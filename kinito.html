@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<!-- Cette ligne rend la page lisible sur telephone (zoom adapte a l ecran) -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kinito - Jeu de dés</title>
+
+<!-- ========================================================== -->
+<!--  PARTIE CSS : tout ce qui concerne l apparence            -->
+<!-- ========================================================== -->
+<style>
+  /* Les ":root" definit des variables de couleur reutilisables partout.
+     Si tu veux changer l ambiance du jeu, tu modifies juste ici. */
+  :root {
+    --fond: #1a1410;
+    --fond-carte: #2a1f17;
+    --accent: #e0a23b;      /* le dore, couleur principale */
+    --accent-clair: #f5d28a;
+    --texte: #f0e6d2;
+    --texte-doux: #a89878;
+    --danger: #c0552f;      /* rouge brique pour les pertes */
+    --vert: #6b8e4e;        /* vert pour les actions positives */
+  }
+
+  /* "*" veut dire "tous les elements". On remet les marges a zero
+     pour partir sur une base propre. */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: Georgia, 'Times New Roman', serif;
+    background: var(--fond);
+    /* Un petit degrade discret pour donner de la profondeur au fond */
+    background-image: radial-gradient(circle at 50% 0%, #2a1f17 0%, #1a1410 60%);
+    color: var(--texte);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px;
+  }
+
+  /* Le conteneur principal du jeu, centre et limite en largeur
+     pour rester lisible meme sur grand ecran */
+  .app {
+    width: 100%;
+    max-width: 440px;
+    margin-top: 20px;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 2.2rem;
+    color: var(--accent);
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  }
+
+  .sous-titre {
+    text-align: center;
+    color: var(--texte-doux);
+    font-style: italic;
+    margin-bottom: 28px;
+    font-size: 0.95rem;
+  }
+
+  /* Style commun a toutes les "cartes" (zones encadrees du jeu) */
+  .carte {
+    background: var(--fond-carte);
+    border: 1px solid rgba(224, 162, 59, 0.25);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 18px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+
+  /* Style commun a tous les boutons */
+  button {
+    font-family: inherit;
+    font-size: 1.05rem;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 10px;
+    transition: transform 0.1s ease, filter 0.15s ease;
+    font-weight: bold;
+  }
+  /* Effet quand on appuie sur un bouton : il s enfonce legerement */
+  button:active { transform: scale(0.97); }
+
+  .btn-principal { background: var(--accent); color: #2a1f17; }
+  .btn-principal:hover { filter: brightness(1.1); }
+
+  .btn-vert { background: var(--vert); color: #fff; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-neutre { background: #3a2d22; color: var(--texte); border: 1px solid rgba(224,162,59,0.3); }
+
+  label { display: block; margin-bottom: 8px; color: var(--texte-doux); }
+
+  input[type="number"], input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    font-size: 1.1rem;
+    font-family: inherit;
+    background: #1a1410;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    color: var(--texte);
+    text-align: center;
+  }
+
+  /* L affichage du gros score des des, bien visible */
+  .score-des {
+    font-size: 5rem;
+    text-align: center;
+    color: var(--accent-clair);
+    margin: 16px 0;
+    letter-spacing: 8px;
+    text-shadow: 0 0 20px rgba(245, 210, 138, 0.3);
+  }
+
+  .info-joueur {
+    text-align: center;
+    font-size: 1.3rem;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  .texte-centre { text-align: center; }
+  .marge-haut { margin-top: 16px; }
+
+  /* La grille des deux boutons de des (vrai / annonce) cote a cote */
+  .ligne-boutons { display: flex; gap: 10px; }
+  .ligne-boutons button { margin-top: 0; }
+
+  /* L ecran de "cache" : un voile opaque qu on tape pour reveler */
+  .voile {
+    text-align: center;
+    padding: 40px 20px;
+    background: #14100c;
+    border-radius: 12px;
+    border: 2px dashed var(--accent);
+    cursor: pointer;
+  }
+  .voile-icone { font-size: 3rem; margin-bottom: 12px; }
+
+  /* Le tableau de l annonce : les chiffres a choisir */
+  .grille-annonce {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .grille-annonce button { margin-top: 0; font-size: 1.2rem; padding: 16px 0; }
+
+  /* Le message de resultat (qui a perdu, combien de gorgées) */
+  .resultat {
+    text-align: center;
+    font-size: 1.2rem;
+    line-height: 1.6;
+    padding: 10px 0;
+  }
+  .gorgees {
+    font-size: 2.5rem;
+    color: var(--danger);
+    font-weight: bold;
+    margin: 8px 0;
+  }
+
+  .historique {
+    font-size: 0.9rem;
+    color: var(--texte-doux);
+    text-align: center;
+    margin-top: 10px;
+    min-height: 20px;
+  }
+
+  /* "hidden" sert a cacher un element. On l ajoute/retire en JS. */
+  .hidden { display: none !important; }
+
+  /* ----- Bouton Regles et fenetre modale ----- */
+  .barre-haut { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .lien-haut { color: var(--texte-doux); text-decoration: none; font-size: 0.85rem; cursor: pointer; background: none; border: none; font-family: inherit; padding: 0; width: auto; margin: 0; font-weight: normal; }
+  .lien-haut:hover { color: var(--accent); }
+
+  /* Le fond sombre qui recouvre tout quand la modale est ouverte */
+  .modale-fond {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 20px; z-index: 100; overflow-y: auto;
+  }
+  /* La fenetre des regles */
+  .modale {
+    background: var(--fond-carte); border: 1px solid var(--accent);
+    border-radius: 14px; padding: 22px; max-width: 480px; width: 100%;
+    margin: auto; line-height: 1.55;
+  }
+  .modale h2 { color: var(--accent); font-size: 1.4rem; margin-bottom: 12px; text-align: center; }
+  .modale h3 { color: var(--accent-clair); font-size: 1.05rem; margin: 16px 0 6px; }
+  .modale p { margin-bottom: 10px; font-size: 0.92rem; }
+  .modale ul { margin: 0 0 10px 18px; font-size: 0.92rem; }
+  .modale li { margin-bottom: 5px; }
+  .modale table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.85rem; }
+  .modale th, .modale td { padding: 6px 8px; text-align: center; border-bottom: 1px solid rgba(224,162,59,0.2); }
+  .modale th { color: var(--accent); }
+  .modale .accent { color: var(--accent-clair); font-weight: bold; }
+  .modale .btn-fermer { background: var(--accent); color: #2a1f17; margin-top: 16px; }
+</style>
+</head>
+
+<body>
+<div class="app">
+  <div class="barre-haut">
+    <a class="lien-haut" href="index.html">&#8592; Menu</a>
+    <button class="lien-haut" onclick="ouvrirRegles()">Règles &#9432;</button>
+  </div>
+  <h1>KINITO</h1>
+  <p class="sous-titre">Bluffe, accuse, et que le meilleur gagne</p>
+
+  <!-- Fenetre modale des regles, cachee par defaut -->
+  <div class="modale-fond hidden" id="modale-regles">
+    <div class="modale">
+      <h2>Règles du Kinito</h2>
+      <p>Fais le plus gros score sans te faire prendre à mentir, et sans annoncer moins que le joueur précédent. Celui qui perd boit. Deux dés se cachent dans le verre (ton téléphone).</p>
+
+      <h3>Un tour</h3>
+      <p>Tu lances, tu vois ton score (toi seul). Il se lit gros chiffre en premier : un 4 et un 2 font 42. Tu annonces un score à voix haute, vrai ou faux. Le joueur suivant, qui doit avoir <span class="accent">écouté</span> (personne ne répète l'annonce), réagit.</p>
+
+      <h3>Les trois réactions</h3>
+      <ul>
+        <li><span class="accent">Je prends</span> : il te croit et doit faire mieux.</li>
+        <li><span class="accent">Menteur</span> : il t'accuse. On révèle le vrai score.</li>
+        <li><span class="accent">Tu as fait moins</span> : il t'accuse d'avoir annoncé sous le précédent. Il doit citer le score précédent exact, sinon c'est lui qui perd.</li>
+      </ul>
+      <p>Dans chaque accusation, celui qui se trompe boit. Démasqué menteur, tu bois le maximum entre la pénalité de ton vrai jet et celle de ton annonce, en version doublée.</p>
+
+      <h3>Hiérarchie (du plus faible au plus fort)</h3>
+      <p><span class="accent">31</span>, puis 32, 41, 42, 43, 52, 53, 54, 61 à 65, puis les doubles <span class="accent">11, 22, 33, 44, 55, 66</span>, puis <span class="accent">21</span> (le plus fort). Les égalités sont permises.</p>
+
+      <h3>Tableau des gorgées</h3>
+      <table>
+        <tr><th>Score</th><th>Simple</th><th>Menteur</th></tr>
+        <tr><td>32</td><td>3</td><td>6</td></tr>
+        <tr><td>41-43</td><td>4</td><td>8</td></tr>
+        <tr><td>52-54</td><td>5</td><td>10</td></tr>
+        <tr><td>61-65</td><td>6</td><td>12</td></tr>
+        <tr><td>11</td><td>7</td><td>14</td></tr>
+        <tr><td>22</td><td>8</td><td>16</td></tr>
+        <tr><td>33</td><td>9</td><td>18</td></tr>
+        <tr><td>44</td><td>10</td><td>20</td></tr>
+        <tr><td>55</td><td>11</td><td>22</td></tr>
+        <tr><td>66</td><td>12</td><td>24</td></tr>
+      </table>
+
+      <h3>Scores spéciaux</h3>
+      <ul>
+        <li><span class="accent">21</span> : le plus fort, bluff possible. Sanction : cul sec ou 2 bouchons (mi-verre ou 1 bouchon si on assume avoir perdu).</li>
+        <li><span class="accent">51</span> : annule tout, on repart de zéro, tout le monde boit 1 gorgée. Ni mensonge ni contestation.</li>
+        <li><span class="accent">31</span> : change le sens de rotation. Ni mensonge ni contestation.</li>
+      </ul>
+
+      <h3>Assumer avoir perdu</h3>
+      <p>Si tu as fait moins que le score à battre, tu peux l'avouer avec « j'ai perdu » : tu bois la colonne simple du score à battre, sans double peine.</p>
+
+      <button class="btn-fermer" onclick="fermerRegles()">Fermer</button>
+    </div>
+  </div>
+
+  <!-- ====================================================== -->
+  <!--  ECRAN 1 : Reglages de depart (nombre puis noms)       -->
+  <!-- ====================================================== -->
+  <div class="carte" id="ecran-reglages">
+    <label for="nb-joueurs">Combien de joueurs ?</label>
+    <input type="number" id="nb-joueurs" value="4" min="2" max="8" oninput="genererChampsNoms()">
+    <!-- Les champs pour les prenoms apparaissent ici, generes en JS -->
+    <div id="champs-noms" style="margin-top:18px;"></div>
+    <button class="btn-principal" onclick="demarrerPartie()">Commencer la partie</button>
+  </div>
+
+  <!-- ====================================================== -->
+  <!--  ECRAN 2 : Le tour de jeu                              -->
+  <!-- ====================================================== -->
+  <div class="carte hidden" id="ecran-jeu">
+    <div class="info-joueur" id="info-joueur">Au tour du Joueur 1</div>
+    <div class="historique" id="historique"></div>
+
+    <!-- Sous-ecran A : on attend que le joueur lance -->
+    <div id="phase-lancer">
+      <button class="btn-principal marge-haut" onclick="lancerDes()">Secouer le verre et lancer</button>
+    </div>
+
+    <!-- Sous-ecran B : le voile qui cache le score pendant le passage du tel -->
+    <div id="phase-voile" class="hidden">
+      <div class="voile" onclick="ouvrirReaction()">
+        <div class="voile-icone">&#127866;</div>
+        <div id="texte-voile">Passe le téléphone au joueur suivant</div>
+        <div style="color:var(--texte-doux); font-size:0.85rem; margin-top:8px;">Touche quand tu l'as récupéré</div>
+      </div>
+    </div>
+
+    <!-- Sous-ecran C : le score est revele, le joueur doit annoncer -->
+    <div id="phase-annonce" class="hidden">
+      <div class="texte-centre" style="color:var(--texte-doux)">Ton vrai score :</div>
+      <div class="score-des" id="affichage-score">--</div>
+      <div class="texte-centre" style="color:var(--texte-doux); margin-top:10px;">
+        Annonce un score (le vrai... ou pas) :
+      </div>
+      <div class="grille-annonce" id="grille-annonce"></div>
+      <!-- Option d abandon : visible seulement si une annonce est a battre -->
+      <button class="btn-danger" id="bouton-abandon" onclick="abandonner()" style="margin-top:16px;">
+        J'ai perdu (j'assume avoir fait moins)
+      </button>
+    </div>
+
+    <!-- Sous-ecran D : le joueur suivant reagit a l annonce -->
+    <div id="phase-reaction" class="hidden">
+      <div class="texte-centre marge-haut" style="font-size:1.1rem; color:var(--texte-doux);">
+        <span id="nom-reacteur"></span>, tu dois avoir entendu l'annonce
+      </div>
+      <div class="texte-centre" style="color:var(--texte-doux); margin-top:6px; font-style:italic; font-size:0.9rem;">
+        (personne ne te la répétera, sois attentif)
+      </div>
+      <button class="btn-vert" onclick="reaction('prends')">Je prends (à moi de faire mieux)</button>
+      <button class="btn-danger" onclick="reaction('menteur')">Menteur !</button>
+      <button class="btn-neutre" onclick="reaction('moins')">Tu as dit moins que le précédent</button>
+    </div>
+
+    <!-- Sous-ecran D-bis : le denonciateur doit citer le score precedent -->
+    <div id="phase-denonciation" class="hidden">
+      <div class="texte-centre marge-haut" style="font-size:1.1rem;">
+        Pour dénoncer, prouve que tu as écouté.
+      </div>
+      <div class="texte-centre" style="color:var(--texte-doux); margin-top:6px; font-size:0.95rem;">
+        Quel score le joueur d'avant a-t-il vraiment annoncé ?
+      </div>
+      <input type="number" id="champ-denonciation" placeholder="ex : 65" style="margin-top:14px;">
+      <button class="btn-danger" onclick="validerDenonciation()">Valider ma dénonciation</button>
+      <div class="texte-centre" style="color:var(--texte-doux); margin-top:8px; font-style:italic; font-size:0.85rem;">
+        Si tu te trompes de score, c'est toi qui bois.
+      </div>
+    </div>
+
+    <!-- Sous-ecran E : le resultat d une manche perdue -->
+    <div id="phase-resultat" class="hidden">
+      <div class="resultat" id="texte-resultat"></div>
+      <button class="btn-principal" onclick="nouvelleManche()">Manche suivante</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================================== -->
+<!--  PARTIE JAVASCRIPT : toute la logique du jeu              -->
+<!-- ========================================================== -->
+<script>
+  /* ----------------------------------------------------------
+     LES REGLES (fenetre modale)
+     Ouvrir/fermer la fenetre des regles par-dessus le jeu.
+  ---------------------------------------------------------- */
+  function ouvrirRegles() {
+    document.getElementById('modale-regles').classList.remove('hidden');
+  }
+  function fermerRegles() {
+    document.getElementById('modale-regles').classList.add('hidden');
+  }
+
+  /* ----------------------------------------------------------
+     1) L ETAT DU JEU
+     Ce sont les "variables" qui retiennent ce qui se passe.
+     C est la memoire du jeu a un instant donne.
+  ---------------------------------------------------------- */
+  let nombreDeJoueurs = 4;
+  let nomsJoueurs = [];        // les prenoms saisis, ex: ["Enzo", "Lea", ...]
+  let joueurActuel = 0;        // index du joueur qui lance (0 = premier joueur)
+  let joueurReacteur = 0;      // index du joueur qui doit reagir
+  let scoreReel = 0;           // le vrai resultat des des (secret)
+  let scoreAnnonce = 0;        // ce que le joueur a annonce (peut etre faux)
+  let annoncePrecedente = 0;   // l annonce du tour d avant (pour comparer)
+  let premiereAnnonce = true;  // vrai si personne n a encore annonce
+  let revelationDemandee = false; // vrai quand on doit montrer le vrai score (cas menteur)
+  let sens = 1;                // sens de rotation : +1 (avant) ou -1 (arriere), inverse par le 31
+  let reinitialiserAuClic = true; // le bouton "manche suivante" doit-il tout remettre a zero ?
+  let estAbandon = false;      // vrai quand le perdant a utilise "j ai perdu" (pour le 21 en colonne 1)
+
+  /* ----------------------------------------------------------
+     2) LE TABLEAU DES GORGEES
+     A chaque score correspond [gorgées normales, gorgées menteur].
+     Note : le 31 et le 51 n y figurent PAS : ce sont des effets
+     speciaux qui ne font jamais boire (voir plus bas).
+  ---------------------------------------------------------- */
+  const TABLEAU_GORGEES = {
+    32: [3, 6],
+    41: [4, 8], 42: [4, 8], 43: [4, 8],
+    52: [5, 10], 53: [5, 10], 54: [5, 10],
+    61: [6, 12], 62: [6, 12], 63: [6, 12], 64: [6, 12], 65: [6, 12],
+    11: [7, 14],
+    22: [8, 16],
+    33: [9, 18],
+    44: [10, 20],
+    55: [11, 22],
+    66: [12, 24],
+    21: [9, 18]   // le 21 est le plus fort ; valeur de gorgées a ajuster si besoin
+  };
+
+  /* ----------------------------------------------------------
+     2bis) L ECHELLE DES SCORES (la hierarchie du jeu)
+     L ordre du plus FAIBLE au plus FORT. Le 31 tout en bas, puis
+     les normaux, puis les doubles, et le 21 au sommet. C est CET
+     ordre qui fait foi, pas la valeur numerique brute.
+     Le 51 n y est PAS : il annule tout, ce n est pas un score a battre.
+  ---------------------------------------------------------- */
+  const ECHELLE = [
+    31,                                          // le plus faible, change de sens
+    32, 41, 42, 43, 52, 53, 54, 61, 62, 63, 64, 65,  // normaux
+    11, 22, 33, 44, 55, 66,                      // doubles
+    21                                           // le plus fort de tous
+  ];
+
+  /* Les scores speciaux : ni mensonge ni contestation possibles.
+     Quand ils sortent, on applique juste leur effet. */
+  const SCORE_CHANGE_SENS = 31;
+  const SCORE_ANNULE = 51;
+
+  /* Donne le rang d un score dans l echelle (sa position).
+     Plus le rang est grand, plus le score est fort.
+     Exemple : rang(65) = 12, rang(11) = 13, donc 11 bat 65. */
+  function rang(score) {
+    return ECHELLE.indexOf(score);
+  }
+
+  /* ----------------------------------------------------------
+     3) FONCTION UTILITAIRE : afficher un sous-ecran, cacher les autres
+     Ca evite de repeter le code partout. On lui donne l id du
+     sous-ecran a montrer, elle cache tous les autres.
+  ---------------------------------------------------------- */
+  function montrerPhase(idAMontrer) {
+    const phases = ['phase-lancer', 'phase-voile', 'phase-annonce', 'phase-reaction', 'phase-denonciation', 'phase-resultat'];
+    phases.forEach(function(id) {
+      document.getElementById(id).classList.add('hidden');
+    });
+    document.getElementById(idAMontrer).classList.remove('hidden');
+  }
+
+  /* Renvoie le prenom du joueur a partir de son index. Si aucun
+     prenom n a ete saisi, on retombe sur "Joueur X" par securite. */
+  function nomJoueur(index) {
+    if (nomsJoueurs[index] && nomsJoueurs[index].trim() !== '') {
+      return nomsJoueurs[index];
+    }
+    return 'Joueur ' + (index + 1);
+  }
+
+  /* Renvoie l index du joueur suivant en tenant compte du sens de
+     rotation. Le calcul "+ nombreDeJoueurs" avant le modulo evite
+     les index negatifs quand on tourne en arriere (sens = -1). */
+  function joueurSuivant(index) {
+    return (index + sens + nombreDeJoueurs) % nombreDeJoueurs;
+  }
+
+  /* ----------------------------------------------------------
+     3bis) GENERER LES CHAMPS DE SAISIE DES PRENOMS
+     Declenchee quand on change le nombre de joueurs. On cree un
+     champ texte par joueur pour saisir son prenom.
+  ---------------------------------------------------------- */
+  function genererChampsNoms() {
+    let nb = parseInt(document.getElementById('nb-joueurs').value);
+    if (isNaN(nb) || nb < 2) nb = 2;
+    if (nb > 8) nb = 8;
+
+    const zone = document.getElementById('champs-noms');
+    zone.innerHTML = '';  // on vide avant de reconstruire
+
+    for (let i = 0; i < nb; i++) {
+      const champ = document.createElement('input');
+      champ.type = 'text';
+      champ.id = 'nom-joueur-' + i;
+      champ.placeholder = 'Prénom du joueur ' + (i + 1);
+      champ.style.marginBottom = '8px';
+      // On reaffecte la classe d input texte pour garder le style
+      champ.className = 'champ-nom';
+      zone.appendChild(champ);
+    }
+  }
+
+  /* ----------------------------------------------------------
+     4) DEMARRER LA PARTIE
+     Declenchee par le bouton "Commencer". On lit le nombre de
+     joueurs, on cache les reglages, on affiche le jeu.
+  ---------------------------------------------------------- */
+  function demarrerPartie() {
+    nombreDeJoueurs = parseInt(document.getElementById('nb-joueurs').value);
+    // Petite securite : entre 2 et 8 joueurs
+    if (nombreDeJoueurs < 2) nombreDeJoueurs = 2;
+    if (nombreDeJoueurs > 8) nombreDeJoueurs = 8;
+
+    // On recupere les prenoms saisis dans les champs.
+    nomsJoueurs = [];
+    for (let i = 0; i < nombreDeJoueurs; i++) {
+      const champ = document.getElementById('nom-joueur-' + i);
+      // Si le champ existe et n est pas vide, on prend le prenom,
+      // sinon on laisse vide (nomJoueur retombera sur "Joueur X").
+      nomsJoueurs.push(champ ? champ.value.trim() : '');
+    }
+
+    joueurActuel = 0;
+    premiereAnnonce = true;
+    annoncePrecedente = 0;
+    sens = 1;                  // on repart toujours en sens horaire
+    reinitialiserAuClic = true;
+
+    document.getElementById('ecran-reglages').classList.add('hidden');
+    document.getElementById('ecran-jeu').classList.remove('hidden');
+
+    preparerTour();
+  }
+
+  /* ----------------------------------------------------------
+     5) PREPARER UN TOUR
+     On met a jour l affichage du joueur courant et on montre
+     le bouton "lancer".
+  ---------------------------------------------------------- */
+  function preparerTour() {
+    document.getElementById('info-joueur').textContent = 'Au tour du ' + nomJoueur(joueurActuel);
+    // On n affiche JAMAIS l annonce a battre : ce serait donner un indice.
+    // Le joueur doit avoir ecoute. On met juste un texte neutre.
+    if (premiereAnnonce) {
+      document.getElementById('historique').textContent = 'Premier lancer de la manche';
+    } else {
+      document.getElementById('historique').textContent = 'À toi de jouer';
+    }
+    montrerPhase('phase-lancer');
+  }
+
+  /* ----------------------------------------------------------
+     6) LANCER LES DES
+     On tire deux nombres aleatoires entre 1 et 6, on calcule le
+     score, puis on montre DIRECTEMENT le score au lanceur (lui
+     seul le regarde) pour qu il fasse son annonce dans la foulee.
+     Le secret sera protege plus tard, au moment de passer le tel.
+  ---------------------------------------------------------- */
+  function lancerDes() {
+    const de1 = Math.floor(Math.random() * 6) + 1;  // nombre entre 1 et 6
+    const de2 = Math.floor(Math.random() * 6) + 1;
+    scoreReel = calculerScore(de1, de2);
+    estAbandon = false;  // on repart d un tour propre
+
+    // Cas speciaux : si le VRAI jet est 31 ou 51, on ne peut pas mentir
+    // dessus. Le joueur est donc oblige de l annoncer : on applique
+    // l effet directement, sans passer par le choix de l annonce.
+    if (scoreReel === SCORE_ANNULE) {
+      scoreAnnonce = scoreReel;
+      appliquerEffetSpecial('annule');
+      return;
+    }
+    if (scoreReel === SCORE_CHANGE_SENS) {
+      scoreAnnonce = scoreReel;
+      appliquerEffetSpecial('sens');
+      return;
+    }
+
+    // Cas normal : on affiche son vrai score et on prepare les boutons
+    // d annonce pour qu il choisisse quoi annoncer (vrai ou bluff).
+    document.getElementById('affichage-score').textContent = scoreReel;
+    construireBoutonsAnnonce();
+
+    // L option "j ai perdu" n a de sens que s il y a deja une annonce a
+    // battre. Au tout premier lancer de la manche, on la cache.
+    const boutonAbandon = document.getElementById('bouton-abandon');
+    if (premiereAnnonce) {
+      boutonAbandon.classList.add('hidden');
+    } else {
+      boutonAbandon.classList.remove('hidden');
+    }
+
+    montrerPhase('phase-annonce');
+  }
+
+  /* Transforme deux des en un score a deux chiffres, le plus grand
+     chiffre en premier. Exemple : 2 et 4 -> 42. */
+  function calculerScore(a, b) {
+    const grand = Math.max(a, b);
+    const petit = Math.min(a, b);
+    return grand * 10 + petit;
+  }
+
+  /* ----------------------------------------------------------
+     7) REVELER LE SCORE
+     Quand le joueur tape sur le voile, on lui montre son vrai
+     score et on prepare les boutons d annonce.
+  ---------------------------------------------------------- */
+  function revelerScore() {
+    document.getElementById('affichage-score').textContent = scoreReel;
+    construireBoutonsAnnonce();
+    montrerPhase('phase-annonce');
+  }
+
+  /* ----------------------------------------------------------
+     8) CONSTRUIRE LES BOUTONS D ANNONCE
+     On genere les boutons dans l ORDRE DE PUISSANCE, en parcourant
+     directement ECHELLE (du plus faible au plus fort, doubles a la
+     fin). Comme ca l interface reflete la vraie hierarchie du jeu :
+     on lit de gauche a droite, du moins fort au plus fort.
+  ---------------------------------------------------------- */
+  function construireBoutonsAnnonce() {
+    const grille = document.getElementById('grille-annonce');
+    grille.innerHTML = '';  // on vide la grille avant de la reconstruire
+
+    // On parcourt ECHELLE, mais on SAUTE les scores speciaux : on ne
+    // peut pas mentir dessus, donc on ne doit pas pouvoir les annoncer
+    // volontairement. Ils ne surgissent que quand les des tombent dessus.
+    ECHELLE.forEach(function(score) {
+      if (score === SCORE_CHANGE_SENS || score === SCORE_ANNULE) return;
+      const bouton = document.createElement('button');
+      bouton.textContent = score;
+      bouton.className = 'btn-neutre';
+      // Quand on clique, on enregistre l annonce
+      bouton.onclick = function() { annoncerScore(score); };
+      grille.appendChild(bouton);
+    });
+  }
+
+  /* ----------------------------------------------------------
+     8bis) ABANDONNER ("j ai perdu")
+     Le lanceur assume avoir fait moins que le score a battre, sans
+     bluffer. Il boit la colonne 1 (normale) du score qu il devait
+     battre (l annonce precedente). Pas de double peine : il avoue.
+  ---------------------------------------------------------- */
+  function abandonner() {
+    revelationDemandee = false;
+    estAbandon = true;  // pour le 21 : on appliquera la colonne 1 (sanction douce)
+    // Il boit sur le score a battre (annoncePrecedente), colonne normale.
+    finManche(joueurActuel, false, 'assume avoir fait moins', annoncePrecedente);
+  }
+
+  /* ----------------------------------------------------------
+     9) ANNONCER UN SCORE
+     Le joueur annonce ce qu il veut (vrai, faux, ou meme un score
+     plus faible que le precedent). Le jeu ne l empeche de RIEN :
+     c est au joueur suivant d etre attentif et d accuser si besoin.
+     EXCEPTION : les scores speciaux 31 et 51 declenchent leur effet
+     immediatement, sans voile ni reaction possible.
+  ---------------------------------------------------------- */
+  function annoncerScore(score) {
+    scoreAnnonce = score;
+    revelationDemandee = false;
+
+    // --- Cas special : le 51 annule tout, on repart de zero ---
+    if (score === SCORE_ANNULE) {
+      appliquerEffetSpecial('annule');
+      return;
+    }
+    // --- Cas special : le 31 change le sens de rotation ---
+    if (score === SCORE_CHANGE_SENS) {
+      appliquerEffetSpecial('sens');
+      return;
+    }
+
+    // Cas normal : on prepare le tour du joueur suivant. Avant de lui
+    // donner la main, on cache le score en affichant le voile : c est
+    // le moment ou on passe physiquement le telephone.
+    joueurReacteur = joueurSuivant(joueurActuel);
+    document.getElementById('nom-reacteur').textContent = nomJoueur(joueurReacteur);
+    document.getElementById('texte-voile').textContent = 'Passe le téléphone au ' + nomJoueur(joueurReacteur);
+    montrerPhase('phase-voile');
+  }
+
+  /* ----------------------------------------------------------
+     9-special) APPLIQUER UN EFFET SPECIAL (31 ou 51)
+     Ces scores ne se contestent pas et ne font pas boire. On
+     affiche un message expliquant l effet, puis le jeu continue
+     avec le joueur suivant (dans le nouveau sens pour le 31).
+  ---------------------------------------------------------- */
+  function appliquerEffetSpecial(type) {
+    let message;
+
+    if (type === 'annule') {
+      // Le 51 remet la manche a zero ET fait boire tout le monde 1 gorgee.
+      premiereAnnonce = true;
+      annoncePrecedente = 0;
+      // Le jeu repart au joueur suivant dans le sens actuel.
+      joueurActuel = joueurSuivant(joueurActuel);
+      message =
+        '<div style="color:var(--accent); font-size:1.4rem;">51</div>' +
+        '<div class="gorgees" style="font-size:1.8rem;">Tout le monde boit 1 gorgée</div>' +
+        '<div style="color:var(--texte-doux); font-style:italic;">Toutes les annonces sont effacées, on repart de zéro</div>' +
+        '<div class="marge-haut" style="color:var(--accent-clair);">Au tour de ' + nomJoueur(joueurActuel) + '</div>';
+
+    } else {  // type === 'sens'
+      // Le 31 inverse le sens de rotation.
+      sens = -sens;
+      // L annonce 31 reste a battre : le suivant (nouveau sens) doit faire mieux.
+      annoncePrecedente = SCORE_CHANGE_SENS;
+      premiereAnnonce = false;
+      joueurActuel = joueurSuivant(joueurActuel);
+      const sensTexte = (sens === 1) ? 'sens horaire' : 'sens anti-horaire';
+      message =
+        '<div style="color:var(--accent); font-size:1.4rem;">31 - Changement de sens</div>' +
+        '<div style="color:var(--texte-doux); font-style:italic;">On joue maintenant dans l\'autre sens (' + sensTexte + ')</div>' +
+        '<div class="marge-haut" style="color:var(--accent-clair);">Au tour de ' + nomJoueur(joueurActuel) + ' (doit battre 31)</div>';
+    }
+
+    // On reutilise l ecran de resultat pour afficher le message,
+    // puis le bouton "Manche suivante" relancera proprement le tour.
+    // On a deja prepare l etat ici, donc le bouton ne doit PAS reinitialiser.
+    reinitialiserAuClic = false;
+    document.getElementById('texte-resultat').innerHTML = message;
+    montrerPhase('phase-resultat');
+  }
+
+  /* ----------------------------------------------------------
+     9bis) PASSER LE VOILE
+     Quand le joueur suivant a recupere le telephone et tape sur
+     le voile, on lui montre ses options (prendre / menteur).
+     Le score reste cache : il ne le verra que s il accuse.
+  ---------------------------------------------------------- */
+  function ouvrirReaction() {
+    montrerPhase('phase-reaction');
+  }
+
+  /* ----------------------------------------------------------
+     10) LA REACTION DU JOUEUR SUIVANT
+     Trois choix possibles :
+     - "prends"  : il continue, pas de verification
+     - "menteur" : on compare le VRAI score des des a l annonce
+     - "moins"   : on compare l annonce actuelle a la precedente
+     Pour menteur et moins, celui qui se trompe boit (comme tu veux).
+     On utilise les RANGS pour comparer, jamais les valeurs brutes.
+  ---------------------------------------------------------- */
+  function reaction(choix) {
+    if (choix === 'menteur') {
+      // On devoile le vrai score dans le verdict
+      revelationDemandee = true;
+      // Le lanceur mentait si son vrai score est plus FAIBLE (rang plus
+      // petit) que ce qu il a annonce.
+      const ilMentait = (rang(scoreReel) < rang(scoreAnnonce));
+      if (ilMentait) {
+        // Demasque : il boit, en mode menteur (double dose)
+        finManche(joueurActuel, true, 'a été démasqué, il mentait');
+      } else {
+        // Accusation a tort : l accusateur boit (dose normale)
+        finManche(joueurReacteur, false, 'a accusé à tort de mensonge');
+      }
+
+    } else if (choix === 'moins') {
+      // On ne tranche pas tout de suite : le denonciateur doit d abord
+      // PROUVER qu il a ecoute, en tapant le score que le joueur d avant
+      // avait vraiment annonce. On ouvre la phase de saisie.
+      revelationDemandee = false;
+      document.getElementById('champ-denonciation').value = '';
+      montrerPhase('phase-denonciation');
+
+    } else {
+      // "Je prends" : l annonce actuelle devient la reference a battre,
+      // et c est au tour du joueur suivant de lancer.
+      // Le score reste cache, le suivant relance sans jamais l avoir vu.
+      revelationDemandee = false;
+      annoncePrecedente = scoreAnnonce;
+      premiereAnnonce = false;
+      joueurActuel = joueurReacteur;
+      preparerTour();
+    }
+  }
+
+  /* ----------------------------------------------------------
+     10bis) VALIDER UNE DENONCIATION "tu as fait moins"
+     Le denonciateur a tape le score qu il pense etre le precedent.
+     Double verification :
+     1) A-t-il cite le BON score precedent ? Sinon il n a pas ecoute
+        -> il boit (il a denonce sans preuve).
+     2) Si oui, l annonce contestee etait-elle vraiment trop basse ?
+        - Oui -> le lanceur boit.
+        - Non (annonce valide) -> le denonciateur boit (accusation a tort).
+  ---------------------------------------------------------- */
+  function validerDenonciation() {
+    const saisie = parseInt(document.getElementById('champ-denonciation').value);
+
+    // Cas particulier : premiere annonce de la manche, pas de precedent.
+    // Le denonciateur ne peut pas avoir raison -> il boit.
+    if (premiereAnnonce) {
+      finManche(joueurReacteur, false, 'a dénoncé alors qu\'il n\'y avait pas d\'annonce avant');
+      return;
+    }
+
+    // Verification 1 : a-t-il cite le bon score precedent ?
+    if (saisie !== annoncePrecedente) {
+      finManche(joueurReacteur, false, 'n\'a pas cité le bon score précédent (pas écouté)');
+      return;
+    }
+
+    // Verification 2 : l annonce contestee etait-elle trop basse ?
+    const annonceTropBasse = (rang(scoreAnnonce) < rang(annoncePrecedente));
+    if (annonceTropBasse) {
+      // Denonciation juste : le lanceur boit sur le score qu il devait
+      // battre (annoncePrecedente, ex: 65), en VERSION MENTEUR (12),
+      // car annoncer en dessous de la reference est une triche.
+      finManche(joueurActuel, true, 'a annoncé moins que le précédent', annoncePrecedente);
+    } else {
+      // L annonce etait valide : le denonciateur s est trompe, il boit
+      finManche(joueurReacteur, false, 'a dénoncé à tort (l\'annonce était valide)');
+    }
+  }
+
+  /* ----------------------------------------------------------
+     11) FIN D UNE MANCHE
+     On affiche qui perd et combien de gorgées, selon le tableau.
+     "perdant" = index du joueur qui boit
+     "modeMenteur" = vrai si on applique la colonne "menteur"
+     "raison" = petit texte explicatif
+     "scoreBaseForce" = optionnel. Si fourni, on calcule les gorgées
+       sur CE score au lieu de l annonce. Sert au cas "tu as fait
+       moins" reussi, ou la reference est le score precedent (ex: 65).
+  ---------------------------------------------------------- */
+  function finManche(perdant, modeMenteur, raison, scoreBaseForce) {
+    // Petite fonction interne : donne la penalite d un score donne.
+    // colonne 0 = normale, colonne 1 = menteur (doublee).
+    function penalite(score, colonne) {
+      if (TABLEAU_GORGEES[score]) {
+        return TABLEAU_GORGEES[score][colonne];
+      }
+      return 0;
+    }
+
+    // On determine la base de calcul et le nombre de gorgees.
+    // Trois situations :
+    // 1) Score force (denonciation reussie) : on calcule dessus directement.
+    // 2) Demasque menteur : REGLE DU MAXIMUM. On compare la penalite
+    //    menteur du vrai jet et celle de l annonce, on garde la plus grosse.
+    //    Le menteur paie toujours le prix le plus eleve.
+    // 3) Autres cas (accusation a tort, etc.) : sur l annonce, colonne normale.
+    let scoreBase;     // sert a detecter le cas special 21 pour l affichage
+    let gorgees = 0;
+
+    if (scoreBaseForce !== undefined) {
+      scoreBase = scoreBaseForce;
+      gorgees = penalite(scoreBase, modeMenteur ? 1 : 0);
+    } else if (modeMenteur) {
+      // Regle du maximum entre vrai jet et annonce, en colonne menteur.
+      const penaliteVrai = penalite(scoreReel, 1);
+      const penaliteAnnonce = penalite(scoreAnnonce, 1);
+      gorgees = Math.max(penaliteVrai, penaliteAnnonce);
+      // Pour l affichage du cas 21 : on retient celui qui a servi de base.
+      scoreBase = (penaliteVrai >= penaliteAnnonce) ? scoreReel : scoreAnnonce;
+    } else {
+      scoreBase = scoreAnnonce;
+      gorgees = penalite(scoreBase, 0);
+    }
+
+    const texte = document.getElementById('texte-resultat');
+    // Si on a crie menteur, on devoile le vrai score (le verre s ouvre).
+    // On montre l annonce ET la verite, pour que tout le monde comprenne.
+    let blocRevelation = '';
+    if (revelationDemandee) {
+      blocRevelation =
+        '<div style="color:var(--texte-doux); margin-bottom:6px;">' +
+        'Annonce : ' + scoreAnnonce + '  /  Vrai score : ' +
+        '<span style="color:var(--accent-clair); font-weight:bold;">' + scoreReel + '</span></div>';
+    }
+
+    // Cas special : le 21 (Kinito) n a pas un nombre de gorgees mais une
+    // sanction speciale. Deux niveaux selon le contexte :
+    //  - abandon volontaire ("j ai perdu") -> colonne 1, sanction douce
+    //  - tous les autres cas (menteur, fausse accusation) -> colonne 2
+    let blocSanction;
+    if (scoreAnnonce === 21 || scoreBase === 21) {
+      const texteKinito = estAbandon ? 'Mi-verre ou 1 bouchon' : 'Cul sec ou 2 bouchons';
+      blocSanction = '<div class="gorgees" style="font-size:1.8rem;">' + texteKinito + '</div>';
+    } else {
+      blocSanction = '<div class="gorgees">' + gorgees + ' gorgées</div>' +
+        (modeMenteur ? '<div style="color:var(--danger);">(pénalité menteur)</div>' : '');
+    }
+
+    texte.innerHTML =
+      blocRevelation +
+      '<div style="color:var(--accent); font-size:1.4rem;">' + nomJoueur(perdant) + '</div>' +
+      '<div style="color:var(--texte-doux); font-style:italic;">' + raison + '</div>' +
+      blocSanction;
+
+    // Regle de ton PDF : la manche suivante reprend au joueur d APRES
+    // le perdant (dans le sens de rotation courant), pas le perdant.
+    joueurActuel = joueurSuivant(perdant);
+
+    montrerPhase('phase-resultat');
+  }
+
+  /* ----------------------------------------------------------
+     12) BOUTON "MANCHE SUIVANTE"
+     Ce bouton sert dans deux situations differentes :
+     - apres une PERTE : on remet tout a zero (nouvelle manche)
+     - apres un EFFET SPECIAL (31/51) : on continue sans tout effacer,
+       car l etat a deja ete prepare par appliquerEffetSpecial.
+     La variable "reinitialiserAuClic" nous dit quel comportement avoir.
+  ---------------------------------------------------------- */
+  function nouvelleManche() {
+    if (reinitialiserAuClic) {
+      // Vraie nouvelle manche apres une perte
+      premiereAnnonce = true;
+      annoncePrecedente = 0;
+    }
+    // Apres un effet special, on ne touche a rien : l etat est deja bon.
+    reinitialiserAuClic = true;  // par defaut, le prochain clic reinitialise
+    preparerTour();
+  }
+
+  /* ----------------------------------------------------------
+     INITIALISATION : au chargement de la page, on genere tout de
+     suite les champs de prenoms correspondant au nombre par defaut.
+  ---------------------------------------------------------- */
+  genererChampsNoms();
+</script>
+</body>
+</html>

@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BeerBattle</title>
+<style>
+  :root {
+    --fond: #0d2a1f;
+    --fond-carte: #134032;
+    --case: #14513c;
+    --case-bord: #1d6b50;
+    --accent: #d4af68;
+    --accent-clair: #ecd29a;
+    --texte: #f0ece0;
+    --texte-doux: #9bb0a4;
+    --carte-dos: #1a5c44;
+    --carte-dos-bord: #2a7d5e;
+    --danger: #d0563b;
+    --j1: #e0563b;
+    --j2: #4fb3d4;
+    --j3: #e0a23b;
+    --j4: #b06fd4;
+    --j5: #e8e2d0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+    background: var(--fond);
+    background-image: radial-gradient(circle at 50% 0%, #134032 0%, #0d2a1f 65%);
+    color: var(--texte);
+    min-height: 100vh;
+    display: flex; justify-content: center; align-items: flex-start;
+    padding: 16px;
+  }
+  .app { width: 100%; max-width: 540px; margin-top: 12px; }
+  h1 { text-align: center; font-size: 1.9rem; color: var(--accent); letter-spacing: 1px; margin-bottom: 4px; }
+  .sous-titre { text-align: center; color: var(--texte-doux); font-size: 0.9rem; margin-bottom: 18px; }
+  .carte-ui {
+    background: var(--fond-carte);
+    border: 1px solid rgba(212, 175, 104, 0.2);
+    border-radius: 14px; padding: 20px; margin-bottom: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  button {
+    font-family: inherit; font-size: 1rem; padding: 13px 18px; border: none;
+    border-radius: 10px; cursor: pointer; width: 100%; margin-top: 10px;
+    font-weight: bold; transition: transform 0.1s ease, filter 0.15s ease;
+  }
+  button:active { transform: scale(0.97); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-principal { background: var(--accent); color: #14181f; }
+  .btn-principal:hover:not(:disabled) { filter: brightness(1.1); }
+  .btn-secondaire { background: #1d6b50; color: var(--texte); border: 1px solid var(--accent); }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-neutre { background: #0d2a1f; color: var(--texte-doux); border: 1px solid var(--case-bord); }
+  label { display: block; margin-bottom: 8px; color: var(--texte-doux); }
+  input[type="number"], input[type="text"] {
+    width: 100%; padding: 12px; font-size: 1.1rem; font-family: inherit;
+    background: #0d2a1f; border: 1px solid var(--accent); border-radius: 8px;
+    color: var(--texte); text-align: center; margin-bottom: 8px;
+  }
+
+  /* Les compteurs de gorgees de chaque joueur */
+  .compteurs { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .compteur {
+    flex: 1; min-width: 70px; padding: 6px 4px; border-radius: 8px;
+    text-align: center; font-size: 0.8rem; border: 2px solid transparent;
+    background: #0d2a1f;
+  }
+  .compteur.actif { border-color: var(--accent); }
+  .compteur.elimine { opacity: 0.35; text-decoration: line-through; }
+  .compteur .nom { font-weight: bold; }
+  .compteur .verre {
+    height: 8px; border-radius: 4px; background: var(--case-bord);
+    margin-top: 4px; overflow: hidden; position: relative;
+  }
+  .compteur .verre-plein { height: 100%; background: var(--danger); transition: width 0.3s ease; }
+  .compteur .valeur { font-size: 0.75rem; color: var(--texte-doux); margin-top: 2px; }
+
+  .plateau { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 0 auto 14px; }
+  .case {
+    aspect-ratio: 1; background: var(--carte-dos);
+    border: 1px solid var(--carte-dos-bord); border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: default; position: relative;
+    transition: transform 0.1s ease, box-shadow 0.15s ease;
+    background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.03) 4px, rgba(255,255,255,0.03) 8px);
+  }
+  .case.vide { background: var(--case); background-image: none; border-style: dashed; opacity: 0.5; }
+  .case.cible { cursor: pointer; }
+  .case.cible:hover { transform: scale(1.05); box-shadow: 0 0 12px var(--accent); border-color: var(--accent); }
+  .case.atteignable { box-shadow: inset 0 0 0 2px var(--accent); cursor: pointer; }
+  .case.atteignable:hover { background: var(--case-bord); }
+  .case.visee { box-shadow: inset 0 0 0 2px var(--danger); cursor: pointer; }
+  .case.visee:hover { background: #5a2418; }
+  /* Plusieurs pions sur une meme case : on les empile en petit */
+  .cases-pions { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; align-items: center; width: 100%; height: 100%; padding: 3px; }
+  .pion {
+    width: 22px; height: 22px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold; color: #14181f; font-size: 0.55rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5); z-index: 2;
+  }
+  .info-tour { text-align: center; font-size: 1.1rem; color: var(--accent-clair); margin-bottom: 12px; min-height: 24px; }
+  .main-titre { text-align: center; color: var(--texte-doux); font-size: 0.85rem; margin: 6px 0; }
+  .armes-posees { text-align: center; color: var(--accent-clair); font-size: 0.8rem; margin-bottom: 6px; min-height: 18px; }
+  .main { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; min-height: 80px; }
+  .carte-jeu {
+    width: 54px; height: 76px; border-radius: 8px;
+    background: #f4f0e4; color: #14181f;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-weight: bold; box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+    cursor: pointer; transition: transform 0.1s ease;
+    border: 2px solid transparent; position: relative;
+  }
+  .carte-jeu:hover { transform: translateY(-6px); }
+  .carte-jeu.choisie { border-color: var(--accent); transform: translateY(-6px); }
+  .carte-valeur { font-size: 1.3rem; line-height: 1; }
+  .carte-type { font-size: 0.58rem; margin-top: 4px; text-align: center; color: #5a5a4a; }
+  .carte-rouge { color: #b3322a; }
+  .carte-noir { color: #14181f; }
+  .voile { text-align: center; padding: 50px 20px; background: #0a2017; border-radius: 12px; border: 2px dashed var(--accent); cursor: pointer; }
+  .voile-icone { font-size: 3rem; margin-bottom: 12px; }
+  .zone-actions { margin-top: 8px; }
+  .gros-message { text-align: center; font-size: 1.5rem; color: var(--accent); margin: 16px 0; }
+  .hidden { display: none !important; }
+
+  /* ----- Bouton Regles et fenetre modale ----- */
+  .barre-haut { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .lien-haut { color: var(--texte-doux); text-decoration: none; font-size: 0.85rem; cursor: pointer; background: none; border: none; font-family: inherit; padding: 0; width: auto; margin: 0; font-weight: normal; }
+  .lien-haut:hover { color: var(--accent); }
+  .modale-fond {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 20px; z-index: 100; overflow-y: auto;
+  }
+  .modale {
+    background: var(--fond-carte); border: 1px solid var(--accent);
+    border-radius: 14px; padding: 22px; max-width: 480px; width: 100%;
+    margin: auto; line-height: 1.55;
+  }
+  .modale h2 { color: var(--accent); font-size: 1.4rem; margin-bottom: 12px; text-align: center; }
+  .modale h3 { color: var(--accent-clair); font-size: 1.05rem; margin: 16px 0 6px; }
+  .modale p { margin-bottom: 10px; font-size: 0.92rem; }
+  .modale ul { margin: 0 0 10px 18px; font-size: 0.92rem; }
+  .modale li { margin-bottom: 5px; }
+  .modale table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.82rem; }
+  .modale th, .modale td { padding: 6px 8px; text-align: left; border-bottom: 1px solid rgba(212,175,104,0.2); }
+  .modale th { color: var(--accent); }
+  .modale .accent { color: var(--accent-clair); font-weight: bold; }
+  .modale .btn-fermer { background: var(--accent); color: #14181f; margin-top: 16px; }
+</style>
+</head>
+
+<body>
+<div class="app">
+  <div class="barre-haut">
+    <a class="lien-haut" href="index.html">&#8592; Menu</a>
+    <button class="lien-haut" onclick="ouvrirRegles()">Règles &#9432;</button>
+  </div>
+  <h1>BEERBATTLE</h1>
+  <p class="sous-titre">Le jeu de plateau tactique</p>
+
+  <!-- Fenetre modale des regles -->
+  <div class="modale-fond hidden" id="modale-regles">
+    <div class="modale">
+      <h2>Règles de BeerBattle</h2>
+      <p>Chaque joueur a un verre de 20 gorgées. On s'attaque pour faire boire les autres : éliminé à 20. Le dernier debout gagne. De 3 à 5 joueurs sur un plateau 6x6 de cartes face cachée.</p>
+
+      <h3>Mise en place</h3>
+      <ul>
+        <li>Main secrète : 4 cartes à 3-4 joueurs, 3 à 5 joueurs.</li>
+        <li>36 cartes sur le plateau, le reste à la défausse.</li>
+        <li>Chacun choisit sa case de départ au premier tour.</li>
+      </ul>
+
+      <h3>Un tour : une seule action</h3>
+      <ul>
+        <li>Se déplacer (1 case gratuite, ou carte déplacement).</li>
+        <li>Attaquer (corps à corps ou arme).</li>
+        <li>Poser une arme (Roi ou Valet).</li>
+        <li>Jouer une Dame, ou ne rien faire.</li>
+      </ul>
+      <p>Après l'action, tu peux regarder et prendre la carte de ta case. Pas de déplacement en diagonale.</p>
+
+      <h3>Les cartes</h3>
+      <table>
+        <tr><th>Carte</th><th>Effet</th></tr>
+        <tr><td>2-5</td><td>Déplacement (nb de cases)</td></tr>
+        <tr><td>6-10</td><td>Gorgées infligées en attaque</td></tr>
+        <tr><td>Valet</td><td>Arme : 2 cases, gorgées entières</td></tr>
+        <tr><td>Roi</td><td>Arme : 6 cases, gorgées /2 (arrondi sup)</td></tr>
+        <tr><td>As</td><td>Déplacement + corps à corps mi-verre</td></tr>
+        <tr><td>Dame</td><td>Remet un verre à zéro (soi ou autre)</td></tr>
+        <tr><td>Joker</td><td>Mi-verre à distance, via une arme</td></tr>
+      </table>
+
+      <h3>Les attaques</h3>
+      <p><span class="accent">Corps à corps</span> (même case) : carte gorgée, ou mains nues (1 gorgée, 5 si plateau vide).</p>
+      <p><span class="accent">À distance</span> : une arme posée + une carte gorgée ou un Joker, sur une cible à portée, sans obstacle.</p>
+      <p><span class="accent">Mi-verre</span> : la moitié de ce qu'il reste avant 20, arrondi au supérieur.</p>
+
+      <h3>Cartes et plateau</h3>
+      <ul>
+        <li>Main pleine : tu peux échanger (ta carte reste sur la case face cachée).</li>
+        <li>Main non pleine : tu prends, la case devient vide.</li>
+        <li>Les armes posées restent et servent à l'infini.</li>
+      </ul>
+
+      <button class="btn-fermer" onclick="fermerRegles()">Fermer</button>
+    </div>
+  </div>
+
+  <div class="carte-ui" id="ecran-reglages">
+    <label for="nb-joueurs">Combien de joueurs ? (3 à 5)</label>
+    <input type="number" id="nb-joueurs" value="3" min="3" max="5" oninput="genererChampsNoms()">
+    <div id="champs-noms" style="margin-top:16px;"></div>
+    <button class="btn-principal" onclick="demarrerPartie()">Distribuer et commencer</button>
+  </div>
+
+  <div class="carte-ui hidden" id="ecran-placement">
+    <div class="info-tour" id="info-placement"></div>
+    <div class="plateau" id="plateau-placement"></div>
+  </div>
+
+  <div class="carte-ui hidden" id="ecran-voile">
+    <div class="voile" onclick="revelerTour()">
+      <div class="voile-icone">&#127183;</div>
+      <div id="voile-texte">Passe le téléphone au joueur suivant</div>
+      <div style="color:var(--texte-doux); font-size:0.85rem; margin-top:8px;">Touche quand tu l'as récupéré</div>
+    </div>
+  </div>
+
+  <div class="carte-ui hidden" id="ecran-jeu">
+    <div class="compteurs" id="compteurs"></div>
+    <div class="info-tour" id="info-tour"></div>
+    <div class="plateau" id="plateau-jeu"></div>
+    <div class="armes-posees" id="armes-posees"></div>
+    <div class="main-titre">Ta main (secrète)</div>
+    <div class="main" id="main-joueur"></div>
+    <div class="zone-actions" id="zone-actions"></div>
+  </div>
+
+  <div class="carte-ui hidden" id="ecran-fin">
+    <div class="gros-message" id="message-fin"></div>
+    <button class="btn-principal" onclick="rejouer()">Nouvelle partie</button>
+  </div>
+</div>
+
+<script>
+  /* ==========================================================
+     LES REGLES (fenetre modale)
+  ========================================================== */
+  function ouvrirRegles() {
+    document.getElementById('modale-regles').classList.remove('hidden');
+  }
+  function fermerRegles() {
+    document.getElementById('modale-regles').classList.add('hidden');
+  }
+
+  /* ==========================================================
+     1) ETAT DU JEU
+  ========================================================== */
+  const TAILLE = 6;
+  const VERRE_MAX = 20;        // gorgees pour etre elimine
+  let nombreDeJoueurs = 3;
+  let nomsJoueurs = [];        // prenoms saisis
+  let maxCartes = 4;
+
+  let joueurEnPlacement = 0;
+  let positions = [];          // positions[i] = {ligne, colonne}
+  let mains = [];              // mains[i] = [cartes secretes]
+  let armes = [];              // armes[i] = [cartes Roi/Valet posees]
+  let verres = [];             // verres[i] = gorgees encaissees (0 a 20)
+  let elimine = [];            // elimine[i] = true/false
+  let plateau = [];            // plateau[ligne][colonne] = carte ou null
+
+  let joueurCourant = 0;
+  let actionFaite = false;
+  let carteChoisie = null;
+  let asADeplace = false;      // pour l As : a-t-on deja utilise le deplacement ?
+
+  let deplacementMax = 0;
+  let depViaCarte = false;
+
+  const COULEURS = ['var(--j1)', 'var(--j2)', 'var(--j3)', 'var(--j4)', 'var(--j5)'];
+
+  /* Genere les champs de saisie des prenoms selon le nombre de joueurs. */
+  function genererChampsNoms() {
+    let nb = parseInt(document.getElementById('nb-joueurs').value);
+    if (isNaN(nb) || nb < 3) nb = 3;
+    if (nb > 5) nb = 5;
+    const zone = document.getElementById('champs-noms');
+    zone.innerHTML = '';
+    for (let i = 0; i < nb; i++) {
+      const champ = document.createElement('input');
+      champ.type = 'text';
+      champ.id = 'nom-joueur-' + i;
+      champ.placeholder = 'Prénom du joueur ' + (i + 1);
+      champ.maxLength = 12;
+      zone.appendChild(champ);
+    }
+  }
+
+  /* Renvoie le nom complet d un joueur (ou "Joueur X" par defaut). */
+  function nomJoueur(i) {
+    if (nomsJoueurs[i] && nomsJoueurs[i].trim() !== '') return nomsJoueurs[i];
+    return 'Joueur ' + (i + 1);
+  }
+
+  /* Renvoie un acronyme court (max 3 lettres) pour les pions ronds. */
+  function acronyme(i) {
+    const nom = nomsJoueurs[i];
+    if (nom && nom.trim() !== '') {
+      return nom.trim().substring(0, 3).toUpperCase();
+    }
+    return 'J' + (i + 1);
+  }
+
+  /* ==========================================================
+     2) LE PAQUET DE CARTES (54 cartes)
+  ========================================================== */
+  function creerPaquet() {
+    const couleurs = ['coeur', 'carreau', 'trefle', 'pique'];
+    const rouge = ['coeur', 'carreau'];
+    const paquet = [];
+    couleurs.forEach(function(coul) {
+      for (let v = 2; v <= 10; v++) {
+        let type, libelle;
+        if (v >= 2 && v <= 5) { type = 'deplacement'; libelle = 'Dépl. ' + v; }
+        else { type = 'gorgee'; libelle = v + ' gorgées'; }
+        paquet.push({ type: type, valeur: v, rouge: rouge.includes(coul), libelle: libelle, symbole: String(v) });
+      }
+      paquet.push({ type: 'valet', valeur: 0, rouge: rouge.includes(coul), libelle: 'Valet (arme 2)', symbole: 'V' });
+      paquet.push({ type: 'dame',  valeur: 0, rouge: rouge.includes(coul), libelle: 'Dame (vide verre)', symbole: 'D' });
+      paquet.push({ type: 'roi',   valeur: 0, rouge: rouge.includes(coul), libelle: 'Roi (arme 6)', symbole: 'R' });
+      paquet.push({ type: 'as',    valeur: 0, rouge: rouge.includes(coul), libelle: 'As (mi-verre CC)', symbole: 'A' });
+    });
+    paquet.push({ type: 'joker', valeur: 0, rouge: true,  libelle: 'Joker (mi-verre)', symbole: 'J' });
+    paquet.push({ type: 'joker', valeur: 0, rouge: false, libelle: 'Joker (mi-verre)', symbole: 'J' });
+    return paquet;
+  }
+
+  function melanger(tab) {
+    for (let i = tab.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = tab[i]; tab[i] = tab[j]; tab[j] = tmp;
+    }
+    return tab;
+  }
+
+  /* ==========================================================
+     3) DEMARRER LA PARTIE
+  ========================================================== */
+  function demarrerPartie() {
+    nombreDeJoueurs = parseInt(document.getElementById('nb-joueurs').value);
+    if (nombreDeJoueurs < 3) nombreDeJoueurs = 3;
+    if (nombreDeJoueurs > 5) nombreDeJoueurs = 5;
+    maxCartes = (nombreDeJoueurs === 5) ? 3 : 4;
+
+    // On recupere les prenoms saisis
+    nomsJoueurs = [];
+    for (let i = 0; i < nombreDeJoueurs; i++) {
+      const champ = document.getElementById('nom-joueur-' + i);
+      nomsJoueurs.push(champ ? champ.value.trim() : '');
+    }
+
+    const paquet = melanger(creerPaquet());
+
+    mains = []; armes = []; verres = []; elimine = [];
+    let index = 0;
+    for (let i = 0; i < nombreDeJoueurs; i++) {
+      mains[i] = [];
+      for (let c = 0; c < maxCartes; c++) { mains[i].push(paquet[index]); index++; }
+      armes[i] = [];
+      verres[i] = 0;
+      elimine[i] = false;
+    }
+
+    plateau = [];
+    for (let ligne = 0; ligne < TAILLE; ligne++) {
+      plateau[ligne] = [];
+      for (let colonne = 0; colonne < TAILLE; colonne++) {
+        plateau[ligne][colonne] = paquet[index]; index++;
+      }
+    }
+
+    positions = [];
+    joueurEnPlacement = 0;
+
+    document.getElementById('ecran-reglages').classList.add('hidden');
+    document.getElementById('ecran-fin').classList.add('hidden');
+    document.getElementById('ecran-placement').classList.remove('hidden');
+
+    construirePlateau('plateau-placement', true);
+    majPlacement();
+  }
+
+  /* ==========================================================
+     4) PLACEMENT
+  ========================================================== */
+  function majPlacement() {
+    const info = document.getElementById('info-placement');
+    info.textContent = nomJoueur(joueurEnPlacement) + ', choisis ta case de départ';
+    info.style.color = COULEURS[joueurEnPlacement];
+    document.querySelectorAll('#plateau-placement .case').forEach(function(c) {
+      const l = parseInt(c.dataset.ligne), col = parseInt(c.dataset.colonne);
+      if (caseOccupee(l, col)) c.classList.remove('cible');
+      else c.classList.add('cible');
+    });
+    dessinerPions('plateau-placement');
+  }
+
+  function placerJoueur(ligne, colonne) {
+    if (caseOccupee(ligne, colonne)) return;
+    positions[joueurEnPlacement] = { ligne: ligne, colonne: colonne };
+    joueurEnPlacement++;
+    if (joueurEnPlacement < nombreDeJoueurs) {
+      majPlacement();
+    } else {
+      joueurCourant = 0;
+      document.getElementById('ecran-placement').classList.add('hidden');
+      preparerTransition();
+    }
+  }
+
+  /* Verifie si une case est occupee par un joueur NON elimine. */
+  function caseOccupee(ligne, colonne) {
+    for (let i = 0; i < positions.length; i++) {
+      if (elimine[i]) continue;
+      if (positions[i] && positions[i].ligne === ligne && positions[i].colonne === colonne) return true;
+    }
+    return false;
+  }
+
+  /* Liste les joueurs (non elimines) presents sur une case donnee. */
+  function joueursSurCase(ligne, colonne) {
+    const liste = [];
+    for (let i = 0; i < positions.length; i++) {
+      if (elimine[i]) continue;
+      if (positions[i] && positions[i].ligne === ligne && positions[i].colonne === colonne) liste.push(i);
+    }
+    return liste;
+  }
+
+  /* ==========================================================
+     5) TRANSITION (voile)
+  ========================================================== */
+  function preparerTransition() {
+    // On saute les joueurs elimines
+    while (elimine[joueurCourant]) {
+      joueurCourant = (joueurCourant + 1) % nombreDeJoueurs;
+    }
+    document.getElementById('voile-texte').textContent =
+      'Passe le téléphone à ' + nomJoueur(joueurCourant);
+    document.getElementById('ecran-jeu').classList.add('hidden');
+    document.getElementById('ecran-voile').classList.remove('hidden');
+  }
+
+  function revelerTour() {
+    document.getElementById('ecran-voile').classList.add('hidden');
+    document.getElementById('ecran-jeu').classList.remove('hidden');
+    demarrerTour();
+  }
+
+  /* ==========================================================
+     6) DEROULEMENT D UN TOUR
+  ========================================================== */
+  function demarrerTour() {
+    actionFaite = false;
+    carteChoisie = null;
+    asADeplace = false;
+
+    const info = document.getElementById('info-tour');
+    info.textContent = 'Tour de ' + nomJoueur(joueurCourant);
+    info.style.color = COULEURS[joueurCourant];
+
+    majCompteurs();
+    construirePlateau('plateau-jeu', false);
+    dessinerPions('plateau-jeu');
+    afficherArmes();
+    afficherMain();
+    afficherActions();
+  }
+
+  /* Affiche les compteurs de gorgees de tous les joueurs. */
+  function majCompteurs() {
+    const zone = document.getElementById('compteurs');
+    zone.innerHTML = '';
+    for (let i = 0; i < nombreDeJoueurs; i++) {
+      const div = document.createElement('div');
+      div.className = 'compteur';
+      if (i === joueurCourant) div.classList.add('actif');
+      if (elimine[i]) div.classList.add('elimine');
+      const pourcent = (verres[i] / VERRE_MAX) * 100;
+      div.innerHTML =
+        '<div class="nom" style="color:' + COULEURS[i] + '">' + acronyme(i) + '</div>' +
+        '<div class="verre"><div class="verre-plein" style="width:' + pourcent + '%"></div></div>' +
+        '<div class="valeur">' + verres[i] + '/' + VERRE_MAX + '</div>';
+      zone.appendChild(div);
+    }
+  }
+
+  /* Affiche les armes posees du joueur courant. */
+  function afficherArmes() {
+    const zone = document.getElementById('armes-posees');
+    const mesArmes = armes[joueurCourant];
+    if (mesArmes.length === 0) {
+      zone.textContent = '';
+      return;
+    }
+    const noms = mesArmes.map(function(a) {
+      return a.type === 'roi' ? 'Roi (6 cases)' : 'Valet (2 cases)';
+    });
+    zone.textContent = 'Armes posées : ' + noms.join(', ');
+  }
+
+  function construirePlateau(idPlateau, pourPlacement) {
+    const p = document.getElementById(idPlateau);
+    p.innerHTML = '';
+    for (let ligne = 0; ligne < TAILLE; ligne++) {
+      for (let colonne = 0; colonne < TAILLE; colonne++) {
+        const c = document.createElement('div');
+        c.className = 'case';
+        c.dataset.ligne = ligne;
+        c.dataset.colonne = colonne;
+        if (!pourPlacement && plateau[ligne][colonne] === null) c.classList.add('vide');
+        if (pourPlacement) {
+          c.onclick = function() { placerJoueur(ligne, colonne); };
+        }
+        p.appendChild(c);
+      }
+    }
+  }
+
+  function afficherMain() {
+    const main = document.getElementById('main-joueur');
+    main.innerHTML = '';
+    const mesCartes = mains[joueurCourant];
+    mesCartes.forEach(function(carte, i) {
+      const div = document.createElement('div');
+      div.className = 'carte-jeu ' + (carte.rouge ? 'carte-rouge' : 'carte-noir');
+      if (carteChoisie === i) div.classList.add('choisie');
+      const val = document.createElement('div');
+      val.className = 'carte-valeur';
+      val.textContent = carte.symbole;
+      const typ = document.createElement('div');
+      typ.className = 'carte-type';
+      typ.textContent = libelleCourt(carte);
+      div.appendChild(val); div.appendChild(typ);
+      div.onclick = function() { choisirCarte(i); };
+      main.appendChild(div);
+    });
+    if (mesCartes.length === 0) {
+      main.innerHTML = '<div style="color:var(--texte-doux); font-style:italic;">Aucune carte en main</div>';
+    }
+  }
+
+  function libelleCourt(carte) {
+    switch (carte.type) {
+      case 'deplacement': return 'dépl. ' + carte.valeur;
+      case 'gorgee': return carte.valeur + ' gorg.';
+      case 'as': return 'As';
+      case 'dame': return 'Dame';
+      case 'roi': return 'Roi';
+      case 'valet': return 'Valet';
+      case 'joker': return 'Joker';
+    }
+    return '';
+  }
+
+  function choisirCarte(i) {
+    if (actionFaite && !asADeplace) return;
+    carteChoisie = (carteChoisie === i) ? null : i;
+    afficherMain();
+    afficherActions();
+  }
+
+  /* ==========================================================
+     7) LES ACTIONS DISPONIBLES
+     Action principale unique : deplacement, attaque, poser arme,
+     dame, ou rien. L As est l exception (deplacement + CC).
+  ========================================================== */
+  function afficherActions() {
+    const zone = document.getElementById('zone-actions');
+    zone.innerHTML = '';
+
+    // Si l action est faite, et qu on n est pas dans le cas special As,
+    // on ne propose plus rien (le ramassage est gere a part).
+    if (actionFaite && !asADeplace) return;
+
+    const carte = (carteChoisie !== null) ? mains[joueurCourant][carteChoisie] : null;
+
+    // --- Cas special : l As a deplace, il peut maintenant frapper ---
+    if (asADeplace) {
+      proposerAttaqueAs(zone);
+      return;
+    }
+
+    // --- Deplacement d une case (gratuit) ---
+    const btnCase = document.createElement('button');
+    btnCase.className = 'btn-secondaire';
+    btnCase.textContent = "Me déplacer d'une case (gratuit)";
+    btnCase.onclick = function() { lancerDeplacement(1, false); };
+    zone.appendChild(btnCase);
+
+    // --- Corps a corps a MAINS NUES (sans carte gorgee) ---
+    // Disponible des qu un adversaire est sur ma case. Inflige 1 gorgee,
+    // ou 5 si le plateau est totalement vide (cas extreme de fin de partie).
+    const moi = positions[joueurCourant];
+    const ciblesIci = joueursSurCase(moi.ligne, moi.colonne).filter(function(j) { return j !== joueurCourant; });
+    const degatsMainsNues = plateauEstVide() ? 5 : 1;
+    ciblesIci.forEach(function(j) {
+      const b = document.createElement('button');
+      b.className = 'btn-danger';
+      b.textContent = 'Frapper ' + nomJoueur(j) + ' à mains nues (' + degatsMainsNues + ' gorgée' + (degatsMainsNues > 1 ? 's' : '') + ')';
+      b.onclick = function() {
+        appliquerGorgees(j, degatsMainsNues);
+        // Pas de carte a consommer ici : on force carteChoisie a null
+        carteChoisie = null;
+        actionFaite = true;
+        majCompteurs();
+        if (verifierVictoire()) return;
+        phaseRamassage();
+      };
+      zone.appendChild(b);
+    });
+
+    // --- Selon la carte choisie, on propose l action adaptee ---
+    if (carte) {
+      if (carte.type === 'deplacement') {
+        const b = document.createElement('button');
+        b.className = 'btn-principal';
+        b.textContent = "Jouer déplacement (jusqu'à " + carte.valeur + ' cases)';
+        b.onclick = function() { lancerDeplacement(carte.valeur, true); };
+        zone.appendChild(b);
+      }
+      else if (carte.type === 'gorgee') {
+        // Attaque corps a corps (si quelqu un sur ma case) ou via arme
+        ajouterBoutonsAttaqueGorgee(zone, carte);
+      }
+      else if (carte.type === 'as') {
+        const b = document.createElement('button');
+        b.className = 'btn-danger';
+        b.textContent = "As : me déplacer puis frapper (ou frapper ici)";
+        b.onclick = function() { lancerAs(); };
+        zone.appendChild(b);
+      }
+      else if (carte.type === 'joker') {
+        ajouterBoutonsJoker(zone, carte);
+      }
+      else if (carte.type === 'dame') {
+        const b = document.createElement('button');
+        b.className = 'btn-secondaire';
+        b.textContent = "Dame : remettre un verre à zéro";
+        b.onclick = function() { lancerDame(); };
+        zone.appendChild(b);
+      }
+      else if (carte.type === 'roi' || carte.type === 'valet') {
+        const b = document.createElement('button');
+        b.className = 'btn-secondaire';
+        b.textContent = "Poser " + (carte.type === 'roi' ? 'le Roi (arme 6 cases)' : 'le Valet (arme 2 cases)');
+        b.onclick = function() { poserArme(); };
+        zone.appendChild(b);
+      }
+    }
+
+    // --- Ne rien faire ---
+    const btnRien = document.createElement('button');
+    btnRien.className = 'btn-neutre';
+    btnRien.textContent = 'Ne rien faire';
+    btnRien.onclick = function() { actionFaite = true; phaseRamassage(); };
+    zone.appendChild(btnRien);
+  }
+
+  /* ==========================================================
+     8) DEPLACEMENT
+  ========================================================== */
+  function lancerDeplacement(distanceMax, viaCarte) {
+    deplacementMax = distanceMax;
+    depViaCarte = viaCarte;
+    const moi = positions[joueurCourant];
+    document.querySelectorAll('#plateau-jeu .case').forEach(function(c) {
+      const l = parseInt(c.dataset.ligne), col = parseInt(c.dataset.colonne);
+      const dist = Math.abs(l - moi.ligne) + Math.abs(col - moi.colonne);
+      // On autorise les cases occupees : c est justement comme ca qu on
+      // rejoint un adversaire pour l attaquer au corps a corps.
+      if (dist >= 1 && dist <= distanceMax) {
+        c.classList.add('atteignable');
+        c.onclick = function() { effectuerDeplacement(l, col); };
+      }
+    });
+    document.getElementById('info-tour').textContent =
+      'Choisis ta destination (max ' + distanceMax + ', pas de diagonale)';
+  }
+
+  function effectuerDeplacement(ligne, colonne) {
+    positions[joueurCourant] = { ligne: ligne, colonne: colonne };
+    if (depViaCarte && carteChoisie !== null) {
+      mains[joueurCourant].splice(carteChoisie, 1);
+      carteChoisie = null;
+    }
+    actionFaite = true;
+    construirePlateau('plateau-jeu', false);
+    dessinerPions('plateau-jeu');
+    afficherMain();
+    phaseRamassage();
+  }
+
+  /* ==========================================================
+     9) L AS : deplacement (optionnel) puis corps a corps mi-verre
+  ========================================================== */
+  function lancerAs() {
+    // On propose d abord de se deplacer (jusqu a 1 case comme un mouvement
+    // gratuit), OU de frapper directement si on est deja sur une cible.
+    // Pour rester simple : l As permet 1 case de deplacement puis le CC.
+    const moi = positions[joueurCourant];
+    document.querySelectorAll('#plateau-jeu .case').forEach(function(c) {
+      const l = parseInt(c.dataset.ligne), col = parseInt(c.dataset.colonne);
+      const dist = Math.abs(l - moi.ligne) + Math.abs(col - moi.colonne);
+      // Cases occupees autorisees : l As sert justement a rejoindre une cible.
+      if (dist === 1) {
+        c.classList.add('atteignable');
+        c.onclick = function() {
+          positions[joueurCourant] = { ligne: l, colonne: col };
+          asADeplace = true;
+          construirePlateau('plateau-jeu', false);
+          dessinerPions('plateau-jeu');
+          afficherActions();
+        };
+      }
+    });
+    // Bouton pour frapper sans se deplacer
+    const zone = document.getElementById('zone-actions');
+    zone.innerHTML = '';
+    const info = document.getElementById('info-tour');
+    info.textContent = "As : déplace-toi d'une case (cases en surbrillance) ou frappe ici";
+    asADeplace = true;  // on autorise directement la phase d attaque
+    proposerAttaqueAs(zone);
+  }
+
+  /* Propose les cibles corps a corps pour l As (sur la case du joueur). */
+  function proposerAttaqueAs(zone) {
+    zone.innerHTML = '';
+    const moi = positions[joueurCourant];
+    const cibles = joueursSurCase(moi.ligne, moi.colonne).filter(function(j) { return j !== joueurCourant; });
+
+    if (cibles.length === 0) {
+      const txt = document.createElement('div');
+      txt.style.cssText = 'color:var(--texte-doux); text-align:center; margin:8px 0;';
+      txt.textContent = "Personne à frapper sur ta case. Tu peux te déplacer (surbrillance) ou terminer.";
+      zone.appendChild(txt);
+    } else {
+      const aide = document.createElement('div');
+      aide.style.cssText = 'color:var(--texte-doux); font-size:0.85rem; text-align:center; margin:6px 0;';
+      aide.textContent = 'Qui frapper (mi-verre) ?';
+      zone.appendChild(aide);
+      cibles.forEach(function(j) {
+        const b = document.createElement('button');
+        b.className = 'btn-danger';
+        b.textContent = 'Frapper ' + nomJoueur(j) + ' (reste ' + (VERRE_MAX - verres[j]) + ')';
+        b.onclick = function() { appliquerMiVerre(j); consommerCarteEtFinir(); };
+        zone.appendChild(b);
+      });
+    }
+    // Terminer sans frapper
+    const btnFin = document.createElement('button');
+    btnFin.className = 'btn-neutre';
+    btnFin.textContent = 'Terminer (sans frapper)';
+    btnFin.onclick = function() { consommerCarteEtFinir(); };
+    zone.appendChild(btnFin);
+  }
+
+  /* ==========================================================
+     10) ATTAQUE AVEC CARTE GORGEE (corps a corps ou via arme)
+  ========================================================== */
+  function ajouterBoutonsAttaqueGorgee(zone, carte) {
+    const moi = positions[joueurCourant];
+
+    // Corps a corps : cibles sur ma case
+    const ciblesCC = joueursSurCase(moi.ligne, moi.colonne).filter(function(j) { return j !== joueurCourant; });
+    ciblesCC.forEach(function(j) {
+      const b = document.createElement('button');
+      b.className = 'btn-danger';
+      b.textContent = 'Corps à corps ' + nomJoueur(j) + ' : ' + carte.valeur + ' gorgées';
+      b.onclick = function() { appliquerGorgees(j, carte.valeur); consommerCarteEtFinir(); };
+      zone.appendChild(b);
+    });
+
+    // Via armes posees : pour chaque arme, cibles a portee
+    armes[joueurCourant].forEach(function(arme) {
+      const portee = (arme.type === 'roi') ? 6 : 2;
+      const cibles = ciblesAPortee(portee);
+      cibles.forEach(function(j) {
+        // Roi : gorgees divisees par 2 (arrondi sup). Valet : entieres.
+        const degats = (arme.type === 'roi') ? Math.ceil(carte.valeur / 2) : carte.valeur;
+        const b = document.createElement('button');
+        b.className = 'btn-danger';
+        b.textContent = (arme.type === 'roi' ? 'Roi' : 'Valet') + ' sur ' + nomJoueur(j) + ' : ' + degats + ' gorgées';
+        b.onclick = function() { appliquerGorgees(j, degats); consommerCarteEtFinir(); };
+        zone.appendChild(b);
+      });
+    });
+  }
+
+  /* Joker : mi-verre via une arme uniquement (pas de division au Roi). */
+  function ajouterBoutonsJoker(zone, carte) {
+    if (armes[joueurCourant].length === 0) {
+      const txt = document.createElement('div');
+      txt.style.cssText = 'color:var(--texte-doux); font-size:0.85rem; text-align:center; margin:6px 0;';
+      txt.textContent = 'Le Joker nécessite une arme posée pour être utilisé.';
+      zone.appendChild(txt);
+      return;
+    }
+    armes[joueurCourant].forEach(function(arme) {
+      const portee = (arme.type === 'roi') ? 6 : 2;
+      const cibles = ciblesAPortee(portee);
+      cibles.forEach(function(j) {
+        const b = document.createElement('button');
+        b.className = 'btn-danger';
+        b.textContent = 'Joker via ' + (arme.type === 'roi' ? 'Roi' : 'Valet') + ' sur ' + nomJoueur(j) + ' (mi-verre)';
+        b.onclick = function() { appliquerMiVerre(j); consommerCarteEtFinir(); };
+        zone.appendChild(b);
+      });
+    });
+  }
+
+  /* Renvoie les joueurs (autres, non elimines) a portee donnee. */
+  function ciblesAPortee(portee) {
+    const moi = positions[joueurCourant];
+    const cibles = [];
+    for (let j = 0; j < nombreDeJoueurs; j++) {
+      if (j === joueurCourant || elimine[j]) continue;
+      const dist = Math.abs(positions[j].ligne - moi.ligne) + Math.abs(positions[j].colonne - moi.colonne);
+      if (dist >= 1 && dist <= portee) cibles.push(j);
+    }
+    return cibles;
+  }
+
+  /* ==========================================================
+     11) POSER UNE ARME (action principale)
+  ========================================================== */
+  function poserArme() {
+    const carte = mains[joueurCourant][carteChoisie];
+    armes[joueurCourant].push(carte);
+    mains[joueurCourant].splice(carteChoisie, 1);
+    carteChoisie = null;
+    actionFaite = true;
+    afficherArmes();
+    afficherMain();
+    phaseRamassage();
+  }
+
+  /* ==========================================================
+     12) LA DAME : remettre un verre a zero (soi ou un autre)
+  ========================================================== */
+  function lancerDame() {
+    const zone = document.getElementById('zone-actions');
+    zone.innerHTML = '';
+    const aide = document.createElement('div');
+    aide.style.cssText = 'color:var(--texte-doux); font-size:0.85rem; text-align:center; margin:6px 0;';
+    aide.textContent = 'Quel verre remettre à zéro ?';
+    zone.appendChild(aide);
+
+    for (let j = 0; j < nombreDeJoueurs; j++) {
+      if (elimine[j]) continue;
+      const b = document.createElement('button');
+      b.className = 'btn-secondaire';
+      b.textContent = (j === joueurCourant ? 'Mon verre' : 'Verre de ' + nomJoueur(j)) + ' (actuel : ' + verres[j] + ')';
+      b.onclick = function() {
+        verres[j] = 0;
+        consommerCarteEtFinir();
+      };
+      zone.appendChild(b);
+    }
+    const btnAnnuler = document.createElement('button');
+    btnAnnuler.className = 'btn-neutre';
+    btnAnnuler.textContent = 'Annuler';
+    btnAnnuler.onclick = function() { demarrerTour(); };
+    zone.appendChild(btnAnnuler);
+  }
+
+  /* ==========================================================
+     13) APPLIQUER LES DEGATS
+  ========================================================== */
+  function appliquerGorgees(cible, nombre) {
+    verres[cible] += nombre;
+    if (verres[cible] >= VERRE_MAX) {
+      verres[cible] = VERRE_MAX;   // surplus efface
+      elimine[cible] = true;
+    }
+  }
+
+  /* Mi-verre : moitie de ce qu il reste avant 20, arrondi au superieur. */
+  function appliquerMiVerre(cible) {
+    const restant = VERRE_MAX - verres[cible];
+    const degats = Math.ceil(restant / 2);
+    appliquerGorgees(cible, degats);
+  }
+
+  /* Apres une attaque ou une dame : on consomme la carte choisie
+     (defausse), on verifie la victoire, et on finit le tour. */
+  function consommerCarteEtFinir() {
+    if (carteChoisie !== null) {
+      mains[joueurCourant].splice(carteChoisie, 1);
+      carteChoisie = null;
+    }
+    actionFaite = true;
+    asADeplace = false;
+    majCompteurs();
+
+    if (verifierVictoire()) return;
+    phaseRamassage();
+  }
+
+  /* ==========================================================
+     14) PHASE DE RAMASSAGE
+  ========================================================== */
+  function phaseRamassage() {
+    // On nettoie les surbrillances eventuelles
+    construirePlateau('plateau-jeu', false);
+    dessinerPions('plateau-jeu');
+
+    const moi = positions[joueurCourant];
+    const carteSol = plateau[moi.ligne][moi.colonne];
+    const info = document.getElementById('info-tour');
+    const zone = document.getElementById('zone-actions');
+    zone.innerHTML = '';
+
+    if (carteSol === null) {
+      info.textContent = 'Aucune carte sur ta case';
+      ajouterBoutonFinTour(zone);
+      return;
+    }
+    info.textContent = 'Il y a une carte sous toi';
+    const btn = document.createElement('button');
+    btn.className = 'btn-secondaire';
+    btn.textContent = 'Regarder la carte de ma case';
+    btn.onclick = function() { regarderCarteSol(); };
+    zone.appendChild(btn);
+    ajouterBoutonFinTour(zone);
+  }
+
+  function regarderCarteSol() {
+    const moi = positions[joueurCourant];
+    const carteSol = plateau[moi.ligne][moi.colonne];
+    const zone = document.getElementById('zone-actions');
+    zone.innerHTML = '';
+
+    const apercu = document.createElement('div');
+    apercu.style.cssText = 'text-align:center; margin:10px 0;';
+    apercu.innerHTML = '<div style="color:var(--texte-doux); font-size:0.85rem;">Carte de ta case :</div>' +
+      '<div style="font-size:1.2rem; color:var(--accent-clair); font-weight:bold;">' +
+      carteSol.symbole + ' — ' + carteSol.libelle + '</div>';
+    zone.appendChild(apercu);
+
+    if (mains[joueurCourant].length < maxCartes) {
+      const b = document.createElement('button');
+      b.className = 'btn-principal';
+      b.textContent = 'Prendre cette carte';
+      b.onclick = function() { prendreCarte(); };
+      zone.appendChild(b);
+    } else {
+      const aide = document.createElement('div');
+      aide.style.cssText = 'color:var(--texte-doux); font-size:0.82rem; text-align:center; margin-top:6px;';
+      aide.textContent = 'Main pleine : choisis une carte à échanger (elle reste sur la case)';
+      zone.appendChild(aide);
+      mains[joueurCourant].forEach(function(carte, i) {
+        const b = document.createElement('button');
+        b.className = 'btn-secondaire';
+        b.textContent = 'Échanger ' + carte.symbole + ' (' + libelleCourt(carte) + ')';
+        b.onclick = function() { echangerCarte(i); };
+        zone.appendChild(b);
+      });
+    }
+    const btnRien = document.createElement('button');
+    btnRien.className = 'btn-neutre';
+    btnRien.textContent = 'Ne pas prendre (remettre face cachée)';
+    btnRien.onclick = function() { terminerTour(); };
+    zone.appendChild(btnRien);
+  }
+
+  function prendreCarte() {
+    const moi = positions[joueurCourant];
+    mains[joueurCourant].push(plateau[moi.ligne][moi.colonne]);
+    plateau[moi.ligne][moi.colonne] = null;
+    terminerTour();
+  }
+
+  function echangerCarte(i) {
+    const moi = positions[joueurCourant];
+    const carteSol = plateau[moi.ligne][moi.colonne];
+    const maCarte = mains[joueurCourant][i];
+    plateau[moi.ligne][moi.colonne] = maCarte;
+    mains[joueurCourant][i] = carteSol;
+    terminerTour();
+  }
+
+  function ajouterBoutonFinTour(zone) {
+    const btn = document.createElement('button');
+    btn.className = 'btn-principal';
+    btn.textContent = 'Terminer mon tour';
+    btn.onclick = function() { terminerTour(); };
+    zone.appendChild(btn);
+  }
+
+  /* ==========================================================
+     15) FIN DE TOUR + VICTOIRE
+  ========================================================== */
+  function terminerTour() {
+    if (verifierVictoire()) return;
+    joueurCourant = (joueurCourant + 1) % nombreDeJoueurs;
+    preparerTransition();
+  }
+
+  /* Verifie s il ne reste qu un joueur : il gagne. */
+  function verifierVictoire() {
+    const survivants = [];
+    for (let i = 0; i < nombreDeJoueurs; i++) {
+      if (!elimine[i]) survivants.push(i);
+    }
+    if (survivants.length <= 1) {
+      const gagnant = survivants.length === 1 ? survivants[0] : null;
+      document.getElementById('ecran-jeu').classList.add('hidden');
+      document.getElementById('ecran-voile').classList.add('hidden');
+      document.getElementById('ecran-fin').classList.remove('hidden');
+      const msg = document.getElementById('message-fin');
+      if (gagnant !== null) {
+        msg.innerHTML = '🏆 ' + nomJoueur(gagnant) + ' gagne !';
+        msg.style.color = COULEURS[gagnant];
+      } else {
+        msg.textContent = 'Tout le monde est éliminé !';
+      }
+      return true;
+    }
+    return false;
+  }
+
+  function rejouer() {
+    document.getElementById('ecran-fin').classList.add('hidden');
+    document.getElementById('ecran-reglages').classList.remove('hidden');
+    genererChampsNoms();
+  }
+
+  /* ==========================================================
+     UTILITAIRES
+  ========================================================== */
+  /* Verifie si toutes les cases du plateau sont vides (cas extreme). */
+  function plateauEstVide() {
+    for (let ligne = 0; ligne < TAILLE; ligne++) {
+      for (let colonne = 0; colonne < TAILLE; colonne++) {
+        if (plateau[ligne][colonne] !== null) return false;
+      }
+    }
+    return true;
+  }
+
+  function dessinerPions(idPlateau) {
+    // On vide les conteneurs de pions
+    document.querySelectorAll('#' + idPlateau + ' .cases-pions').forEach(function(c) { c.remove(); });
+
+    // On regroupe les joueurs par case pour gerer plusieurs pions au meme endroit
+    for (let ligne = 0; ligne < TAILLE; ligne++) {
+      for (let colonne = 0; colonne < TAILLE; colonne++) {
+        const occupants = joueursSurCase(ligne, colonne);
+        if (occupants.length === 0) continue;
+        const caseDiv = document.querySelector('#' + idPlateau + ' .case[data-ligne="' + ligne + '"][data-colonne="' + colonne + '"]');
+        if (!caseDiv) continue;
+        const conteneur = document.createElement('div');
+        conteneur.className = 'cases-pions';
+        occupants.forEach(function(i) {
+          const pion = document.createElement('div');
+          pion.className = 'pion';
+          pion.style.background = COULEURS[i];
+          pion.textContent = acronyme(i);
+          conteneur.appendChild(pion);
+        });
+        caseDiv.appendChild(conteneur);
+      }
+    }
+  }
+
+  /* INITIALISATION : on genere les champs de noms au chargement. */
+  genererChampsNoms();
+</script>
+</body>
+</html>
