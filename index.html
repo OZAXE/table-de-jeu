@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jeux de soirée</title>
+<title>La Table de Jeu</title>
 <style>
   :root {
     --fond: #0a2017;
@@ -15,106 +15,66 @@
     --texte: #f0ece0;
     --texte-doux: #9bb0a4;
     --rouge: #c0392b;
+    --en-ligne: #4fb37a;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
     background: var(--fond);
-    /* Fond avec un dégradé radial + une texture de feutrine subtile */
     background-image:
       radial-gradient(circle at 50% 0%, #16523e 0%, #0a2017 70%),
       repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(0,0,0,0.04) 6px, rgba(0,0,0,0.04) 12px);
     color: var(--texte);
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    display: flex; flex-direction: column; align-items: center;
     padding: 28px 16px 40px;
   }
-
-  /* En-tete */
   .entete { text-align: center; margin-bottom: 36px; margin-top: 12px; }
   .sur-titre {
-    color: var(--accent);
-    letter-spacing: 4px;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    margin-bottom: 10px;
+    color: var(--accent); letter-spacing: 4px; font-size: 0.8rem;
+    text-transform: uppercase; margin-bottom: 10px;
   }
   h1 {
     font-family: Georgia, 'Times New Roman', serif;
-    font-size: 2.8rem;
-    color: var(--texte);
-    line-height: 1.1;
+    font-size: 2.8rem; color: var(--texte); line-height: 1.1;
     text-shadow: 0 3px 12px rgba(0,0,0,0.5);
   }
   h1 .accent { color: var(--accent); }
-  .slogan {
-    color: var(--texte-doux);
-    font-style: italic;
-    margin-top: 12px;
-    font-size: 1rem;
-  }
-
-  /* Liste des jeux */
-  .jeux {
-    width: 100%;
-    max-width: 440px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
-
-  /* Carte d un jeu */
+  .slogan { color: var(--texte-doux); font-style: italic; margin-top: 12px; font-size: 1rem; }
+  .jeux { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 20px; }
   .jeu {
-    background: var(--carte);
-    border: 1px solid var(--carte-bord);
-    border-radius: 18px;
-    padding: 24px;
+    background: var(--carte); border: 1px solid var(--carte-bord);
+    border-radius: 18px; padding: 24px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.45);
-    position: relative;
-    overflow: hidden;
+    position: relative; overflow: hidden;
     transition: transform 0.15s ease, box-shadow 0.2s ease;
   }
   .jeu:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.55); }
-  /* Petit liseré doré décoratif en haut de chaque carte */
   .jeu::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 4px;
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
     background: linear-gradient(90deg, transparent, var(--accent), transparent);
   }
-
   .jeu-icone { font-size: 2.4rem; margin-bottom: 10px; }
-  .jeu-nom {
-    font-family: Georgia, serif;
-    font-size: 1.6rem;
-    color: var(--accent-clair);
-    margin-bottom: 6px;
-  }
+  .jeu-nom { font-family: Georgia, serif; font-size: 1.6rem; color: var(--accent-clair); margin-bottom: 6px; }
   .jeu-desc { color: var(--texte-doux); font-size: 0.92rem; line-height: 1.5; margin-bottom: 18px; }
-
-  /* Boutons */
-  .boutons { display: flex; gap: 10px; }
+  .badge {
+    display: inline-block; background: var(--en-ligne); color: #0a2017;
+    font-size: 0.7rem; padding: 2px 8px; border-radius: 4px;
+    font-weight: bold; vertical-align: middle; margin-left: 6px;
+    letter-spacing: 1px;
+  }
+  .boutons { display: flex; gap: 10px; flex-direction: column; }
   a.btn {
-    flex: 1;
-    text-align: center;
-    text-decoration: none;
-    padding: 13px 14px;
-    border-radius: 10px;
-    font-weight: bold;
-    font-size: 0.95rem;
-    transition: filter 0.15s ease, transform 0.1s ease;
-    display: block;
+    flex: 1; text-align: center; text-decoration: none;
+    padding: 13px 14px; border-radius: 10px;
+    font-weight: bold; font-size: 0.95rem;
+    transition: filter 0.15s ease, transform 0.1s ease; display: block;
   }
   a.btn:active { transform: scale(0.97); }
   .btn-jouer { background: var(--accent); color: #14181f; }
   .btn-jouer:hover { filter: brightness(1.1); }
-  .btn-regles { background: transparent; color: var(--accent-clair); border: 1px solid var(--carte-bord); }
-  .btn-regles:hover { background: var(--fond-clair); }
-
-  /* Pied de page */
+  .btn-en-ligne { background: var(--en-ligne); color: #0a2017; }
+  .btn-en-ligne:hover { filter: brightness(1.1); }
   .pied { margin-top: 40px; color: var(--texte-doux); font-size: 0.8rem; text-align: center; }
 </style>
 </head>
@@ -126,20 +86,21 @@
   </div>
 
   <div class="jeux">
-    <!-- Jeu 1 : Kinito -->
+    <!-- Kinito -->
     <div class="jeu">
       <div class="jeu-icone">&#127922;</div>
-      <div class="jeu-nom">Kinito</div>
+      <div class="jeu-nom">Kinito <span class="badge">EN LIGNE</span></div>
       <div class="jeu-desc">
         Le jeu de dés où le bluff est roi. Annonce ton score, mens si tu l'oses,
-        et démasque les menteurs. Mais attention à bien écouter.
+        et démasque les menteurs. Maintenant jouable à distance, chacun sur son téléphone.
       </div>
       <div class="boutons">
-        <a class="btn btn-jouer" href="kinito.html">Jouer</a>
+        <a class="btn btn-en-ligne" href="kinito-en-ligne.html">Jouer en ligne (multijoueur)</a>
+        <a class="btn btn-jouer" href="kinito.html">Jouer en local (un seul téléphone)</a>
       </div>
     </div>
 
-    <!-- Jeu 2 : BeerBattle -->
+    <!-- BeerBattle -->
     <div class="jeu">
       <div class="jeu-icone">&#127183;</div>
       <div class="jeu-nom">BeerBattle</div>
@@ -148,7 +109,7 @@
         et fais boire tes adversaires jusqu'à les éliminer. Le dernier debout gagne.
       </div>
       <div class="boutons">
-        <a class="btn btn-jouer" href="beerbattle.html">Jouer</a>
+        <a class="btn btn-jouer" href="beerbattle.html">Jouer (un seul téléphone)</a>
       </div>
     </div>
   </div>

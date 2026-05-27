@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kinito en ligne</title>
+<style>
+  :root {
+    --fond: #1a1410;
+    --fond-carte: #2a1f17;
+    --accent: #e0a23b;
+    --accent-clair: #f5d28a;
+    --texte: #f0e6d2;
+    --texte-doux: #a89878;
+    --danger: #c0552f;
+    --vert: #6b8e4e;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: Georgia, 'Times New Roman', serif;
+    background: var(--fond);
+    background-image: radial-gradient(circle at 50% 0%, #2a1f17 0%, #1a1410 60%);
+    color: var(--texte);
+    min-height: 100vh;
+    display: flex; justify-content: center; align-items: flex-start;
+    padding: 20px;
+  }
+  .app { width: 100%; max-width: 440px; margin-top: 20px; }
+  h1 {
+    text-align: center; font-size: 2.2rem; color: var(--accent);
+    letter-spacing: 2px; margin-bottom: 6px;
+  }
+  .sous-titre { text-align: center; color: var(--texte-doux); font-style: italic; margin-bottom: 24px; font-size: 0.9rem; }
+  .carte {
+    background: var(--fond-carte); border: 1px solid rgba(224, 162, 59, 0.25);
+    border-radius: 14px; padding: 22px; margin-bottom: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  button {
+    font-family: inherit; font-size: 1rem; padding: 13px 18px; border: none;
+    border-radius: 10px; cursor: pointer; width: 100%; margin-top: 10px;
+    font-weight: bold; transition: transform 0.1s ease, filter 0.15s ease;
+  }
+  button:active { transform: scale(0.97); }
+  .btn-principal { background: var(--accent); color: #2a1f17; }
+  .btn-vert { background: var(--vert); color: #fff; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-neutre { background: #3a2d22; color: var(--texte); border: 1px solid rgba(224,162,59,0.3); }
+  label { display: block; margin-bottom: 6px; color: var(--texte-doux); font-size: 0.9rem; }
+  input {
+    width: 100%; padding: 12px; font-size: 1.1rem; font-family: inherit;
+    background: #1a1410; border: 1px solid var(--accent); border-radius: 8px;
+    color: var(--texte); text-align: center; margin-bottom: 10px;
+  }
+  .code-salon {
+    text-align: center; font-size: 2.5rem; letter-spacing: 8px;
+    color: var(--accent-clair); margin: 10px 0; font-weight: bold;
+  }
+  .liste-joueurs {
+    margin: 10px 0; padding: 10px; background: #1a1410;
+    border-radius: 8px; min-height: 60px;
+  }
+  .liste-joueurs .joueur {
+    padding: 6px 10px; color: var(--texte);
+    border-bottom: 1px solid rgba(224,162,59,0.15);
+  }
+  .liste-joueurs .joueur:last-child { border-bottom: none; }
+  .score-des {
+    font-size: 4.5rem; text-align: center; color: var(--accent-clair);
+    margin: 12px 0; letter-spacing: 6px;
+    text-shadow: 0 0 20px rgba(245, 210, 138, 0.3);
+  }
+  .info { text-align: center; font-size: 1.05rem; color: var(--accent-clair); margin-bottom: 12px; min-height: 24px; }
+  .grille-annonce {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px;
+  }
+  .grille-annonce button { margin-top: 0; font-size: 1.15rem; padding: 14px 0; }
+  .statut { text-align: center; color: var(--texte-doux); font-size: 0.85rem; margin-top: 8px; }
+  .hidden { display: none !important; }
+  .erreur {
+    background: rgba(192,85,47,0.2); border: 1px solid var(--danger);
+    color: var(--danger); padding: 10px; border-radius: 8px; margin-bottom: 10px;
+    text-align: center; font-size: 0.9rem;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>KINITO</h1>
+  <p class="sous-titre">En ligne, avec tes potes</p>
+
+  <!-- ECRAN 1 : Accueil (creer ou rejoindre un salon) -->
+  <div class="carte" id="ecran-accueil">
+    <label>Ton prénom</label>
+    <input type="text" id="prenom" placeholder="Ex: Enzo" maxlength="12">
+
+    <button class="btn-principal" onclick="creerSalon()">Créer un salon</button>
+
+    <div style="text-align:center; color:var(--texte-doux); margin: 14px 0 6px;">— ou —</div>
+
+    <label>Code du salon (4 lettres)</label>
+    <input type="text" id="code-rejoindre" placeholder="ABCD" maxlength="4" style="text-transform:uppercase">
+    <button class="btn-vert" onclick="rejoindreSalon()">Rejoindre</button>
+
+    <div id="erreur-accueil"></div>
+  </div>
+
+  <!-- ECRAN 2 : Salle d attente -->
+  <div class="carte hidden" id="ecran-attente">
+    <div style="text-align:center; color:var(--texte-doux);">Code du salon :</div>
+    <div class="code-salon" id="affichage-code">----</div>
+    <div style="text-align:center; color:var(--texte-doux); font-size:0.85rem; margin-bottom:10px;">
+      Partage ce code avec tes potes
+    </div>
+    <div style="color:var(--texte-doux); font-size:0.85rem; margin-top:14px;">Joueurs connectés :</div>
+    <div class="liste-joueurs" id="liste-joueurs"></div>
+    <button class="btn-principal hidden" id="btn-demarrer" onclick="demarrerPartie()">Démarrer la partie</button>
+    <div class="statut" id="statut-attente">En attente de joueurs...</div>
+  </div>
+
+  <!-- ECRAN 3 : Le jeu -->
+  <div class="carte hidden" id="ecran-jeu">
+    <div class="info" id="info-jeu"></div>
+
+    <!-- Phase lancer -->
+    <div id="phase-lancer" class="hidden">
+      <button class="btn-principal" onclick="envoyer('lancer')">Secouer et lancer</button>
+    </div>
+
+    <!-- Phase annonce (seul le lanceur voit cet ecran) -->
+    <div id="phase-annonce" class="hidden">
+      <div style="text-align:center; color:var(--texte-doux);">Ton vrai score :</div>
+      <div class="score-des" id="score-affiche">--</div>
+      <div style="text-align:center; color:var(--texte-doux); margin-top:8px;">
+        Annonce un score (vrai ou bluff) :
+      </div>
+      <div class="grille-annonce" id="grille-scores"></div>
+    </div>
+
+    <!-- Phase attente (les autres joueurs pendant que quelqu un joue) -->
+    <div id="phase-attente-jeu" class="hidden">
+      <div style="text-align:center; color:var(--texte-doux); font-style:italic; padding:20px;">
+        En attente du joueur actif...
+      </div>
+    </div>
+
+    <!-- Phase reaction (seul le joueur suivant voit cet ecran) -->
+    <div id="phase-reaction" class="hidden">
+      <div style="text-align:center; font-size:1.05rem;">
+        À toi de réagir, tu dois avoir entendu l'annonce
+      </div>
+      <div style="text-align:center; color:var(--texte-doux); font-style:italic; font-size:0.85rem; margin-top:6px;">
+        (personne ne te la répétera)
+      </div>
+      <button class="btn-vert" onclick="reactionPrendre()">Je prends</button>
+      <button class="btn-danger" onclick="reactionMenteur()">Menteur !</button>
+      <button class="btn-neutre" onclick="reactionMoins()">Tu as dit moins que le précédent</button>
+    </div>
+
+    <!-- Phase saisie denonciation -->
+    <div id="phase-denonciation" class="hidden">
+      <div style="text-align:center;">Quel score le joueur d'avant a-t-il annoncé ?</div>
+      <input type="number" id="champ-denonciation" placeholder="Ex : 65" style="margin-top:14px;">
+      <button class="btn-danger" onclick="validerDenonciation()">Valider</button>
+    </div>
+
+    <!-- Phase resultat (apres une manche) -->
+    <div id="phase-resultat" class="hidden">
+      <div id="texte-resultat" style="text-align:center; padding:10px;"></div>
+      <button class="btn-principal" onclick="envoyer('nouvelle_manche')">Manche suivante</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ==========================================================
+  // CONFIGURATION : adresse du serveur
+  // ==========================================================
+  // Serveur de production sur Render (HTTPS et WSS car chiffres).
+  const SERVEUR_HTTP = 'https://kinito-serveur.onrender.com';
+  const SERVEUR_WS   = 'wss://kinito-serveur.onrender.com';
+
+  // ==========================================================
+  // ETAT LOCAL : ce que ce navigateur sait
+  // ==========================================================
+  let ws = null;              // la connexion WebSocket
+  let monNom = '';
+  let codeSalon = '';
+  let monIndex = -1;          // mon numero de joueur dans le salon
+  let estCreateur = false;    // suis-je le createur du salon (peut demarrer) ?
+  let monScore = 0;           // mon vrai score quand je viens de lancer
+
+  // ==========================================================
+  // GESTION DES ECRANS
+  // ==========================================================
+  function montrerEcran(id) {
+    ['ecran-accueil', 'ecran-attente', 'ecran-jeu'].forEach(function(e) {
+      document.getElementById(e).classList.add('hidden');
+    });
+    document.getElementById(id).classList.remove('hidden');
+  }
+
+  function montrerPhase(id) {
+    ['phase-lancer', 'phase-annonce', 'phase-attente-jeu', 'phase-reaction',
+     'phase-denonciation', 'phase-resultat'].forEach(function(p) {
+      document.getElementById(p).classList.add('hidden');
+    });
+    document.getElementById(id).classList.remove('hidden');
+  }
+
+  function afficherErreur(message) {
+    const zone = document.getElementById('erreur-accueil');
+    zone.innerHTML = '<div class="erreur">' + message + '</div>';
+    setTimeout(function() { zone.innerHTML = ''; }, 4000);
+  }
+
+  // ==========================================================
+  // CREER UN SALON
+  // On demande au serveur un code, puis on rejoint le salon.
+  // ==========================================================
+  async function creerSalon() {
+    monNom = document.getElementById('prenom').value.trim();
+    if (!monNom) { afficherErreur('Entre ton prénom'); return; }
+
+    try {
+      const reponse = await fetch(SERVEUR_HTTP + '/creer-salon');
+      const data = await reponse.json();
+      codeSalon = data.code;
+      estCreateur = true;
+      seConnecter();
+    } catch (e) {
+      afficherErreur('Impossible de joindre le serveur. Est-il bien lancé ?');
+    }
+  }
+
+  // ==========================================================
+  // REJOINDRE UN SALON
+  // ==========================================================
+  async function rejoindreSalon() {
+    monNom = document.getElementById('prenom').value.trim();
+    if (!monNom) { afficherErreur('Entre ton prénom'); return; }
+
+    codeSalon = document.getElementById('code-rejoindre').value.trim().toUpperCase();
+    if (codeSalon.length !== 4) { afficherErreur('Le code doit faire 4 lettres'); return; }
+
+    try {
+      const reponse = await fetch(SERVEUR_HTTP + '/salon/' + codeSalon);
+      const data = await reponse.json();
+      if (!data.existe) { afficherErreur('Salon introuvable'); return; }
+      estCreateur = false;
+      seConnecter();
+    } catch (e) {
+      afficherErreur('Impossible de joindre le serveur');
+    }
+  }
+
+  // ==========================================================
+  // SE CONNECTER AU SALON via WebSocket
+  // ==========================================================
+  function seConnecter() {
+    ws = new WebSocket(SERVEUR_WS + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom));
+
+    ws.onopen = function() {
+      // Connexion etablie : on passe en salle d attente
+      document.getElementById('affichage-code').textContent = codeSalon;
+      montrerEcran('ecran-attente');
+      if (estCreateur) {
+        document.getElementById('btn-demarrer').classList.remove('hidden');
+      }
+    };
+
+    // Quand le serveur envoie un message, on l interprete
+    ws.onmessage = function(event) {
+      const message = JSON.parse(event.data);
+      traiterMessage(message);
+    };
+
+    ws.onerror = function() {
+      afficherErreur('Erreur de connexion au serveur');
+    };
+
+    ws.onclose = function() {
+      // Connexion fermee (serveur arrete ou probleme reseau)
+      console.log('Connexion fermée');
+    };
+  }
+
+  // ==========================================================
+  // ENVOYER UN MESSAGE AU SERVEUR
+  // ==========================================================
+  function envoyer(type, donnees) {
+    const message = Object.assign({ type: type }, donnees || {});
+    ws.send(JSON.stringify(message));
+  }
+
+  function demarrerPartie() {
+    envoyer('demarrer');
+  }
+
+  // ==========================================================
+  // TRAITER LES MESSAGES RECUS DU SERVEUR
+  // C est le cœur de l interactivite : selon le type de message,
+  // on met a jour l interface en consequence.
+  // ==========================================================
+  function traiterMessage(m) {
+    switch (m.type) {
+      case 'joueur_rejoint':
+      case 'joueur_parti':
+        majListeJoueurs(m.joueurs);
+        break;
+
+      case 'partie_demarree':
+        montrerEcran('ecran-jeu');
+        // On retient notre index dans la liste des joueurs
+        monIndex = m.joueurs.indexOf(monNom);
+        break;
+
+      case 'etat':
+        majEtatJeu(m);
+        break;
+
+      case 'ton_score':
+        // Le serveur nous envoie notre vrai score (a nous seul)
+        monScore = m.score;
+        afficherScoreEtAnnonces(m.score, m.scores_possibles);
+        break;
+
+      case 'annonce':
+        // Quelqu un a annonce, le reacteur va recevoir un autre message
+        if (m.reacteur === monNom) {
+          // C est moi qui dois reagir
+          montrerPhase('phase-reaction');
+        } else {
+          document.getElementById('info-jeu').textContent =
+            m.annonceur + ' a annoncé. ' + m.reacteur + ' réagit...';
+          montrerPhase('phase-attente-jeu');
+        }
+        break;
+
+      case 'a_toi_de_reagir':
+        document.getElementById('info-jeu').textContent = 'À toi de réagir';
+        montrerPhase('phase-reaction');
+        break;
+
+      case 'joueur_prend':
+        document.getElementById('info-jeu').textContent = m.nom + ' prend !';
+        break;
+
+      case 'fin_manche':
+        afficherResultat(m);
+        break;
+
+      case 'effet_special':
+        afficherEffetSpecial(m);
+        break;
+
+      case 'erreur':
+        alert(m.message);
+        break;
+    }
+  }
+
+  function majListeJoueurs(joueurs) {
+    const zone = document.getElementById('liste-joueurs');
+    zone.innerHTML = '';
+    joueurs.forEach(function(j) {
+      const div = document.createElement('div');
+      div.className = 'joueur';
+      div.textContent = '• ' + j;
+      zone.appendChild(div);
+    });
+    document.getElementById('statut-attente').textContent =
+      joueurs.length + ' joueur' + (joueurs.length > 1 ? 's' : '') + ' connecté' + (joueurs.length > 1 ? 's' : '');
+  }
+
+  function majEtatJeu(etat) {
+    const nomCourant = etat.joueurs[etat.joueur_courant];
+    if (nomCourant === monNom) {
+      document.getElementById('info-jeu').textContent = 'À toi de jouer';
+      montrerPhase('phase-lancer');
+    } else {
+      document.getElementById('info-jeu').textContent = 'Au tour de ' + nomCourant;
+      montrerPhase('phase-attente-jeu');
+    }
+  }
+
+  function afficherScoreEtAnnonces(score, scoresPossibles) {
+    document.getElementById('score-affiche').textContent = score;
+
+    // On construit les boutons d annonce, en sautant 31 et 51 (interdits)
+    const grille = document.getElementById('grille-scores');
+    grille.innerHTML = '';
+    scoresPossibles.forEach(function(s) {
+      if (s === 31 || s === 51) return;
+      const btn = document.createElement('button');
+      btn.className = 'btn-neutre';
+      btn.textContent = s;
+      btn.onclick = function() { envoyer('annoncer', { score: s }); };
+      grille.appendChild(btn);
+    });
+    montrerPhase('phase-annonce');
+  }
+
+  function reactionPrendre() { envoyer('reaction', { choix: 'prends' }); }
+  function reactionMenteur() { envoyer('reaction', { choix: 'menteur' }); }
+  function reactionMoins() { montrerPhase('phase-denonciation'); }
+
+  function validerDenonciation() {
+    const score = parseInt(document.getElementById('champ-denonciation').value);
+    envoyer('reaction', { choix: 'moins', score_cite: score });
+  }
+
+  function afficherResultat(m) {
+    const texte = document.getElementById('texte-resultat');
+    let sanctionTexte;
+    if (m.gorgees === null) {
+      sanctionTexte = '<div style="font-size:1.8rem; color:var(--danger); margin-top:8px;">Cul sec ou 2 bouchons</div>';
+    } else {
+      sanctionTexte = '<div style="font-size:2.2rem; color:var(--danger); margin-top:8px;">' + m.gorgees + ' gorgées</div>';
+    }
+
+    let revelation = '';
+    if (m.score_reel !== null && m.score_reel !== undefined) {
+      revelation = '<div style="color:var(--texte-doux); margin-bottom:6px;">Vrai score révélé : <span style="color:var(--accent-clair); font-weight:bold;">' + m.score_reel + '</span></div>';
+    }
+
+    texte.innerHTML =
+      revelation +
+      '<div style="font-size:1.3rem; color:var(--accent);">' + m.perdant + '</div>' +
+      '<div style="color:var(--texte-doux); font-style:italic;">' + m.message + '</div>' +
+      sanctionTexte +
+      (m.menteur ? '<div style="color:var(--danger);">(pénalité menteur)</div>' : '');
+
+    montrerPhase('phase-resultat');
+  }
+
+  function afficherEffetSpecial(m) {
+    const texte = document.getElementById('texte-resultat');
+    texte.innerHTML =
+      '<div style="font-size:1.5rem; color:var(--accent);">' + m.effet + '</div>' +
+      '<div style="color:var(--accent-clair); margin-top:8px;">' + m.message + '</div>';
+    montrerPhase('phase-resultat');
+  }
+</script>
+</body>
+</html>
