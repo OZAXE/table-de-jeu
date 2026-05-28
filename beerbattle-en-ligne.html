@@ -433,10 +433,21 @@
     return false;
   }
 
+  function nettoyerPlateau() {
+    document.querySelectorAll('#plateau .case').forEach(function(caseDiv) {
+      caseDiv.classList.remove('atteignable', 'cible');
+      caseDiv.onclick = null;
+    });
+  }
+
   function afficherActions() {
     const zone = document.getElementById('zone-actions');
     zone.innerHTML = '';
     if (!etatActuel) return;
+
+    // Nettoyage du plateau : on enleve les surbrillances et les clics
+    // fantomes laisses par un deplacement ou une attaque precedente.
+    nettoyerPlateau();
 
     if (etatActuel.phase === 'placement') {
       if (etatActuel.joueur_en_placement === monIndex) activerPlacement();
@@ -519,7 +530,18 @@
           });
         }
       } else if (carte.type === 'joker') {
-        ciblesViaArmes().forEach(function(j) {
+        const ciblesJoker = ciblesViaArmes();
+        if (ciblesJoker.length === 0) {
+          const aide = document.createElement('div');
+          aide.style.cssText = 'color:var(--texte-doux); font-size:0.82rem; text-align:center; margin-top:8px;';
+          if (!etatActuel.armes[monIndex] || etatActuel.armes[monIndex].length === 0) {
+            aide.textContent = "Le Joker nécessite une arme posée (Roi ou Valet) pour être utilisé.";
+          } else {
+            aide.textContent = "Aucune cible à portée de tes armes pour le Joker.";
+          }
+          zone.appendChild(aide);
+        }
+        ciblesJoker.forEach(function(j) {
           const b = document.createElement('button');
           b.className = 'btn-danger';
           b.textContent = 'Joker sur ' + etatActuel.joueurs[j] + ' (mi-verre)';
