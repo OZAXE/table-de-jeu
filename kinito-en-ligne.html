@@ -31,6 +31,9 @@
     letter-spacing: 2px; margin-bottom: 6px;
   }
   .sous-titre { text-align: center; color: var(--texte-doux); font-style: italic; margin-bottom: 24px; font-size: 0.9rem; }
+  .barre-haut { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .lien-haut { color: var(--texte-doux); text-decoration: none; font-size: 0.85rem; cursor: pointer; background: none; border: none; font-family: inherit; padding: 0; width: auto; margin: 0; }
+  .lien-haut:hover { color: var(--accent); }
   .carte {
     background: var(--fond-carte); border: 1px solid rgba(224, 162, 59, 0.25);
     border-radius: 14px; padding: 22px; margin-bottom: 16px;
@@ -56,24 +59,15 @@
     text-align: center; font-size: 2.5rem; letter-spacing: 8px;
     color: var(--accent-clair); margin: 10px 0; font-weight: bold;
   }
-  .liste-joueurs {
-    margin: 10px 0; padding: 10px; background: #1a1410;
-    border-radius: 8px; min-height: 60px;
-  }
-  .liste-joueurs .joueur {
-    padding: 6px 10px; color: var(--texte);
-    border-bottom: 1px solid rgba(224,162,59,0.15);
-  }
+  .liste-joueurs { margin: 10px 0; padding: 10px; background: #1a1410; border-radius: 8px; min-height: 60px; }
+  .liste-joueurs .joueur { padding: 6px 10px; color: var(--texte); border-bottom: 1px solid rgba(224,162,59,0.15); }
   .liste-joueurs .joueur:last-child { border-bottom: none; }
   .score-des {
     font-size: 4.5rem; text-align: center; color: var(--accent-clair);
-    margin: 12px 0; letter-spacing: 6px;
-    text-shadow: 0 0 20px rgba(245, 210, 138, 0.3);
+    margin: 12px 0; letter-spacing: 6px; text-shadow: 0 0 20px rgba(245, 210, 138, 0.3);
   }
   .info { text-align: center; font-size: 1.05rem; color: var(--accent-clair); margin-bottom: 12px; min-height: 24px; }
-  .grille-annonce {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px;
-  }
+  .grille-annonce { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
   .grille-annonce button { margin-top: 0; font-size: 1.15rem; padding: 14px 0; }
   .statut { text-align: center; color: var(--texte-doux); font-size: 0.85rem; margin-top: 8px; }
   .hidden { display: none !important; }
@@ -82,26 +76,89 @@
     color: var(--danger); padding: 10px; border-radius: 8px; margin-bottom: 10px;
     text-align: center; font-size: 0.9rem;
   }
+  /* Modale regles */
+  .modale-fond {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.78);
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 20px; z-index: 100; overflow-y: auto;
+  }
+  .modale {
+    background: var(--fond-carte); border: 1px solid var(--accent);
+    border-radius: 14px; padding: 22px; max-width: 440px; width: 100%;
+    margin: auto; line-height: 1.55;
+  }
+  .modale h2 { color: var(--accent); font-size: 1.4rem; margin-bottom: 12px; text-align: center; }
+  .modale h3 { color: var(--accent-clair); font-size: 1.05rem; margin: 16px 0 6px; }
+  .modale p { margin-bottom: 10px; font-size: 0.9rem; }
+  .modale ul { margin: 0 0 10px 18px; font-size: 0.9rem; }
+  .modale li { margin-bottom: 5px; }
+  .modale table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.82rem; }
+  .modale th, .modale td { padding: 6px 8px; text-align: center; border-bottom: 1px solid rgba(224,162,59,0.2); }
+  .modale th { color: var(--accent); }
+  .modale .accent { color: var(--accent-clair); font-weight: bold; }
+  .modale .btn-fermer { background: var(--accent); color: #2a1f17; margin-top: 16px; }
 </style>
 </head>
 <body>
 <div class="app">
+  <div class="barre-haut">
+    <a class="lien-haut" href="index.html">&#8592; Menu</a>
+    <button class="lien-haut" onclick="ouvrirRegles()">Règles &#9432;</button>
+  </div>
   <h1>KINITO</h1>
   <p class="sous-titre">En ligne, avec tes potes</p>
 
-  <!-- ECRAN 1 : Accueil (creer ou rejoindre un salon) -->
+  <!-- Modale regles -->
+  <div class="modale-fond hidden" id="modale-regles">
+    <div class="modale">
+      <h2>Règles du Kinito</h2>
+      <p>Fais le plus gros score sans te faire prendre à mentir, et sans annoncer moins que le joueur précédent. Celui qui perd boit.</p>
+      <h3>Un tour</h3>
+      <p>Tu lances, tu vois ton score (toi seul). Il se lit gros chiffre en premier : un 4 et un 2 font 42. Tu annonces un score à voix haute, vrai ou faux. Le joueur suivant, qui doit avoir <span class="accent">écouté</span> (personne ne répète l'annonce), réagit.</p>
+      <h3>Les réactions</h3>
+      <ul>
+        <li><span class="accent">Je prends</span> : il te croit et doit faire mieux.</li>
+        <li><span class="accent">Menteur</span> : il t'accuse. On révèle le vrai score. Mentir = annoncer un score différent du vrai, dans un sens ou l'autre.</li>
+        <li><span class="accent">Tu as fait moins</span> : il t'accuse d'avoir annoncé sous le précédent. Il doit citer le score précédent exact, sinon c'est lui qui perd.</li>
+      </ul>
+      <p>Celui qui se trompe boit. Démasqué menteur, tu bois le maximum entre la pénalité de ton vrai jet et celle de ton annonce, en version doublée.</p>
+      <h3>Hiérarchie (faible vers fort)</h3>
+      <p>31, puis 32, 41, 42, 43, 52, 53, 54, 61 à 65, puis les doubles 11, 22, 33, 44, 55, 66, puis 21 (le plus fort). Égalités permises.</p>
+      <h3>Tableau des gorgées</h3>
+      <table>
+        <tr><th>Score</th><th>Simple</th><th>Menteur</th></tr>
+        <tr><td>32</td><td>3</td><td>6</td></tr>
+        <tr><td>41-43</td><td>4</td><td>8</td></tr>
+        <tr><td>52-54</td><td>5</td><td>10</td></tr>
+        <tr><td>61-65</td><td>6</td><td>12</td></tr>
+        <tr><td>11</td><td>7</td><td>14</td></tr>
+        <tr><td>22</td><td>8</td><td>16</td></tr>
+        <tr><td>33</td><td>9</td><td>18</td></tr>
+        <tr><td>44</td><td>10</td><td>20</td></tr>
+        <tr><td>55</td><td>11</td><td>22</td></tr>
+        <tr><td>66</td><td>12</td><td>24</td></tr>
+      </table>
+      <h3>Scores spéciaux</h3>
+      <ul>
+        <li><span class="accent">21</span> : le plus fort, bluff possible. Sanction : cul sec ou 2 bouchons.</li>
+        <li><span class="accent">51</span> : annule tout, on repart de zéro, tout le monde boit 1 gorgée.</li>
+        <li><span class="accent">31</span> : change le sens de rotation.</li>
+      </ul>
+      <h3>Assumer avoir perdu</h3>
+      <p>Si tu as fait moins que le score à battre, avoue avec « j'ai perdu » : tu bois la colonne simple du score à battre, sans double peine.</p>
+      <button class="btn-fermer" onclick="fermerRegles()">Fermer</button>
+    </div>
+  </div>
+
+  <!-- ECRAN 1 : Accueil -->
   <div class="carte" id="ecran-accueil">
     <label>Ton prénom</label>
     <input type="text" id="prenom" placeholder="Ex: Enzo" maxlength="12">
-
     <button class="btn-principal" onclick="creerSalon()">Créer un salon</button>
-
     <div style="text-align:center; color:var(--texte-doux); margin: 14px 0 6px;">— ou —</div>
-
     <label>Code du salon (4 lettres)</label>
     <input type="text" id="code-rejoindre" placeholder="ABCD" maxlength="4" style="text-transform:uppercase">
     <button class="btn-vert" onclick="rejoindreSalon()">Rejoindre</button>
-
     <div id="erreur-accueil"></div>
   </div>
 
@@ -109,9 +166,7 @@
   <div class="carte hidden" id="ecran-attente">
     <div style="text-align:center; color:var(--texte-doux);">Code du salon :</div>
     <div class="code-salon" id="affichage-code">----</div>
-    <div style="text-align:center; color:var(--texte-doux); font-size:0.85rem; margin-bottom:10px;">
-      Partage ce code avec tes potes
-    </div>
+    <div style="text-align:center; color:var(--texte-doux); font-size:0.85rem; margin-bottom:10px;">Partage ce code avec tes potes</div>
     <div style="color:var(--texte-doux); font-size:0.85rem; margin-top:14px;">Joueurs connectés :</div>
     <div class="liste-joueurs" id="liste-joueurs"></div>
     <button class="btn-principal hidden" id="btn-demarrer" onclick="demarrerPartie()">Démarrer la partie</button>
@@ -122,49 +177,36 @@
   <div class="carte hidden" id="ecran-jeu">
     <div class="info" id="info-jeu"></div>
 
-    <!-- Phase lancer -->
     <div id="phase-lancer" class="hidden">
       <button class="btn-principal" onclick="envoyer('lancer')">Secouer et lancer</button>
     </div>
 
-    <!-- Phase annonce (seul le lanceur voit cet ecran) -->
     <div id="phase-annonce" class="hidden">
       <div style="text-align:center; color:var(--texte-doux);">Ton vrai score :</div>
       <div class="score-des" id="score-affiche">--</div>
-      <div style="text-align:center; color:var(--texte-doux); margin-top:8px;">
-        Annonce un score (vrai ou bluff) :
-      </div>
+      <div style="text-align:center; color:var(--texte-doux); margin-top:8px;">Annonce un score (vrai ou bluff) :</div>
       <div class="grille-annonce" id="grille-scores"></div>
+      <button class="btn-danger hidden" id="btn-abandon" onclick="envoyer('abandonner')" style="margin-top:14px;">J'ai perdu (j'assume avoir fait moins)</button>
     </div>
 
-    <!-- Phase attente (les autres joueurs pendant que quelqu un joue) -->
     <div id="phase-attente-jeu" class="hidden">
-      <div style="text-align:center; color:var(--texte-doux); font-style:italic; padding:20px;">
-        En attente du joueur actif...
-      </div>
+      <div style="text-align:center; color:var(--texte-doux); font-style:italic; padding:20px;">En attente du joueur actif...</div>
     </div>
 
-    <!-- Phase reaction (seul le joueur suivant voit cet ecran) -->
     <div id="phase-reaction" class="hidden">
-      <div style="text-align:center; font-size:1.05rem;">
-        À toi de réagir, tu dois avoir entendu l'annonce
-      </div>
-      <div style="text-align:center; color:var(--texte-doux); font-style:italic; font-size:0.85rem; margin-top:6px;">
-        (personne ne te la répétera)
-      </div>
+      <div style="text-align:center; font-size:1.05rem;">À toi de réagir, tu dois avoir entendu l'annonce</div>
+      <div style="text-align:center; color:var(--texte-doux); font-style:italic; font-size:0.85rem; margin-top:6px;">(personne ne te la répétera)</div>
       <button class="btn-vert" onclick="reactionPrendre()">Je prends</button>
       <button class="btn-danger" onclick="reactionMenteur()">Menteur !</button>
       <button class="btn-neutre" onclick="reactionMoins()">Tu as dit moins que le précédent</button>
     </div>
 
-    <!-- Phase saisie denonciation -->
     <div id="phase-denonciation" class="hidden">
       <div style="text-align:center;">Quel score le joueur d'avant a-t-il annoncé ?</div>
       <input type="number" id="champ-denonciation" placeholder="Ex : 65" style="margin-top:14px;">
       <button class="btn-danger" onclick="validerDenonciation()">Valider</button>
     </div>
 
-    <!-- Phase resultat (apres une manche) -->
     <div id="phase-resultat" class="hidden">
       <div id="texte-resultat" style="text-align:center; padding:10px;"></div>
       <button class="btn-principal" onclick="envoyer('nouvelle_manche')">Manche suivante</button>
@@ -173,33 +215,26 @@
 </div>
 
 <script>
-  // ==========================================================
-  // CONFIGURATION : adresse du serveur
-  // ==========================================================
-  // Serveur de production sur Render (HTTPS et WSS car chiffres).
+  // Serveur de production sur Render (HTTPS et WSS).
   const SERVEUR_HTTP = 'https://kinito-serveur.onrender.com';
   const SERVEUR_WS   = 'wss://kinito-serveur.onrender.com';
 
-  // ==========================================================
-  // ETAT LOCAL : ce que ce navigateur sait
-  // ==========================================================
-  let ws = null;              // la connexion WebSocket
+  let ws = null;
   let monNom = '';
   let codeSalon = '';
-  let monIndex = -1;          // mon numero de joueur dans le salon
-  let estCreateur = false;    // suis-je le createur du salon (peut demarrer) ?
-  let monScore = 0;           // mon vrai score quand je viens de lancer
+  let monIndex = -1;
+  let estCreateur = false;
+  let monScore = 0;
 
-  // ==========================================================
-  // GESTION DES ECRANS
-  // ==========================================================
+  function ouvrirRegles() { document.getElementById('modale-regles').classList.remove('hidden'); }
+  function fermerRegles() { document.getElementById('modale-regles').classList.add('hidden'); }
+
   function montrerEcran(id) {
     ['ecran-accueil', 'ecran-attente', 'ecran-jeu'].forEach(function(e) {
       document.getElementById(e).classList.add('hidden');
     });
     document.getElementById(id).classList.remove('hidden');
   }
-
   function montrerPhase(id) {
     ['phase-lancer', 'phase-annonce', 'phase-attente-jeu', 'phase-reaction',
      'phase-denonciation', 'phase-resultat'].forEach(function(p) {
@@ -207,21 +242,15 @@
     });
     document.getElementById(id).classList.remove('hidden');
   }
-
   function afficherErreur(message) {
     const zone = document.getElementById('erreur-accueil');
     zone.innerHTML = '<div class="erreur">' + message + '</div>';
     setTimeout(function() { zone.innerHTML = ''; }, 4000);
   }
 
-  // ==========================================================
-  // CREER UN SALON
-  // On demande au serveur un code, puis on rejoint le salon.
-  // ==========================================================
   async function creerSalon() {
     monNom = document.getElementById('prenom').value.trim();
     if (!monNom) { afficherErreur('Entre ton prénom'); return; }
-
     try {
       const reponse = await fetch(SERVEUR_HTTP + '/creer-salon');
       const data = await reponse.json();
@@ -229,20 +258,15 @@
       estCreateur = true;
       seConnecter();
     } catch (e) {
-      afficherErreur('Impossible de joindre le serveur. Est-il bien lancé ?');
+      afficherErreur('Impossible de joindre le serveur. Patiente, il se réveille peut-être (30s).');
     }
   }
 
-  // ==========================================================
-  // REJOINDRE UN SALON
-  // ==========================================================
   async function rejoindreSalon() {
     monNom = document.getElementById('prenom').value.trim();
     if (!monNom) { afficherErreur('Entre ton prénom'); return; }
-
     codeSalon = document.getElementById('code-rejoindre').value.trim().toUpperCase();
     if (codeSalon.length !== 4) { afficherErreur('Le code doit faire 4 lettres'); return; }
-
     try {
       const reponse = await fetch(SERVEUR_HTTP + '/salon/' + codeSalon);
       const data = await reponse.json();
@@ -254,106 +278,62 @@
     }
   }
 
-  // ==========================================================
-  // SE CONNECTER AU SALON via WebSocket
-  // ==========================================================
   function seConnecter() {
     ws = new WebSocket(SERVEUR_WS + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom));
-
     ws.onopen = function() {
-      // Connexion etablie : on passe en salle d attente
       document.getElementById('affichage-code').textContent = codeSalon;
       montrerEcran('ecran-attente');
-      if (estCreateur) {
-        document.getElementById('btn-demarrer').classList.remove('hidden');
-      }
+      if (estCreateur) document.getElementById('btn-demarrer').classList.remove('hidden');
     };
-
-    // Quand le serveur envoie un message, on l interprete
-    ws.onmessage = function(event) {
-      const message = JSON.parse(event.data);
-      traiterMessage(message);
-    };
-
-    ws.onerror = function() {
-      afficherErreur('Erreur de connexion au serveur');
-    };
-
-    ws.onclose = function() {
-      // Connexion fermee (serveur arrete ou probleme reseau)
-      console.log('Connexion fermée');
-    };
+    ws.onmessage = function(event) { traiterMessage(JSON.parse(event.data)); };
+    ws.onerror = function() { afficherErreur('Erreur de connexion au serveur'); };
+    ws.onclose = function() { console.log('Connexion fermée'); };
   }
 
-  // ==========================================================
-  // ENVOYER UN MESSAGE AU SERVEUR
-  // ==========================================================
   function envoyer(type, donnees) {
     const message = Object.assign({ type: type }, donnees || {});
     ws.send(JSON.stringify(message));
   }
+  function demarrerPartie() { envoyer('demarrer'); }
 
-  function demarrerPartie() {
-    envoyer('demarrer');
-  }
-
-  // ==========================================================
-  // TRAITER LES MESSAGES RECUS DU SERVEUR
-  // C est le cœur de l interactivite : selon le type de message,
-  // on met a jour l interface en consequence.
-  // ==========================================================
   function traiterMessage(m) {
     switch (m.type) {
       case 'joueur_rejoint':
       case 'joueur_parti':
         majListeJoueurs(m.joueurs);
         break;
-
       case 'partie_demarree':
         montrerEcran('ecran-jeu');
-        // On retient notre index dans la liste des joueurs
         monIndex = m.joueurs.indexOf(monNom);
         break;
-
       case 'etat':
         majEtatJeu(m);
         break;
-
       case 'ton_score':
-        // Le serveur nous envoie notre vrai score (a nous seul)
         monScore = m.score;
-        afficherScoreEtAnnonces(m.score, m.scores_possibles);
+        afficherScoreEtAnnonces(m.score, m.scores_possibles, m.premiere_annonce);
         break;
-
       case 'annonce':
-        // Quelqu un a annonce, le reacteur va recevoir un autre message
         if (m.reacteur === monNom) {
-          // C est moi qui dois reagir
           montrerPhase('phase-reaction');
         } else {
-          document.getElementById('info-jeu').textContent =
-            m.annonceur + ' a annoncé. ' + m.reacteur + ' réagit...';
+          document.getElementById('info-jeu').textContent = m.annonceur + ' a annoncé. ' + m.reacteur + ' réagit...';
           montrerPhase('phase-attente-jeu');
         }
         break;
-
       case 'a_toi_de_reagir':
         document.getElementById('info-jeu').textContent = 'À toi de réagir';
         montrerPhase('phase-reaction');
         break;
-
       case 'joueur_prend':
         document.getElementById('info-jeu').textContent = m.nom + ' prend !';
         break;
-
       case 'fin_manche':
         afficherResultat(m);
         break;
-
       case 'effet_special':
         afficherEffetSpecial(m);
         break;
-
       case 'erreur':
         alert(m.message);
         break;
@@ -384,10 +364,8 @@
     }
   }
 
-  function afficherScoreEtAnnonces(score, scoresPossibles) {
+  function afficherScoreEtAnnonces(score, scoresPossibles, premiereAnnonce) {
     document.getElementById('score-affiche').textContent = score;
-
-    // On construit les boutons d annonce, en sautant 31 et 51 (interdits)
     const grille = document.getElementById('grille-scores');
     grille.innerHTML = '';
     scoresPossibles.forEach(function(s) {
@@ -398,13 +376,16 @@
       btn.onclick = function() { envoyer('annoncer', { score: s }); };
       grille.appendChild(btn);
     });
+    // Le bouton "j ai perdu" n apparait que s il y a une annonce a battre
+    const btnAbandon = document.getElementById('btn-abandon');
+    if (premiereAnnonce) btnAbandon.classList.add('hidden');
+    else btnAbandon.classList.remove('hidden');
     montrerPhase('phase-annonce');
   }
 
   function reactionPrendre() { envoyer('reaction', { choix: 'prends' }); }
   function reactionMenteur() { envoyer('reaction', { choix: 'menteur' }); }
   function reactionMoins() { montrerPhase('phase-denonciation'); }
-
   function validerDenonciation() {
     const score = parseInt(document.getElementById('champ-denonciation').value);
     envoyer('reaction', { choix: 'moins', score_cite: score });
@@ -418,19 +399,16 @@
     } else {
       sanctionTexte = '<div style="font-size:2.2rem; color:var(--danger); margin-top:8px;">' + m.gorgees + ' gorgées</div>';
     }
-
     let revelation = '';
     if (m.score_reel !== null && m.score_reel !== undefined) {
       revelation = '<div style="color:var(--texte-doux); margin-bottom:6px;">Vrai score révélé : <span style="color:var(--accent-clair); font-weight:bold;">' + m.score_reel + '</span></div>';
     }
-
     texte.innerHTML =
       revelation +
       '<div style="font-size:1.3rem; color:var(--accent);">' + m.perdant + '</div>' +
       '<div style="color:var(--texte-doux); font-style:italic;">' + m.message + '</div>' +
       sanctionTexte +
       (m.menteur ? '<div style="color:var(--danger);">(pénalité menteur)</div>' : '');
-
     montrerPhase('phase-resultat');
   }
 
