@@ -492,13 +492,32 @@
           zone.appendChild(b);
         });
       } else if (carte.type === 'as') {
+        // Option 1 : frapper quelqu un deja sur ma case
         ciblesIci.forEach(function(j) {
           const b = document.createElement('button');
           b.className = 'btn-danger';
-          b.textContent = 'As sur ' + etatActuel.joueurs[j] + ' (mi-verre)';
+          b.textContent = 'As sur ' + etatActuel.joueurs[j] + ' (mi-verre, sur place)';
           b.onclick = function() { envoyer('bb_attaquer', { cible: j, index_carte: carteChoisie, type_attaque: 'as' }); };
           zone.appendChild(b);
         });
+        // Option 2 : se deplacer d une case vers un adversaire adjacent et le frapper
+        const ciblesAdjacentes = adversairesAdjacents();
+        if (ciblesAdjacentes.length > 0) {
+          const aide = document.createElement('div');
+          aide.style.cssText = 'color:var(--texte-doux); font-size:0.82rem; text-align:center; margin-top:8px;';
+          aide.textContent = "As : foncer sur un adversaire à 1 case et le frapper";
+          zone.appendChild(aide);
+          ciblesAdjacentes.forEach(function(j) {
+            const pos = etatActuel.positions[j];
+            const b = document.createElement('button');
+            b.className = 'btn-danger';
+            b.textContent = "Foncer sur " + etatActuel.joueurs[j] + " (mi-verre)";
+            b.onclick = function() {
+              envoyer('bb_as_deplacer', { ligne: pos.ligne, colonne: pos.colonne, cible: j, index_carte: carteChoisie });
+            };
+            zone.appendChild(b);
+          });
+        }
       } else if (carte.type === 'joker') {
         ciblesViaArmes().forEach(function(j) {
           const b = document.createElement('button');
@@ -599,6 +618,19 @@ function afficherRamassage(zone) {
       if (i === monIndex || etatActuel.elimine[i]) continue;
       const p = etatActuel.positions[i];
       if (p && p.ligne === moi.ligne && p.colonne === moi.colonne) liste.push(i);
+    }
+    return liste;
+  }
+
+  function adversairesAdjacents() {
+    const moi = etatActuel.positions[monIndex];
+    const liste = [];
+    for (let i = 0; i < etatActuel.positions.length; i++) {
+      if (i === monIndex || etatActuel.elimine[i]) continue;
+      const p = etatActuel.positions[i];
+      if (!p) continue;
+      const dist = Math.abs(p.ligne - moi.ligne) + Math.abs(p.colonne - moi.colonne);
+      if (dist === 1) liste.push(i);
     }
     return liste;
   }
