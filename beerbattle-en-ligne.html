@@ -211,6 +211,7 @@
   let maMain = [];
   let etatActuel = null;
   let carteChoisie = null;
+  let carteDeMaCase = null;   // contenu de ma case, recu du serveur en phase ramassage
   let COULEURS = ['var(--j1)', 'var(--j2)', 'var(--j3)', 'var(--j4)', 'var(--j5)'];
 
   function ouvrirRegles() { document.getElementById('modale-regles').classList.remove('hidden'); }
@@ -274,6 +275,8 @@
         maMain = m.main; monIndex = m.mon_index; afficherMain(); afficherActions(); break;
       case 'bb_etat':
         etatActuel = m; majAffichage(); break;
+      case 'bb_carte_case':
+        carteDeMaCase = m.carte; afficherActions(); break;
       case 'bb_victoire':
         document.getElementById('message-fin').textContent = '🏆 ' + m.gagnant + ' gagne !';
         montrerEcran('ecran-fin'); break;
@@ -530,29 +533,39 @@
   }
 
   // Phase de ramassage apres l action
-  function afficherRamassage(zone) {
+function afficherRamassage(zone) {
     const moi = etatActuel.positions[monIndex];
     const aCarte = etatActuel.plateau[moi.ligne][moi.colonne] === true;
     document.getElementById('info-jeu').textContent = 'Ton action est faite';
 
     if (aCarte) {
+      // On affiche la carte de la case (recue du serveur, secrete)
+      if (carteDeMaCase) {
+        const apercu = document.createElement('div');
+        apercu.style.cssText = 'text-align:center; margin:8px 0; padding:10px; background:#0d2a1f; border-radius:8px;';
+        apercu.innerHTML = '<div style="color:var(--texte-doux); font-size:0.82rem;">Carte sous toi :</div>' +
+          '<div style="color:var(--accent-clair); font-weight:bold; font-size:1.1rem;">' +
+          carteDeMaCase.symbole + ' — ' + carteDeMaCase.libelle + '</div>';
+        zone.appendChild(apercu);
+      }
+
       const mainPleine = maMain.length >= (etatActuel.max_cartes || 4);
       if (!mainPleine) {
         const b = document.createElement('button');
         b.className = 'btn-principal';
-        b.textContent = 'Prendre la carte de ma case';
-        b.onclick = function() { envoyer('bb_ramasser', { decision: 'prendre' }); };
+        b.textContent = 'Prendre cette carte';
+        b.onclick = function() { carteDeMaCase = null; envoyer('bb_ramasser', { decision: 'prendre' }); };
         zone.appendChild(b);
       } else {
         const aide = document.createElement('div');
         aide.style.cssText = 'color:var(--texte-doux); font-size:0.82rem; text-align:center; margin-top:6px;';
-        aide.textContent = 'Main pleine : échanger une carte (la tienne reste sur la case)';
+        aide.textContent = 'Main pleine : échanger une de tes cartes contre celle-ci';
         zone.appendChild(aide);
         maMain.forEach(function(carte, i) {
           const b = document.createElement('button');
           b.className = 'btn-neutre';
-          b.textContent = 'Échanger ' + carte.symbole + ' (' + libelleCourt(carte) + ')';
-          b.onclick = function() { envoyer('bb_ramasser', { decision: 'echanger', index_echange: i }); };
+          b.textContent = 'Donner ' + carte.symbole + ' (' + libelleCourt(carte) + ') et prendre ' + carteDeMaCase.symbole;
+          b.onclick = function() { carteDeMaCase = null; envoyer('bb_ramasser', { decision: 'echanger', index_echange: i }); };
           zone.appendChild(b);
         });
       }
@@ -560,7 +573,7 @@
     const bFin = document.createElement('button');
     bFin.className = aCarte ? 'btn-neutre' : 'btn-principal';
     bFin.textContent = aCarte ? 'Ne pas prendre, finir le tour' : 'Finir mon tour';
-    bFin.onclick = function() { envoyer('bb_ramasser', { decision: 'rien' }); };
+    bFin.onclick = function() { carteDeMaCase = null; envoyer('bb_ramasser', { decision: 'rien' }); };
     zone.appendChild(bFin);
   }
 
