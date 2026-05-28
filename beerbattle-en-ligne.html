@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BeerBattle en ligne</title>
+<style>
+  :root {
+    --fond: #0d2a1f;
+    --fond-carte: #134032;
+    --case: #14513c;
+    --case-bord: #1d6b50;
+    --accent: #d4af68;
+    --accent-clair: #ecd29a;
+    --texte: #f0ece0;
+    --texte-doux: #9bb0a4;
+    --carte-dos: #1a5c44;
+    --carte-dos-bord: #2a7d5e;
+    --danger: #d0563b;
+    --vert: #4fb37a;
+    --j1: #e0563b; --j2: #4fb3d4; --j3: #e0a23b; --j4: #b06fd4; --j5: #e8e2d0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+    background: var(--fond);
+    background-image: radial-gradient(circle at 50% 0%, #134032 0%, #0d2a1f 65%);
+    color: var(--texte); min-height: 100vh;
+    display: flex; justify-content: center; align-items: flex-start; padding: 16px;
+  }
+  .app { width: 100%; max-width: 540px; margin-top: 12px; }
+  h1 { text-align: center; font-size: 1.9rem; color: var(--accent); letter-spacing: 1px; margin-bottom: 4px; }
+  .sous-titre { text-align: center; color: var(--texte-doux); font-size: 0.9rem; margin-bottom: 18px; }
+  .barre-haut { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .lien-haut { color: var(--texte-doux); text-decoration: none; font-size: 0.85rem; cursor: pointer; background: none; border: none; font-family: inherit; padding: 0; width: auto; margin: 0; }
+  .lien-haut:hover { color: var(--accent); }
+  .carte-ui {
+    background: var(--fond-carte); border: 1px solid rgba(212, 175, 104, 0.2);
+    border-radius: 14px; padding: 20px; margin-bottom: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  button {
+    font-family: inherit; font-size: 1rem; padding: 13px 18px; border: none;
+    border-radius: 10px; cursor: pointer; width: 100%; margin-top: 10px; font-weight: bold;
+    transition: transform 0.1s ease, filter 0.15s ease;
+  }
+  button:active { transform: scale(0.97); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-principal { background: var(--accent); color: #14181f; }
+  .btn-vert { background: var(--vert); color: #08231a; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-neutre { background: #0d2a1f; color: var(--texte-doux); border: 1px solid var(--case-bord); }
+  label { display: block; margin-bottom: 6px; color: var(--texte-doux); font-size: 0.9rem; }
+  input {
+    width: 100%; padding: 12px; font-size: 1.1rem; font-family: inherit;
+    background: #0d2a1f; border: 1px solid var(--accent); border-radius: 8px;
+    color: var(--texte); text-align: center; margin-bottom: 10px;
+  }
+  .code-salon { text-align: center; font-size: 2.5rem; letter-spacing: 8px; color: var(--accent-clair); margin: 10px 0; font-weight: bold; }
+  .liste-joueurs { margin: 10px 0; padding: 10px; background: #0d2a1f; border-radius: 8px; min-height: 50px; }
+  .liste-joueurs .joueur { padding: 6px 10px; border-bottom: 1px solid rgba(212,175,104,0.15); }
+  .liste-joueurs .joueur:last-child { border-bottom: none; }
+  .statut { text-align: center; color: var(--texte-doux); font-size: 0.85rem; margin-top: 8px; }
+
+  .compteurs { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .compteur { flex: 1; min-width: 64px; padding: 6px 4px; border-radius: 8px; text-align: center; font-size: 0.78rem; border: 2px solid transparent; background: #0d2a1f; }
+  .compteur.actif { border-color: var(--accent); }
+  .compteur.elimine { opacity: 0.35; text-decoration: line-through; }
+  .compteur .nom { font-weight: bold; }
+  .compteur .verre { height: 7px; border-radius: 4px; background: var(--case-bord); margin-top: 4px; overflow: hidden; }
+  .compteur .verre-plein { height: 100%; background: var(--danger); transition: width 0.3s ease; }
+  .compteur .valeur { font-size: 0.72rem; color: var(--texte-doux); margin-top: 2px; }
+
+  .plateau { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 0 auto 12px; }
+  .case {
+    aspect-ratio: 1; background: var(--carte-dos); border: 1px solid var(--carte-dos-bord);
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    cursor: default; position: relative; transition: transform 0.1s ease, box-shadow 0.15s ease;
+    background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.03) 4px, rgba(255,255,255,0.03) 8px);
+  }
+  .case.vide { background: var(--case); background-image: none; border-style: dashed; opacity: 0.5; }
+  .case.cible { cursor: pointer; }
+  .case.cible:hover { transform: scale(1.05); box-shadow: 0 0 12px var(--accent); border-color: var(--accent); }
+  .case.atteignable { box-shadow: inset 0 0 0 2px var(--accent); cursor: pointer; }
+  .case.atteignable:hover { background: var(--case-bord); }
+  .cases-pions { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; align-items: center; width: 100%; height: 100%; padding: 3px; }
+  .pion { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #14181f; font-size: 0.55rem; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+
+  .info { text-align: center; font-size: 1.05rem; color: var(--accent-clair); margin-bottom: 10px; min-height: 22px; }
+  .message-jeu { text-align: center; color: var(--texte-doux); font-size: 0.85rem; font-style: italic; min-height: 18px; margin-bottom: 8px; }
+  .main-titre { text-align: center; color: var(--texte-doux); font-size: 0.85rem; margin: 6px 0; }
+  .armes-info { text-align: center; color: var(--accent-clair); font-size: 0.8rem; margin-bottom: 6px; min-height: 16px; }
+  .main { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; min-height: 80px; }
+  .carte-jeu {
+    width: 52px; height: 74px; border-radius: 8px; background: #f4f0e4; color: #14181f;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-weight: bold; box-shadow: 0 3px 8px rgba(0,0,0,0.4); cursor: pointer;
+    transition: transform 0.1s ease; border: 2px solid transparent;
+  }
+  .carte-jeu:hover { transform: translateY(-6px); }
+  .carte-jeu.choisie { border-color: var(--accent); transform: translateY(-6px); }
+  .carte-valeur { font-size: 1.25rem; line-height: 1; }
+  .carte-type { font-size: 0.55rem; margin-top: 4px; color: #5a5a4a; }
+  .carte-rouge { color: #b3322a; } .carte-noir { color: #14181f; }
+
+  .zone-actions { margin-top: 8px; }
+  .gros-message { text-align: center; font-size: 1.5rem; color: var(--accent); margin: 16px 0; }
+  .hidden { display: none !important; }
+  .erreur { background: rgba(208,86,59,0.2); border: 1px solid var(--danger); color: var(--danger); padding: 10px; border-radius: 8px; margin-bottom: 10px; text-align: center; font-size: 0.9rem; }
+
+  .modale-fond { position: fixed; inset: 0; background: rgba(0,0,0,0.78); display: flex; align-items: flex-start; justify-content: center; padding: 20px; z-index: 100; overflow-y: auto; }
+  .modale { background: var(--fond-carte); border: 1px solid var(--accent); border-radius: 14px; padding: 22px; max-width: 460px; width: 100%; margin: auto; line-height: 1.55; }
+  .modale h2 { color: var(--accent); font-size: 1.4rem; margin-bottom: 12px; text-align: center; }
+  .modale h3 { color: var(--accent-clair); font-size: 1.05rem; margin: 14px 0 6px; }
+  .modale p { margin-bottom: 10px; font-size: 0.88rem; }
+  .modale ul { margin: 0 0 10px 18px; font-size: 0.88rem; }
+  .modale li { margin-bottom: 5px; }
+  .modale table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.8rem; }
+  .modale th, .modale td { padding: 5px 7px; text-align: left; border-bottom: 1px solid rgba(212,175,104,0.2); }
+  .modale th { color: var(--accent); }
+  .modale .accent { color: var(--accent-clair); font-weight: bold; }
+  .modale .btn-fermer { background: var(--accent); color: #14181f; margin-top: 16px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="barre-haut">
+    <a class="lien-haut" href="index.html">&#8592; Menu</a>
+    <button class="lien-haut" onclick="ouvrirRegles()">Règles &#9432;</button>
+  </div>
+  <h1>BEERBATTLE</h1>
+  <p class="sous-titre">En ligne, chacun sur son téléphone</p>
+
+  <!-- Modale regles -->
+  <div class="modale-fond hidden" id="modale-regles">
+    <div class="modale">
+      <h2>Règles de BeerBattle</h2>
+      <p>Chaque joueur a un verre de 20 gorgées. On s'attaque pour faire boire les autres : éliminé à 20. Le dernier debout gagne. De 3 à 5 joueurs sur un plateau 6x6 de cartes face cachée.</p>
+      <h3>Un tour : une seule action</h3>
+      <ul>
+        <li>Se déplacer (1 case gratuite, ou carte déplacement).</li>
+        <li>Attaquer (corps à corps ou arme).</li>
+        <li>Poser une arme (Roi ou Valet).</li>
+        <li>Jouer une Dame, ou ne rien faire.</li>
+      </ul>
+      <p>Après l'action, tu peux prendre la carte de ta case. Pas de diagonale.</p>
+      <h3>Les cartes</h3>
+      <table>
+        <tr><th>Carte</th><th>Effet</th></tr>
+        <tr><td>2-5</td><td>Déplacement</td></tr>
+        <tr><td>6-10</td><td>Gorgées infligées</td></tr>
+        <tr><td>Valet</td><td>Arme : 2 cases, entières</td></tr>
+        <tr><td>Roi</td><td>Arme : 6 cases, /2 arrondi sup</td></tr>
+        <tr><td>As</td><td>Déplacement + corps à corps mi-verre</td></tr>
+        <tr><td>Dame</td><td>Remet un verre à zéro</td></tr>
+        <tr><td>Joker</td><td>Mi-verre à distance, via une arme</td></tr>
+      </table>
+      <h3>Attaques</h3>
+      <p><span class="accent">Corps à corps</span> (même case) : carte gorgée, ou mains nues (1, ou 5 si plateau vide). <span class="accent">À distance</span> : arme posée + carte gorgée ou Joker. <span class="accent">Mi-verre</span> : moitié du restant avant 20, arrondi sup.</p>
+      <button class="btn-fermer" onclick="fermerRegles()">Fermer</button>
+    </div>
+  </div>
+
+  <!-- ECRAN 1 : Accueil -->
+  <div class="carte-ui" id="ecran-accueil">
+    <label>Ton prénom</label>
+    <input type="text" id="prenom" placeholder="Ex: Enzo" maxlength="12">
+    <button class="btn-principal" onclick="creerSalon()">Créer un salon</button>
+    <div style="text-align:center; color:var(--texte-doux); margin: 14px 0 6px;">— ou —</div>
+    <label>Code du salon (4 lettres)</label>
+    <input type="text" id="code-rejoindre" placeholder="ABCD" maxlength="4" style="text-transform:uppercase">
+    <button class="btn-vert" onclick="rejoindreSalon()">Rejoindre</button>
+    <div id="erreur-accueil"></div>
+  </div>
+
+  <!-- ECRAN 2 : Salle d attente -->
+  <div class="carte-ui hidden" id="ecran-attente">
+    <div style="text-align:center; color:var(--texte-doux);">Code du salon :</div>
+    <div class="code-salon" id="affichage-code">----</div>
+    <div style="text-align:center; color:var(--texte-doux); font-size:0.85rem; margin-bottom:10px;">Partage ce code (3 à 5 joueurs)</div>
+    <div class="liste-joueurs" id="liste-joueurs"></div>
+    <button class="btn-principal hidden" id="btn-demarrer" onclick="envoyer('bb_demarrer')">Démarrer la partie</button>
+    <div class="statut" id="statut-attente">En attente de joueurs...</div>
+  </div>
+
+  <!-- ECRAN 3 : Le jeu -->
+  <div class="carte-ui hidden" id="ecran-jeu">
+    <div class="compteurs" id="compteurs"></div>
+    <div class="info" id="info-jeu"></div>
+    <div class="message-jeu" id="message-jeu"></div>
+    <div class="plateau" id="plateau"></div>
+    <div class="armes-info" id="armes-info"></div>
+    <div class="main-titre">Ta main</div>
+    <div class="main" id="main-joueur"></div>
+    <div class="zone-actions" id="zone-actions"></div>
+  </div>
+
+  <!-- ECRAN 4 : Fin -->
+  <div class="carte-ui hidden" id="ecran-fin">
+    <div class="gros-message" id="message-fin"></div>
+    <button class="btn-principal" onclick="location.reload()">Nouvelle partie</button>
+  </div>
+</div>
+
+<script>
+  const SERVEUR_HTTP = 'https://kinito-serveur.onrender.com';
+  const SERVEUR_WS   = 'wss://kinito-serveur.onrender.com';
+
+  let ws = null, monNom = '', codeSalon = '', estCreateur = false;
+  let monIndex = -1;
+  let maMain = [];
+  let etatActuel = null;
+  let carteChoisie = null;
+  let COULEURS = ['var(--j1)', 'var(--j2)', 'var(--j3)', 'var(--j4)', 'var(--j5)'];
+
+  function ouvrirRegles() { document.getElementById('modale-regles').classList.remove('hidden'); }
+  function fermerRegles() { document.getElementById('modale-regles').classList.add('hidden'); }
+
+  function montrerEcran(id) {
+    ['ecran-accueil','ecran-attente','ecran-jeu','ecran-fin'].forEach(function(e){ document.getElementById(e).classList.add('hidden'); });
+    document.getElementById(id).classList.remove('hidden');
+  }
+  function afficherErreur(msg) {
+    const z = document.getElementById('erreur-accueil');
+    z.innerHTML = '<div class="erreur">' + msg + '</div>';
+    setTimeout(function(){ z.innerHTML = ''; }, 4000);
+  }
+
+  async function creerSalon() {
+    monNom = document.getElementById('prenom').value.trim();
+    if (!monNom) { afficherErreur('Entre ton prénom'); return; }
+    try {
+      const r = await fetch(SERVEUR_HTTP + '/creer-salon');
+      const d = await r.json();
+      codeSalon = d.code; estCreateur = true; seConnecter();
+    } catch (e) { afficherErreur('Serveur injoignable. Il se réveille peut-être (30s).'); }
+  }
+  async function rejoindreSalon() {
+    monNom = document.getElementById('prenom').value.trim();
+    if (!monNom) { afficherErreur('Entre ton prénom'); return; }
+    codeSalon = document.getElementById('code-rejoindre').value.trim().toUpperCase();
+    if (codeSalon.length !== 4) { afficherErreur('Code à 4 lettres'); return; }
+    try {
+      const r = await fetch(SERVEUR_HTTP + '/salon/' + codeSalon);
+      const d = await r.json();
+      if (!d.existe) { afficherErreur('Salon introuvable'); return; }
+      estCreateur = false; seConnecter();
+    } catch (e) { afficherErreur('Serveur injoignable'); }
+  }
+
+  function seConnecter() {
+    ws = new WebSocket(SERVEUR_WS + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom));
+    ws.onopen = function() {
+      document.getElementById('affichage-code').textContent = codeSalon;
+      montrerEcran('ecran-attente');
+      if (estCreateur) document.getElementById('btn-demarrer').classList.remove('hidden');
+    };
+    ws.onmessage = function(ev) { traiterMessage(JSON.parse(ev.data)); };
+    ws.onerror = function() { afficherErreur('Erreur de connexion'); };
+  }
+
+  function envoyer(type, donnees) {
+    ws.send(JSON.stringify(Object.assign({ type: type }, donnees || {})));
+  }
+
+  function traiterMessage(m) {
+    switch (m.type) {
+      case 'joueur_rejoint':
+      case 'joueur_parti':
+        majListeJoueurs(m.joueurs); break;
+      case 'bb_demarree':
+        montrerEcran('ecran-jeu'); break;
+      case 'bb_ta_main':
+        maMain = m.main; monIndex = m.mon_index; afficherMain(); afficherActions(); break;
+      case 'bb_etat':
+        etatActuel = m; majAffichage(); break;
+      case 'bb_victoire':
+        document.getElementById('message-fin').textContent = '🏆 ' + m.gagnant + ' gagne !';
+        montrerEcran('ecran-fin'); break;
+      case 'erreur':
+        alert(m.message); break;
+    }
+  }
+
+  function majListeJoueurs(joueurs) {
+    const z = document.getElementById('liste-joueurs');
+    z.innerHTML = '';
+    joueurs.forEach(function(j){ const d = document.createElement('div'); d.className = 'joueur'; d.textContent = '• ' + j; z.appendChild(d); });
+    document.getElementById('statut-attente').textContent = joueurs.length + ' connecté(s)';
+  }
+
+  function acro(i) {
+    if (!etatActuel) return 'J' + (i+1);
+    const nom = etatActuel.joueurs[i];
+    return nom ? nom.substring(0,3).toUpperCase() : 'J' + (i+1);
+  }
+
+  function majAffichage() {
+    if (!etatActuel) return;
+    majCompteurs();
+    construirePlateau();
+    dessinerPions();
+    afficherArmesInfo();
+    document.getElementById('message-jeu').textContent = etatActuel.message || '';
+    const info = document.getElementById('info-jeu');
+    if (etatActuel.phase === 'placement') {
+      const enPlace = etatActuel.joueur_en_placement;
+      if (enPlace === monIndex) info.textContent = 'Place-toi : touche une case libre';
+      else info.textContent = 'Placement de ' + etatActuel.joueurs[enPlace];
+    } else if (etatActuel.phase === 'jeu') {
+      if (etatActuel.joueur_courant === monIndex) info.textContent = 'À toi de jouer';
+      else info.textContent = 'Au tour de ' + etatActuel.joueurs[etatActuel.joueur_courant];
+    }
+    afficherActions();
+  }
+
+  function majCompteurs() {
+    const z = document.getElementById('compteurs');
+    z.innerHTML = '';
+    for (let i = 0; i < etatActuel.joueurs.length; i++) {
+      const d = document.createElement('div');
+      d.className = 'compteur';
+      if (i === etatActuel.joueur_courant && etatActuel.phase === 'jeu') d.classList.add('actif');
+      if (etatActuel.elimine[i]) d.classList.add('elimine');
+      const pct = (etatActuel.verres[i] / etatActuel.verre_max) * 100;
+      d.innerHTML = '<div class="nom" style="color:' + COULEURS[i] + '">' + acro(i) + '</div>' +
+        '<div class="verre"><div class="verre-plein" style="width:' + pct + '%"></div></div>' +
+        '<div class="valeur">' + etatActuel.verres[i] + '/' + etatActuel.verre_max + '</div>';
+      z.appendChild(d);
+    }
+  }
+
+  function construirePlateau() {
+    const p = document.getElementById('plateau');
+    p.innerHTML = '';
+    for (let l = 0; l < 6; l++) {
+      for (let c = 0; c < 6; c++) {
+        const div = document.createElement('div');
+        div.className = 'case';
+        div.dataset.ligne = l; div.dataset.colonne = c;
+        if (etatActuel.plateau[l][c] === false) div.classList.add('vide');
+        p.appendChild(div);
+      }
+    }
+  }
+
+  function dessinerPions() {
+    for (let l = 0; l < 6; l++) {
+      for (let c = 0; c < 6; c++) {
+        const occupants = [];
+        for (let i = 0; i < etatActuel.positions.length; i++) {
+          if (etatActuel.elimine[i]) continue;
+          const pos = etatActuel.positions[i];
+          if (pos && pos.ligne === l && pos.colonne === c) occupants.push(i);
+        }
+        if (occupants.length === 0) continue;
+        const caseDiv = document.querySelector('#plateau .case[data-ligne="' + l + '"][data-colonne="' + c + '"]');
+        if (!caseDiv) continue;
+        const cont = document.createElement('div');
+        cont.className = 'cases-pions';
+        occupants.forEach(function(i) {
+          const pion = document.createElement('div');
+          pion.className = 'pion';
+          pion.style.background = COULEURS[i];
+          pion.textContent = acro(i);
+          cont.appendChild(pion);
+        });
+        caseDiv.appendChild(cont);
+      }
+    }
+  }
+
+  function afficherArmesInfo() {
+    const z = document.getElementById('armes-info');
+    if (!etatActuel.armes[monIndex] || etatActuel.armes[monIndex].length === 0) { z.textContent = ''; return; }
+    const noms = etatActuel.armes[monIndex].map(function(t){ return t === 'roi' ? 'Roi (6)' : 'Valet (2)'; });
+    z.textContent = 'Tes armes posées : ' + noms.join(', ');
+  }
+
+  function afficherMain() {
+    const main = document.getElementById('main-joueur');
+    main.innerHTML = '';
+    maMain.forEach(function(carte, i) {
+      const div = document.createElement('div');
+      div.className = 'carte-jeu ' + (carte.rouge ? 'carte-rouge' : 'carte-noir');
+      if (carteChoisie === i) div.classList.add('choisie');
+      div.innerHTML = '<div class="carte-valeur">' + carte.symbole + '</div><div class="carte-type">' + libelleCourt(carte) + '</div>';
+      div.onclick = function() { choisirCarte(i); };
+      main.appendChild(div);
+    });
+    if (maMain.length === 0) main.innerHTML = '<div style="color:var(--texte-doux); font-style:italic;">Aucune carte</div>';
+  }
+
+  function libelleCourt(c) {
+    switch (c.type) {
+      case 'deplacement': return 'dépl. ' + c.valeur;
+      case 'gorgee': return c.valeur + ' gorg.';
+      case 'as': return 'As'; case 'dame': return 'Dame';
+      case 'roi': return 'Roi'; case 'valet': return 'Valet'; case 'joker': return 'Joker';
+    }
+    return '';
+  }
+
+  function choisirCarte(i) {
+    if (!estMonTour()) return;
+    carteChoisie = (carteChoisie === i) ? null : i;
+    afficherMain(); afficherActions();
+  }
+
+  function estMonTour() {
+    return etatActuel && etatActuel.phase === 'jeu' && etatActuel.joueur_courant === monIndex && !etatActuel.action_faite;
+  }
+
+  function activerPlacement() {
+    document.querySelectorAll('#plateau .case').forEach(function(caseDiv) {
+      const l = parseInt(caseDiv.dataset.ligne), c = parseInt(caseDiv.dataset.colonne);
+      if (!estCaseOccupee(l, c)) {
+        caseDiv.classList.add('cible');
+        caseDiv.onclick = function() { envoyer('bb_placer', { ligne: l, colonne: c }); };
+      }
+    });
+  }
+
+  function estCaseOccupee(l, c) {
+    for (let i = 0; i < etatActuel.positions.length; i++) {
+      if (etatActuel.elimine[i]) continue;
+      const p = etatActuel.positions[i];
+      if (p && p.ligne === l && p.colonne === c) return true;
+    }
+    return false;
+  }
+
+  function afficherActions() {
+    const zone = document.getElementById('zone-actions');
+    zone.innerHTML = '';
+    if (!etatActuel) return;
+
+    if (etatActuel.phase === 'placement') {
+      if (etatActuel.joueur_en_placement === monIndex) activerPlacement();
+      return;
+    }
+
+    // Phase ramassage : si c est mon tour et que mon action est faite
+    if (etatActuel.phase === 'jeu' && etatActuel.joueur_courant === monIndex && etatActuel.action_faite) {
+      afficherRamassage(zone);
+      return;
+    }
+
+    if (!estMonTour()) return;
+
+    const carte = (carteChoisie !== null) ? maMain[carteChoisie] : null;
+
+    const bDep = document.createElement('button');
+    bDep.className = 'btn-neutre';
+    bDep.textContent = "Me déplacer d'une case";
+    bDep.onclick = function() { lancerDeplacement(1, false); };
+    zone.appendChild(bDep);
+
+    const ciblesIci = joueursSurMaCase();
+    const degMainsNues = plateauVide() ? 5 : 1;
+    ciblesIci.forEach(function(j) {
+      const b = document.createElement('button');
+      b.className = 'btn-danger';
+      b.textContent = 'Frapper ' + etatActuel.joueurs[j] + ' à mains nues (' + degMainsNues + ')';
+      b.onclick = function() { envoyer('bb_attaquer', { cible: j, type_attaque: 'cc_mains_nues' }); };
+      zone.appendChild(b);
+    });
+
+    if (carte) {
+      if (carte.type === 'deplacement') {
+        const b = document.createElement('button');
+        b.className = 'btn-principal';
+        b.textContent = "Jouer déplacement (jusqu'à " + carte.valeur + ')';
+        b.onclick = function() { lancerDeplacement(carte.valeur, true); };
+        zone.appendChild(b);
+      } else if (carte.type === 'gorgee') {
+        ciblesIci.forEach(function(j) {
+          const b = document.createElement('button');
+          b.className = 'btn-danger';
+          b.textContent = 'Corps à corps ' + etatActuel.joueurs[j] + ' (' + carte.valeur + ')';
+          b.onclick = function() { envoyer('bb_attaquer', { cible: j, index_carte: carteChoisie, type_attaque: 'cc_gorgee' }); };
+          zone.appendChild(b);
+        });
+        ciblesViaArmes().forEach(function(j) {
+          const b = document.createElement('button');
+          b.className = 'btn-danger';
+          b.textContent = 'Tirer sur ' + etatActuel.joueurs[j];
+          b.onclick = function() { envoyer('bb_attaquer', { cible: j, index_carte: carteChoisie, type_attaque: 'arme' }); };
+          zone.appendChild(b);
+        });
+      } else if (carte.type === 'as') {
+        ciblesIci.forEach(function(j) {
+          const b = document.createElement('button');
+          b.className = 'btn-danger';
+          b.textContent = 'As sur ' + etatActuel.joueurs[j] + ' (mi-verre)';
+          b.onclick = function() { envoyer('bb_attaquer', { cible: j, index_carte: carteChoisie, type_attaque: 'as' }); };
+          zone.appendChild(b);
+        });
+      } else if (carte.type === 'joker') {
+        ciblesViaArmes().forEach(function(j) {
+          const b = document.createElement('button');
+          b.className = 'btn-danger';
+          b.textContent = 'Joker sur ' + etatActuel.joueurs[j] + ' (mi-verre)';
+          b.onclick = function() { envoyer('bb_attaquer', { cible: j, index_carte: carteChoisie, type_attaque: 'joker' }); };
+          zone.appendChild(b);
+        });
+      } else if (carte.type === 'dame') {
+        for (let j = 0; j < etatActuel.joueurs.length; j++) {
+          if (etatActuel.elimine[j]) continue;
+          const b = document.createElement('button');
+          b.className = 'btn-vert';
+          b.textContent = (j === monIndex ? 'Mon verre' : 'Verre de ' + etatActuel.joueurs[j]) + ' à zéro';
+          (function(cible){ b.onclick = function() { envoyer('bb_dame', { cible: cible, index_carte: carteChoisie }); }; })(j);
+          zone.appendChild(b);
+        }
+      } else if (carte.type === 'roi' || carte.type === 'valet') {
+        const b = document.createElement('button');
+        b.className = 'btn-principal';
+        b.textContent = 'Poser ' + (carte.type === 'roi' ? 'le Roi' : 'le Valet');
+        b.onclick = function() { envoyer('bb_poser_arme', { index_carte: carteChoisie }); };
+        zone.appendChild(b);
+      }
+    }
+
+    const bRien = document.createElement('button');
+    bRien.className = 'btn-neutre';
+    bRien.textContent = 'Ne rien faire';
+    bRien.onclick = function() { envoyer('bb_ne_rien_faire'); };
+    zone.appendChild(bRien);
+  }
+
+  // Phase de ramassage apres l action
+  function afficherRamassage(zone) {
+    const moi = etatActuel.positions[monIndex];
+    const aCarte = etatActuel.plateau[moi.ligne][moi.colonne] === true;
+    document.getElementById('info-jeu').textContent = 'Ton action est faite';
+
+    if (aCarte) {
+      const mainPleine = maMain.length >= (etatActuel.max_cartes || 4);
+      if (!mainPleine) {
+        const b = document.createElement('button');
+        b.className = 'btn-principal';
+        b.textContent = 'Prendre la carte de ma case';
+        b.onclick = function() { envoyer('bb_ramasser', { decision: 'prendre' }); };
+        zone.appendChild(b);
+      } else {
+        const aide = document.createElement('div');
+        aide.style.cssText = 'color:var(--texte-doux); font-size:0.82rem; text-align:center; margin-top:6px;';
+        aide.textContent = 'Main pleine : échanger une carte (la tienne reste sur la case)';
+        zone.appendChild(aide);
+        maMain.forEach(function(carte, i) {
+          const b = document.createElement('button');
+          b.className = 'btn-neutre';
+          b.textContent = 'Échanger ' + carte.symbole + ' (' + libelleCourt(carte) + ')';
+          b.onclick = function() { envoyer('bb_ramasser', { decision: 'echanger', index_echange: i }); };
+          zone.appendChild(b);
+        });
+      }
+    }
+    const bFin = document.createElement('button');
+    bFin.className = aCarte ? 'btn-neutre' : 'btn-principal';
+    bFin.textContent = aCarte ? 'Ne pas prendre, finir le tour' : 'Finir mon tour';
+    bFin.onclick = function() { envoyer('bb_ramasser', { decision: 'rien' }); };
+    zone.appendChild(bFin);
+  }
+
+  function lancerDeplacement(distMax, viaCarte) {
+    const moi = etatActuel.positions[monIndex];
+    document.querySelectorAll('#plateau .case').forEach(function(caseDiv) {
+      const l = parseInt(caseDiv.dataset.ligne), c = parseInt(caseDiv.dataset.colonne);
+      const dist = Math.abs(l - moi.ligne) + Math.abs(c - moi.colonne);
+      if (dist >= 1 && dist <= distMax) {
+        caseDiv.classList.add('atteignable');
+        caseDiv.onclick = function() {
+          envoyer('bb_deplacer', { ligne: l, colonne: c, via_carte: viaCarte, index_carte: viaCarte ? carteChoisie : null });
+        };
+      }
+    });
+    document.getElementById('info-jeu').textContent = 'Choisis ta destination (max ' + distMax + ')';
+  }
+
+  function joueursSurMaCase() {
+    const moi = etatActuel.positions[monIndex];
+    const liste = [];
+    for (let i = 0; i < etatActuel.positions.length; i++) {
+      if (i === monIndex || etatActuel.elimine[i]) continue;
+      const p = etatActuel.positions[i];
+      if (p && p.ligne === moi.ligne && p.colonne === moi.colonne) liste.push(i);
+    }
+    return liste;
+  }
+
+  function ciblesViaArmes() {
+    const moi = etatActuel.positions[monIndex];
+    const mesArmes = etatActuel.armes[monIndex] || [];
+    if (mesArmes.length === 0) return [];
+    let porteeMax = 0;
+    mesArmes.forEach(function(t){ porteeMax = Math.max(porteeMax, t === 'roi' ? 6 : 2); });
+    const cibles = [];
+    for (let i = 0; i < etatActuel.positions.length; i++) {
+      if (i === monIndex || etatActuel.elimine[i]) continue;
+      const p = etatActuel.positions[i];
+      const dist = Math.abs(p.ligne - moi.ligne) + Math.abs(p.colonne - moi.colonne);
+      if (dist >= 1 && dist <= porteeMax) cibles.push(i);
+    }
+    return cibles;
+  }
+
+  function plateauVide() {
+    for (let l = 0; l < 6; l++) for (let c = 0; c < 6; c++) if (etatActuel.plateau[l][c]) return false;
+    return true;
+  }
+</script>
+</body>
+</html>
