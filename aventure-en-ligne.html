@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aventure en ligne</title>
+<style>
+  :root {
+    --sable: #f0d9b5; --sable-clair: #f7e8cf;
+    --ciel: #bfe3df; --ciel-clair: #d6efeb;
+    --roche: #d98b7a; --roche-clair: #e8a896; --roche-fonce: #b56a5c;
+    --texte: #5a4636; --texte-doux: #8a7560;
+    --accent: #d98b7a; --accent-fonce: #b56a5c;
+    --or: #e0b15e; --blanc-casse: #fdf6ea;
+    --vert: #6b8a5a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Trebuchet MS', 'Segoe UI', sans-serif; background: var(--ciel-clair); color: var(--texte); min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; padding: 16px; }
+  .app { width: 100%; max-width: 540px; margin-top: 10px; }
+  .barre-haut { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .lien-haut { color: var(--texte-doux); text-decoration: none; font-size: 0.85rem; cursor: pointer; background: none; border: none; font-family: inherit; padding: 0; }
+  .lien-haut:hover { color: var(--accent-fonce); }
+  h1 { font-family: Georgia, serif; text-align: center; font-size: 2rem; color: var(--roche-fonce); margin-bottom: 2px; font-weight: normal; }
+  .sous-titre { text-align: center; color: var(--texte-doux); font-style: italic; margin-bottom: 18px; font-size: 0.9rem; }
+  .carte { background: var(--blanc-casse); border-radius: 18px; padding: 22px; margin-bottom: 16px; box-shadow: 0 8px 28px rgba(90,70,54,0.15); }
+  button { font-family: inherit; font-size: 1rem; padding: 13px 18px; border: none; border-radius: 12px; cursor: pointer; width: 100%; margin-top: 10px; font-weight: bold; transition: transform 0.1s ease, filter 0.15s ease; }
+  button:active { transform: scale(0.97); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-principal { background: var(--accent); color: var(--blanc-casse); }
+  .btn-principal:hover { filter: brightness(1.05); }
+  .btn-vert { background: var(--vert); color: #fff; }
+  .btn-choix { background: var(--sable); color: var(--texte); border: 2px solid var(--roche-clair); text-align: left; }
+  .btn-choix:hover { background: var(--sable-clair); border-color: var(--accent); }
+  .btn-neutre { background: var(--ciel); color: var(--texte); }
+  label { display: block; margin-bottom: 6px; color: var(--texte-doux); font-size: 0.9rem; font-weight: bold; }
+  input[type="text"], input[type="number"] { width: 100%; padding: 11px; font-size: 1.05rem; font-family: inherit; background: #fff; border: 2px solid var(--roche-clair); border-radius: 10px; color: var(--texte); text-align: center; margin-bottom: 10px; }
+  .code-salon { text-align: center; font-size: 2.4rem; letter-spacing: 8px; color: var(--accent-fonce); margin: 10px 0; font-weight: bold; font-family: Georgia, serif; }
+  .liste-joueurs { margin: 10px 0; padding: 10px; background: var(--sable-clair); border-radius: 10px; min-height: 50px; }
+  .liste-joueurs .joueur { padding: 5px 10px; }
+  .statut { text-align: center; color: var(--texte-doux); font-size: 0.85rem; margin-top: 6px; }
+  .histoires-liste { display: flex; flex-direction: column; gap: 10px; }
+  .histoire-carte { background: var(--sable); border: 2px solid var(--roche-clair); border-radius: 12px; padding: 14px; cursor: pointer; transition: all 0.15s ease; }
+  .histoire-carte:hover { background: var(--sable-clair); border-color: var(--accent); }
+  .histoire-carte.choisi { background: var(--accent); color: var(--blanc-casse); border-color: var(--accent-fonce); }
+  .histoire-titre { font-family: Georgia, serif; font-size: 1.15rem; margin-bottom: 3px; }
+  .histoire-meta { font-size: 0.82rem; opacity: 0.85; font-style: italic; }
+  .difficultes { display: flex; flex-direction: column; gap: 7px; margin-bottom: 8px; }
+  .diff-option { padding: 11px 14px; border-radius: 10px; border: 2px solid var(--roche-clair); background: #fff; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+  .diff-option:hover { background: var(--sable-clair); }
+  .diff-option.choisi { background: var(--accent); color: var(--blanc-casse); border-color: var(--accent-fonce); }
+  .diff-coef { font-size: 0.82rem; opacity: 0.8; }
+  .mode-compet { display: flex; gap: 8px; }
+  .mode-compet button { flex: 1; }
+  .mode-compet button.choisi { background: var(--accent); color: var(--blanc-casse); }
+  .classes-liste { display: flex; flex-direction: column; gap: 10px; }
+  .classe-carte { background: var(--sable-clair); border: 2px solid var(--roche-clair); border-radius: 12px; padding: 11px 14px; cursor: pointer; transition: all 0.15s ease; }
+  .classe-carte:hover { background: #fff; border-color: var(--accent); }
+  .classe-carte.choisi { background: var(--accent); color: var(--blanc-casse); border-color: var(--accent-fonce); }
+  .classe-carte.deja-pris { opacity: 0.4; cursor: not-allowed; }
+  .classe-nom { font-weight: bold; font-size: 1.05rem; }
+  .classe-desc { font-size: 0.82rem; opacity: 0.85; margin-top: 2px; font-style: italic; }
+  .classe-stats { font-size: 0.8rem; margin-top: 4px; }
+  .stat-ligne { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .stat-controle { display: flex; align-items: center; gap: 10px; }
+  .stat-controle button { width: 32px; height: 32px; margin: 0; padding: 0; border-radius: 8px; font-size: 1.1rem; background: var(--accent); color: #fff; }
+  .stat-valeur { min-width: 24px; text-align: center; font-weight: bold; font-size: 1.05rem; }
+  .points-restants { text-align: center; color: var(--texte-doux); margin-bottom: 8px; font-size: 0.9rem; }
+  .pas-mon-tour { text-align: center; color: var(--texte-doux); font-style: italic; padding: 16px; }
+  .erreur { background: rgba(208,86,59,0.15); border: 1px solid #c4534a; color: #9c4438; padding: 10px; border-radius: 8px; margin-bottom: 10px; text-align: center; font-size: 0.88rem; }
+  .hidden { display: none !important; }
+  .centre { text-align: center; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="barre-haut">
+    <a class="lien-haut" href="index.html">&#8592; Menu</a>
+    <span></span>
+  </div>
+  <h1>Aventure en ligne</h1>
+  <p class="sous-titre">Une aventure coopérative à distance</p>
+
+  <!-- ECRAN 1 : ACCUEIL -->
+  <div class="carte" id="ecran-accueil">
+    <label>Ton prénom</label>
+    <input type="text" id="prenom" placeholder="Ex: Enzo" maxlength="12">
+    <button class="btn-principal" onclick="creerSalon()">Créer un salon</button>
+    <div style="text-align:center; color:var(--texte-doux); margin:14px 0 6px;">— ou —</div>
+    <label>Code du salon</label>
+    <input type="text" id="code-rejoindre" placeholder="ABCD" maxlength="4" style="text-transform:uppercase">
+    <button class="btn-vert" onclick="rejoindreSalon()">Rejoindre</button>
+    <div id="erreur-accueil"></div>
+  </div>
+
+  <!-- ECRAN 2 : SALLE D ATTENTE / CONFIG -->
+  <div class="carte hidden" id="ecran-attente">
+    <div style="text-align:center; color:var(--texte-doux); font-size:0.9rem;">Code du salon :</div>
+    <div class="code-salon" id="affichage-code">----</div>
+    <div class="liste-joueurs" id="liste-joueurs"></div>
+    <div class="statut" id="statut-attente">En attente...</div>
+
+    <!-- Reglages visibles seulement pour le createur -->
+    <div id="zone-config" class="hidden" style="margin-top:14px;">
+      <label>Histoire</label>
+      <div class="histoires-liste" id="histoires-liste"></div>
+      <label style="margin-top:14px;">Difficulté</label>
+      <div class="difficultes" id="difficultes"></div>
+      <label style="margin-top:10px;">Compétences supplémentaires</label>
+      <div class="mode-compet" id="mode-compet">
+        <button class="btn-neutre choisi" id="mode-aleatoire" onclick="choisirMode('aleatoire')">Aléatoires</button>
+        <button class="btn-neutre" id="mode-reparti" onclick="choisirMode('reparti')">À répartir</button>
+      </div>
+      <button class="btn-principal" style="margin-top:14px;" onclick="demarrerPartie()">Démarrer</button>
+    </div>
+    <div id="zone-attente-message" style="margin-top:14px; color:var(--texte-doux); text-align:center; font-size:0.9rem;"></div>
+  </div>
+
+  <!-- ECRAN 3 : CHOIX DE CLASSE -->
+  <div class="carte hidden" id="ecran-classe">
+    <h3 class="centre" style="color:var(--accent-fonce); margin-bottom:6px;" id="classe-tour-titre"></h3>
+    <p class="centre" style="color:var(--texte-doux); font-size:0.88rem; margin-bottom:14px;" id="classe-tour-info"></p>
+    <div class="classes-liste" id="classes-liste"></div>
+    <button class="btn-principal hidden" id="btn-valider-classe" style="margin-top:14px;">Valider mon choix</button>
+  </div>
+
+  <!-- ECRAN 4 : REPARTITION DES POINTS -->
+  <div class="carte hidden" id="ecran-repartition">
+    <h3 class="centre" style="color:var(--accent-fonce); margin-bottom:6px;" id="repart-titre"></h3>
+    <p class="centre" style="color:var(--texte-doux); font-size:0.88rem; margin-bottom:14px;" id="repart-info"></p>
+    <div id="repart-zone"></div>
+  </div>
+
+  <!-- ECRAN 5 : EN JEU (placeholder, sera dans la sous-etape 1c) -->
+  <div class="carte hidden centre" id="ecran-jeu-placeholder">
+    <p style="color:var(--accent-fonce); font-weight:bold;">Le jeu démarre !</p>
+    <p style="color:var(--texte-doux); margin-top:8px; font-size:0.9rem;">(L'écran de jeu sera ajouté dans la prochaine étape)</p>
+  </div>
+</div>
+
+<script>
+  // ============================================================
+  //   CONFIGURATION DU SERVEUR
+  // ============================================================
+  const SERVEUR_HTTP = 'https://kinito-serveur.onrender.com';
+  const SERVEUR_WS = 'wss://kinito-serveur.onrender.com';
+
+  // ============================================================
+  //   ETAT LOCAL
+  // ============================================================
+  let ws = null;
+  let monNom = '';
+  let codeSalon = '';
+  let estCreateur = false;
+  let monIndex = -1;
+  let etatRecent = null;            // dernier etat recu du serveur
+  let histoireChoisie = 'akrenos';
+  let difficulteChoisie = 'normal';
+  let modeChoisi = 'aleatoire';
+  let classeChoisieTemp = null;     // selection temporaire avant validation
+
+  // Pour la repartition (mode reparti)
+  let repartLocal = { force: 0, agilite: 0, ruse: 0 };
+
+  // ============================================================
+  //   LES HISTOIRES (donnees, partagees avec le moteur local)
+  // ============================================================
+  // Pour la sous-etape 1b on a juste besoin des metadonnees et des classes,
+  // les scenes seront utilisees dans la sous-etape 1c.
+
+  const HISTOIRE_AKRENOS = {
+    id: "akrenos",
+    titre: "Le Silence d'Akrenos",
+    univers: "Première Croisade, Anatolie",
+    classes: [
+      { nom: "Chevalier", desc: "Noble combattant, bardé d'orgueil et de fer", force: 4, agilite: 2, ruse: 1 },
+      { nom: "Sergent d'armes", desc: "Soldat expérimenté, polyvalent et discipliné", force: 3, agilite: 3, ruse: 1 },
+      { nom: "Archer", desc: "Œil vif, pieds légers, observateur silencieux", force: 1, agilite: 4, ruse: 2 },
+      { nom: "Moine guerrier", desc: "Croisé érudit, manie autant le verbe que l'arme", force: 2, agilite: 1, ruse: 4 },
+      { nom: "Éclaireur", desc: "Ancien chasseur, connaît sentiers et hommes", force: 2, agilite: 3, ruse: 2 },
+    ],
+  };
+
+  const HISTOIRE_CITE = {
+    id: "cite",
+    titre: "La Cité Ensevelie",
+    univers: "Désert, aventure",
+    classes: null,  // pas de classes pour cette histoire
+  };
+
+  const HISTOIRES = [HISTOIRE_AKRENOS, HISTOIRE_CITE];
+
+  const DIFFICULTES = [
+    { id: 'promenade', nom: 'Promenade de santé', coef: 0.5 },
+    { id: 'facile', nom: 'Facile', coef: 1 },
+    { id: 'normal', nom: 'Normal', coef: 1.5 },
+    { id: 'difficile', nom: 'Difficile', coef: 2 },
+    { id: 'cirrhose', nom: 'Cirrhose', coef: 5 },
+  ];
+
+  // ============================================================
+  //   UTILITAIRES UI
+  // ============================================================
+  function montrerEcran(id) {
+    ['ecran-accueil', 'ecran-attente', 'ecran-classe', 'ecran-repartition', 'ecran-jeu-placeholder'].forEach(function(e) {
+      document.getElementById(e).classList.add('hidden');
+    });
+    document.getElementById(id).classList.remove('hidden');
+  }
+
+  function afficherErreur(msg) {
+    const z = document.getElementById('erreur-accueil');
+    z.innerHTML = '<div class="erreur">' + msg + '</div>';
+    setTimeout(function() { z.innerHTML = ''; }, 4000);
+  }
+
+  // ============================================================
+  //   CONNEXION
+  // ============================================================
+  async function creerSalon() {
+    monNom = document.getElementById('prenom').value.trim();
+    if (!monNom) { afficherErreur('Entre ton prénom'); return; }
+    try {
+      const r = await fetch(SERVEUR_HTTP + '/creer-salon');
+      const d = await r.json();
+      codeSalon = d.code;
+      estCreateur = true;
+      seConnecter();
+    } catch (e) {
+      afficherErreur('Serveur injoignable. Il se réveille peut-être (30s).');
+    }
+  }
+
+  async function rejoindreSalon() {
+    monNom = document.getElementById('prenom').value.trim();
+    if (!monNom) { afficherErreur('Entre ton prénom'); return; }
+    codeSalon = document.getElementById('code-rejoindre').value.trim().toUpperCase();
+    if (codeSalon.length !== 4) { afficherErreur('Code à 4 lettres'); return; }
+    try {
+      const r = await fetch(SERVEUR_HTTP + '/salon/' + codeSalon);
+      const d = await r.json();
+      if (!d.existe) { afficherErreur('Salon introuvable'); return; }
+      estCreateur = false;
+      seConnecter();
+    } catch (e) {
+      afficherErreur('Serveur injoignable');
+    }
+  }
+
+  function seConnecter() {
+    ws = new WebSocket(SERVEUR_WS + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom));
+    ws.onopen = function() {
+      document.getElementById('affichage-code').textContent = codeSalon;
+      montrerEcran('ecran-attente');
+      if (estCreateur) {
+        document.getElementById('zone-config').classList.remove('hidden');
+        afficherHistoires();
+        afficherDifficultes();
+      } else {
+        document.getElementById('zone-attente-message').textContent = "En attente que l'hôte démarre la partie...";
+      }
+    };
+    ws.onmessage = function(ev) { traiterMessage(JSON.parse(ev.data)); };
+    ws.onerror = function() { afficherErreur('Erreur de connexion'); };
+  }
+
+  function envoyer(type, donnees) {
+    ws.send(JSON.stringify(Object.assign({ type: type }, donnees || {})));
+  }
+
+  // ============================================================
+  //   TRAITEMENT DES MESSAGES SERVEUR
+  // ============================================================
+  function traiterMessage(m) {
+    switch (m.type) {
+      case 'joueur_rejoint':
+      case 'joueur_parti':
+        majListeJoueurs(m.joueurs);
+        break;
+      case 'av_demarree':
+        // L hote a demarre, on attend l etat
+        break;
+      case 'av_etat':
+        etatRecent = m;
+        // Trouve mon index
+        if (monIndex < 0) {
+          for (let i = 0; i < m.joueurs.length; i++) {
+            if (m.joueurs[i] === monNom) { monIndex = i; break; }
+          }
+        }
+        majAffichage();
+        break;
+      case 'erreur':
+        alert(m.message);
+        break;
+    }
+  }
+
+  function majListeJoueurs(joueurs) {
+    const z = document.getElementById('liste-joueurs');
+    z.innerHTML = '';
+    joueurs.forEach(function(j) {
+      const d = document.createElement('div');
+      d.className = 'joueur';
+      d.textContent = '\u2022 ' + j;
+      z.appendChild(d);
+    });
+    document.getElementById('statut-attente').textContent = joueurs.length + ' connecté(s)';
+  }
+
+  // ============================================================
+  //   CONFIGURATION (cote createur)
+  // ============================================================
+  function afficherHistoires() {
+    const zone = document.getElementById('histoires-liste');
+    zone.innerHTML = '';
+    HISTOIRES.forEach(function(h) {
+      const div = document.createElement('div');
+      div.className = 'histoire-carte' + (h.id === histoireChoisie ? ' choisi' : '');
+      div.innerHTML = '<div class="histoire-titre">' + h.titre + '</div>' +
+        '<div class="histoire-meta">' + h.univers + '</div>';
+      div.onclick = function() { histoireChoisie = h.id; afficherHistoires(); };
+      zone.appendChild(div);
+    });
+  }
+
+  function afficherDifficultes() {
+    const zone = document.getElementById('difficultes');
+    zone.innerHTML = '';
+    DIFFICULTES.forEach(function(d) {
+      const div = document.createElement('div');
+      div.className = 'diff-option' + (d.id === difficulteChoisie ? ' choisi' : '');
+      div.onclick = function() { difficulteChoisie = d.id; afficherDifficultes(); };
+      div.innerHTML = '<span>' + d.nom + '</span><span class="diff-coef">x' + d.coef + '</span>';
+      zone.appendChild(div);
+    });
+  }
+
+  function choisirMode(mode) {
+    modeChoisi = mode;
+    document.getElementById('mode-aleatoire').classList.toggle('choisi', mode === 'aleatoire');
+    document.getElementById('mode-reparti').classList.toggle('choisi', mode === 'reparti');
+  }
+
+  function demarrerPartie() {
+    envoyer('av_demarrer', {
+      histoire_id: histoireChoisie,
+      difficulte: difficulteChoisie,
+      mode_competences: modeChoisi,
+    });
+  }
+
+  // ============================================================
+  //   MISE A JOUR DE L AFFICHAGE SELON L ETAT SERVEUR
+  // ============================================================
+  function majAffichage() {
+    if (!etatRecent) return;
+
+    if (etatRecent.phase === 'config') {
+      // Phase de choix des classes
+      const histoire = trouverHistoire(etatRecent.histoire_id);
+      if (histoire && histoire.classes) {
+        montrerEcran('ecran-classe');
+        afficherChoixClasse(histoire);
+      } else {
+        // Histoire sans classes : on saute directement (ne devrait pas arriver mais on gere)
+        montrerEcran('ecran-jeu-placeholder');
+      }
+    } else if (etatRecent.phase === 'repartition') {
+      montrerEcran('ecran-repartition');
+      afficherRepartition();
+    } else if (etatRecent.phase === 'jeu') {
+      // Sous-etape 1c : ici on affichera le jeu
+      montrerEcran('ecran-jeu-placeholder');
+    } else if (etatRecent.phase === 'fin') {
+      // Sous-etape 1c
+      montrerEcran('ecran-jeu-placeholder');
+    }
+  }
+
+  function trouverHistoire(id) {
+    for (let i = 0; i < HISTOIRES.length; i++) {
+      if (HISTOIRES[i].id === id) return HISTOIRES[i];
+    }
+    return null;
+  }
+
+  // ============================================================
+  //   CHOIX DE CLASSE
+  // ============================================================
+  function afficherChoixClasse(histoire) {
+    const joueurEnCours = etatRecent.config_joueur;
+    const nomEnCours = etatRecent.joueurs[joueurEnCours];
+    const estMonTour = (joueurEnCours === monIndex);
+
+    if (estMonTour) {
+      document.getElementById('classe-tour-titre').textContent = 'À toi, ' + monNom;
+      document.getElementById('classe-tour-info').textContent = 'Choisis ta classe';
+    } else {
+      document.getElementById('classe-tour-titre').textContent = nomEnCours + ' choisit sa classe';
+      document.getElementById('classe-tour-info').textContent = 'Attends ton tour...';
+    }
+
+    const zone = document.getElementById('classes-liste');
+    zone.innerHTML = '';
+    classeChoisieTemp = null;
+    document.getElementById('btn-valider-classe').classList.add('hidden');
+
+    histoire.classes.forEach(function(cl) {
+      const div = document.createElement('div');
+      div.className = 'classe-carte';
+      // Si la classe est deja prise par un autre joueur, on grise
+      const dejaPris = etatRecent.classes_choisies.indexOf(cl.nom) !== -1;
+      if (dejaPris) div.classList.add('deja-pris');
+
+      div.innerHTML = '<div class="classe-nom">' + cl.nom + (dejaPris ? ' (prise)' : '') + '</div>' +
+        '<div class="classe-desc">' + cl.desc + '</div>' +
+        '<div class="classe-stats">Force ' + cl.force + ' \u00b7 Agilité ' + cl.agilite + ' \u00b7 Ruse ' + cl.ruse + '</div>';
+
+      if (estMonTour && !dejaPris) {
+        div.onclick = function() {
+          document.querySelectorAll('.classe-carte').forEach(function(c) { c.classList.remove('choisi'); });
+          div.classList.add('choisi');
+          classeChoisieTemp = cl;
+          document.getElementById('btn-valider-classe').classList.remove('hidden');
+        };
+      }
+      zone.appendChild(div);
+    });
+
+    document.getElementById('btn-valider-classe').onclick = function() {
+      if (classeChoisieTemp) {
+        envoyer('av_choisir_classe', { classe: classeChoisieTemp });
+      }
+    };
+  }
+
+  // ============================================================
+  //   REPARTITION DES POINTS
+  // ============================================================
+  function afficherRepartition() {
+    const joueurEnCours = etatRecent.config_joueur;
+    const nomEnCours = etatRecent.joueurs[joueurEnCours];
+    const estMonTour = (joueurEnCours === monIndex);
+    const monAvatar = etatRecent.avatars[monIndex];
+
+    if (estMonTour) {
+      document.getElementById('repart-titre').textContent = 'À toi, ' + monNom;
+      document.getElementById('repart-info').textContent = 'Répartis 3 points supplémentaires (' + monAvatar.classe + ')';
+      repartLocal = { force: 0, agilite: 0, ruse: 0 };
+      afficherRepartContenu(monAvatar);
+    } else {
+      document.getElementById('repart-titre').textContent = nomEnCours + ' répartit ses points';
+      document.getElementById('repart-info').textContent = 'Attends ton tour...';
+      const monAv = etatRecent.avatars[joueurEnCours];
+      document.getElementById('repart-zone').innerHTML = '<div class="pas-mon-tour">' +
+        nomEnCours + ' (' + monAv.classe + ') choisit où placer ses 3 points</div>';
+    }
+  }
+
+  function afficherRepartContenu(avatar) {
+    const zone = document.getElementById('repart-zone');
+    const utilises = repartLocal.force + repartLocal.agilite + repartLocal.ruse;
+    const restants = 3 - utilises;
+
+    zone.innerHTML = '<div class="points-restants">Points à placer : ' + restants + '</div>';
+
+    ['force', 'agilite', 'ruse'].forEach(function(stat) {
+      const nomStat = stat.charAt(0).toUpperCase() + stat.slice(1);
+      const ligne = document.createElement('div');
+      ligne.className = 'stat-ligne';
+      ligne.innerHTML = '<span style="font-weight:bold;">' + nomStat + '</span>';
+
+      const controle = document.createElement('div');
+      controle.className = 'stat-controle';
+
+      const moins = document.createElement('button');
+      moins.textContent = '\u2212';
+      moins.onclick = function() {
+        if (repartLocal[stat] > 0) { repartLocal[stat]--; afficherRepartContenu(avatar); }
+      };
+
+      const valeurAffichee = avatar[stat] + repartLocal[stat];
+      const valeur = document.createElement('span');
+      valeur.className = 'stat-valeur';
+      valeur.innerHTML = valeurAffichee + ' <span style="color:var(--texte-doux); font-size:0.85rem;">(+' + repartLocal[stat] + ')</span>';
+
+      const plus = document.createElement('button');
+      plus.textContent = '+';
+      plus.onclick = function() {
+        if (restants > 0) { repartLocal[stat]++; afficherRepartContenu(avatar); }
+      };
+
+      controle.appendChild(moins); controle.appendChild(valeur); controle.appendChild(plus);
+      ligne.appendChild(controle);
+      zone.appendChild(ligne);
+    });
+
+    const btn = document.createElement('button');
+    btn.className = 'btn-principal';
+    if (restants > 0) {
+      btn.textContent = 'Place tous tes points (' + restants + ' restants)';
+      btn.disabled = true; btn.style.opacity = '0.5';
+    } else {
+      btn.textContent = 'Valider';
+      btn.onclick = function() {
+        envoyer('av_repartir', repartLocal);
+      };
+    }
+    zone.appendChild(btn);
+  }
+</script>
+</body>
+</html>
