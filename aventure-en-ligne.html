@@ -13,6 +13,10 @@
     --accent: #d98b7a; --accent-fonce: #b56a5c;
     --or: #e0b15e; --blanc-casse: #fdf6ea;
     --vert: #6b8a5a; --foret: #6b8a5a; --pierre: #a89d8e;
+    --vert-fonce: #3d6b48; --vert-clair: #cfe8d4;
+    --orange: #d4843a; --orange-clair: #f5e0c0;
+    --rouge: #9c4438; --rouge-clair: #f0cfc9;
+    --pv-rouge: #c4534a;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Trebuchet MS', 'Segoe UI', sans-serif; background: var(--ciel-clair); color: var(--texte); min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; padding: 16px; }
@@ -36,21 +40,17 @@
   .liste-joueurs { margin: 10px 0; padding: 10px; background: var(--sable-clair); border-radius: 10px; min-height: 50px; }
   .liste-joueurs .joueur { padding: 5px 10px; }
   .statut { text-align: center; color: var(--texte-doux); font-size: 0.85rem; margin-top: 6px; }
-  .histoires-liste { display: flex; flex-direction: column; gap: 10px; }
-  .histoire-carte { background: var(--sable); border: 2px solid var(--roche-clair); border-radius: 12px; padding: 14px; cursor: pointer; }
-  .histoire-carte.choisi { background: var(--accent); color: var(--blanc-casse); border-color: var(--accent-fonce); }
+  .histoires-liste, .classes-liste, .difficultes { display: flex; flex-direction: column; gap: 10px; }
+  .histoire-carte, .classe-carte { background: var(--sable); border: 2px solid var(--roche-clair); border-radius: 12px; padding: 12px 14px; cursor: pointer; }
+  .histoire-carte.choisi, .classe-carte.choisi { background: var(--accent); color: var(--blanc-casse); border-color: var(--accent-fonce); }
+  .classe-carte.deja-pris { opacity: 0.4; cursor: not-allowed; }
   .histoire-titre { font-family: Georgia, serif; font-size: 1.15rem; margin-bottom: 3px; }
   .histoire-meta { font-size: 0.82rem; opacity: 0.85; font-style: italic; }
-  .difficultes { display: flex; flex-direction: column; gap: 7px; }
   .diff-option { padding: 11px 14px; border-radius: 10px; border: 2px solid var(--roche-clair); background: #fff; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
   .diff-option.choisi { background: var(--accent); color: var(--blanc-casse); border-color: var(--accent-fonce); }
   .mode-compet { display: flex; gap: 8px; }
   .mode-compet button { flex: 1; }
   .mode-compet button.choisi { background: var(--accent); color: var(--blanc-casse); }
-  .classes-liste { display: flex; flex-direction: column; gap: 10px; }
-  .classe-carte { background: var(--sable-clair); border: 2px solid var(--roche-clair); border-radius: 12px; padding: 11px 14px; cursor: pointer; }
-  .classe-carte.choisi { background: var(--accent); color: var(--blanc-casse); border-color: var(--accent-fonce); }
-  .classe-carte.deja-pris { opacity: 0.4; cursor: not-allowed; }
   .classe-nom { font-weight: bold; font-size: 1.05rem; }
   .classe-desc { font-size: 0.82rem; opacity: 0.85; margin-top: 2px; font-style: italic; }
   .classe-stats { font-size: 0.8rem; margin-top: 4px; }
@@ -61,6 +61,24 @@
   .points-restants { text-align: center; color: var(--texte-doux); margin-bottom: 8px; font-size: 0.9rem; }
   .pas-mon-tour { text-align: center; color: var(--texte-doux); font-style: italic; padding: 16px; }
 
+  /* Encadre de mes PV personnels, bien visible */
+  .mes-pv {
+    background: linear-gradient(135deg, var(--ciel) 0%, var(--ciel-clair) 100%);
+    border: 2px solid var(--accent-clair); border-radius: 12px; padding: 10px 14px;
+    margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .mes-pv-titre { font-size: 0.85rem; color: var(--texte-doux); }
+  .mes-pv-coeurs { font-size: 1.2rem; color: var(--pv-rouge); letter-spacing: 2px; }
+  .mes-pv-valeur { font-size: 1.1rem; font-weight: bold; color: var(--accent-fonce); }
+
+  /* Bandeau de mort */
+  .je-suis-mort {
+    background: #3a2c1c; color: var(--blanc-casse);
+    border-radius: 12px; padding: 14px; text-align: center; margin-bottom: 12px;
+  }
+  .je-suis-mort .titre { font-family: Georgia, serif; font-size: 1.2rem; margin-bottom: 4px; }
+  .je-suis-mort .info { font-size: 0.88rem; opacity: 0.85; }
+
   /* Ecran de jeu */
   .barre-progression { height: 6px; background: var(--sable); border-radius: 4px; overflow: hidden; margin-bottom: 14px; }
   .barre-remplie { height: 100%; background: var(--accent); transition: width 0.4s ease; }
@@ -68,6 +86,8 @@
   .avatar-puce { background: var(--sable); border-radius: 8px; padding: 5px 8px; font-size: 0.72rem; text-align: center; min-width: 70px; border: 2px solid transparent; }
   .avatar-puce.actif { border-color: var(--accent); }
   .avatar-puce.moi { background: var(--ciel); }
+  .avatar-puce.mort { background: #3a2c1c; color: #c4b4a4; opacity: 0.65; }
+  .avatar-puce.mort .avatar-nom-petit { text-decoration: line-through; }
   .avatar-nom-petit { font-weight: bold; }
   .avatar-classe-petite { font-size: 0.65rem; color: var(--accent-fonce); font-style: italic; }
   .avatar-stats-petite { font-size: 0.65rem; color: var(--texte-doux); }
@@ -84,10 +104,18 @@
   .de.roule { animation: secoue 0.15s infinite; }
   @keyframes secoue { 0% { transform: rotate(-8deg) translateY(0); } 50% { transform: rotate(8deg) translateY(-4px); } 100% { transform: rotate(-8deg) translateY(0); } }
   .pip { width: 12px; height: 12px; border-radius: 50%; background: var(--accent-fonce); align-self: center; justify-self: center; }
+
+  /* Resultats par palier */
   .resultat-test { text-align: center; padding: 12px; border-radius: 12px; margin-bottom: 12px; font-size: 1rem; }
-  .resultat-reussite { background: #cfe8d4; color: #3d6b48; }
-  .resultat-echec { background: #f0cfc9; color: #9c4438; }
-  .gorgees-annonce { font-size: 1.4rem; font-weight: bold; margin-top: 5px; }
+  .palier-franche { background: var(--vert-clair); color: var(--vert-fonce); border: 2px solid var(--vert-fonce); }
+  .palier-limite-r { background: #e0eed4; color: #4a7a3a; border: 2px solid #6b8a5a; }
+  .palier-limite-e { background: var(--orange-clair); color: #8a4a1a; border: 2px solid var(--orange); }
+  .palier-franc-e { background: var(--rouge-clair); color: var(--rouge); border: 2px solid var(--rouge); }
+  .palier-libre { background: var(--vert-clair); color: var(--vert-fonce); }
+  .palier-titre { font-weight: bold; font-size: 1.05rem; margin-top: 4px; }
+  .gorgees-annonce { font-size: 1.3rem; font-weight: bold; margin-top: 5px; }
+  .pv-annonce { font-size: 0.95rem; margin-top: 4px; color: var(--rouge); font-weight: bold; }
+  .mort-annonce { font-size: 1.1rem; font-weight: bold; margin-top: 8px; padding: 6px; background: #3a2c1c; color: var(--blanc-casse); border-radius: 8px; }
   .vote-info { text-align: center; color: var(--texte-doux); font-size: 0.88rem; margin: 6px 0; }
   .erreur { background: rgba(208,86,59,0.15); border: 1px solid #c4534a; color: #9c4438; padding: 10px; border-radius: 8px; margin-bottom: 10px; text-align: center; font-size: 0.88rem; }
   .hidden { display: none !important; }
@@ -115,7 +143,7 @@
     <div id="erreur-accueil"></div>
   </div>
 
-  <!-- ECRAN 2 : SALLE D ATTENTE / CONFIG -->
+  <!-- ECRAN 2 : SALLE D ATTENTE -->
   <div class="carte hidden" id="ecran-attente">
     <div style="text-align:center; color:var(--texte-doux); font-size:0.9rem;">Code du salon :</div>
     <div class="code-salon" id="affichage-code">----</div>
@@ -144,16 +172,21 @@
     <button class="btn-principal hidden" id="btn-valider-classe" style="margin-top:14px;">Valider mon choix</button>
   </div>
 
-  <!-- ECRAN 4 : REPARTITION DES POINTS -->
+  <!-- ECRAN 4 : REPARTITION -->
   <div class="carte hidden" id="ecran-repartition">
     <h3 class="centre" style="color:var(--accent-fonce); margin-bottom:6px;" id="repart-titre"></h3>
     <p class="centre" style="color:var(--texte-doux); font-size:0.88rem; margin-bottom:14px;" id="repart-info"></p>
     <div id="repart-zone"></div>
   </div>
 
-  <!-- ECRAN 5 : EN JEU -->
+  <!-- ECRAN 5 : JEU -->
   <div class="carte hidden" id="ecran-jeu">
     <div class="barre-progression"><div class="barre-remplie" id="barre"></div></div>
+    <div class="mes-pv hidden" id="mes-pv"></div>
+    <div class="je-suis-mort hidden" id="je-suis-mort">
+      <div class="titre">Tu es tombé au combat</div>
+      <div class="info">Cul sec final. Tu restes à la table mais tu ne participes plus aux choix.</div>
+    </div>
     <div class="avatars-ligne" id="avatars-ligne"></div>
     <div class="scene-image" id="scene-image"></div>
     <div class="scene-texte" id="scene-texte"></div>
@@ -181,101 +214,102 @@
   let monNom = '', codeSalon = '', estCreateur = false;
   let monIndex = -1;
   let etatRecent = null;
+  let mesPv = null;          // PV prives recus du serveur
+  let mesPvMax = null;
   let histoireChoisie = 'akrenos';
   let difficulteChoisie = 'normal';
   let modeChoisi = 'aleatoire';
   let classeChoisieTemp = null;
   let repartLocal = { force: 0, agilite: 0, ruse: 0 };
-  let sceneCourantePrecedente = -1;  // pour detecter le changement de scene cote hote
-  let deAnimeEnCours = false;        // pour eviter doubles animations
+  let deAnimeEnCours = false;
 
   // ============================================================
-  // LES HISTOIRES
+  // HISTOIRES (avec PV par classe)
   // ============================================================
   const HISTOIRE_AKRENOS = {
     id: "akrenos",
     titre: "Le Silence d'Akrenos",
     univers: "Première Croisade, Anatolie",
     classes: [
-      { nom: "Chevalier", desc: "Noble combattant, bardé d'orgueil et de fer", force: 4, agilite: 2, ruse: 1 },
-      { nom: "Sergent d'armes", desc: "Soldat expérimenté, polyvalent et discipliné", force: 3, agilite: 3, ruse: 1 },
-      { nom: "Archer", desc: "Œil vif, pieds légers, observateur silencieux", force: 1, agilite: 4, ruse: 2 },
-      { nom: "Moine guerrier", desc: "Croisé érudit, manie autant le verbe que l'arme", force: 2, agilite: 1, ruse: 4 },
-      { nom: "Éclaireur", desc: "Ancien chasseur, connaît sentiers et hommes", force: 2, agilite: 3, ruse: 2 },
+      { nom: "Chevalier", desc: "Noble combattant, bardé d'orgueil et de fer", force: 4, agilite: 2, ruse: 1, pv: 6 },
+      { nom: "Sergent d'armes", desc: "Soldat expérimenté, polyvalent et discipliné", force: 3, agilite: 3, ruse: 1, pv: 6 },
+      { nom: "Archer", desc: "Œil vif, pieds légers, observateur silencieux", force: 1, agilite: 4, ruse: 2, pv: 4 },
+      { nom: "Moine guerrier", desc: "Croisé érudit, manie autant le verbe que l'arme", force: 2, agilite: 1, ruse: 4, pv: 4 },
+      { nom: "Éclaireur", desc: "Ancien chasseur, connaît sentiers et hommes", force: 2, agilite: 3, ruse: 2, pv: 5 },
     ],
     scenes: [
       { type: "narration", image: "campement",
         texte: "Année 1098. L'armée croisée campe en Anatolie, sur la route d'Antioche. Vos compagnons d'armes vous connaissent : ensemble, vous avez survécu à trois mois de marche. Ce matin, le capitaine vous convoque sous sa tente. \"Le village d'Akrenos, à une demi-journée d'ici, devait nous fournir vivres et eau. J'y ai envoyé un éclaireur à l'aube. Il aurait dû rentrer. Allez voir, et ramenez ce qui peut l'être.\" Il vous regarde longuement, comme s'il hésitait à ajouter quelque chose, puis se ravise.",
         bouton: "Partir pour Akrenos" },
       { type: "choix_groupe", image: "sentier",
-        texte: "La piste se divise. À droite, la route directe, large et visible. À gauche, un sentier de chèvre par les hauteurs boisées.",
+        texte: "La piste se divise. À droite, la route directe. À gauche, un sentier de chèvre par les hauteurs boisées.",
         choix: [
           { texte: "Route directe", compet: "force", difficulte: 7, succes: "Vous arrivez tôt et reposés.", echec: "Chaleur écrasante. Vous arrivez exténués." },
-          { texte: "Sentier boisé", compet: "agilite", difficulte: 7, succes: "Vous arrivez en haut d'une crête qui domine le village.", echec: "Ravin imprévu et ronces. Vous arrivez écorchés." },
+          { texte: "Sentier boisé", compet: "agilite", difficulte: 7, succes: "Vous arrivez en haut d'une crête.", echec: "Ravin imprévu et ronces." },
         ] },
       { type: "narration", image: "chariot",
-        texte: "Un cheval gît au bord du chemin, sans blessure. Plus loin, un chariot abandonné, les sacs encore dessus. Personne ne laisse ses provisions au soleil, sauf à ne plus pouvoir revenir.",
+        texte: "Un cheval gît au bord du chemin, sans blessure. Plus loin, un chariot abandonné, les sacs encore dessus.",
         bouton: "Continuer" },
       { type: "test_solo", image: "sentinelle",
-        texte: "À l'entrée du village, l'éclaireur croisé dort, casque de travers. Son visage est étrangement paisible. Le réveiller demande du doigté.",
+        texte: "À l'entrée du village, l'éclaireur croisé dort, casque de travers. Le réveiller demande du doigté.",
         compet: "ruse", difficulte: 8, gorgees_base: 3,
-        succes: "Il sursaute, se reprend. \"Ils étaient tous à la messe quand je suis arrivé. Depuis, plus personne. Je n'ai pas eu le courage d'entrer.\" Il vous suit, le regard fuyant.",
-        echec: "Il jaillit en hurlant, frappe au hasard, refuse de parler, et plante là sa lance pour fuir vers le camp." },
+        succes: "Il sursaute. \"Ils étaient tous à la messe quand je suis arrivé. Depuis, plus personne.\" Il vous suit.",
+        echec: "Il jaillit en hurlant, frappe au hasard, et plante là sa lance pour fuir." },
       { type: "narration", image: "placevide",
-        texte: "Vous entrez. Le silence frappe. Une porte bat dans le vent, un foyer fume mais le pain est froid. Au centre, un puits, une église, et l'impression d'être observé.",
+        texte: "Vous entrez. Le silence frappe. Au centre, un puits, une église, et l'impression d'être observé.",
         bouton: "S'enfoncer dans le village" },
       { type: "test_solo", image: "fenetre",
-        texte: "Un enfant vous observe par une fenêtre, immobile, sans expression. Il ne cligne pas des yeux.",
+        texte: "Un enfant vous observe par une fenêtre, immobile. Il ne cligne pas des yeux.",
         compet: "ruse", difficulte: 8, gorgees_base: 3,
-        succes: "Vous approchez sans le brusquer. Il murmure : \"Ils sont tous descendus. À la cave de l'église. Ma mère m'a dit de rester ici, mais elle n'est pas revenue.\" Puis il se tait.",
-        echec: "Un mouvement maladroit, l'enfant disparaît. La porte se verrouille. Vous n'en tirerez rien." },
+        succes: "Il murmure : \"Ils sont tous descendus. À la cave de l'église. Ma mère m'a dit de rester ici.\"",
+        echec: "Un mouvement maladroit, l'enfant disparaît. La porte se verrouille." },
       { type: "choix_groupe", image: "eglise",
-        texte: "L'église se dresse au centre du village, massive, portes closes.",
+        texte: "L'église se dresse au centre du village, portes closes.",
         choix: [
-          { texte: "Forcer la porte", compet: "force", difficulte: 7, succes: "La porte cède d'un coup. Les bancs sont renversés.", echec: "La porte craque mais résiste. Vous entrez par une fenêtre brisée." },
-          { texte: "Autre entrée", compet: "agilite", difficulte: 7, succes: "Une porte de service mal fermée. Vous entrez en silence.", echec: "Vous tournez longuement avant de trouver." },
+          { texte: "Forcer la porte", compet: "force", difficulte: 7, succes: "La porte cède d'un coup.", echec: "Vous entrez par une fenêtre brisée." },
+          { texte: "Autre entrée", compet: "agilite", difficulte: 7, succes: "Une porte de service mal fermée.", echec: "Vous tournez longuement avant de trouver." },
         ] },
       { type: "test_solo", image: "inscription",
-        texte: "Près de l'autel, une inscription gravée à la hâte. C'est du grec ancien, à demi effacé.",
-        compet: "ruse", difficulte: 9, gorgees_base: 3,
-        succes: "Vous déchiffrez : \"Ne buvez pas. Ne mangez pas. Ils ne sont plus eux-mêmes.\" La main qui a gravé tremblait.",
+        texte: "Près de l'autel, une inscription gravée à la hâte. C'est du grec ancien.",
+        compet: "ruse", difficulte: 9, gorgees_base: 3, pas_de_pv: true,
+        succes: "Vous déchiffrez : \"Ne buvez pas. Ne mangez pas. Ils ne sont plus eux-mêmes.\"",
         echec: "Les mots vous échappent. Quelque chose à propos de l'eau, peut-être." },
       { type: "test_groupe", image: "puits",
-        texte: "Quelque chose flotte au fond du puits. L'éclat est métallique. Il faut une descente coordonnée.",
+        texte: "Quelque chose flotte au fond du puits. Il faut une descente coordonnée.",
         compet: "agilite", difficulte: 8, gorgees_base: 3,
-        succes: "Vous remontez un coffret scellé. À l'intérieur, des reliques et un parchemin marqué du sceau du prêtre.",
+        succes: "Vous remontez un coffret scellé avec des reliques et un parchemin.",
         echec: "La corde glisse. Ce que vous remontez vous échappe et retombe." },
       { type: "narration", image: "vieillefemme",
-        texte: "Une vieille femme apparaît sur le seuil d'une maison, paisible. Elle sourit doucement. \"Vous avez soif, mes enfants ? Entrez, j'ai de l'eau fraîche.\" Elle tend une cruche.",
+        texte: "Une vieille femme apparaît, paisible. \"Vous avez soif, mes enfants ? Entrez, j'ai de l'eau fraîche.\" Elle tend une cruche.",
         bouton: "Décliner et continuer" },
       { type: "test_solo", image: "maison",
-        texte: "La porte est barricadée de l'intérieur. Les volets sont cloués. Quelqu'un s'est enfermé là.",
+        texte: "La porte est barricadée de l'intérieur. Quelqu'un s'est enfermé là.",
         compet: "force", difficulte: 8, gorgees_base: 3,
-        succes: "La porte cède d'un coup d'épaule. Le prêtre n'est plus, mais son journal repose ouvert.",
-        echec: "Vous forcez bruyamment. Le journal est là, mais vous sentez des regards depuis les fenêtres." },
+        succes: "La porte cède. Le prêtre n'est plus, mais son journal repose ouvert.",
+        echec: "Vous forcez bruyamment. Le journal est là, mais vous sentez des regards." },
       { type: "test_groupe", image: "journal",
         texte: "Les pages sont éparses. Reconstituer ce que le prêtre a vu demande méthode.",
-        compet: "ruse", difficulte: 9, gorgees_base: 3,
-        succes: "Tout s'éclaire. Une caravane est passée par Akrenos il y a une semaine, malade. Trois jours plus tard, l'eau du puits avait un goût. Les gens commençaient à ne plus être eux-mêmes.",
+        compet: "ruse", difficulte: 9, gorgees_base: 3, pas_de_pv: true,
+        succes: "Tout s'éclaire. Une caravane est passée, malade. L'eau du puits avait un goût. Les gens ont changé.",
         echec: "Vous saisissez des bribes. Une caravane. De l'eau. Mais le fil vous échappe." },
       { type: "choix_groupe", image: "cimetiere",
-        texte: "Au-delà du village, le cimetière. Les tombes récentes sont retournées, de l'intérieur. Quelque chose y bouge.",
+        texte: "Les tombes récentes sont retournées, de l'intérieur. Quelque chose y bouge.",
         choix: [
           { texte: "Fouiller les tombes", compet: "force", difficulte: 8, succes: "Vous découvrez des corps qui ne sont pas ceux qu'ils devraient être.", echec: "Ce qui sort de la terre vous repousse." },
-          { texte: "Observer de loin", compet: "ruse", difficulte: 8, succes: "Vous comprenez. Ce qui bouge n'est pas mort. Mais ce n'est plus vivant non plus.", echec: "De loin, vous ne distinguez rien. L'angoisse monte sans preuve." },
+          { texte: "Observer de loin", compet: "ruse", difficulte: 8, succes: "Ce qui bouge n'est pas mort. Mais ce n'est plus vivant non plus.", echec: "Vous ne distinguez rien de clair. L'angoisse monte." },
         ] },
       { type: "test_groupe", image: "affrontement",
-        texte: "Ils sortent des maisons. Pas en courant. En marchant, calmement, comme à la messe. Mais leurs yeux sont vides, et leurs mains tiennent des outils, des couteaux, des pierres.",
+        texte: "Ils sortent des maisons. Calmement, comme à la messe. Mais leurs yeux sont vides, leurs mains tiennent outils et couteaux.",
         compet: "force", difficulte: 10, gorgees_base: 3,
         succes: "Vous tenez bon. À plusieurs, vous repoussez la foule sans la massacrer.",
         echec: "Vous êtes débordés. Vous frappez plus que de raison. Du sang coule." },
       { type: "test_solo", image: "piegecave",
-        texte: "Pendant l'affrontement, le sol cède sous l'un de vous. Une trappe. Il faut sortir, vite.",
+        texte: "Pendant l'affrontement, le sol cède sous l'un de vous. Une trappe.",
         compet: "agilite", difficulte: 8, gorgees_base: 3,
-        succes: "Le piégé trouve un passage par la cave et libère les siens en les prenant à revers.",
+        succes: "Le piégé trouve un passage et libère les siens en les prenant à revers.",
         echec: "Le piégé tâtonne dans l'obscurité. Quand il rejoint les autres, ils ont pris des coups." },
       { type: "narration", image: "revelation",
-        texte: "Le calme retombe. La vieille femme réapparaît, souriante. \"Vous voyez ? Ils n'étaient plus eux-mêmes. C'est l'eau, c'est la caravane, ou autre chose. Personne ne sait. Moi, je n'ai jamais bu à ce puits.\" Elle vous regarde longuement. \"Et vous, qu'allez-vous dire à votre capitaine ?\"",
+        texte: "Le calme retombe. La vieille femme réapparaît, souriante. \"Vous voyez ? Ils n'étaient plus eux-mêmes. C'est l'eau, c'est la caravane, ou autre chose. Personne ne sait. Et vous, qu'allez-vous dire à votre capitaine ?\"",
         bouton: "Faire face au choix" },
       { type: "choix_libre", image: "choixfeu",
         texte: "Vous devez décider du sort d'Akrenos avant de partir.",
@@ -288,8 +322,8 @@
         bouton: "Raconter ce qui s'est passé" },
     ],
     finTriomphe: { titre: "Devoir accompli", texte: "Vous racontez. Le capitaine vous écoute, le visage fermé. Il ne dit rien. Vous savez qu'il vous croit. La croisade reprend sa marche, et personne ne parlera plus jamais d'Akrenos." },
-    finMoyenne: { titre: "L'écho du silence", texte: "Vous racontez ce que vous pouvez. Certains détails vous échappent. Le capitaine hoche la tête, mais son regard dit qu'il sait. L'armée repart. Et la nuit, parfois, vous entendez encore le silence d'Akrenos." },
-    finEchec: { titre: "Ce qu'on ne raconte pas", texte: "Vous bafouillez. Le capitaine vous écoute en silence, puis vous renvoie. Quelques jours plus tard, un autre détachement est envoyé à Akrenos. Il ne revient pas." },
+    finMoyenne: { titre: "L'écho du silence", texte: "Vous racontez ce que vous pouvez. Le capitaine hoche la tête, mais son regard dit qu'il sait. Et la nuit, parfois, vous entendez encore le silence d'Akrenos." },
+    finEchec: { titre: "Ce qu'on ne raconte pas", texte: "Vous bafouillez. Le capitaine vous renvoie. Quelques jours plus tard, un autre détachement est envoyé à Akrenos. Il ne revient pas." },
   };
 
   const HISTOIRE_CITE = {
@@ -299,13 +333,13 @@
     classes: null,
     scenes: [
       { type: "narration", image: "arrivee",
-        texte: "Après des jours de marche, la cité apparaît enfin, à demi engloutie par les sables. Des tours brisées percent les dunes.",
+        texte: "Après des jours de marche, la cité apparaît, à demi engloutie par les sables.",
         bouton: "Avancer vers la cité" },
       { type: "choix_groupe", image: "entree",
         texte: "Deux accès s'offrent à vous.",
         choix: [
-          { texte: "La porte effondrée", compet: "force", difficulte: 7, succes: "Vous forcez le passage dans un fracas de pierres.", echec: "Une poutre cède !" },
-          { texte: "Le passage étroit", compet: "agilite", difficulte: 6, succes: "Vous vous faufilez en silence.", echec: "Le passage est retors, quelqu'un se coince." },
+          { texte: "La porte effondrée", compet: "force", difficulte: 7, succes: "Vous forcez le passage.", echec: "Une poutre cède !" },
+          { texte: "Le passage étroit", compet: "agilite", difficulte: 6, succes: "Vous vous faufilez en silence.", echec: "Quelqu'un se coince." },
         ] },
       { type: "test_solo", image: "piege",
         texte: "Une dalle s'enfonce. Un déclic. Piège ancien !",
@@ -314,18 +348,18 @@
       { type: "choix_groupe", image: "gardien",
         texte: "Une statue de pierre s'anime : un gardien.",
         choix: [
-          { texte: "Le combattre", compet: "force", difficulte: 8, succes: "À plusieurs, vous renversez le colosse.", echec: "Le gardien frappe fort. Vous l'emportez, mais pas sans casse." },
+          { texte: "Le combattre", compet: "force", difficulte: 8, succes: "Vous renversez le colosse.", echec: "Le gardien frappe fort." },
           { texte: "Le contourner par la ruse", compet: "ruse", difficulte: 8, succes: "Vous détournez son attention.", echec: "Le gardien vous bouscule." },
         ] },
       { type: "test_groupe", image: "tresor",
         texte: "Le trésor est scellé dans un mécanisme ancien.",
         compet: "ruse", difficulte: 9, gorgees_base: 3,
-        succes: "Ensemble, vous percez le secret.", echec: "Le mécanisme résiste. La cité gronde." },
+        succes: "Vous percez le secret.", echec: "Le mécanisme résiste. La cité gronde." },
       { type: "finale", image: "sortie",
         texte: "La cité s'effondre !", bouton: "Courir vers la lumière" },
     ],
     finTriomphe: { titre: "Triomphe !", texte: "Vous jaillissez des sables, le trésor en main." },
-    finMoyenne: { titre: "De justesse...", texte: "Couverts de poussière, vous vous effondrez hors de la cité, le trésor sauvé." },
+    finMoyenne: { titre: "De justesse...", texte: "Vous vous effondrez hors de la cité, le trésor sauvé." },
     finEchec: { titre: "Sortie héroïque", texte: "La cité a bien failli vous engloutir." },
   };
 
@@ -358,6 +392,7 @@
     return null;
   }
   function envoyer(type, donnees) { ws.send(JSON.stringify(Object.assign({ type: type }, donnees || {}))); }
+  function jeSuisMort() { return etatRecent && etatRecent.morts && etatRecent.morts[monIndex]; }
 
   // ============================================================
   // CONNEXION
@@ -413,6 +448,10 @@
           for (let i = 0; i < m.joueurs.length; i++) if (m.joueurs[i] === monNom) { monIndex = i; break; }
         }
         majAffichage(); break;
+      case 'av_pv_prive':
+        mesPv = m.pv; mesPvMax = m.pv_max;
+        majMesPv();
+        break;
       case 'av_fin':
         afficherFin(m); break;
       case 'erreur':
@@ -424,6 +463,19 @@
     z.innerHTML = '';
     joueurs.forEach(function(j){ const d = document.createElement('div'); d.className = 'joueur'; d.textContent = '\u2022 ' + j; z.appendChild(d); });
     document.getElementById('statut-attente').textContent = joueurs.length + ' connecté(s)';
+  }
+
+  // Mise a jour de l'affichage de mes PV personnels
+  function majMesPv() {
+    if (mesPv === null) return;
+    const zone = document.getElementById('mes-pv');
+    // Coeurs : 1 plein par PV restant, 1 vide par PV perdu
+    let coeurs = '';
+    for (let i = 0; i < mesPv; i++) coeurs += '\u2665';
+    for (let i = mesPv; i < mesPvMax; i++) coeurs += '\u2661';
+    zone.innerHTML = '<div><div class="mes-pv-titre">Tes points de vie</div>' +
+      '<div class="mes-pv-coeurs">' + coeurs + '</div></div>' +
+      '<div class="mes-pv-valeur">' + mesPv + ' / ' + mesPvMax + '</div>';
   }
 
   // ============================================================
@@ -459,18 +511,14 @@
   }
 
   // ============================================================
-  // AIGUILLAGE DE L AFFICHAGE
+  // AIGUILLAGE
   // ============================================================
   function majAffichage() {
     if (!etatRecent) return;
-
     if (etatRecent.phase === 'config') {
       const histoire = trouverHistoire(etatRecent.histoire_id);
       if (histoire && histoire.classes) {
         montrerEcran('ecran-classe'); afficherChoixClasse(histoire);
-      } else {
-        // Histoire sans classes : le serveur va sauter directement a 'jeu',
-        // donc on attend juste le prochain etat
       }
     } else if (etatRecent.phase === 'repartition') {
       montrerEcran('ecran-repartition'); afficherRepartition();
@@ -480,7 +528,7 @@
   }
 
   // ============================================================
-  // CHOIX DE CLASSE (cf sous-etape 1b)
+  // CHOIX DE CLASSE
   // ============================================================
   function afficherChoixClasse(histoire) {
     const joueurEnCours = etatRecent.config_joueur;
@@ -502,7 +550,7 @@
       if (dejaPris) div.classList.add('deja-pris');
       div.innerHTML = '<div class="classe-nom">' + cl.nom + (dejaPris ? ' (prise)' : '') + '</div>' +
         '<div class="classe-desc">' + cl.desc + '</div>' +
-        '<div class="classe-stats">Force ' + cl.force + ' \u00b7 Agilité ' + cl.agilite + ' \u00b7 Ruse ' + cl.ruse + '</div>';
+        '<div class="classe-stats">F' + cl.force + ' \u00b7 A' + cl.agilite + ' \u00b7 R' + cl.ruse + ' \u00b7 ' + cl.pv + ' PV</div>';
       if (estMonTour && !dejaPris) {
         div.onclick = function() {
           document.querySelectorAll('.classe-carte').forEach(function(c){ c.classList.remove('choisi'); });
@@ -519,7 +567,7 @@
   }
 
   // ============================================================
-  // REPARTITION DES POINTS (cf sous-etape 1b)
+  // REPARTITION
   // ============================================================
   function afficherRepartition() {
     const joueurEnCours = etatRecent.config_joueur;
@@ -572,37 +620,38 @@
   }
 
   // ============================================================
-  // AFFICHAGE DU JEU
+  // JEU
   // ============================================================
   function afficherJeu() {
     const histoire = trouverHistoire(etatRecent.histoire_id);
     if (!histoire) return;
 
-    // Si je suis l hote et qu il n y a pas encore de scene_courante pour la scene actuelle,
-    // je l envoie au serveur. Le serveur la rediffusera a tous.
+    // Bandeau si je suis mort
+    document.getElementById('je-suis-mort').classList.toggle('hidden', !jeSuisMort());
+    // Affichage de mes PV (seulement si vivant)
+    document.getElementById('mes-pv').classList.toggle('hidden', jeSuisMort() || mesPv === null);
+    if (mesPv !== null) majMesPv();
+
+    // Si je suis l hote (index 0) et qu'il n y a pas de scene_courante, j envoie la prochaine
     if (estCreateur && monIndex === 0) {
       const sceneIdx = etatRecent.scene_index;
       if (sceneIdx < histoire.scenes.length && (etatRecent.scene_courante === null || etatRecent.scene_courante === undefined)) {
-        const scene = histoire.scenes[sceneIdx];
-        envoyer('av_scene_demarrer', { scene: scene });
-        return;  // on attendra l etat suivant pour afficher
+        envoyer('av_scene_demarrer', { scene: histoire.scenes[sceneIdx] });
+        return;
       }
-      // Si on a depasse la fin, on termine
       if (sceneIdx >= histoire.scenes.length) {
         envoyer('av_terminer');
         return;
       }
     }
 
-    // Affichage commun a tous : barre de progression, avatars, scene
     const totalScenes = histoire.scenes.length;
     document.getElementById('barre').style.width = ((etatRecent.scene_index / Math.max(1, totalScenes - 1)) * 100) + '%';
     afficherAvatarsLigne();
 
     if (!etatRecent.scene_courante) {
-      // En attente que l hote envoie la scene
       document.getElementById('scene-image').innerHTML = '';
-      document.getElementById('scene-texte').innerHTML = '<div class="pas-mon-tour">Chargement de la scène...</div>';
+      document.getElementById('scene-texte').innerHTML = '<div class="pas-mon-tour">Chargement...</div>';
       document.getElementById('zone-test').innerHTML = '';
       document.getElementById('zone-actions').innerHTML = '';
       return;
@@ -614,14 +663,17 @@
     document.getElementById('zone-test').innerHTML = '';
     document.getElementById('zone-actions').innerHTML = '';
 
-    // Si on est en phase resolution, on affiche le resultat.
-    // Pour les tests : il y a un resultat_test. Pour les choix libres : il y a un choix_groupe (vote tranché).
     if (etatRecent.scene_etape === 'resolution') {
       afficherResultat(scene);
       return;
     }
 
-    // Sinon, on affiche selon le type de scene
+    // Si je suis mort, je vois la scene mais sans pouvoir agir
+    if (jeSuisMort()) {
+      document.getElementById('zone-actions').innerHTML = '<div class="pas-mon-tour">Tu n\'agis plus. Les autres jouent...</div>';
+      return;
+    }
+
     if (scene.type === 'narration') afficherNarration(scene);
     else if (scene.type === 'choix_groupe') afficherChoixGroupe(scene);
     else if (scene.type === 'test_solo') afficherTestSolo(scene);
@@ -637,18 +689,19 @@
       let classes = 'avatar-puce';
       if (i === monIndex) classes += ' moi';
       if (etatRecent.qui_tente === i) classes += ' actif';
+      if (etatRecent.morts && etatRecent.morts[i]) classes += ' mort';
       d.className = classes;
       let html = '<div class="avatar-nom-petit">' + av.nom + '</div>';
       if (av.classe) html += '<div class="avatar-classe-petite">' + av.classe + '</div>';
       html += '<div class="avatar-stats-petite">F' + av.force + ' A' + av.agilite + ' R' + av.ruse + '</div>';
       const gorgees = etatRecent.gorgees[i] || 0;
-      html += '<div class="avatar-gorgees-petite">' + gorgees + ' g.</div>';
+      const morttxt = (etatRecent.morts && etatRecent.morts[i]) ? ' \u2620' : '';
+      html += '<div class="avatar-gorgees-petite">' + gorgees + ' g.' + morttxt + '</div>';
       d.innerHTML = html;
       zone.appendChild(d);
     });
   }
 
-  // ----- NARRATION : premier-qui-clique pour continuer -----
   function afficherNarration(scene) {
     const zone = document.getElementById('zone-actions');
     const b = document.createElement('button');
@@ -657,11 +710,9 @@
     zone.appendChild(b);
   }
 
-  // ----- CHOIX DE GROUPE : premier-qui-clique pour l option, puis "Je le fais" -----
   function afficherChoixGroupe(scene) {
     const zone = document.getElementById('zone-actions');
     if (etatRecent.choix_groupe === null || etatRecent.choix_groupe === undefined) {
-      // Phase 1 : choisir l option (premier-qui-clique)
       scene.choix.forEach(function(choix, i) {
         const b = document.createElement('button');
         b.className = 'btn-choix';
@@ -670,7 +721,6 @@
         zone.appendChild(b);
       });
     } else {
-      // Phase 2 : un choix a ete fait, on annonce le test et "Je le fais"
       const choix = scene.choix[etatRecent.choix_groupe];
       const annonce = document.createElement('div'); annonce.className = 'annonce-test';
       annonce.innerHTML = '<div class="compet">Test de ' + NOMS_COMPET[choix.compet] + '</div>' +
@@ -691,14 +741,12 @@
     }
   }
 
-  // ----- TEST SOLO : "Je le fais" puis lancer -----
   function afficherTestSolo(scene) {
     const annonce = document.createElement('div'); annonce.className = 'annonce-test';
     annonce.innerHTML = '<div class="compet">Test de ' + NOMS_COMPET[scene.compet] + '</div>' +
       '<div class="diff">Difficulté : ' + scene.difficulte + '</div>';
     document.getElementById('zone-test').appendChild(annonce);
     const zone = document.getElementById('zone-actions');
-
     if (etatRecent.qui_tente === null || etatRecent.qui_tente === undefined) {
       const info = document.createElement('div'); info.className = 'qui-tente';
       info.textContent = 'Qui tente ?';
@@ -712,7 +760,6 @@
     }
   }
 
-  // ----- TEST DE GROUPE -----
   function afficherTestGroupe(scene) {
     const annonce = document.createElement('div'); annonce.className = 'annonce-test';
     annonce.innerHTML = '<div class="compet">Test de ' + NOMS_COMPET[scene.compet] + ' (groupe)</div>' +
@@ -725,32 +772,32 @@
     afficherPhaseLancer(scene, scene);
   }
 
-  // Phase de lancer de de : le qui_tente lance, les autres regardent
   function afficherPhaseLancer(scene, source) {
     const zone = document.getElementById('zone-actions');
     const compet = source.compet;
     const difficulte = source.difficulte;
     const estGroupe = scene.type === 'test_groupe';
 
-    // Calcul de la valeur de competence
     let valeurCompet;
     if (estGroupe) {
-      // Meilleure stat du groupe + bonus
-      let max = etatRecent.avatars[0][compet];
-      for (let i = 1; i < etatRecent.avatars.length; i++) {
+      // Meilleur des vivants + bonus
+      let max = -1;
+      let nbVivants = 0;
+      for (let i = 0; i < etatRecent.avatars.length; i++) {
+        if (etatRecent.morts && etatRecent.morts[i]) continue;
+        nbVivants++;
         if (etatRecent.avatars[i][compet] > max) max = etatRecent.avatars[i][compet];
       }
-      valeurCompet = max + Math.ceil((etatRecent.avatars.length - 1) / 2);
+      if (max < 0) max = 0;
+      valeurCompet = max + Math.ceil(Math.max(0, nbVivants - 1) / 2);
     } else {
       valeurCompet = etatRecent.avatars[etatRecent.qui_tente][compet];
     }
 
-    // Affichage du de (face 1 par defaut, ou animation si en cours)
     const zoneDe = document.createElement('div'); zoneDe.className = 'zone-de';
     zoneDe.innerHTML = '<div class="de" id="le-de">' + facesDe(1) + '</div>';
     zone.appendChild(zoneDe);
 
-    // Qui peut lancer ?
     const peutLancer = estGroupe || (etatRecent.qui_tente === monIndex);
     if (peutLancer) {
       const b = document.createElement('button');
@@ -759,11 +806,7 @@
         if (deAnimeEnCours) return;
         deAnimeEnCours = true;
         animerDe(function(){
-          envoyer('av_lancer_de', {
-            scene: scene,
-            compet_valeur: valeurCompet,
-            difficulte: difficulte,
-          });
+          envoyer('av_lancer_de', { scene: scene, compet_valeur: valeurCompet, difficulte: difficulte });
           deAnimeEnCours = false;
         });
       };
@@ -775,7 +818,6 @@
     }
   }
 
-  // Anime le de localement (juste l effet visuel)
   function animerDe(callback) {
     const de = document.getElementById('le-de');
     if (!de) { callback(); return; }
@@ -793,12 +835,12 @@
     }, 110);
   }
 
-  // ----- CHOIX LIBRE : vote -----
   function afficherChoixLibre(scene) {
     const zone = document.getElementById('zone-actions');
-    const aDejaVote = etatRecent.votes_count > 0 && false;  // on n a pas le detail de qui a vote
     const info = document.createElement('div'); info.className = 'vote-info';
-    info.textContent = 'Vote du groupe (' + etatRecent.votes_count + ' / ' + etatRecent.joueurs.length + ')';
+    let nbVivants = 0;
+    for (let i = 0; i < (etatRecent.morts || []).length; i++) if (!etatRecent.morts[i]) nbVivants++;
+    info.textContent = 'Vote du groupe (' + etatRecent.votes_count + ' / ' + nbVivants + ')';
     zone.appendChild(info);
     scene.choix.forEach(function(choix, i) {
       const b = document.createElement('button'); b.className = 'btn-choix';
@@ -808,7 +850,6 @@
     });
   }
 
-  // ----- FINALE -----
   function afficherFinale(scene) {
     const zone = document.getElementById('zone-actions');
     const b = document.createElement('button');
@@ -817,34 +858,40 @@
     zone.appendChild(b);
   }
 
-  // ----- RESULTAT D UN TEST OU D UN CHOIX LIBRE -----
+  // RESULTAT avec paliers
   function afficherResultat(scene) {
-    const r = etatRecent.resultat_test;  // null pour les choix_libre
+    const r = etatRecent.resultat_test;
     const zoneT = document.getElementById('zone-test');
-    let txt = '';
-    let estReussi = true;  // pour les choix libres, on traite comme une reussite visuellement (vert)
+    let txt = '', classePalier = 'palier-libre', titrePalier = '';
 
     if (scene.type === 'choix_libre' && etatRecent.choix_groupe !== null) {
       txt = scene.choix[etatRecent.choix_groupe].consequence;
-      estReussi = true;
-    } else if (scene.type === 'choix_groupe' && etatRecent.choix_groupe !== null && r) {
-      const c = scene.choix[etatRecent.choix_groupe];
-      txt = r.reussi ? c.succes : c.echec;
-      estReussi = r.reussi;
+      classePalier = 'palier-libre';
     } else if (r) {
-      txt = r.reussi ? scene.succes : scene.echec;
-      estReussi = r.reussi;
+      const palier = r.palier;
+      // Choix de couleur et titre selon le palier
+      if (palier === 'reussite_franche') { classePalier = 'palier-franche'; titrePalier = '\u2713 Réussite franche'; }
+      else if (palier === 'reussite_limite') { classePalier = 'palier-limite-r'; titrePalier = '\u2713 Réussite limite'; }
+      else if (palier === 'echec_limite') { classePalier = 'palier-limite-e'; titrePalier = '\u2717 Échec limite'; }
+      else { classePalier = 'palier-franc-e'; titrePalier = '\u2717 Échec franc'; }
+
+      if (scene.type === 'choix_groupe' && etatRecent.choix_groupe !== null) {
+        const c = scene.choix[etatRecent.choix_groupe];
+        txt = r.reussi ? c.succes : c.echec;
+      } else {
+        txt = r.reussi ? scene.succes : scene.echec;
+      }
     }
 
-    let html = '<div class="resultat-test ' + (estReussi ? 'resultat-reussite' : 'resultat-echec') + '">';
-    // On affiche les details du de seulement s il y a eu un test
+    let html = '<div class="resultat-test ' + classePalier + '">';
     if (r && scene.type !== 'choix_libre') {
       html += '<div>Dé : ' + r.de + ' + compétence ' + r.compet + ' = <strong>' + r.total + '</strong></div>';
-      html += '<div style="margin-top:2px; font-size:0.88rem;">Il fallait atteindre ' + r.difficulte +
-        (r.reussi ? '' : ' (manqué de ' + (r.difficulte - r.total) + ')') + '</div>';
-      html += '<div style="margin-top:6px; font-weight:bold;">' + (r.reussi ? '\u2713 Réussite' : '\u2717 Échec') + '</div>';
+      html += '<div style="margin-top:2px; font-size:0.88rem;">Il fallait atteindre ' + r.difficulte + '</div>';
+      html += '<div class="palier-titre">' + titrePalier + '</div>';
     }
     html += '<div style="margin-top:8px; font-style:italic;">' + txt + '</div>';
+
+    // Conséquences gorgées
     if (r && r.gorgees_appliquees && r.gorgees_appliquees.length > 0) {
       if (r.gorgees_appliquees.length > 1) {
         const detail = r.gorgees_appliquees.map(function(g){ return etatRecent.avatars[g[0]].nom + ' : ' + g[1]; }).join(' \u00b7 ');
@@ -855,18 +902,40 @@
         html += '<div class="gorgees-annonce">' + etatRecent.avatars[g[0]].nom + ' boit ' + g[1] + ' gorgées</div>';
       }
     }
+
+    // Conséquences PV (juste l'info publique : qui perd combien, pas le total restant)
+    if (r && r.pv_appliques && r.pv_appliques.length > 0) {
+      if (r.pv_appliques.length > 1) {
+        html += '<div class="pv-annonce">L\'équipe perd ' + r.pv_appliques[0][1] + ' PV chacun</div>';
+      } else {
+        const p = r.pv_appliques[0];
+        html += '<div class="pv-annonce">' + etatRecent.avatars[p[0]].nom + ' perd ' + p[1] + ' PV</div>';
+      }
+    }
+
+    // Morts publiques
+    if (r && r.morts && r.morts.length > 0) {
+      r.morts.forEach(function(idx) {
+        html += '<div class="mort-annonce">\u2620 ' + etatRecent.avatars[idx].nom + ' est tombé au combat. Cul sec final !</div>';
+      });
+    }
+
     html += '</div>';
     zoneT.innerHTML = html;
 
-    const zone = document.getElementById('zone-actions');
-    const b = document.createElement('button');
-    b.className = 'btn-principal'; b.textContent = 'Continuer';
-    b.onclick = function(){ envoyer('av_terminer_scene'); };
-    zone.appendChild(b);
+    if (jeSuisMort()) {
+      document.getElementById('zone-actions').innerHTML = '<div class="pas-mon-tour">Tu n\'agis plus. Les autres continuent...</div>';
+    } else {
+      const zone = document.getElementById('zone-actions');
+      const b = document.createElement('button');
+      b.className = 'btn-principal'; b.textContent = 'Continuer';
+      b.onclick = function(){ envoyer('av_terminer_scene'); };
+      zone.appendChild(b);
+    }
   }
 
   // ============================================================
-  // FIN DE PARTIE
+  // FIN
   // ============================================================
   function afficherFin(m) {
     const histoire = trouverHistoire(etatRecent.histoire_id);
@@ -875,8 +944,11 @@
     else if (m.type_fin === 'moyenne') { titre = histoire.finMoyenne.titre; texte = histoire.finMoyenne.texte; }
     else { titre = histoire.finEchec.titre; texte = histoire.finEchec.texte; }
     document.getElementById('fin-titre').textContent = titre;
-    let bilan = '<div style="margin-top:12px; font-size:0.9rem; color:var(--texte-doux);">Bilan des gorgées : ';
-    bilan += m.avatars.map(function(av, i){ return av.nom + ' (' + m.gorgees[i] + ')'; }).join(' \u00b7 ');
+    let bilan = '<div style="margin-top:12px; font-size:0.9rem; color:var(--texte-doux);">Bilan : ';
+    bilan += m.avatars.map(function(av, i){
+      const mort = (m.morts && m.morts[i]) ? ' \u2620' : '';
+      return av.nom + mort + ' (' + m.gorgees[i] + ' gorgées)';
+    }).join(' \u00b7 ');
     bilan += '</div>';
     document.getElementById('fin-texte').innerHTML = texte + bilan;
     document.getElementById('fin-image').innerHTML = dessinerScene(m.type_fin === 'echec' ? 'sortie' : 'retour');
