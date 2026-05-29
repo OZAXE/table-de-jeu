@@ -614,8 +614,9 @@
     document.getElementById('zone-test').innerHTML = '';
     document.getElementById('zone-actions').innerHTML = '';
 
-    // Si on a un resultat, on le montre en priorite
-    if (etatRecent.resultat_test && etatRecent.scene_etape === 'resolution') {
+    // Si on est en phase resolution, on affiche le resultat.
+    // Pour les tests : il y a un resultat_test. Pour les choix libres : il y a un choix_groupe (vote tranché).
+    if (etatRecent.scene_etape === 'resolution') {
       afficherResultat(scene);
       return;
     }
@@ -816,30 +817,35 @@
     zone.appendChild(b);
   }
 
-  // ----- RESULTAT D UN TEST -----
+  // ----- RESULTAT D UN TEST OU D UN CHOIX LIBRE -----
   function afficherResultat(scene) {
-    const r = etatRecent.resultat_test;
+    const r = etatRecent.resultat_test;  // null pour les choix_libre
     const zoneT = document.getElementById('zone-test');
     let txt = '';
-    // Pour les choix_groupe et choix_libre on prend le texte de l option choisie
-    if (scene.type === 'choix_groupe' && etatRecent.choix_groupe !== null) {
+    let estReussi = true;  // pour les choix libres, on traite comme une reussite visuellement (vert)
+
+    if (scene.type === 'choix_libre' && etatRecent.choix_groupe !== null) {
+      txt = scene.choix[etatRecent.choix_groupe].consequence;
+      estReussi = true;
+    } else if (scene.type === 'choix_groupe' && etatRecent.choix_groupe !== null && r) {
       const c = scene.choix[etatRecent.choix_groupe];
       txt = r.reussi ? c.succes : c.echec;
-    } else if (scene.type === 'choix_libre' && etatRecent.choix_groupe !== null) {
-      txt = scene.choix[etatRecent.choix_groupe].consequence;
-    } else {
+      estReussi = r.reussi;
+    } else if (r) {
       txt = r.reussi ? scene.succes : scene.echec;
+      estReussi = r.reussi;
     }
 
-    let html = '<div class="resultat-test ' + (r.reussi ? 'resultat-reussite' : 'resultat-echec') + '">';
-    if (scene.type !== 'choix_libre') {
+    let html = '<div class="resultat-test ' + (estReussi ? 'resultat-reussite' : 'resultat-echec') + '">';
+    // On affiche les details du de seulement s il y a eu un test
+    if (r && scene.type !== 'choix_libre') {
       html += '<div>Dé : ' + r.de + ' + compétence ' + r.compet + ' = <strong>' + r.total + '</strong></div>';
       html += '<div style="margin-top:2px; font-size:0.88rem;">Il fallait atteindre ' + r.difficulte +
         (r.reussi ? '' : ' (manqué de ' + (r.difficulte - r.total) + ')') + '</div>';
       html += '<div style="margin-top:6px; font-weight:bold;">' + (r.reussi ? '\u2713 Réussite' : '\u2717 Échec') + '</div>';
     }
     html += '<div style="margin-top:8px; font-style:italic;">' + txt + '</div>';
-    if (r.gorgees_appliquees && r.gorgees_appliquees.length > 0) {
+    if (r && r.gorgees_appliquees && r.gorgees_appliquees.length > 0) {
       if (r.gorgees_appliquees.length > 1) {
         const detail = r.gorgees_appliquees.map(function(g){ return etatRecent.avatars[g[0]].nom + ' : ' + g[1]; }).join(' \u00b7 ');
         html += '<div class="gorgees-annonce">Tout le monde boit !</div>';
