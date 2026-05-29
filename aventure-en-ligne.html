@@ -12,14 +12,13 @@
     --texte: #5a4636; --texte-doux: #8a7560;
     --accent: #d98b7a; --accent-fonce: #b56a5c;
     --or: #e0b15e; --blanc-casse: #fdf6ea;
-    --vert: #6b8a5a;
+    --vert: #6b8a5a; --foret: #6b8a5a; --pierre: #a89d8e;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Trebuchet MS', 'Segoe UI', sans-serif; background: var(--ciel-clair); color: var(--texte); min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; padding: 16px; }
   .app { width: 100%; max-width: 540px; margin-top: 10px; }
   .barre-haut { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .lien-haut { color: var(--texte-doux); text-decoration: none; font-size: 0.85rem; cursor: pointer; background: none; border: none; font-family: inherit; padding: 0; }
-  .lien-haut:hover { color: var(--accent-fonce); }
   h1 { font-family: Georgia, serif; text-align: center; font-size: 2rem; color: var(--roche-fonce); margin-bottom: 2px; font-weight: normal; }
   .sous-titre { text-align: center; color: var(--texte-doux); font-style: italic; margin-bottom: 18px; font-size: 0.9rem; }
   .carte { background: var(--blanc-casse); border-radius: 18px; padding: 22px; margin-bottom: 16px; box-shadow: 0 8px 28px rgba(90,70,54,0.15); }
@@ -27,7 +26,6 @@
   button:active { transform: scale(0.97); }
   button:disabled { opacity: 0.4; cursor: not-allowed; }
   .btn-principal { background: var(--accent); color: var(--blanc-casse); }
-  .btn-principal:hover { filter: brightness(1.05); }
   .btn-vert { background: var(--vert); color: #fff; }
   .btn-choix { background: var(--sable); color: var(--texte); border: 2px solid var(--roche-clair); text-align: left; }
   .btn-choix:hover { background: var(--sable-clair); border-color: var(--accent); }
@@ -39,22 +37,18 @@
   .liste-joueurs .joueur { padding: 5px 10px; }
   .statut { text-align: center; color: var(--texte-doux); font-size: 0.85rem; margin-top: 6px; }
   .histoires-liste { display: flex; flex-direction: column; gap: 10px; }
-  .histoire-carte { background: var(--sable); border: 2px solid var(--roche-clair); border-radius: 12px; padding: 14px; cursor: pointer; transition: all 0.15s ease; }
-  .histoire-carte:hover { background: var(--sable-clair); border-color: var(--accent); }
+  .histoire-carte { background: var(--sable); border: 2px solid var(--roche-clair); border-radius: 12px; padding: 14px; cursor: pointer; }
   .histoire-carte.choisi { background: var(--accent); color: var(--blanc-casse); border-color: var(--accent-fonce); }
   .histoire-titre { font-family: Georgia, serif; font-size: 1.15rem; margin-bottom: 3px; }
   .histoire-meta { font-size: 0.82rem; opacity: 0.85; font-style: italic; }
-  .difficultes { display: flex; flex-direction: column; gap: 7px; margin-bottom: 8px; }
+  .difficultes { display: flex; flex-direction: column; gap: 7px; }
   .diff-option { padding: 11px 14px; border-radius: 10px; border: 2px solid var(--roche-clair); background: #fff; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-  .diff-option:hover { background: var(--sable-clair); }
   .diff-option.choisi { background: var(--accent); color: var(--blanc-casse); border-color: var(--accent-fonce); }
-  .diff-coef { font-size: 0.82rem; opacity: 0.8; }
   .mode-compet { display: flex; gap: 8px; }
   .mode-compet button { flex: 1; }
   .mode-compet button.choisi { background: var(--accent); color: var(--blanc-casse); }
   .classes-liste { display: flex; flex-direction: column; gap: 10px; }
-  .classe-carte { background: var(--sable-clair); border: 2px solid var(--roche-clair); border-radius: 12px; padding: 11px 14px; cursor: pointer; transition: all 0.15s ease; }
-  .classe-carte:hover { background: #fff; border-color: var(--accent); }
+  .classe-carte { background: var(--sable-clair); border: 2px solid var(--roche-clair); border-radius: 12px; padding: 11px 14px; cursor: pointer; }
   .classe-carte.choisi { background: var(--accent); color: var(--blanc-casse); border-color: var(--accent-fonce); }
   .classe-carte.deja-pris { opacity: 0.4; cursor: not-allowed; }
   .classe-nom { font-weight: bold; font-size: 1.05rem; }
@@ -66,6 +60,35 @@
   .stat-valeur { min-width: 24px; text-align: center; font-weight: bold; font-size: 1.05rem; }
   .points-restants { text-align: center; color: var(--texte-doux); margin-bottom: 8px; font-size: 0.9rem; }
   .pas-mon-tour { text-align: center; color: var(--texte-doux); font-style: italic; padding: 16px; }
+
+  /* Ecran de jeu */
+  .barre-progression { height: 6px; background: var(--sable); border-radius: 4px; overflow: hidden; margin-bottom: 14px; }
+  .barre-remplie { height: 100%; background: var(--accent); transition: width 0.4s ease; }
+  .avatars-ligne { display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .avatar-puce { background: var(--sable); border-radius: 8px; padding: 5px 8px; font-size: 0.72rem; text-align: center; min-width: 70px; border: 2px solid transparent; }
+  .avatar-puce.actif { border-color: var(--accent); }
+  .avatar-puce.moi { background: var(--ciel); }
+  .avatar-nom-petit { font-weight: bold; }
+  .avatar-classe-petite { font-size: 0.65rem; color: var(--accent-fonce); font-style: italic; }
+  .avatar-stats-petite { font-size: 0.65rem; color: var(--texte-doux); }
+  .avatar-gorgees-petite { font-size: 0.7rem; color: var(--accent-fonce); font-weight: bold; }
+  .scene-image { width: 100%; border-radius: 14px; overflow: hidden; margin-bottom: 14px; }
+  .scene-image svg { width: 100%; height: auto; display: block; }
+  .scene-texte { font-size: 1rem; line-height: 1.55; margin-bottom: 14px; }
+  .annonce-test { background: var(--ciel); border-radius: 12px; padding: 11px; text-align: center; margin-bottom: 11px; }
+  .annonce-test .compet { font-size: 1.1rem; font-weight: bold; color: var(--roche-fonce); }
+  .annonce-test .diff { font-size: 0.88rem; color: var(--texte-doux); margin-top: 2px; }
+  .qui-tente { text-align: center; color: var(--texte-doux); font-size: 0.88rem; margin-bottom: 6px; }
+  .zone-de { display: flex; flex-direction: column; align-items: center; margin: 10px 0; }
+  .de { width: 70px; height: 70px; background: #fff; border-radius: 14px; box-shadow: 0 3px 10px rgba(90,70,54,0.25); display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 10px; }
+  .de.roule { animation: secoue 0.15s infinite; }
+  @keyframes secoue { 0% { transform: rotate(-8deg) translateY(0); } 50% { transform: rotate(8deg) translateY(-4px); } 100% { transform: rotate(-8deg) translateY(0); } }
+  .pip { width: 12px; height: 12px; border-radius: 50%; background: var(--accent-fonce); align-self: center; justify-self: center; }
+  .resultat-test { text-align: center; padding: 12px; border-radius: 12px; margin-bottom: 12px; font-size: 1rem; }
+  .resultat-reussite { background: #cfe8d4; color: #3d6b48; }
+  .resultat-echec { background: #f0cfc9; color: #9c4438; }
+  .gorgees-annonce { font-size: 1.4rem; font-weight: bold; margin-top: 5px; }
+  .vote-info { text-align: center; color: var(--texte-doux); font-size: 0.88rem; margin: 6px 0; }
   .erreur { background: rgba(208,86,59,0.15); border: 1px solid #c4534a; color: #9c4438; padding: 10px; border-radius: 8px; margin-bottom: 10px; text-align: center; font-size: 0.88rem; }
   .hidden { display: none !important; }
   .centre { text-align: center; }
@@ -98,8 +121,6 @@
     <div class="code-salon" id="affichage-code">----</div>
     <div class="liste-joueurs" id="liste-joueurs"></div>
     <div class="statut" id="statut-attente">En attente...</div>
-
-    <!-- Reglages visibles seulement pour le createur -->
     <div id="zone-config" class="hidden" style="margin-top:14px;">
       <label>Histoire</label>
       <div class="histoires-liste" id="histoires-liste"></div>
@@ -130,43 +151,47 @@
     <div id="repart-zone"></div>
   </div>
 
-  <!-- ECRAN 5 : EN JEU (placeholder, sera dans la sous-etape 1c) -->
-  <div class="carte hidden centre" id="ecran-jeu-placeholder">
-    <p style="color:var(--accent-fonce); font-weight:bold;">Le jeu démarre !</p>
-    <p style="color:var(--texte-doux); margin-top:8px; font-size:0.9rem;">(L'écran de jeu sera ajouté dans la prochaine étape)</p>
+  <!-- ECRAN 5 : EN JEU -->
+  <div class="carte hidden" id="ecran-jeu">
+    <div class="barre-progression"><div class="barre-remplie" id="barre"></div></div>
+    <div class="avatars-ligne" id="avatars-ligne"></div>
+    <div class="scene-image" id="scene-image"></div>
+    <div class="scene-texte" id="scene-texte"></div>
+    <div id="zone-test"></div>
+    <div id="zone-actions"></div>
+  </div>
+
+  <!-- ECRAN 6 : FIN -->
+  <div class="carte hidden centre" id="ecran-fin">
+    <div id="fin-image" class="scene-image"></div>
+    <h2 id="fin-titre" style="color:var(--roche-fonce); margin-bottom:10px;"></h2>
+    <p id="fin-texte" style="line-height:1.6; margin-bottom:16px;"></p>
+    <button class="btn-principal" onclick="location.reload()">Nouvelle aventure</button>
   </div>
 </div>
 
 <script>
   // ============================================================
-  //   CONFIGURATION DU SERVEUR
+  // CONFIGURATION
   // ============================================================
   const SERVEUR_HTTP = 'https://kinito-serveur.onrender.com';
   const SERVEUR_WS = 'wss://kinito-serveur.onrender.com';
 
-  // ============================================================
-  //   ETAT LOCAL
-  // ============================================================
   let ws = null;
-  let monNom = '';
-  let codeSalon = '';
-  let estCreateur = false;
+  let monNom = '', codeSalon = '', estCreateur = false;
   let monIndex = -1;
-  let etatRecent = null;            // dernier etat recu du serveur
+  let etatRecent = null;
   let histoireChoisie = 'akrenos';
   let difficulteChoisie = 'normal';
   let modeChoisi = 'aleatoire';
-  let classeChoisieTemp = null;     // selection temporaire avant validation
-
-  // Pour la repartition (mode reparti)
+  let classeChoisieTemp = null;
   let repartLocal = { force: 0, agilite: 0, ruse: 0 };
+  let sceneCourantePrecedente = -1;  // pour detecter le changement de scene cote hote
+  let deAnimeEnCours = false;        // pour eviter doubles animations
 
   // ============================================================
-  //   LES HISTOIRES (donnees, partagees avec le moteur local)
+  // LES HISTOIRES
   // ============================================================
-  // Pour la sous-etape 1b on a juste besoin des metadonnees et des classes,
-  // les scenes seront utilisees dans la sous-etape 1c.
-
   const HISTOIRE_AKRENOS = {
     id: "akrenos",
     titre: "Le Silence d'Akrenos",
@@ -178,17 +203,133 @@
       { nom: "Moine guerrier", desc: "Croisé érudit, manie autant le verbe que l'arme", force: 2, agilite: 1, ruse: 4 },
       { nom: "Éclaireur", desc: "Ancien chasseur, connaît sentiers et hommes", force: 2, agilite: 3, ruse: 2 },
     ],
+    scenes: [
+      { type: "narration", image: "campement",
+        texte: "Année 1098. L'armée croisée campe en Anatolie, sur la route d'Antioche. Vos compagnons d'armes vous connaissent : ensemble, vous avez survécu à trois mois de marche. Ce matin, le capitaine vous convoque sous sa tente. \"Le village d'Akrenos, à une demi-journée d'ici, devait nous fournir vivres et eau. J'y ai envoyé un éclaireur à l'aube. Il aurait dû rentrer. Allez voir, et ramenez ce qui peut l'être.\" Il vous regarde longuement, comme s'il hésitait à ajouter quelque chose, puis se ravise.",
+        bouton: "Partir pour Akrenos" },
+      { type: "choix_groupe", image: "sentier",
+        texte: "La piste se divise. À droite, la route directe, large et visible. À gauche, un sentier de chèvre par les hauteurs boisées.",
+        choix: [
+          { texte: "Route directe", compet: "force", difficulte: 7, succes: "Vous arrivez tôt et reposés.", echec: "Chaleur écrasante. Vous arrivez exténués." },
+          { texte: "Sentier boisé", compet: "agilite", difficulte: 7, succes: "Vous arrivez en haut d'une crête qui domine le village.", echec: "Ravin imprévu et ronces. Vous arrivez écorchés." },
+        ] },
+      { type: "narration", image: "chariot",
+        texte: "Un cheval gît au bord du chemin, sans blessure. Plus loin, un chariot abandonné, les sacs encore dessus. Personne ne laisse ses provisions au soleil, sauf à ne plus pouvoir revenir.",
+        bouton: "Continuer" },
+      { type: "test_solo", image: "sentinelle",
+        texte: "À l'entrée du village, l'éclaireur croisé dort, casque de travers. Son visage est étrangement paisible. Le réveiller demande du doigté.",
+        compet: "ruse", difficulte: 8, gorgees_base: 3,
+        succes: "Il sursaute, se reprend. \"Ils étaient tous à la messe quand je suis arrivé. Depuis, plus personne. Je n'ai pas eu le courage d'entrer.\" Il vous suit, le regard fuyant.",
+        echec: "Il jaillit en hurlant, frappe au hasard, refuse de parler, et plante là sa lance pour fuir vers le camp." },
+      { type: "narration", image: "placevide",
+        texte: "Vous entrez. Le silence frappe. Une porte bat dans le vent, un foyer fume mais le pain est froid. Au centre, un puits, une église, et l'impression d'être observé.",
+        bouton: "S'enfoncer dans le village" },
+      { type: "test_solo", image: "fenetre",
+        texte: "Un enfant vous observe par une fenêtre, immobile, sans expression. Il ne cligne pas des yeux.",
+        compet: "ruse", difficulte: 8, gorgees_base: 3,
+        succes: "Vous approchez sans le brusquer. Il murmure : \"Ils sont tous descendus. À la cave de l'église. Ma mère m'a dit de rester ici, mais elle n'est pas revenue.\" Puis il se tait.",
+        echec: "Un mouvement maladroit, l'enfant disparaît. La porte se verrouille. Vous n'en tirerez rien." },
+      { type: "choix_groupe", image: "eglise",
+        texte: "L'église se dresse au centre du village, massive, portes closes.",
+        choix: [
+          { texte: "Forcer la porte", compet: "force", difficulte: 7, succes: "La porte cède d'un coup. Les bancs sont renversés.", echec: "La porte craque mais résiste. Vous entrez par une fenêtre brisée." },
+          { texte: "Autre entrée", compet: "agilite", difficulte: 7, succes: "Une porte de service mal fermée. Vous entrez en silence.", echec: "Vous tournez longuement avant de trouver." },
+        ] },
+      { type: "test_solo", image: "inscription",
+        texte: "Près de l'autel, une inscription gravée à la hâte. C'est du grec ancien, à demi effacé.",
+        compet: "ruse", difficulte: 9, gorgees_base: 3,
+        succes: "Vous déchiffrez : \"Ne buvez pas. Ne mangez pas. Ils ne sont plus eux-mêmes.\" La main qui a gravé tremblait.",
+        echec: "Les mots vous échappent. Quelque chose à propos de l'eau, peut-être." },
+      { type: "test_groupe", image: "puits",
+        texte: "Quelque chose flotte au fond du puits. L'éclat est métallique. Il faut une descente coordonnée.",
+        compet: "agilite", difficulte: 8, gorgees_base: 3,
+        succes: "Vous remontez un coffret scellé. À l'intérieur, des reliques et un parchemin marqué du sceau du prêtre.",
+        echec: "La corde glisse. Ce que vous remontez vous échappe et retombe." },
+      { type: "narration", image: "vieillefemme",
+        texte: "Une vieille femme apparaît sur le seuil d'une maison, paisible. Elle sourit doucement. \"Vous avez soif, mes enfants ? Entrez, j'ai de l'eau fraîche.\" Elle tend une cruche.",
+        bouton: "Décliner et continuer" },
+      { type: "test_solo", image: "maison",
+        texte: "La porte est barricadée de l'intérieur. Les volets sont cloués. Quelqu'un s'est enfermé là.",
+        compet: "force", difficulte: 8, gorgees_base: 3,
+        succes: "La porte cède d'un coup d'épaule. Le prêtre n'est plus, mais son journal repose ouvert.",
+        echec: "Vous forcez bruyamment. Le journal est là, mais vous sentez des regards depuis les fenêtres." },
+      { type: "test_groupe", image: "journal",
+        texte: "Les pages sont éparses. Reconstituer ce que le prêtre a vu demande méthode.",
+        compet: "ruse", difficulte: 9, gorgees_base: 3,
+        succes: "Tout s'éclaire. Une caravane est passée par Akrenos il y a une semaine, malade. Trois jours plus tard, l'eau du puits avait un goût. Les gens commençaient à ne plus être eux-mêmes.",
+        echec: "Vous saisissez des bribes. Une caravane. De l'eau. Mais le fil vous échappe." },
+      { type: "choix_groupe", image: "cimetiere",
+        texte: "Au-delà du village, le cimetière. Les tombes récentes sont retournées, de l'intérieur. Quelque chose y bouge.",
+        choix: [
+          { texte: "Fouiller les tombes", compet: "force", difficulte: 8, succes: "Vous découvrez des corps qui ne sont pas ceux qu'ils devraient être.", echec: "Ce qui sort de la terre vous repousse." },
+          { texte: "Observer de loin", compet: "ruse", difficulte: 8, succes: "Vous comprenez. Ce qui bouge n'est pas mort. Mais ce n'est plus vivant non plus.", echec: "De loin, vous ne distinguez rien. L'angoisse monte sans preuve." },
+        ] },
+      { type: "test_groupe", image: "affrontement",
+        texte: "Ils sortent des maisons. Pas en courant. En marchant, calmement, comme à la messe. Mais leurs yeux sont vides, et leurs mains tiennent des outils, des couteaux, des pierres.",
+        compet: "force", difficulte: 10, gorgees_base: 3,
+        succes: "Vous tenez bon. À plusieurs, vous repoussez la foule sans la massacrer.",
+        echec: "Vous êtes débordés. Vous frappez plus que de raison. Du sang coule." },
+      { type: "test_solo", image: "piegecave",
+        texte: "Pendant l'affrontement, le sol cède sous l'un de vous. Une trappe. Il faut sortir, vite.",
+        compet: "agilite", difficulte: 8, gorgees_base: 3,
+        succes: "Le piégé trouve un passage par la cave et libère les siens en les prenant à revers.",
+        echec: "Le piégé tâtonne dans l'obscurité. Quand il rejoint les autres, ils ont pris des coups." },
+      { type: "narration", image: "revelation",
+        texte: "Le calme retombe. La vieille femme réapparaît, souriante. \"Vous voyez ? Ils n'étaient plus eux-mêmes. C'est l'eau, c'est la caravane, ou autre chose. Personne ne sait. Moi, je n'ai jamais bu à ce puits.\" Elle vous regarde longuement. \"Et vous, qu'allez-vous dire à votre capitaine ?\"",
+        bouton: "Faire face au choix" },
+      { type: "choix_libre", image: "choixfeu",
+        texte: "Vous devez décider du sort d'Akrenos avant de partir.",
+        choix: [
+          { texte: "Brûler le village", consequence: "Vous mettez le feu. Les flammes mangent les maisons. Vous ne vous retournez pas." },
+          { texte: "Partir en silence", consequence: "Vous quittez Akrenos sans bruit. La vieille femme vous regarde partir. Le village reste, et son secret avec lui." },
+        ] },
+      { type: "finale", image: "retour",
+        texte: "Le camp croisé apparaît à l'horizon. Le capitaine vous attend.",
+        bouton: "Raconter ce qui s'est passé" },
+    ],
+    finTriomphe: { titre: "Devoir accompli", texte: "Vous racontez. Le capitaine vous écoute, le visage fermé. Il ne dit rien. Vous savez qu'il vous croit. La croisade reprend sa marche, et personne ne parlera plus jamais d'Akrenos." },
+    finMoyenne: { titre: "L'écho du silence", texte: "Vous racontez ce que vous pouvez. Certains détails vous échappent. Le capitaine hoche la tête, mais son regard dit qu'il sait. L'armée repart. Et la nuit, parfois, vous entendez encore le silence d'Akrenos." },
+    finEchec: { titre: "Ce qu'on ne raconte pas", texte: "Vous bafouillez. Le capitaine vous écoute en silence, puis vous renvoie. Quelques jours plus tard, un autre détachement est envoyé à Akrenos. Il ne revient pas." },
   };
 
   const HISTOIRE_CITE = {
     id: "cite",
     titre: "La Cité Ensevelie",
     univers: "Désert, aventure",
-    classes: null,  // pas de classes pour cette histoire
+    classes: null,
+    scenes: [
+      { type: "narration", image: "arrivee",
+        texte: "Après des jours de marche, la cité apparaît enfin, à demi engloutie par les sables. Des tours brisées percent les dunes.",
+        bouton: "Avancer vers la cité" },
+      { type: "choix_groupe", image: "entree",
+        texte: "Deux accès s'offrent à vous.",
+        choix: [
+          { texte: "La porte effondrée", compet: "force", difficulte: 7, succes: "Vous forcez le passage dans un fracas de pierres.", echec: "Une poutre cède !" },
+          { texte: "Le passage étroit", compet: "agilite", difficulte: 6, succes: "Vous vous faufilez en silence.", echec: "Le passage est retors, quelqu'un se coince." },
+        ] },
+      { type: "test_solo", image: "piege",
+        texte: "Une dalle s'enfonce. Un déclic. Piège ancien !",
+        compet: "agilite", difficulte: 8, gorgees_base: 3,
+        succes: "D'un bond, l'aventurier évite les pointes.", echec: "Trop lent ! Les pointes éraflent." },
+      { type: "choix_groupe", image: "gardien",
+        texte: "Une statue de pierre s'anime : un gardien.",
+        choix: [
+          { texte: "Le combattre", compet: "force", difficulte: 8, succes: "À plusieurs, vous renversez le colosse.", echec: "Le gardien frappe fort. Vous l'emportez, mais pas sans casse." },
+          { texte: "Le contourner par la ruse", compet: "ruse", difficulte: 8, succes: "Vous détournez son attention.", echec: "Le gardien vous bouscule." },
+        ] },
+      { type: "test_groupe", image: "tresor",
+        texte: "Le trésor est scellé dans un mécanisme ancien.",
+        compet: "ruse", difficulte: 9, gorgees_base: 3,
+        succes: "Ensemble, vous percez le secret.", echec: "Le mécanisme résiste. La cité gronde." },
+      { type: "finale", image: "sortie",
+        texte: "La cité s'effondre !", bouton: "Courir vers la lumière" },
+    ],
+    finTriomphe: { titre: "Triomphe !", texte: "Vous jaillissez des sables, le trésor en main." },
+    finMoyenne: { titre: "De justesse...", texte: "Couverts de poussière, vous vous effondrez hors de la cité, le trésor sauvé." },
+    finEchec: { titre: "Sortie héroïque", texte: "La cité a bien failli vous engloutir." },
   };
 
   const HISTOIRES = [HISTOIRE_AKRENOS, HISTOIRE_CITE];
-
   const DIFFICULTES = [
     { id: 'promenade', nom: 'Promenade de santé', coef: 0.5 },
     { id: 'facile', nom: 'Facile', coef: 1 },
@@ -196,25 +337,30 @@
     { id: 'difficile', nom: 'Difficile', coef: 2 },
     { id: 'cirrhose', nom: 'Cirrhose', coef: 5 },
   ];
+  const NOMS_COMPET = { force: 'Force', agilite: 'Agilité', ruse: 'Ruse' };
 
   // ============================================================
-  //   UTILITAIRES UI
+  // UTILITAIRES
   // ============================================================
   function montrerEcran(id) {
-    ['ecran-accueil', 'ecran-attente', 'ecran-classe', 'ecran-repartition', 'ecran-jeu-placeholder'].forEach(function(e) {
+    ['ecran-accueil','ecran-attente','ecran-classe','ecran-repartition','ecran-jeu','ecran-fin'].forEach(function(e) {
       document.getElementById(e).classList.add('hidden');
     });
     document.getElementById(id).classList.remove('hidden');
   }
-
   function afficherErreur(msg) {
     const z = document.getElementById('erreur-accueil');
     z.innerHTML = '<div class="erreur">' + msg + '</div>';
-    setTimeout(function() { z.innerHTML = ''; }, 4000);
+    setTimeout(function(){ z.innerHTML = ''; }, 4000);
   }
+  function trouverHistoire(id) {
+    for (let i = 0; i < HISTOIRES.length; i++) if (HISTOIRES[i].id === id) return HISTOIRES[i];
+    return null;
+  }
+  function envoyer(type, donnees) { ws.send(JSON.stringify(Object.assign({ type: type }, donnees || {}))); }
 
   // ============================================================
-  //   CONNEXION
+  // CONNEXION
   // ============================================================
   async function creerSalon() {
     monNom = document.getElementById('prenom').value.trim();
@@ -222,14 +368,9 @@
     try {
       const r = await fetch(SERVEUR_HTTP + '/creer-salon');
       const d = await r.json();
-      codeSalon = d.code;
-      estCreateur = true;
-      seConnecter();
-    } catch (e) {
-      afficherErreur('Serveur injoignable. Il se réveille peut-être (30s).');
-    }
+      codeSalon = d.code; estCreateur = true; seConnecter();
+    } catch (e) { afficherErreur('Serveur injoignable. Il se réveille peut-être (30s).'); }
   }
-
   async function rejoindreSalon() {
     monNom = document.getElementById('prenom').value.trim();
     if (!monNom) { afficherErreur('Entre ton prénom'); return; }
@@ -239,13 +380,9 @@
       const r = await fetch(SERVEUR_HTTP + '/salon/' + codeSalon);
       const d = await r.json();
       if (!d.existe) { afficherErreur('Salon introuvable'); return; }
-      estCreateur = false;
-      seConnecter();
-    } catch (e) {
-      afficherErreur('Serveur injoignable');
-    }
+      estCreateur = false; seConnecter();
+    } catch (e) { afficherErreur('Serveur injoignable'); }
   }
-
   function seConnecter() {
     ws = new WebSocket(SERVEUR_WS + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom));
     ws.onopen = function() {
@@ -253,8 +390,7 @@
       montrerEcran('ecran-attente');
       if (estCreateur) {
         document.getElementById('zone-config').classList.remove('hidden');
-        afficherHistoires();
-        afficherDifficultes();
+        afficherHistoires(); afficherDifficultes();
       } else {
         document.getElementById('zone-attente-message').textContent = "En attente que l'hôte démarre la partie...";
       }
@@ -263,135 +399,93 @@
     ws.onerror = function() { afficherErreur('Erreur de connexion'); };
   }
 
-  function envoyer(type, donnees) {
-    ws.send(JSON.stringify(Object.assign({ type: type }, donnees || {})));
-  }
-
   // ============================================================
-  //   TRAITEMENT DES MESSAGES SERVEUR
+  // MESSAGES
   // ============================================================
   function traiterMessage(m) {
     switch (m.type) {
       case 'joueur_rejoint':
       case 'joueur_parti':
-        majListeJoueurs(m.joueurs);
-        break;
-      case 'av_demarree':
-        // L hote a demarre, on attend l etat
-        break;
+        majListeJoueurs(m.joueurs); break;
       case 'av_etat':
         etatRecent = m;
-        // Trouve mon index
         if (monIndex < 0) {
-          for (let i = 0; i < m.joueurs.length; i++) {
-            if (m.joueurs[i] === monNom) { monIndex = i; break; }
-          }
+          for (let i = 0; i < m.joueurs.length; i++) if (m.joueurs[i] === monNom) { monIndex = i; break; }
         }
-        majAffichage();
-        break;
+        majAffichage(); break;
+      case 'av_fin':
+        afficherFin(m); break;
       case 'erreur':
-        alert(m.message);
-        break;
+        alert(m.message); break;
     }
   }
-
   function majListeJoueurs(joueurs) {
     const z = document.getElementById('liste-joueurs');
     z.innerHTML = '';
-    joueurs.forEach(function(j) {
-      const d = document.createElement('div');
-      d.className = 'joueur';
-      d.textContent = '\u2022 ' + j;
-      z.appendChild(d);
-    });
+    joueurs.forEach(function(j){ const d = document.createElement('div'); d.className = 'joueur'; d.textContent = '\u2022 ' + j; z.appendChild(d); });
     document.getElementById('statut-attente').textContent = joueurs.length + ' connecté(s)';
   }
 
   // ============================================================
-  //   CONFIGURATION (cote createur)
+  // CONFIGURATION
   // ============================================================
   function afficherHistoires() {
-    const zone = document.getElementById('histoires-liste');
-    zone.innerHTML = '';
+    const z = document.getElementById('histoires-liste'); z.innerHTML = '';
     HISTOIRES.forEach(function(h) {
-      const div = document.createElement('div');
-      div.className = 'histoire-carte' + (h.id === histoireChoisie ? ' choisi' : '');
-      div.innerHTML = '<div class="histoire-titre">' + h.titre + '</div>' +
-        '<div class="histoire-meta">' + h.univers + '</div>';
-      div.onclick = function() { histoireChoisie = h.id; afficherHistoires(); };
-      zone.appendChild(div);
+      const d = document.createElement('div');
+      d.className = 'histoire-carte' + (h.id === histoireChoisie ? ' choisi' : '');
+      d.innerHTML = '<div class="histoire-titre">' + h.titre + '</div><div class="histoire-meta">' + h.univers + '</div>';
+      d.onclick = function(){ histoireChoisie = h.id; afficherHistoires(); };
+      z.appendChild(d);
     });
   }
-
   function afficherDifficultes() {
-    const zone = document.getElementById('difficultes');
-    zone.innerHTML = '';
-    DIFFICULTES.forEach(function(d) {
-      const div = document.createElement('div');
-      div.className = 'diff-option' + (d.id === difficulteChoisie ? ' choisi' : '');
-      div.onclick = function() { difficulteChoisie = d.id; afficherDifficultes(); };
-      div.innerHTML = '<span>' + d.nom + '</span><span class="diff-coef">x' + d.coef + '</span>';
-      zone.appendChild(div);
+    const z = document.getElementById('difficultes'); z.innerHTML = '';
+    DIFFICULTES.forEach(function(diff) {
+      const d = document.createElement('div');
+      d.className = 'diff-option' + (diff.id === difficulteChoisie ? ' choisi' : '');
+      d.onclick = function(){ difficulteChoisie = diff.id; afficherDifficultes(); };
+      d.innerHTML = '<span style="font-weight:bold;">' + diff.nom + '</span><span style="font-size:0.85rem; opacity:0.8;">x' + diff.coef + '</span>';
+      z.appendChild(d);
     });
   }
-
   function choisirMode(mode) {
     modeChoisi = mode;
     document.getElementById('mode-aleatoire').classList.toggle('choisi', mode === 'aleatoire');
     document.getElementById('mode-reparti').classList.toggle('choisi', mode === 'reparti');
   }
-
   function demarrerPartie() {
-    envoyer('av_demarrer', {
-      histoire_id: histoireChoisie,
-      difficulte: difficulteChoisie,
-      mode_competences: modeChoisi,
-    });
+    envoyer('av_demarrer', { histoire_id: histoireChoisie, difficulte: difficulteChoisie, mode_competences: modeChoisi });
   }
 
   // ============================================================
-  //   MISE A JOUR DE L AFFICHAGE SELON L ETAT SERVEUR
+  // AIGUILLAGE DE L AFFICHAGE
   // ============================================================
   function majAffichage() {
     if (!etatRecent) return;
 
     if (etatRecent.phase === 'config') {
-      // Phase de choix des classes
       const histoire = trouverHistoire(etatRecent.histoire_id);
       if (histoire && histoire.classes) {
-        montrerEcran('ecran-classe');
-        afficherChoixClasse(histoire);
+        montrerEcran('ecran-classe'); afficherChoixClasse(histoire);
       } else {
-        // Histoire sans classes : on saute directement (ne devrait pas arriver mais on gere)
-        montrerEcran('ecran-jeu-placeholder');
+        // Histoire sans classes : le serveur va sauter directement a 'jeu',
+        // donc on attend juste le prochain etat
       }
     } else if (etatRecent.phase === 'repartition') {
-      montrerEcran('ecran-repartition');
-      afficherRepartition();
+      montrerEcran('ecran-repartition'); afficherRepartition();
     } else if (etatRecent.phase === 'jeu') {
-      // Sous-etape 1c : ici on affichera le jeu
-      montrerEcran('ecran-jeu-placeholder');
-    } else if (etatRecent.phase === 'fin') {
-      // Sous-etape 1c
-      montrerEcran('ecran-jeu-placeholder');
+      montrerEcran('ecran-jeu'); afficherJeu();
     }
-  }
-
-  function trouverHistoire(id) {
-    for (let i = 0; i < HISTOIRES.length; i++) {
-      if (HISTOIRES[i].id === id) return HISTOIRES[i];
-    }
-    return null;
   }
 
   // ============================================================
-  //   CHOIX DE CLASSE
+  // CHOIX DE CLASSE (cf sous-etape 1b)
   // ============================================================
   function afficherChoixClasse(histoire) {
     const joueurEnCours = etatRecent.config_joueur;
     const nomEnCours = etatRecent.joueurs[joueurEnCours];
     const estMonTour = (joueurEnCours === monIndex);
-
     if (estMonTour) {
       document.getElementById('classe-tour-titre').textContent = 'À toi, ' + monNom;
       document.getElementById('classe-tour-info').textContent = 'Choisis ta classe';
@@ -399,26 +493,19 @@
       document.getElementById('classe-tour-titre').textContent = nomEnCours + ' choisit sa classe';
       document.getElementById('classe-tour-info').textContent = 'Attends ton tour...';
     }
-
-    const zone = document.getElementById('classes-liste');
-    zone.innerHTML = '';
+    const zone = document.getElementById('classes-liste'); zone.innerHTML = '';
     classeChoisieTemp = null;
     document.getElementById('btn-valider-classe').classList.add('hidden');
-
     histoire.classes.forEach(function(cl) {
-      const div = document.createElement('div');
-      div.className = 'classe-carte';
-      // Si la classe est deja prise par un autre joueur, on grise
+      const div = document.createElement('div'); div.className = 'classe-carte';
       const dejaPris = etatRecent.classes_choisies.indexOf(cl.nom) !== -1;
       if (dejaPris) div.classList.add('deja-pris');
-
       div.innerHTML = '<div class="classe-nom">' + cl.nom + (dejaPris ? ' (prise)' : '') + '</div>' +
         '<div class="classe-desc">' + cl.desc + '</div>' +
         '<div class="classe-stats">Force ' + cl.force + ' \u00b7 Agilité ' + cl.agilite + ' \u00b7 Ruse ' + cl.ruse + '</div>';
-
       if (estMonTour && !dejaPris) {
         div.onclick = function() {
-          document.querySelectorAll('.classe-carte').forEach(function(c) { c.classList.remove('choisi'); });
+          document.querySelectorAll('.classe-carte').forEach(function(c){ c.classList.remove('choisi'); });
           div.classList.add('choisi');
           classeChoisieTemp = cl;
           document.getElementById('btn-valider-classe').classList.remove('hidden');
@@ -426,87 +513,409 @@
       }
       zone.appendChild(div);
     });
-
     document.getElementById('btn-valider-classe').onclick = function() {
-      if (classeChoisieTemp) {
-        envoyer('av_choisir_classe', { classe: classeChoisieTemp });
-      }
+      if (classeChoisieTemp) envoyer('av_choisir_classe', { classe: classeChoisieTemp });
     };
   }
 
   // ============================================================
-  //   REPARTITION DES POINTS
+  // REPARTITION DES POINTS (cf sous-etape 1b)
   // ============================================================
   function afficherRepartition() {
     const joueurEnCours = etatRecent.config_joueur;
     const nomEnCours = etatRecent.joueurs[joueurEnCours];
     const estMonTour = (joueurEnCours === monIndex);
     const monAvatar = etatRecent.avatars[monIndex];
-
     if (estMonTour) {
       document.getElementById('repart-titre').textContent = 'À toi, ' + monNom;
-      document.getElementById('repart-info').textContent = 'Répartis 3 points supplémentaires (' + monAvatar.classe + ')';
+      const classeTxt = monAvatar.classe ? ' (' + monAvatar.classe + ')' : '';
+      document.getElementById('repart-info').textContent = 'Répartis 3 points supplémentaires' + classeTxt;
       repartLocal = { force: 0, agilite: 0, ruse: 0 };
       afficherRepartContenu(monAvatar);
     } else {
+      const monAv = etatRecent.avatars[joueurEnCours];
+      const classeTxt = monAv.classe ? ' (' + monAv.classe + ')' : '';
       document.getElementById('repart-titre').textContent = nomEnCours + ' répartit ses points';
       document.getElementById('repart-info').textContent = 'Attends ton tour...';
-      const monAv = etatRecent.avatars[joueurEnCours];
-      document.getElementById('repart-zone').innerHTML = '<div class="pas-mon-tour">' +
-        nomEnCours + ' (' + monAv.classe + ') choisit où placer ses 3 points</div>';
+      document.getElementById('repart-zone').innerHTML = '<div class="pas-mon-tour">' + nomEnCours + classeTxt + ' choisit ses points</div>';
     }
   }
-
   function afficherRepartContenu(avatar) {
     const zone = document.getElementById('repart-zone');
     const utilises = repartLocal.force + repartLocal.agilite + repartLocal.ruse;
     const restants = 3 - utilises;
-
     zone.innerHTML = '<div class="points-restants">Points à placer : ' + restants + '</div>';
-
-    ['force', 'agilite', 'ruse'].forEach(function(stat) {
-      const nomStat = stat.charAt(0).toUpperCase() + stat.slice(1);
-      const ligne = document.createElement('div');
-      ligne.className = 'stat-ligne';
+    ['force','agilite','ruse'].forEach(function(stat) {
+      const nomStat = NOMS_COMPET[stat];
+      const ligne = document.createElement('div'); ligne.className = 'stat-ligne';
       ligne.innerHTML = '<span style="font-weight:bold;">' + nomStat + '</span>';
-
-      const controle = document.createElement('div');
-      controle.className = 'stat-controle';
-
-      const moins = document.createElement('button');
-      moins.textContent = '\u2212';
-      moins.onclick = function() {
-        if (repartLocal[stat] > 0) { repartLocal[stat]--; afficherRepartContenu(avatar); }
-      };
-
+      const controle = document.createElement('div'); controle.className = 'stat-controle';
+      const moins = document.createElement('button'); moins.textContent = '\u2212';
+      moins.onclick = function(){ if (repartLocal[stat] > 0) { repartLocal[stat]--; afficherRepartContenu(avatar); } };
       const valeurAffichee = avatar[stat] + repartLocal[stat];
-      const valeur = document.createElement('span');
-      valeur.className = 'stat-valeur';
+      const valeur = document.createElement('span'); valeur.className = 'stat-valeur';
       valeur.innerHTML = valeurAffichee + ' <span style="color:var(--texte-doux); font-size:0.85rem;">(+' + repartLocal[stat] + ')</span>';
-
-      const plus = document.createElement('button');
-      plus.textContent = '+';
-      plus.onclick = function() {
-        if (restants > 0) { repartLocal[stat]++; afficherRepartContenu(avatar); }
-      };
-
+      const plus = document.createElement('button'); plus.textContent = '+';
+      plus.onclick = function(){ if (restants > 0) { repartLocal[stat]++; afficherRepartContenu(avatar); } };
       controle.appendChild(moins); controle.appendChild(valeur); controle.appendChild(plus);
-      ligne.appendChild(controle);
-      zone.appendChild(ligne);
+      ligne.appendChild(controle); zone.appendChild(ligne);
     });
-
-    const btn = document.createElement('button');
-    btn.className = 'btn-principal';
+    const btn = document.createElement('button'); btn.className = 'btn-principal';
     if (restants > 0) {
       btn.textContent = 'Place tous tes points (' + restants + ' restants)';
       btn.disabled = true; btn.style.opacity = '0.5';
     } else {
       btn.textContent = 'Valider';
-      btn.onclick = function() {
-        envoyer('av_repartir', repartLocal);
-      };
+      btn.onclick = function(){ envoyer('av_repartir', repartLocal); };
     }
     zone.appendChild(btn);
+  }
+
+  // ============================================================
+  // AFFICHAGE DU JEU
+  // ============================================================
+  function afficherJeu() {
+    const histoire = trouverHistoire(etatRecent.histoire_id);
+    if (!histoire) return;
+
+    // Si je suis l hote et qu il n y a pas encore de scene_courante pour la scene actuelle,
+    // je l envoie au serveur. Le serveur la rediffusera a tous.
+    if (estCreateur && monIndex === 0) {
+      const sceneIdx = etatRecent.scene_index;
+      if (sceneIdx < histoire.scenes.length && (etatRecent.scene_courante === null || etatRecent.scene_courante === undefined)) {
+        const scene = histoire.scenes[sceneIdx];
+        envoyer('av_scene_demarrer', { scene: scene });
+        return;  // on attendra l etat suivant pour afficher
+      }
+      // Si on a depasse la fin, on termine
+      if (sceneIdx >= histoire.scenes.length) {
+        envoyer('av_terminer');
+        return;
+      }
+    }
+
+    // Affichage commun a tous : barre de progression, avatars, scene
+    const totalScenes = histoire.scenes.length;
+    document.getElementById('barre').style.width = ((etatRecent.scene_index / Math.max(1, totalScenes - 1)) * 100) + '%';
+    afficherAvatarsLigne();
+
+    if (!etatRecent.scene_courante) {
+      // En attente que l hote envoie la scene
+      document.getElementById('scene-image').innerHTML = '';
+      document.getElementById('scene-texte').innerHTML = '<div class="pas-mon-tour">Chargement de la scène...</div>';
+      document.getElementById('zone-test').innerHTML = '';
+      document.getElementById('zone-actions').innerHTML = '';
+      return;
+    }
+
+    const scene = etatRecent.scene_courante;
+    document.getElementById('scene-image').innerHTML = dessinerScene(scene.image);
+    document.getElementById('scene-texte').innerHTML = scene.texte;
+    document.getElementById('zone-test').innerHTML = '';
+    document.getElementById('zone-actions').innerHTML = '';
+
+    // Si on a un resultat, on le montre en priorite
+    if (etatRecent.resultat_test && etatRecent.scene_etape === 'resolution') {
+      afficherResultat(scene);
+      return;
+    }
+
+    // Sinon, on affiche selon le type de scene
+    if (scene.type === 'narration') afficherNarration(scene);
+    else if (scene.type === 'choix_groupe') afficherChoixGroupe(scene);
+    else if (scene.type === 'test_solo') afficherTestSolo(scene);
+    else if (scene.type === 'test_groupe') afficherTestGroupe(scene);
+    else if (scene.type === 'choix_libre') afficherChoixLibre(scene);
+    else if (scene.type === 'finale') afficherFinale(scene);
+  }
+
+  function afficherAvatarsLigne() {
+    const zone = document.getElementById('avatars-ligne'); zone.innerHTML = '';
+    etatRecent.avatars.forEach(function(av, i) {
+      const d = document.createElement('div');
+      let classes = 'avatar-puce';
+      if (i === monIndex) classes += ' moi';
+      if (etatRecent.qui_tente === i) classes += ' actif';
+      d.className = classes;
+      let html = '<div class="avatar-nom-petit">' + av.nom + '</div>';
+      if (av.classe) html += '<div class="avatar-classe-petite">' + av.classe + '</div>';
+      html += '<div class="avatar-stats-petite">F' + av.force + ' A' + av.agilite + ' R' + av.ruse + '</div>';
+      const gorgees = etatRecent.gorgees[i] || 0;
+      html += '<div class="avatar-gorgees-petite">' + gorgees + ' g.</div>';
+      d.innerHTML = html;
+      zone.appendChild(d);
+    });
+  }
+
+  // ----- NARRATION : premier-qui-clique pour continuer -----
+  function afficherNarration(scene) {
+    const zone = document.getElementById('zone-actions');
+    const b = document.createElement('button');
+    b.className = 'btn-principal'; b.textContent = scene.bouton || 'Continuer';
+    b.onclick = function(){ envoyer('av_continuer'); };
+    zone.appendChild(b);
+  }
+
+  // ----- CHOIX DE GROUPE : premier-qui-clique pour l option, puis "Je le fais" -----
+  function afficherChoixGroupe(scene) {
+    const zone = document.getElementById('zone-actions');
+    if (etatRecent.choix_groupe === null || etatRecent.choix_groupe === undefined) {
+      // Phase 1 : choisir l option (premier-qui-clique)
+      scene.choix.forEach(function(choix, i) {
+        const b = document.createElement('button');
+        b.className = 'btn-choix';
+        b.textContent = choix.texte + '  \u2014  test de ' + NOMS_COMPET[choix.compet];
+        b.onclick = function(){ envoyer('av_choisir_option', { index_option: i }); };
+        zone.appendChild(b);
+      });
+    } else {
+      // Phase 2 : un choix a ete fait, on annonce le test et "Je le fais"
+      const choix = scene.choix[etatRecent.choix_groupe];
+      const annonce = document.createElement('div'); annonce.className = 'annonce-test';
+      annonce.innerHTML = '<div class="compet">Test de ' + NOMS_COMPET[choix.compet] + '</div>' +
+        '<div class="diff">Difficulté : ' + choix.difficulte + '</div>';
+      document.getElementById('zone-test').appendChild(annonce);
+
+      if (etatRecent.qui_tente === null || etatRecent.qui_tente === undefined) {
+        const info = document.createElement('div'); info.className = 'qui-tente';
+        info.textContent = 'Qui réalise cette action ?';
+        zone.appendChild(info);
+        const b = document.createElement('button');
+        b.className = 'btn-principal'; b.textContent = 'Je le fais !';
+        b.onclick = function(){ envoyer('av_je_le_fais'); };
+        zone.appendChild(b);
+      } else {
+        afficherPhaseLancer(scene, choix);
+      }
+    }
+  }
+
+  // ----- TEST SOLO : "Je le fais" puis lancer -----
+  function afficherTestSolo(scene) {
+    const annonce = document.createElement('div'); annonce.className = 'annonce-test';
+    annonce.innerHTML = '<div class="compet">Test de ' + NOMS_COMPET[scene.compet] + '</div>' +
+      '<div class="diff">Difficulté : ' + scene.difficulte + '</div>';
+    document.getElementById('zone-test').appendChild(annonce);
+    const zone = document.getElementById('zone-actions');
+
+    if (etatRecent.qui_tente === null || etatRecent.qui_tente === undefined) {
+      const info = document.createElement('div'); info.className = 'qui-tente';
+      info.textContent = 'Qui tente ?';
+      zone.appendChild(info);
+      const b = document.createElement('button');
+      b.className = 'btn-principal'; b.textContent = 'Je le fais !';
+      b.onclick = function(){ envoyer('av_je_le_fais'); };
+      zone.appendChild(b);
+    } else {
+      afficherPhaseLancer(scene, scene);
+    }
+  }
+
+  // ----- TEST DE GROUPE -----
+  function afficherTestGroupe(scene) {
+    const annonce = document.createElement('div'); annonce.className = 'annonce-test';
+    annonce.innerHTML = '<div class="compet">Test de ' + NOMS_COMPET[scene.compet] + ' (groupe)</div>' +
+      '<div class="diff">Difficulté : ' + scene.difficulte + '</div>';
+    document.getElementById('zone-test').appendChild(annonce);
+    const zone = document.getElementById('zone-actions');
+    const info = document.createElement('div'); info.className = 'qui-tente';
+    info.textContent = "Toute l'équipe tente ensemble";
+    zone.appendChild(info);
+    afficherPhaseLancer(scene, scene);
+  }
+
+  // Phase de lancer de de : le qui_tente lance, les autres regardent
+  function afficherPhaseLancer(scene, source) {
+    const zone = document.getElementById('zone-actions');
+    const compet = source.compet;
+    const difficulte = source.difficulte;
+    const estGroupe = scene.type === 'test_groupe';
+
+    // Calcul de la valeur de competence
+    let valeurCompet;
+    if (estGroupe) {
+      // Meilleure stat du groupe + bonus
+      let max = etatRecent.avatars[0][compet];
+      for (let i = 1; i < etatRecent.avatars.length; i++) {
+        if (etatRecent.avatars[i][compet] > max) max = etatRecent.avatars[i][compet];
+      }
+      valeurCompet = max + Math.ceil((etatRecent.avatars.length - 1) / 2);
+    } else {
+      valeurCompet = etatRecent.avatars[etatRecent.qui_tente][compet];
+    }
+
+    // Affichage du de (face 1 par defaut, ou animation si en cours)
+    const zoneDe = document.createElement('div'); zoneDe.className = 'zone-de';
+    zoneDe.innerHTML = '<div class="de" id="le-de">' + facesDe(1) + '</div>';
+    zone.appendChild(zoneDe);
+
+    // Qui peut lancer ?
+    const peutLancer = estGroupe || (etatRecent.qui_tente === monIndex);
+    if (peutLancer) {
+      const b = document.createElement('button');
+      b.className = 'btn-principal'; b.textContent = 'Lancer le dé';
+      b.onclick = function(){
+        if (deAnimeEnCours) return;
+        deAnimeEnCours = true;
+        animerDe(function(){
+          envoyer('av_lancer_de', {
+            scene: scene,
+            compet_valeur: valeurCompet,
+            difficulte: difficulte,
+          });
+          deAnimeEnCours = false;
+        });
+      };
+      zone.appendChild(b);
+    } else {
+      const info = document.createElement('div'); info.className = 'qui-tente';
+      info.textContent = etatRecent.avatars[etatRecent.qui_tente].nom + ' va lancer le dé...';
+      zone.appendChild(info);
+    }
+  }
+
+  // Anime le de localement (juste l effet visuel)
+  function animerDe(callback) {
+    const de = document.getElementById('le-de');
+    if (!de) { callback(); return; }
+    document.getElementById('zone-actions').querySelectorAll('button').forEach(function(b){ b.disabled = true; b.style.opacity = '0.5'; });
+    de.classList.add('roule');
+    let tics = 0;
+    const interval = setInterval(function(){
+      de.innerHTML = facesDe(Math.floor(Math.random() * 6) + 1);
+      tics++;
+      if (tics > 8) {
+        clearInterval(interval);
+        de.classList.remove('roule');
+        setTimeout(callback, 200);
+      }
+    }, 110);
+  }
+
+  // ----- CHOIX LIBRE : vote -----
+  function afficherChoixLibre(scene) {
+    const zone = document.getElementById('zone-actions');
+    const aDejaVote = etatRecent.votes_count > 0 && false;  // on n a pas le detail de qui a vote
+    const info = document.createElement('div'); info.className = 'vote-info';
+    info.textContent = 'Vote du groupe (' + etatRecent.votes_count + ' / ' + etatRecent.joueurs.length + ')';
+    zone.appendChild(info);
+    scene.choix.forEach(function(choix, i) {
+      const b = document.createElement('button'); b.className = 'btn-choix';
+      b.textContent = choix.texte;
+      b.onclick = function(){ envoyer('av_voter', { index_option: i }); b.disabled = true; b.style.opacity = '0.5'; };
+      zone.appendChild(b);
+    });
+  }
+
+  // ----- FINALE -----
+  function afficherFinale(scene) {
+    const zone = document.getElementById('zone-actions');
+    const b = document.createElement('button');
+    b.className = 'btn-principal'; b.textContent = scene.bouton || 'Conclusion';
+    b.onclick = function(){ envoyer('av_terminer'); };
+    zone.appendChild(b);
+  }
+
+  // ----- RESULTAT D UN TEST -----
+  function afficherResultat(scene) {
+    const r = etatRecent.resultat_test;
+    const zoneT = document.getElementById('zone-test');
+    let txt = '';
+    // Pour les choix_groupe et choix_libre on prend le texte de l option choisie
+    if (scene.type === 'choix_groupe' && etatRecent.choix_groupe !== null) {
+      const c = scene.choix[etatRecent.choix_groupe];
+      txt = r.reussi ? c.succes : c.echec;
+    } else if (scene.type === 'choix_libre' && etatRecent.choix_groupe !== null) {
+      txt = scene.choix[etatRecent.choix_groupe].consequence;
+    } else {
+      txt = r.reussi ? scene.succes : scene.echec;
+    }
+
+    let html = '<div class="resultat-test ' + (r.reussi ? 'resultat-reussite' : 'resultat-echec') + '">';
+    if (scene.type !== 'choix_libre') {
+      html += '<div>Dé : ' + r.de + ' + compétence ' + r.compet + ' = <strong>' + r.total + '</strong></div>';
+      html += '<div style="margin-top:2px; font-size:0.88rem;">Il fallait atteindre ' + r.difficulte +
+        (r.reussi ? '' : ' (manqué de ' + (r.difficulte - r.total) + ')') + '</div>';
+      html += '<div style="margin-top:6px; font-weight:bold;">' + (r.reussi ? '\u2713 Réussite' : '\u2717 Échec') + '</div>';
+    }
+    html += '<div style="margin-top:8px; font-style:italic;">' + txt + '</div>';
+    if (r.gorgees_appliquees && r.gorgees_appliquees.length > 0) {
+      if (r.gorgees_appliquees.length > 1) {
+        const detail = r.gorgees_appliquees.map(function(g){ return etatRecent.avatars[g[0]].nom + ' : ' + g[1]; }).join(' \u00b7 ');
+        html += '<div class="gorgees-annonce">Tout le monde boit !</div>';
+        html += '<div style="font-size:0.85rem; margin-top:4px;">' + detail + '</div>';
+      } else {
+        const g = r.gorgees_appliquees[0];
+        html += '<div class="gorgees-annonce">' + etatRecent.avatars[g[0]].nom + ' boit ' + g[1] + ' gorgées</div>';
+      }
+    }
+    html += '</div>';
+    zoneT.innerHTML = html;
+
+    const zone = document.getElementById('zone-actions');
+    const b = document.createElement('button');
+    b.className = 'btn-principal'; b.textContent = 'Continuer';
+    b.onclick = function(){ envoyer('av_terminer_scene'); };
+    zone.appendChild(b);
+  }
+
+  // ============================================================
+  // FIN DE PARTIE
+  // ============================================================
+  function afficherFin(m) {
+    const histoire = trouverHistoire(etatRecent.histoire_id);
+    let titre, texte;
+    if (m.type_fin === 'triomphe') { titre = histoire.finTriomphe.titre; texte = histoire.finTriomphe.texte; }
+    else if (m.type_fin === 'moyenne') { titre = histoire.finMoyenne.titre; texte = histoire.finMoyenne.texte; }
+    else { titre = histoire.finEchec.titre; texte = histoire.finEchec.texte; }
+    document.getElementById('fin-titre').textContent = titre;
+    let bilan = '<div style="margin-top:12px; font-size:0.9rem; color:var(--texte-doux);">Bilan des gorgées : ';
+    bilan += m.avatars.map(function(av, i){ return av.nom + ' (' + m.gorgees[i] + ')'; }).join(' \u00b7 ');
+    bilan += '</div>';
+    document.getElementById('fin-texte').innerHTML = texte + bilan;
+    document.getElementById('fin-image').innerHTML = dessinerScene(m.type_fin === 'echec' ? 'sortie' : 'retour');
+    montrerEcran('ecran-fin');
+  }
+
+  // ============================================================
+  // DE ET ILLUSTRATIONS
+  // ============================================================
+  function facesDe(n) {
+    const config = { 1:[5], 2:[1,9], 3:[1,5,9], 4:[1,3,7,9], 5:[1,3,5,7,9], 6:[1,3,4,6,7,9] };
+    const positions = config[n] || [5];
+    let html = '';
+    for (let i = 1; i <= 9; i++) html += positions.indexOf(i) !== -1 ? '<div class="pip"></div>' : '<div></div>';
+    return html;
+  }
+
+  function dessinerScene(type) {
+    const ciel = 'var(--ciel)', sable = 'var(--sable)', roche = 'var(--roche)', rocheC = 'var(--roche-clair)', or = 'var(--or)';
+    const foret = 'var(--foret)', pierre = 'var(--pierre)';
+    const tpl = function(c) { return '<svg viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg">' + c + '</svg>'; };
+    if (type === 'arrivee' || type === 'entree') return tpl('<rect width="400" height="220" fill="' + ciel + '"/><ellipse cx="320" cy="50" rx="34" ry="34" fill="#fdf6ea" opacity="0.8"/><path d="M0 150 Q100 110 200 140 T400 130 V220 H0 Z" fill="' + sable + '"/><rect x="150" y="70" width="26" height="90" fill="' + roche + '"/><rect x="185" y="50" width="30" height="110" fill="' + rocheC + '"/><rect x="222" y="85" width="22" height="75" fill="' + roche + '"/>');
+    if (type === 'piege') return tpl('<rect width="400" height="220" fill="#caa890"/><polygon points="120,0 280,0 240,220 160,220" fill="#3a2e26" opacity="0.5"/><polygon points="160,120 170,90 180,120" fill="#e8e0d0"/><polygon points="185,120 195,85 205,120" fill="#e8e0d0"/>');
+    if (type === 'gardien') return tpl('<rect width="400" height="220" fill="' + sable + '" opacity="0.6"/><rect x="170" y="60" width="60" height="110" rx="8" fill="' + roche + '"/><circle cx="200" cy="50" r="26" fill="' + rocheC + '"/><circle cx="191" cy="48" r="5" fill="#9c3a2c"/><circle cx="209" cy="48" r="5" fill="#9c3a2c"/>');
+    if (type === 'tresor') return tpl('<rect width="400" height="220" fill="#2e2620"/><ellipse cx="200" cy="120" rx="120" ry="70" fill="' + or + '" opacity="0.25"/><rect x="150" y="110" width="100" height="60" rx="6" fill="#8a5a3c"/><rect x="190" y="130" width="20" height="20" fill="' + or + '"/>');
+    if (type === 'sortie') return tpl('<rect width="400" height="220" fill="#3a2e26"/><ellipse cx="320" cy="110" rx="70" ry="90" fill="' + ciel + '"/><ellipse cx="330" cy="110" rx="45" ry="65" fill="var(--ciel-clair)"/>');
+    if (type === 'campement') return tpl('<rect width="400" height="220" fill="#a8b8c8"/><path d="M0 160 L400 150 L400 220 L0 220 Z" fill="' + foret + '" opacity="0.5"/><polygon points="80,160 110,110 140,160" fill="#c4534a"/><polygon points="160,160 200,100 240,160" fill="#9c4438"/><polygon points="260,160 290,115 320,160" fill="#c4534a"/>');
+    if (type === 'sentier') return tpl('<rect width="400" height="220" fill="#d4d8c8"/><path d="M0 180 Q150 140 200 160 T400 140 V220 H0 Z" fill="' + foret + '"/><rect x="60" y="100" width="14" height="60" fill="#4a5a3a"/><ellipse cx="67" cy="95" rx="22" ry="28" fill="' + foret + '"/>');
+    if (type === 'chariot') return tpl('<rect width="400" height="220" fill="#e0d8c0"/><path d="M0 170 L400 165 L400 220 L0 220 Z" fill="#c8b89c"/><rect x="160" y="120" width="120" height="50" rx="4" fill="#8a6a4a"/><circle cx="180" cy="180" r="16" fill="#5a4636"/><circle cx="260" cy="180" r="16" fill="#5a4636"/>');
+    if (type === 'sentinelle') return tpl('<rect width="400" height="220" fill="#b8c4c0"/><rect x="0" y="170" width="400" height="50" fill="#c8b89c"/><rect x="100" y="100" width="200" height="70" fill="' + pierre + '"/><ellipse cx="220" cy="170" rx="22" ry="14" fill="#8a7560"/>');
+    if (type === 'placevide') return tpl('<rect width="400" height="220" fill="#d8d8d0"/><path d="M0 160 L400 160 L400 220 L0 220 Z" fill="#b8a890"/><rect x="40" y="80" width="60" height="80" fill="' + pierre + '"/><rect x="160" y="60" width="80" height="100" fill="' + pierre + '"/><rect x="300" y="90" width="60" height="70" fill="' + pierre + '"/><circle cx="200" cy="180" r="14" fill="#6a5a4a"/>');
+    if (type === 'fenetre') return tpl('<rect width="400" height="220" fill="#a89a88"/><rect x="100" y="40" width="200" height="180" fill="' + pierre + '"/><rect x="150" y="80" width="100" height="100" fill="#3a3028"/><circle cx="200" cy="125" r="14" fill="#d8c8b0"/>');
+    if (type === 'eglise') return tpl('<rect width="400" height="220" fill="#c4ccd0"/><path d="M0 170 L400 170 L400 220 L0 220 Z" fill="#b8a890"/><rect x="140" y="80" width="120" height="90" fill="' + pierre + '"/><polygon points="140,80 200,30 260,80" fill="#9a8878"/><rect x="190" y="40" width="20" height="40" fill="#9a8878"/><rect x="180" y="110" width="40" height="60" fill="#4a3828"/>');
+    if (type === 'inscription') return tpl('<rect width="400" height="220" fill="#3a2c1c"/><rect x="60" y="40" width="280" height="140" rx="4" fill="#5a4838"/><line x1="90" y1="80" x2="320" y2="80" stroke="#3a2c1c" stroke-width="2"/><line x1="90" y1="100" x2="280" y2="100" stroke="#3a2c1c" stroke-width="2"/><line x1="90" y1="120" x2="300" y2="120" stroke="#3a2c1c" stroke-width="2"/>');
+    if (type === 'puits') return tpl('<rect width="400" height="220" fill="#c8c8b8"/><path d="M0 170 L400 170 L400 220 L0 220 Z" fill="#a8987a"/><rect x="120" y="120" width="160" height="50" fill="' + pierre + '"/><rect x="140" y="40" width="14" height="80" fill="#5a4636"/><rect x="246" y="40" width="14" height="80" fill="#5a4636"/>');
+    if (type === 'vieillefemme') return tpl('<rect width="400" height="220" fill="#b8a890"/><rect x="0" y="170" width="400" height="50" fill="#9a8878"/><rect x="80" y="60" width="100" height="110" fill="' + pierre + '"/><ellipse cx="240" cy="100" rx="20" ry="22" fill="#e8d8c0"/><rect x="225" y="120" width="30" height="55" fill="#7a6a58"/>');
+    if (type === 'maison') return tpl('<rect width="400" height="220" fill="#a89884"/><rect x="0" y="170" width="400" height="50" fill="#8a7868"/><rect x="120" y="80" width="160" height="90" fill="' + pierre + '"/><polygon points="120,80 200,40 280,80" fill="#7a6858"/><rect x="180" y="120" width="40" height="50" fill="#3a2c1c"/>');
+    if (type === 'journal') return tpl('<rect width="400" height="220" fill="#4a3828"/><rect x="100" y="60" width="220" height="120" fill="#f0e0c0"/><line x1="120" y1="80" x2="290" y2="80" stroke="#3a2c1c" stroke-width="1.5"/><line x1="120" y1="100" x2="270" y2="100" stroke="#3a2c1c" stroke-width="1.5"/><line x1="120" y1="120" x2="280" y2="120" stroke="#3a2c1c" stroke-width="1.5"/>');
+    if (type === 'cimetiere') return tpl('<rect width="400" height="220" fill="#7a8470"/><path d="M0 170 L400 170 L400 220 L0 220 Z" fill="#5a6450"/><rect x="60" y="120" width="20" height="50" rx="3" fill="' + pierre + '"/><rect x="130" y="110" width="22" height="60" rx="3" fill="' + pierre + '"/><rect x="200" y="115" width="20" height="55" rx="3" fill="#8a7868"/><rect x="265" y="105" width="22" height="65" rx="3" fill="' + pierre + '"/>');
+    if (type === 'affrontement') return tpl('<rect width="400" height="220" fill="#9a7868"/><path d="M0 170 L400 170 L400 220 L0 220 Z" fill="#7a5848"/><ellipse cx="100" cy="155" rx="14" ry="20" fill="#6a5a4a"/><ellipse cx="180" cy="155" rx="14" ry="20" fill="#6a5a4a"/><ellipse cx="290" cy="155" rx="14" ry="20" fill="#6a5a4a"/>');
+    if (type === 'piegecave') return tpl('<rect width="400" height="220" fill="#1a0c04"/><rect x="120" y="40" width="160" height="60" fill="#3a2c1c"/><ellipse cx="200" cy="100" rx="60" ry="20" fill="#0a0400"/><rect x="180" y="120" width="40" height="80" fill="#5a4838"/>');
+    if (type === 'revelation') return tpl('<rect width="400" height="220" fill="#a8a090"/><rect x="0" y="170" width="400" height="50" fill="#8a7868"/><ellipse cx="200" cy="100" rx="24" ry="28" fill="#e8d8c0"/><rect x="180" y="130" width="40" height="60" fill="#7a6a58"/>');
+    if (type === 'choixfeu') return tpl('<rect width="400" height="220" fill="#3a1c0c"/><rect x="0" y="170" width="400" height="50" fill="#1a0c04"/><polygon points="60,170 80,90 100,170" fill="#e8593c"/><polygon points="160,170 190,80 220,170" fill="#e8593c"/><polygon points="280,170 310,100 340,170" fill="#e8593c"/>');
+    if (type === 'retour') return tpl('<rect width="400" height="220" fill="' + ciel + '"/><ellipse cx="80" cy="50" rx="30" ry="30" fill="#fdf6ea"/><path d="M0 160 Q150 130 250 145 T400 135 V220 H0 Z" fill="#a8b094"/><polygon points="220,160 250,100 280,160" fill="#c4534a"/>');
+    return tpl('<rect width="400" height="220" fill="' + sable + '"/>');
   }
 </script>
 </body>
