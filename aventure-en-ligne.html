@@ -120,6 +120,24 @@
   .erreur { background: rgba(208,86,59,0.15); border: 1px solid #c4534a; color: #9c4438; padding: 10px; border-radius: 8px; margin-bottom: 10px; text-align: center; font-size: 0.88rem; }
   .hidden { display: none !important; }
   .centre { text-align: center; }
+
+  /* Notification privee traitre */
+  .notif-traitre {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    width: calc(100% - 40px); max-width: 400px;
+    background: #1a0a0a; border: 2px solid #8b1a1a;
+    border-radius: 14px; padding: 18px 20px; z-index: 1000;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.85);
+    animation: notif-apparait 0.3s ease;
+  }
+  @keyframes notif-apparait {
+    from { opacity: 0; bottom: 0px; }
+    to   { opacity: 1; bottom: 20px; }
+  }
+  .notif-traitre-titre { color: #c4534a; font-family: Georgia, serif; font-size: 0.9rem; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+  .notif-traitre-texte { color: #e8d8c8; font-size: 0.9rem; line-height: 1.55; margin-bottom: 14px; font-style: italic; }
+  .notif-traitre-btn { background: #5a1010; color: #f0e0d0; border: none; border-radius: 8px; padding: 11px; font-size: 0.9rem; cursor: pointer; width: 100%; font-weight: bold; font-family: inherit; }
+  .notif-traitre-btn:active { transform: scale(0.97); }
 </style>
 </head>
 <body>
@@ -194,6 +212,13 @@
     <div id="zone-actions"></div>
   </div>
 
+  <!-- Notification privee traitre (position:fixed, invisible aux voisins) -->
+  <div id="notif-traitre" class="notif-traitre hidden">
+    <div class="notif-traitre-titre">Mission secrete</div>
+    <div class="notif-traitre-texte" id="notif-traitre-texte"></div>
+    <button class="notif-traitre-btn" onclick="fermerNotifTraitre()">J'ai compris</button>
+  </div>
+
   <!-- ECRAN 6 : FIN -->
   <div class="carte hidden centre" id="ecran-fin">
     <div id="fin-image" class="scene-image"></div>
@@ -222,6 +247,7 @@
   let classeChoisieTemp = null;
   let repartLocal = { force: 0, agilite: 0, ruse: 0 };
   let deAnimeEnCours = false;
+  let monRole = 'loyal'; // 'loyal' | 'traitre'
 
   // ============================================================
   // HISTOIRES (avec PV par classe)
@@ -230,6 +256,7 @@
     id: "akrenos",
     titre: "Le Silence d'Akrenos",
     univers: "Première Croisade, Anatolie",
+    traitres: { nb: 1, texte_secret: "Avant l'aube, un inconnu t'a glisse un message. Si tu rentres seul d'Akrenos et que tes compagnons restent sur place, une fortune t'attend. Tu n'as pas encore decide." },
     classes: [
       { nom: "Chevalier", desc: "Noble combattant, bardé d'orgueil et de fer", force: 4, agilite: 2, ruse: 1, pv: 6 },
       { nom: "Sergent d'armes", desc: "Soldat expérimenté, polyvalent et discipliné", force: 3, agilite: 3, ruse: 1, pv: 6 },
@@ -254,7 +281,7 @@
         texte: "À l'entrée du village, l'éclaireur croisé dort, casque de travers. Le réveiller demande du doigté.",
         compet: "ruse", difficulte: 8, gorgees_base: 3,
         succes: "Il sursaute. \"Ils étaient tous à la messe quand je suis arrivé. Depuis, plus personne.\" Il vous suit.",
-        echec: "Il jaillit en hurlant, frappe au hasard, et plante là sa lance pour fuir." },
+        echec: "Il bondit en hurlant et frappe au hasard. Vous recevez un coup avant qu'il prenne la fuite." },
       { type: "narration", image: "placevide",
         texte: "Vous entrez. Le silence frappe. Au centre, un puits, une église, et l'impression d'être observé.",
         bouton: "S'enfoncer dans le village" },
@@ -262,7 +289,7 @@
         texte: "Un enfant vous observe par une fenêtre, immobile. Il ne cligne pas des yeux.",
         compet: "ruse", difficulte: 8, gorgees_base: 3,
         succes: "Il murmure : \"Ils sont tous descendus. À la cave de l'église. Ma mère m'a dit de rester ici.\"",
-        echec: "Un mouvement maladroit, l'enfant disparaît. La porte se verrouille." },
+        echec: "Un mouvement maladroit fait crier l'enfant. Un habitant surgit d'une ruelle et vous frappe au passage avant de disparaître." },
       { type: "choix_groupe", image: "eglise",
         texte: "L'église se dresse au centre du village, portes closes.",
         choix: [
@@ -278,7 +305,7 @@
         texte: "Quelque chose flotte au fond du puits. Il faut une descente coordonnée.",
         compet: "agilite", difficulte: 8, gorgees_base: 3,
         succes: "Vous remontez un coffret scellé avec des reliques et un parchemin.",
-        echec: "La corde glisse. Ce que vous remontez vous échappe et retombe." },
+        echec: "La corde glisse des mains. Celui qui descend heurte la paroi et remonte sonné, sans la prise." },
       { type: "narration", image: "vieillefemme",
         texte: "Une vieille femme apparaît, paisible. \"Vous avez soif, mes enfants ? Entrez, j'ai de l'eau fraîche.\" Elle tend une cruche.",
         bouton: "Décliner et continuer" },
@@ -286,7 +313,7 @@
         texte: "La porte est barricadée de l'intérieur. Quelqu'un s'est enfermé là.",
         compet: "force", difficulte: 8, gorgees_base: 3,
         succes: "La porte cède. Le prêtre n'est plus, mais son journal repose ouvert.",
-        echec: "Vous forcez bruyamment. Le journal est là, mais vous sentez des regards." },
+        echec: "Vous forcez bruyamment. Quelqu'un vous charge depuis l'ombre et vous plaque contre le mur avant de fuir." },
       { type: "test_groupe", image: "journal",
         texte: "Les pages sont éparses. Reconstituer ce que le prêtre a vu demande méthode.",
         compet: "ruse", difficulte: 9, gorgees_base: 3, pas_de_pv: true,
@@ -302,12 +329,12 @@
         texte: "Ils sortent des maisons. Calmement, comme à la messe. Mais leurs yeux sont vides, leurs mains tiennent outils et couteaux.",
         compet: "force", difficulte: 10, gorgees_base: 3,
         succes: "Vous tenez bon. À plusieurs, vous repoussez la foule sans la massacrer.",
-        echec: "Vous êtes débordés. Vous frappez plus que de raison. Du sang coule." },
+        echec: "Vous êtes débordés. Les coups pleuvent sur vous. Vous repoussez la foule, blessés." },
       { type: "test_solo", image: "piegecave",
         texte: "Pendant l'affrontement, le sol cède sous l'un de vous. Une trappe.",
         compet: "agilite", difficulte: 8, gorgees_base: 3,
         succes: "Le piégé trouve un passage et libère les siens en les prenant à revers.",
-        echec: "Le piégé tâtonne dans l'obscurité. Quand il rejoint les autres, ils ont pris des coups." },
+        echec: "Le piégé chute dans l'obscurité et heurte la pierre. Quand il rejoint les autres en sang, ils ont eux aussi encaissé." },
       { type: "narration", image: "revelation",
         texte: "Le calme retombe. La vieille femme réapparaît, souriante. \"Vous voyez ? Ils n'étaient plus eux-mêmes. C'est l'eau, c'est la caravane, ou autre chose. Personne ne sait. Et vous, qu'allez-vous dire à votre capitaine ?\"",
         bouton: "Faire face au choix" },
@@ -354,7 +381,7 @@
       { type: "test_groupe", image: "tresor",
         texte: "Le trésor est scellé dans un mécanisme ancien.",
         compet: "ruse", difficulte: 9, gorgees_base: 3,
-        succes: "Vous percez le secret.", echec: "Le mécanisme résiste. La cité gronde." },
+        succes: "Vous percez le secret.", echec: "Le mécanisme déclenche un jet de sable brûlant. La cité gronde." },
       { type: "finale", image: "sortie",
         texte: "La cité s'effondre !", bouton: "Courir vers la lumière" },
     ],
@@ -452,6 +479,13 @@
         mesPv = m.pv; mesPvMax = m.pv_max;
         majMesPv();
         break;
+      case 'av_tu_es_traitre': {
+        monRole = 'traitre';
+        const hist = etatRecent ? trouverHistoire(etatRecent.histoire_id) : null;
+        const texteRole = (hist && hist.traitres) ? hist.traitres.texte_secret : "Tu as une mission secrete.";
+        afficherNotifTraitre(texteRole);
+        break;
+      }
       case 'av_fin':
         afficherFin(m); break;
       case 'erreur':
@@ -463,6 +497,15 @@
     z.innerHTML = '';
     joueurs.forEach(function(j){ const d = document.createElement('div'); d.className = 'joueur'; d.textContent = '\u2022 ' + j; z.appendChild(d); });
     document.getElementById('statut-attente').textContent = joueurs.length + ' connecté(s)';
+  }
+
+  // Notification privee traitre
+  function afficherNotifTraitre(texte) {
+    document.getElementById('notif-traitre-texte').textContent = texte;
+    document.getElementById('notif-traitre').classList.remove('hidden');
+  }
+  function fermerNotifTraitre() {
+    document.getElementById('notif-traitre').classList.add('hidden');
   }
 
   // Mise a jour de l'affichage de mes PV personnels
@@ -507,7 +550,9 @@
     document.getElementById('mode-reparti').classList.toggle('choisi', mode === 'reparti');
   }
   function demarrerPartie() {
-    envoyer('av_demarrer', { histoire_id: histoireChoisie, difficulte: difficulteChoisie, mode_competences: modeChoisi });
+    const h = trouverHistoire(histoireChoisie);
+    const nbTraitres = (h && h.traitres) ? h.traitres.nb : 0;
+    envoyer('av_demarrer', { histoire_id: histoireChoisie, difficulte: difficulteChoisie, mode_competences: modeChoisi, nb_traitres: nbTraitres });
   }
 
   // ============================================================
