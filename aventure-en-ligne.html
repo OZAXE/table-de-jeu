@@ -138,6 +138,47 @@
   .notif-traitre-texte { color: #e8d8c8; font-size: 0.9rem; line-height: 1.55; margin-bottom: 14px; font-style: italic; }
   .notif-traitre-btn { background: #5a1010; color: #f0e0d0; border: none; border-radius: 8px; padding: 11px; font-size: 0.9rem; cursor: pointer; width: 100%; font-weight: bold; font-family: inherit; }
   .notif-traitre-btn:active { transform: scale(0.97); }
+  .trahison-option {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #1a0505; border-top: 2px solid #c84040;
+    padding: 18px 20px 24px; z-index: 1000;
+    animation: notif-apparait 0.3s ease;
+  }
+  .trahison-option-titre { color: #e05040; font-family: Georgia, serif; font-size: 0.85rem; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+  .trahison-option-timer { font-size: 2rem; font-weight: bold; color: #e05040; text-align: center; margin: 8px 0; }
+  .trahison-option-texte { color: #e8d0c0; font-size: 0.9rem; line-height: 1.5; font-style: italic; margin-bottom: 14px; }
+  .trahison-option-btns { display: flex; gap: 10px; }
+  .btn-trahir { flex: 1; background: #8b1a1a; color: #f5e5d5; border: none; border-radius: 8px; padding: 13px; font-size: 1rem; font-weight: bold; cursor: pointer; font-family: inherit; }
+  .btn-trahir:active { transform: scale(0.97); }
+  .btn-passer { flex: 1; background: #3a3028; color: #c0b0a0; border: none; border-radius: 8px; padding: 13px; font-size: 0.9rem; cursor: pointer; font-family: inherit; }
+  .btn-confrontation { font-size: 1.4rem; letter-spacing: 2px; padding: 18px; background: #8b1a1a; }
+  .btn-couvrir { font-size: 1.4rem; letter-spacing: 2px; padding: 18px; background: #1a4a8b; }
+  .alliance-option {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #050f1a; border-top: 2px solid #3a6ab0;
+    padding: 18px 20px 24px; z-index: 1000;
+    animation: notif-apparait 0.3s ease;
+  }
+  .alliance-option-titre { color: #5a9ae0; font-family: Georgia, serif; font-size: 0.85rem; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+  .alliance-option-timer { font-size: 2rem; font-weight: bold; color: #5a9ae0; text-align: center; margin: 8px 0; }
+  .alliance-option-texte { color: #c0d0e8; font-size: 0.88rem; line-height: 1.5; font-style: italic; margin-bottom: 12px; }
+  .alliance-joueurs { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+  .btn-alliance-joueur { background: #1a2a3a; color: #c0d8f0; border: 1px solid #3a6ab0; border-radius: 8px; padding: 11px; font-size: 0.95rem; cursor: pointer; font-family: inherit; text-align: left; }
+  .btn-alliance-joueur:active { transform: scale(0.97); }
+  .btn-alliance-passer { background: #1a1a28; color: #8090a8; border: none; border-radius: 8px; padding: 10px; font-size: 0.85rem; cursor: pointer; font-family: inherit; width: 100%; }
+  .notif-alliance {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    width: calc(100% - 40px); max-width: 400px;
+    background: #050f1a; border: 2px solid #3a6ab0;
+    border-radius: 14px; padding: 16px 18px; z-index: 1000;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.85);
+    animation: notif-apparait 0.3s ease;
+  }
+  .notif-alliance-titre { color: #5a9ae0; font-family: Georgia, serif; font-size: 0.85rem; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+  .notif-alliance-texte { color: #c0d8f0; font-size: 0.9rem; line-height: 1.5; font-style: italic; margin-bottom: 12px; }
+  .notif-alliance-btn { background: #1a3a5a; color: #c0d8f0; border: none; border-radius: 8px; padding: 11px; font-size: 0.9rem; cursor: pointer; width: 100%; font-weight: bold; font-family: inherit; }
+  .avatar-allie::after { content: '⚔'; font-size: 0.7rem; position: absolute; top: 2px; right: 2px; }
+  .avatar-puce { position: relative; }
 </style>
 </head>
 <body>
@@ -152,7 +193,7 @@
   <!-- ECRAN 1 : ACCUEIL -->
   <div class="carte" id="ecran-accueil">
     <label>Ton prénom</label>
-    <input type="text" id="prenom" placeholder="Ex: Enzo" maxlength="12">
+    <input type="text" id="prenom" placeholder="Ex: Théo" maxlength="12">
     <button class="btn-principal" onclick="creerSalon()">Créer un salon</button>
     <div style="text-align:center; color:var(--texte-doux); margin:14px 0 6px;">— ou —</div>
     <label>Code du salon</label>
@@ -212,6 +253,33 @@
     <div id="zone-actions"></div>
   </div>
 
+  <!-- Overlay privé alliance_possible -->
+  <div id="alliance-option" class="alliance-option hidden">
+    <div class="alliance-option-titre">Pacte secret</div>
+    <div class="alliance-option-timer" id="alliance-timer">20</div>
+    <div class="alliance-option-texte">Choisis quelqu'un à qui proposer une alliance. Si l'autre te choisit aussi, le pacte est scellé.</div>
+    <div class="alliance-joueurs" id="alliance-joueurs"></div>
+    <button class="btn-alliance-passer" onclick="passerAlliance()">Je reste seul</button>
+  </div>
+
+  <!-- Notification alliance formée -->
+  <div id="notif-alliance" class="notif-alliance hidden">
+    <div class="notif-alliance-titre">Pacte scellé</div>
+    <div class="notif-alliance-texte" id="notif-alliance-texte"></div>
+    <button class="notif-alliance-btn" onclick="fermerNotifAlliance()">J'ai compris</button>
+  </div>
+
+  <!-- Overlay privé trahison_possible (position:fixed, visible seulement sur le tel du traitre) -->
+  <div id="trahison-option" class="trahison-option hidden">
+    <div class="trahison-option-titre">Moment de vérité</div>
+    <div class="trahison-option-timer" id="trahison-timer">30</div>
+    <div class="trahison-option-texte" id="trahison-option-texte"></div>
+    <div class="trahison-option-btns">
+      <button class="btn-trahir" onclick="choisirTrahir()">Je trahis</button>
+      <button class="btn-passer" onclick="choisirPasser()">Je passe</button>
+    </div>
+  </div>
+
   <!-- Notification privee traitre (position:fixed, invisible aux voisins) -->
   <div id="notif-traitre" class="notif-traitre hidden">
     <div class="notif-traitre-titre">Mission secrete</div>
@@ -248,6 +316,11 @@
   let repartLocal = { force: 0, agilite: 0, ruse: 0 };
   let deAnimeEnCours = false;
   let monRole = 'loyal'; // 'loyal' | 'traitre'
+  let timerTrahison = null;
+  let compteTrahison = 30;
+  let monAllie = null;  // index de l allié, ou null
+  let timerAlliance = null;
+  let compteAlliance = 20;
 
   // ============================================================
   // HISTOIRES (avec PV par classe)
@@ -338,6 +411,11 @@
       { type: "narration", image: "revelation",
         texte: "Le calme retombe. La vieille femme réapparaît, souriante. \"Vous voyez ? Ils n'étaient plus eux-mêmes. C'est l'eau, c'est la caravane, ou autre chose. Personne ne sait. Et vous, qu'allez-vous dire à votre capitaine ?\"",
         bouton: "Faire face au choix" },
+      { type: "alliance_possible", image: "pacte",
+        texte: "Le groupe délibère en silence. Trois mois de route créent des complicités que les mots n'expliquent pas. Certains regards durent un peu trop longtemps." },
+      { type: "trahison_possible", image: "fuite",
+        texte: "Pendant que le groupe délibère, le cheval sans maître piétine encore à l'entrée du village. Il y a un long silence. Quelqu'un regarde la sortie.",
+        texte_prive: "C'est maintenant ou jamais. Si tu pars seul, si tu les laisses ici, la fortune promise est à toi. Clique le premier." },
       { type: "choix_libre", image: "choixfeu",
         texte: "Vous devez décider du sort d'Akrenos avant de partir.",
         choix: [
@@ -486,6 +564,22 @@
         afficherNotifTraitre(texteRole);
         break;
       }
+      case 'av_alliance_proposer': {
+        afficherOptionAlliance(m.autres);
+        break;
+      }
+      case 'av_alliance_formee': {
+        monAllie = m.allie_index;
+        document.getElementById('notif-alliance-texte').textContent = m.allie_nom + ' a accepté ton pacte. Vous êtes alliés.';
+        document.getElementById('notif-alliance').classList.remove('hidden');
+        break;
+      }
+      case 'av_trahison_option': {
+        const scene = etatRecent ? etatRecent.scene_courante : null;
+        const textePrive = (scene && scene.texte_prive) ? scene.texte_prive : "C'est le moment. Tu peux trahir tes compagnons.";
+        afficherOptionTrahison(textePrive);
+        break;
+      }
       case 'av_fin':
         afficherFin(m); break;
       case 'erreur':
@@ -506,6 +600,62 @@
   }
   function fermerNotifTraitre() {
     document.getElementById('notif-traitre').classList.add('hidden');
+  }
+
+  function afficherOptionTrahison(texte) {
+    compteTrahison = 30;
+    document.getElementById('trahison-option-texte').textContent = texte;
+    document.getElementById('trahison-timer').textContent = compteTrahison;
+    document.getElementById('trahison-option').classList.remove('hidden');
+    clearInterval(timerTrahison);
+    timerTrahison = setInterval(function() {
+      compteTrahison--;
+      document.getElementById('trahison-timer').textContent = compteTrahison;
+      if (compteTrahison <= 0) { clearInterval(timerTrahison); choisirPasser(); }
+    }, 1000);
+  }
+  function choisirTrahir() {
+    clearInterval(timerTrahison);
+    document.getElementById('trahison-option').classList.add('hidden');
+    envoyer('av_trahir');
+  }
+  function choisirPasser() {
+    clearInterval(timerTrahison);
+    document.getElementById('trahison-option').classList.add('hidden');
+    envoyer('av_passer_trahison');
+  }
+
+  function afficherOptionAlliance(autres) {
+    compteAlliance = 20;
+    document.getElementById('alliance-timer').textContent = compteAlliance;
+    const zone = document.getElementById('alliance-joueurs'); zone.innerHTML = '';
+    autres.forEach(function(j) {
+      const b = document.createElement('button');
+      b.className = 'btn-alliance-joueur';
+      b.textContent = j.nom;
+      b.onclick = function() { proposerAlliance(j.index); };
+      zone.appendChild(b);
+    });
+    document.getElementById('alliance-option').classList.remove('hidden');
+    clearInterval(timerAlliance);
+    timerAlliance = setInterval(function() {
+      compteAlliance--;
+      document.getElementById('alliance-timer').textContent = compteAlliance;
+      if (compteAlliance <= 0) { clearInterval(timerAlliance); passerAlliance(); }
+    }, 1000);
+  }
+  function proposerAlliance(cible) {
+    clearInterval(timerAlliance);
+    document.getElementById('alliance-option').classList.add('hidden');
+    envoyer('av_proposer_alliance', { cible: cible });
+  }
+  function passerAlliance() {
+    clearInterval(timerAlliance);
+    document.getElementById('alliance-option').classList.add('hidden');
+    envoyer('av_proposer_alliance', { cible: null });
+  }
+  function fermerNotifAlliance() {
+    document.getElementById('notif-alliance').classList.add('hidden');
   }
 
   // Mise a jour de l'affichage de mes PV personnels
@@ -725,6 +875,8 @@
     else if (scene.type === 'test_groupe') afficherTestGroupe(scene);
     else if (scene.type === 'choix_libre') afficherChoixLibre(scene);
     else if (scene.type === 'finale') afficherFinale(scene);
+    else if (scene.type === 'trahison_possible') afficherTrahisonPossible(scene);
+    else if (scene.type === 'alliance_possible') afficherAlliancePossible();
   }
 
   function afficherAvatarsLigne() {
@@ -735,6 +887,7 @@
       if (i === monIndex) classes += ' moi';
       if (etatRecent.qui_tente === i) classes += ' actif';
       if (etatRecent.morts && etatRecent.morts[i]) classes += ' mort';
+      if (monAllie === i) classes += ' avatar-allie';
       d.className = classes;
       let html = '<div class="avatar-nom-petit">' + av.nom + '</div>';
       if (av.classe) html += '<div class="avatar-classe-petite">' + av.classe + '</div>';
@@ -745,6 +898,31 @@
       d.innerHTML = html;
       zone.appendChild(d);
     });
+  }
+
+  function afficherAlliancePossible() {
+    const zone = document.getElementById('zone-actions');
+    zone.innerHTML = '<div class="pas-mon-tour" style="color:#5a9ae0;">Les regards se croisent. Des silences parlent...</div>';
+  }
+
+  function afficherTrahisonPossible(scene) {
+    const zone = document.getElementById('zone-actions');
+    if (etatRecent.scene_etape === 'trahison_attente') {
+      zone.innerHTML = '<div class="pas-mon-tour" style="color:#e05040;">Une tension plane sur le groupe...</div>';
+    } else if (etatRecent.scene_etape === 'confrontation') {
+      const nomTraitre = etatRecent.joueurs[etatRecent.confrontation_acteur] || '???';
+      const estAllie = (monAllie === etatRecent.confrontation_acteur);
+      document.getElementById('zone-test').innerHTML =
+        '<div style="text-align:center; color:#e05040; font-family:Georgia,serif; font-size:0.9rem; margin-bottom:8px;">' + nomTraitre + ' saisit l\'occasion — PREMIER CLIC !</div>';
+      const b = document.createElement('button');
+      if (estAllie) {
+        b.className = 'btn-principal btn-couvrir'; b.textContent = 'Couvrir mon allié !';
+      } else {
+        b.className = 'btn-principal btn-confrontation'; b.textContent = 'RÉAGIR !';
+      }
+      b.onclick = function() { b.disabled = true; b.style.opacity = '0.5'; envoyer('av_confronter'); };
+      zone.appendChild(b);
+    }
   }
 
   function afficherNarration(scene) {
@@ -909,6 +1087,45 @@
     const zoneT = document.getElementById('zone-test');
     let txt = '', classePalier = 'palier-libre', titrePalier = '';
 
+    if (r && r.trahison) {
+      const nomTraitre = etatRecent.joueurs[r.qui_tente] || '???';
+      if (r.reussi) {
+        classePalier = 'palier-franc-e'; titrePalier = '⚔ Trahison réussie';
+        txt = nomTraitre + ' a quitté le groupe dans l\'ombre. Le groupe perd 2 PV.';
+      } else {
+        classePalier = 'palier-franche'; titrePalier = '✓ Trahison déjouée';
+        txt = nomTraitre + ' a tenté de fuir, mais quelqu\'un a réagi à temps. Il est démasqué.';
+      }
+      let html = '<div class="resultat-test ' + classePalier + '">';
+      html += '<div class="palier-titre">' + titrePalier + '</div>';
+      html += '<div style="margin-top:8px; font-style:italic;">' + txt + '</div>';
+      if (r.pv_appliques && r.pv_appliques.length > 0) {
+        if (r.reussi) {
+          html += '<div class="pv-annonce">L\'équipe perd 2 PV chacun</div>';
+        } else {
+          const p = r.pv_appliques[0];
+          html += '<div class="pv-annonce">' + (etatRecent.avatars[p[0]] ? etatRecent.avatars[p[0]].nom : nomTraitre) + ' perd ' + p[1] + ' PV</div>';
+        }
+      }
+      if (r.morts && r.morts.length > 0) {
+        r.morts.forEach(function(idx) {
+          html += '<div class="mort-annonce">☠ ' + etatRecent.avatars[idx].nom + ' est tombé au combat. Cul sec final !</div>';
+        });
+      }
+      html += '</div>';
+      zoneT.innerHTML = html;
+      if (jeSuisMort()) {
+        document.getElementById('zone-actions').innerHTML = '<div class="pas-mon-tour">Tu n\'agis plus. Les autres continuent...</div>';
+      } else {
+        const zone = document.getElementById('zone-actions');
+        const b = document.createElement('button');
+        b.className = 'btn-principal'; b.textContent = 'Continuer';
+        b.onclick = function(){ envoyer('av_terminer_scene'); };
+        zone.appendChild(b);
+      }
+      return;
+    }
+
     if (scene.type === 'choix_libre' && etatRecent.choix_groupe !== null) {
       txt = scene.choix[etatRecent.choix_groupe].consequence;
       classePalier = 'palier-libre';
@@ -1038,6 +1255,8 @@
     if (type === 'revelation') return tpl('<rect width="400" height="220" fill="#a8a090"/><rect x="0" y="170" width="400" height="50" fill="#8a7868"/><ellipse cx="200" cy="100" rx="24" ry="28" fill="#e8d8c0"/><rect x="180" y="130" width="40" height="60" fill="#7a6a58"/>');
     if (type === 'choixfeu') return tpl('<rect width="400" height="220" fill="#3a1c0c"/><rect x="0" y="170" width="400" height="50" fill="#1a0c04"/><polygon points="60,170 80,90 100,170" fill="#e8593c"/><polygon points="160,170 190,80 220,170" fill="#e8593c"/><polygon points="280,170 310,100 340,170" fill="#e8593c"/>');
     if (type === 'retour') return tpl('<rect width="400" height="220" fill="' + ciel + '"/><ellipse cx="80" cy="50" rx="30" ry="30" fill="#fdf6ea"/><path d="M0 160 Q150 130 250 145 T400 135 V220 H0 Z" fill="#a8b094"/><polygon points="220,160 250,100 280,160" fill="#c4534a"/>');
+    if (type === 'pacte') return tpl('<rect width="400" height="220" fill="#1a1a2a"/><ellipse cx="200" cy="110" rx="80" ry="80" fill="#2a2a3a"/><line x1="140" y1="110" x2="260" y2="110" stroke="#5a9ae0" stroke-width="2" opacity="0.6"/><circle cx="140" cy="110" r="10" fill="#3a5a8a"/><circle cx="260" cy="110" r="10" fill="#3a5a8a"/><ellipse cx="170" cy="85" rx="10" ry="14" fill="#6a7080"/><ellipse cx="230" cy="85" rx="10" ry="14" fill="#6a7080"/>');
+    if (type === 'fuite') return tpl('<rect width="400" height="220" fill="#9a9080"/><path d="M0 165 L400 160 L400 220 L0 220 Z" fill="#7a7060"/><ellipse cx="300" cy="150" rx="32" ry="18" fill="#7a5030"/><ellipse cx="326" cy="140" rx="14" ry="10" fill="#7a5030"/><rect x="285" y="155" width="6" height="26" fill="#5a3820"/><rect x="300" y="155" width="6" height="26" fill="#5a3820"/><rect x="315" y="155" width="6" height="26" fill="#5a3820"/><ellipse cx="110" cy="148" rx="12" ry="16" fill="#6a5a48"/><rect x="103" y="162" width="5" height="24" fill="#5a4838"/><rect x="112" y="162" width="5" height="24" fill="#5a4838"/><path d="M200 220 L190 80 L210 80 Z" fill="#5a4a38" opacity="0.5"/>');
     return tpl('<rect width="400" height="220" fill="' + sable + '"/>');
   }
 </script>
