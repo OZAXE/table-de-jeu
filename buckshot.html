@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<!-- Rend la page lisible sur telephone (zoom adapte a l ecran) -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buckshot - Version soirée</title>
+
+<!-- ==========================================================
+     PARTIE CSS : toute l apparence du jeu
+     Le theme reprend le dore des autres jeux, mais dans une
+     ambiance plus sombre et rouge, pour coller a la tension
+     de Buckshot Roulette.
+     ========================================================== -->
+<style>
+  :root {
+    --fond: #170d0c;
+    --fond-carte: #26100e;
+    --table: #3a1512;
+    --table-bord: #5c221c;
+    --accent: #d4af68;        /* le dore, couleur principale */
+    --accent-clair: #f0d59a;
+    --texte: #f0e6da;
+    --texte-doux: #b09a8e;
+    --reel: #c73a28;          /* rouge cartouche reelle */
+    --blanc: #8fb0c0;         /* bleu-gris cartouche a blanc */
+    --danger: #c0402a;
+    --vert: #6b8e4e;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+    background: var(--fond);
+    background-image: radial-gradient(circle at 50% 0%, #2a1210 0%, #170d0c 65%);
+    color: var(--texte);
+    min-height: 100vh;
+    display: flex; justify-content: center; align-items: flex-start;
+    padding: 16px;
+  }
+
+  .app { width: 100%; max-width: 560px; margin-top: 8px; }
+
+  .barre-haut { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .lien-haut {
+    color: var(--texte-doux); text-decoration: none; font-size: 0.85rem;
+    cursor: pointer; background: none; border: none; font-family: inherit;
+    padding: 0; width: auto; margin: 0;
+  }
+  .lien-haut:hover { color: var(--accent); }
+
+  h1 {
+    text-align: center; font-family: Georgia, serif; font-size: 2.2rem;
+    color: var(--accent); letter-spacing: 3px; margin-bottom: 2px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.6);
+  }
+  .sous-titre { text-align: center; color: var(--texte-doux); font-style: italic; margin-bottom: 18px; font-size: 0.9rem; }
+
+  /* Zones encadrees */
+  .carte {
+    background: var(--fond-carte);
+    border: 1px solid rgba(212, 175, 104, 0.22);
+    border-radius: 14px; padding: 20px; margin-bottom: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  }
+
+  /* Boutons */
+  button {
+    font-family: inherit; font-size: 1rem; padding: 13px 18px; border: none;
+    border-radius: 10px; cursor: pointer; width: 100%; margin-top: 10px;
+    font-weight: bold; transition: transform 0.1s ease, filter 0.15s ease;
+  }
+  button:active { transform: scale(0.97); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn-principal { background: var(--accent); color: #211008; }
+  .btn-principal:hover:not(:disabled) { filter: brightness(1.1); }
+  .btn-vert { background: var(--vert); color: #fff; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-neutre { background: #2a1210; color: var(--texte-doux); border: 1px solid var(--table-bord); }
+  .btn-neutre:hover:not(:disabled) { color: var(--texte); }
+
+  label { display: block; margin-bottom: 6px; color: var(--texte-doux); font-size: 0.9rem; }
+  input[type="text"], input[type="number"] {
+    width: 100%; padding: 12px; font-size: 1.05rem; font-family: inherit;
+    background: #170d0c; border: 1px solid var(--accent); border-radius: 8px;
+    color: var(--texte); text-align: center; margin-bottom: 8px;
+  }
+
+  .hidden { display: none !important; }
+
+  /* ---------- ecran d accueil : liste des noms ---------- */
+  .ligne-joueur { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .ligne-joueur input { margin-bottom: 0; }
+  .ligne-joueur button { width: 46px; margin-top: 0; padding: 12px 0; }
+
+  /* ---------- selecteurs de composition (pas +/-) ---------- */
+  .stepper { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 6px 0 14px; }
+  .stepper button { width: 52px; height: 52px; margin: 0; font-size: 1.4rem; border-radius: 12px; }
+  .stepper .valeur { font-size: 2rem; min-width: 60px; text-align: center; color: var(--accent-clair); font-weight: bold; }
+  .repartition { display: flex; gap: 10px; justify-content: center; margin-bottom: 6px; }
+  .pastille { padding: 8px 14px; border-radius: 10px; font-weight: bold; font-size: 0.95rem; }
+  .pastille.reel { background: rgba(199,58,40,0.2); border: 1px solid var(--reel); color: #ff9b8a; }
+  .pastille.blanc { background: rgba(143,176,192,0.15); border: 1px solid var(--blanc); color: #cfe2ea; }
+
+  /* ---------- ecran "passe le telephone" ---------- */
+  #ecran-passer .carte { text-align: center; }
+  .grand-nom { font-family: Georgia, serif; font-size: 2rem; color: var(--accent-clair); margin: 10px 0; }
+  .secret-zone { margin: 16px 0; min-height: 130px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+  /* ---------- LA TABLE VUE DE DESSUS ---------- */
+  .table-zone {
+    position: relative; width: 100%; aspect-ratio: 1 / 1; max-width: 460px;
+    margin: 0 auto 8px; border-radius: 50%;
+    background: radial-gradient(circle at 50% 45%, var(--table) 0%, #240d0b 78%);
+    border: 3px solid var(--table-bord);
+    box-shadow: inset 0 0 40px rgba(0,0,0,0.6), 0 10px 30px rgba(0,0,0,0.5);
+  }
+
+  /* La pile de cartouches au centre */
+  .pile {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .pile-dos {
+    width: 74px; height: 104px; border-radius: 10px;
+    background: repeating-linear-gradient(45deg, #3a1512, #3a1512 6px, #4a1a15 6px, #4a1a15 12px);
+    border: 2px solid var(--accent); box-shadow: 0 6px 14px rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--accent-clair); font-size: 1.8rem;
+    position: relative;
+  }
+  .pile-dos.vide { background: #1c0c0a; border-style: dashed; border-color: var(--table-bord); color: var(--texte-doux); font-size: 0.8rem; }
+  .pile-compte { font-size: 0.8rem; color: var(--texte-doux); }
+
+  /* La carte qui se retourne au moment du tir */
+  .carte-tir {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 84px; height: 118px; perspective: 700px; z-index: 5; pointer-events: none;
+  }
+  .carte-tir-inner {
+    position: relative; width: 100%; height: 100%;
+    transform-style: preserve-3d; transition: transform 0.5s ease;
+  }
+  .carte-tir.reveal .carte-tir-inner { transform: rotateY(180deg); }
+  .carte-face {
+    position: absolute; width: 100%; height: 100%; border-radius: 10px;
+    backface-visibility: hidden; display: flex; align-items: center; justify-content: center;
+    font-size: 2.4rem; font-weight: bold; border: 2px solid var(--accent);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+  }
+  .carte-dos-face {
+    background: repeating-linear-gradient(45deg, #3a1512, #3a1512 6px, #4a1a15 6px, #4a1a15 12px);
+    color: var(--accent-clair);
+  }
+  .carte-avant-face { transform: rotateY(180deg); flex-direction: column; gap: 4px; }
+  .carte-avant-face.reel { background: #3a100b; color: #ff9b8a; border-color: var(--reel); }
+  .carte-avant-face.blanc { background: #12242c; color: #cfe2ea; border-color: var(--blanc); }
+  .carte-avant-face .etiq { font-size: 0.75rem; letter-spacing: 1px; }
+
+  /* Les sieges des joueurs, disposes autour de la table */
+  .siege {
+    position: absolute; width: 84px; transform: translate(-50%, -50%);
+    text-align: center; transition: filter 0.2s ease;
+  }
+  .siege .jeton {
+    width: 54px; height: 54px; border-radius: 50%; margin: 0 auto 4px;
+    background: #2a1210; border: 3px solid var(--table-bord);
+    display: flex; align-items: center; justify-content: center;
+    font-family: Georgia, serif; font-size: 1.3rem; color: var(--accent-clair);
+    position: relative;
+  }
+  .siege.actif .jeton { border-color: var(--accent); box-shadow: 0 0 16px var(--accent); }
+  .siege.actif { filter: none; }
+  .siege .snom { font-size: 0.82rem; font-weight: bold; color: var(--texte); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .siege .sinfo { font-size: 0.72rem; color: var(--texte-doux); }
+  .siege .badge-obj {
+    position: absolute; bottom: -4px; right: -8px; font-size: 0.95rem;
+    background: #170d0c; border: 1px solid var(--accent); border-radius: 6px; padding: 0 3px;
+  }
+  .siege .badge-menotte {
+    position: absolute; top: -6px; left: -8px; font-size: 0.9rem;
+  }
+  /* le petit verre qui se remplit */
+  .verre { width: 26px; height: 34px; margin: 4px auto 0; border: 2px solid var(--texte-doux); border-top: none; border-radius: 0 0 8px 8px; position: relative; overflow: hidden; background: rgba(255,255,255,0.03); }
+  .verre .biere { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(#e0a23b, #b9791f); transition: height 0.4s ease; }
+
+  /* ---------- panneau d actions du tour ---------- */
+  .panneau-tour { text-align: center; }
+  .tour-titre { font-family: Georgia, serif; font-size: 1.25rem; color: var(--accent-clair); margin-bottom: 4px; }
+  .tour-sous { color: var(--texte-doux); font-size: 0.88rem; margin-bottom: 12px; }
+  .cibles { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 6px; }
+  .cibles button { width: auto; flex: 1 1 40%; margin-top: 0; }
+
+  .journal {
+    background: #120807; border: 1px solid var(--table-bord); border-radius: 10px;
+    padding: 10px 12px; margin-top: 10px; font-size: 0.85rem; color: var(--texte-doux);
+    min-height: 40px; line-height: 1.5;
+  }
+  .journal .ok { color: var(--vert); }
+  .journal .bang { color: #ff9b8a; font-weight: bold; }
+
+  /* ---------- phase objets ---------- */
+  .liste-obj { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+  .obj-carte {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    background: #170d0c; border: 1px solid var(--table-bord); border-radius: 10px; text-align: left;
+  }
+  .obj-carte .oicone { font-size: 1.6rem; }
+  .obj-carte .otxt { flex: 1; }
+  .obj-carte .onom { font-weight: bold; color: var(--accent-clair); font-size: 0.95rem; }
+  .obj-carte .odesc { font-size: 0.78rem; color: var(--texte-doux); }
+  .obj-carte button { width: auto; margin: 0; padding: 8px 14px; font-size: 0.85rem; }
+
+  /* ---------- modale (regles + selections) ---------- */
+  .modale-fond {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.78);
+    display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50;
+  }
+  .modale {
+    background: var(--fond-carte); border: 1px solid var(--accent);
+    border-radius: 16px; padding: 22px; max-width: 480px; width: 100%;
+    max-height: 86vh; overflow-y: auto;
+  }
+  .modale h2 { color: var(--accent); font-family: Georgia, serif; margin-bottom: 12px; }
+  .modale h3 { color: var(--accent-clair); font-size: 1rem; margin: 14px 0 6px; }
+  .modale p, .modale li { color: var(--texte-doux); font-size: 0.9rem; line-height: 1.55; margin-bottom: 6px; }
+  .modale ul { padding-left: 18px; }
+  .modale .accent { color: var(--accent-clair); font-weight: bold; }
+  .obj-table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 0.85rem; }
+  .obj-table td { padding: 6px 4px; border-bottom: 1px solid var(--table-bord); vertical-align: top; }
+  .obj-table td:first-child { white-space: nowrap; color: var(--accent-clair); font-weight: bold; }
+
+  .fin-tableau { width: 100%; margin: 10px 0; border-collapse: collapse; }
+  .fin-tableau td { padding: 8px; border-bottom: 1px solid var(--table-bord); }
+  .fin-tableau td:last-child { text-align: right; color: var(--accent-clair); font-weight: bold; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="barre-haut">
+    <a class="lien-haut" href="index.html">&#8592; Accueil</a>
+    <button class="lien-haut" onclick="ouvrirRegles()">Règles &#9432;</button>
+  </div>
+
+  <h1>BUCKSHOT</h1>
+  <div class="sous-titre">Version soirée — sur un seul téléphone</div>
+
+  <!-- =========================================================
+       ECRAN 1 : ACCUEIL / JOUEURS
+       ========================================================= -->
+  <section id="ecran-accueil">
+    <div class="carte">
+      <label>Les joueurs (2 à 6)</label>
+      <div id="liste-noms"></div>
+      <button class="btn-neutre" id="btn-ajouter" onclick="ajouterJoueur()">+ Ajouter un joueur</button>
+      <button class="btn-principal" onclick="validerJoueurs()">Commencer</button>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       ECRAN 2 : COMPOSITION DE LA MANCHE
+       ========================================================= -->
+  <section id="ecran-composition" class="hidden">
+    <div class="carte">
+      <div class="tour-titre" id="compo-qui"></div>
+      <div class="tour-sous">Choisis combien de cartouches, et combien sont réelles. Annonce-le à voix haute, mais garde l'ordre secret.</div>
+
+      <label style="text-align:center">Nombre de cartouches (4 à 8)</label>
+      <div class="stepper">
+        <button class="btn-neutre" onclick="majTotal(-1)">−</button>
+        <div class="valeur" id="val-total">6</div>
+        <button class="btn-neutre" onclick="majTotal(1)">+</button>
+      </div>
+
+      <label style="text-align:center">Dont réelles (♠)</label>
+      <div class="stepper">
+        <button class="btn-neutre" onclick="majReel(-1)">−</button>
+        <div class="valeur" id="val-reel" style="color:#ff9b8a">2</div>
+        <button class="btn-neutre" onclick="majReel(1)">+</button>
+      </div>
+
+      <div class="repartition">
+        <span class="pastille reel" id="pas-reel">2 réelles</span>
+        <span class="pastille blanc" id="pas-blanc">4 blanches</span>
+      </div>
+
+      <button class="btn-principal" onclick="lancerManche()">Charger et mélanger</button>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       ECRAN 3 : PASSE LE TELEPHONE (revelation privee)
+       ========================================================= -->
+  <section id="ecran-passer" class="hidden">
+    <div class="carte">
+      <div class="tour-sous" id="passer-consigne">Passe le téléphone à</div>
+      <div class="grand-nom" id="passer-nom">—</div>
+      <div class="secret-zone" id="passer-zone">
+        <button class="btn-principal" id="btn-reveler" onclick="revelerSecret()">Je suis seul(e), révéler</button>
+      </div>
+      <button class="btn-vert hidden" id="btn-secret-suivant" onclick="finSecret()">Compris, cacher</button>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       ECRAN 4 : LE JEU (table vue de dessus + actions)
+       ========================================================= -->
+  <section id="ecran-jeu" class="hidden">
+    <div class="table-zone" id="table-zone">
+      <div class="pile" id="pile"></div>
+      <div class="carte-tir" id="carte-tir">
+        <div class="carte-tir-inner">
+          <div class="carte-face carte-dos-face">&#9670;</div>
+          <div class="carte-face carte-avant-face" id="carte-avant"></div>
+        </div>
+      </div>
+      <!-- les sieges sont injectes par JS -->
+    </div>
+
+    <div class="carte panneau-tour" id="panneau">
+      <!-- rempli par JS selon la phase -->
+    </div>
+
+    <div class="journal" id="journal">La partie commence.</div>
+  </section>
+
+  <!-- =========================================================
+       ECRAN 5 : FIN DE MANCHE
+       ========================================================= -->
+  <section id="ecran-manche-fin" class="hidden">
+    <div class="carte">
+      <div class="tour-titre">Manche terminée</div>
+      <div class="tour-sous">Le chargeur est vide. Bilan des gorgées bues depuis le début :</div>
+      <table class="fin-tableau" id="fin-tableau"></table>
+      <button class="btn-principal" onclick="nouvelleManche()">Nouvelle manche</button>
+      <button class="btn-neutre" onclick="finPartie()">Arrêter la partie</button>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       MODALE REGLES
+       ========================================================= -->
+  <div class="modale-fond hidden" id="modale-regles">
+    <div class="modale">
+      <h2>Règles de Buckshot — version soirée</h2>
+      <p>Deux paquets. Les <span class="accent">cartouches</span> : ♠ pique = réelle (la cible boit une gorgée), ♥ cœur = à blanc (rien). Les <span class="accent">objets</span> : les 6 figures de ♣ et ♦, une par joueur, posée face visible.</p>
+
+      <h3>Mise en place</h3>
+      <p>Le joueur au verre le plus vide choisit la composition : 4 à 8 cartouches, réparties librement entre réelles et blanches. Il l'annonce à voix haute sans révéler l'ordre. Le paquet est mélangé et posé au centre. Un objet est distribué à chacun.</p>
+
+      <h3>Un tour</h3>
+      <p>Le joueur actif se sert lui-même ou sert un adversaire, puis retourne la carte du dessus.</p>
+      <ul>
+        <li><span class="accent">Sur soi + blanc</span> : rien, il rejoue.</li>
+        <li><span class="accent">Sur soi + réel</span> : il boit, la main passe.</li>
+        <li><span class="accent">Sur un autre + blanc</span> : rien, la main passe.</li>
+        <li><span class="accent">Sur un autre + réel</span> : l'autre boit, la main passe.</li>
+      </ul>
+      <p>La seule façon de garder la main est de se viser soi-même et de tomber sur du blanc.</p>
+
+      <h3>Les objets (avant chaque tir)</h3>
+      <table class="obj-table">
+        <tr><td>&#128269; Loupe</td><td>Regarder la carte du dessus, en secret.</td></tr>
+        <tr><td>&#128241; Téléphone</td><td>Regarder une carte plus bas dans la pile.</td></tr>
+        <tr><td>&#128260; Inverseur</td><td>Change la nature de la carte du dessus (réel ↔ blanc).</td></tr>
+        <tr><td>&#127866; Bière</td><td>Défausse la carte du dessus, sans effet.</td></tr>
+        <tr><td>&#128274; Menottes</td><td>La cible saute complètement son prochain tour.</td></tr>
+        <tr><td>&#129691; Scie</td><td>Double la gorgée de la prochaine carte réelle.</td></tr>
+      </table>
+      <p>Chaque joueur a un objet par manche, jouable sur soi ou sur le tour en cours, même quand ce n'est pas son tour. En fin de manche, les objets sont remélangés et redistribués.</p>
+
+      <button class="btn-principal" onclick="fermerRegles()">Fermer</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ==========================================================
+   ETAT GLOBAL DU JEU (tout en memoire, rien n est sauvegarde)
+   ========================================================== */
+
+// La liste des 6 objets possibles. Chacun a un identifiant, un nom,
+// une icone et une petite description affichee dans le jeu.
+const OBJETS = [
+  { id: 'loupe',     nom: 'Loupe',     icone: '🔍', desc: 'Regarder la carte du dessus, en secret.' },
+  { id: 'telephone', nom: 'Téléphone', icone: '📱', desc: 'Regarder une carte plus bas dans la pile.' },
+  { id: 'inverseur', nom: 'Inverseur', icone: '🔄', desc: 'Change la nature de la carte du dessus.' },
+  { id: 'biere',     nom: 'Bière',     icone: '🍺', desc: 'Défausse la carte du dessus, sans effet.' },
+  { id: 'menottes',  nom: 'Menottes',  icone: '🔒', desc: 'Un joueur saute son prochain tour.' },
+  { id: 'scie',      nom: 'Scie',      icone: '🪚', desc: 'Double la gorgée de la prochaine réelle.' },
+];
+
+let jeu = {
+  joueurs: [],        // { nom, gorgees, objet, objetUtilise, menotte, dernierReel }
+  pile: [],           // liste de 'reel' / 'blanc', index 0 = dessus (prochaine tiree)
+  compoTotal: 6,
+  compoReel: 2,
+  courant: 0,         // index du joueur actif
+  scieActive: false,  // vrai si la prochaine reelle compte double
+  phase: 'accueil',   // accueil | objets | tir | attente
+  fileSecrets: [],    // suite de revelations privees a montrer avant de jouer
+};
+
+/* ==========================================================
+   PETITS UTILITAIRES
+   ========================================================== */
+function el(id) { return document.getElementById(id); }
+function montrerEcran(nom) {
+  ['accueil','composition','passer','jeu','manche-fin'].forEach(e => {
+    el('ecran-' + e).classList.toggle('hidden', e !== nom);
+  });
+}
+function melanger(tab) {
+  for (let i = tab.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [tab[i], tab[j]] = [tab[j], tab[i]];
+  }
+  return tab;
+}
+function ouvrirRegles() { el('modale-regles').classList.remove('hidden'); }
+function fermerRegles() { el('modale-regles').classList.add('hidden'); }
+
+/* ==========================================================
+   ECRAN 1 : SAISIE DES JOUEURS
+   ========================================================== */
+function ligneNomHTML(i, valeur) {
+  return `<div class="ligne-joueur">
+    <input type="text" placeholder="Joueur ${i + 1}" value="${valeur || ''}" maxlength="12">
+    <button class="btn-neutre" onclick="retirerJoueur(${i})">✕</button>
+  </div>`;
+}
+function rendreListeNoms(noms) {
+  el('liste-noms').innerHTML = noms.map((n, i) => ligneNomHTML(i, n)).join('');
+  el('btn-ajouter').disabled = noms.length >= 6;
+}
+function lireNoms() {
+  return [...el('liste-noms').querySelectorAll('input')].map(inp => inp.value.trim());
+}
+function ajouterJoueur() {
+  const noms = lireNoms();
+  if (noms.length >= 6) return;
+  noms.push('');
+  rendreListeNoms(noms);
+}
+function retirerJoueur(i) {
+  const noms = lireNoms();
+  if (noms.length <= 2) return;
+  noms.splice(i, 1);
+  rendreListeNoms(noms);
+}
+function validerJoueurs() {
+  let noms = lireNoms().filter(n => n !== '');
+  // Complete les noms vides pour eviter les trous
+  const brut = lireNoms();
+  noms = brut.map((n, i) => n || ('Joueur ' + (i + 1)));
+  if (noms.length < 2) { alert('Il faut au moins 2 joueurs.'); return; }
+
+  jeu.joueurs = noms.map(nom => ({
+    nom, gorgees: 0, objet: null, objetUtilise: false, menotte: false, dernierReel: 0
+  }));
+  ouvrirComposition();
+}
+
+/* ==========================================================
+   ECRAN 2 : COMPOSITION DE LA MANCHE
+   Le joueur au verre le plus vide decide.
+   ========================================================== */
+function joueurLePlusVide() {
+  let min = Infinity, idx = 0, dernier = -1;
+  jeu.joueurs.forEach((j, i) => {
+    if (j.gorgees < min || (j.gorgees === min && j.dernierReel > dernier)) {
+      min = j.gorgees; idx = i; dernier = j.dernierReel;
+    }
+  });
+  return idx;
+}
+function ouvrirComposition() {
+  jeu.compoTotal = 6; jeu.compoReel = 2;
+  const idx = joueurLePlusVide();
+  el('compo-qui').textContent = jeu.joueurs[idx].nom + ' charge le paquet';
+  majAffichageCompo();
+  montrerEcran('composition');
+}
+function majTotal(d) {
+  jeu.compoTotal = Math.max(4, Math.min(8, jeu.compoTotal + d));
+  if (jeu.compoReel > jeu.compoTotal) jeu.compoReel = jeu.compoTotal;
+  majAffichageCompo();
+}
+function majReel(d) {
+  jeu.compoReel = Math.max(0, Math.min(jeu.compoTotal, jeu.compoReel + d));
+  majAffichageCompo();
+}
+function majAffichageCompo() {
+  const blanc = jeu.compoTotal - jeu.compoReel;
+  el('val-total').textContent = jeu.compoTotal;
+  el('val-reel').textContent = jeu.compoReel;
+  el('pas-reel').textContent = jeu.compoReel + (jeu.compoReel > 1 ? ' réelles' : ' réelle');
+  el('pas-blanc').textContent = blanc + (blanc > 1 ? ' blanches' : ' blanche');
+}
+
+/* ==========================================================
+   LANCEMENT D UNE MANCHE : on charge la pile et on distribue
+   les objets, puis on fait passer le telephone pour que chacun
+   decouvre son objet en secret.
+   ========================================================== */
+function lancerManche() {
+  // Construction de la pile de cartouches
+  jeu.pile = [];
+  for (let i = 0; i < jeu.compoReel; i++) jeu.pile.push('reel');
+  for (let i = 0; i < jeu.compoTotal - jeu.compoReel; i++) jeu.pile.push('blanc');
+  melanger(jeu.pile);
+
+  // Distribution des objets : un par joueur, tire des 6 disponibles
+  const paquetObjets = melanger([...OBJETS]);
+  jeu.joueurs.forEach((j, i) => {
+    j.objet = paquetObjets[i % paquetObjets.length];
+    j.objetUtilise = false;
+    j.menotte = false;
+  });
+
+  jeu.scieActive = false;
+
+  // On prepare la file des revelations privees (chaque joueur voit son objet)
+  jeu.fileSecrets = jeu.joueurs.map((j, i) => ({
+    type: 'objet-perso', joueur: i
+  }));
+  jouerSecretSuivant();
+}
+
+/* ==========================================================
+   ECRAN 3 : REVELATIONS PRIVEES (passe le telephone)
+   Sert a montrer son objet en debut de manche, et aussi
+   la Loupe / le Telephone en cours de partie.
+   ========================================================== */
+let secretCourant = null;
+
+function jouerSecretSuivant() {
+  if (jeu.fileSecrets.length === 0) {
+    // Plus rien de secret : on (re)prend le jeu
+    demarrerTourOuJeu();
+    return;
+  }
+  secretCourant = jeu.fileSecrets.shift();
+  const nom = jeu.joueurs[secretCourant.joueur].nom;
+  el('passer-nom').textContent = nom;
+  el('passer-consigne').textContent =
+    secretCourant.type === 'objet-perso' ? 'Ton objet pour cette manche —' : 'Regard secret —';
+  el('passer-zone').innerHTML = '<button class="btn-principal" id="btn-reveler" onclick="revelerSecret()">Je suis seul(e), révéler</button>';
+  el('btn-secret-suivant').classList.add('hidden');
+  montrerEcran('passer');
+}
+
+function revelerSecret() {
+  const s = secretCourant;
+  const zone = el('passer-zone');
+  let html = '';
+
+  if (s.type === 'objet-perso') {
+    const o = jeu.joueurs[s.joueur].objet;
+    html = `<div style="font-size:3rem">${o.icone}</div>
+            <div class="onom" style="font-size:1.2rem;color:var(--accent-clair);margin-top:6px">${o.nom}</div>
+            <div class="odesc" style="color:var(--texte-doux);font-size:0.85rem;margin-top:4px">${o.desc}</div>`;
+  } else if (s.type === 'loupe') {
+    const c = jeu.pile[0];
+    html = carteRevelHTML(c, 'Carte du dessus');
+  } else if (s.type === 'telephone') {
+    const pos = s.position;
+    const c = jeu.pile[pos];
+    html = carteRevelHTML(c, 'Carte n°' + (pos + 1) + ' de la pile');
+  }
+
+  zone.innerHTML = html;
+  el('btn-secret-suivant').classList.remove('hidden');
+}
+
+function carteRevelHTML(nature, etiquette) {
+  const est = nature === 'reel';
+  return `<div style="font-size:0.8rem;color:var(--texte-doux);letter-spacing:1px">${etiquette}</div>
+    <div style="font-size:3rem;margin-top:6px">${est ? '🔴' : '⚪'}</div>
+    <div style="font-size:1.3rem;font-weight:bold;margin-top:4px;color:${est ? '#ff9b8a' : '#cfe2ea'}">
+      ${est ? 'RÉELLE (♠)' : 'À BLANC (♥)'}
+    </div>`;
+}
+
+function finSecret() {
+  jouerSecretSuivant();
+}
+
+/* ==========================================================
+   BOUCLE DE JEU PRINCIPALE
+   ========================================================== */
+
+// Appele apres les revelations : soit on demarre le jeu (debut de
+// manche), soit on reprend au tour courant.
+function demarrerTourOuJeu() {
+  montrerEcran('jeu');
+  rendreTable();
+  demarrerTour();
+}
+
+// Passe au joueur suivant (dans l ordre)
+function joueurSuivant() {
+  jeu.courant = (jeu.courant + 1) % jeu.joueurs.length;
+}
+
+// Debut du tour du joueur courant : gestion des menottes puis
+// affichage du panneau d actions.
+function demarrerTour() {
+  const j = jeu.joueurs[jeu.courant];
+
+  // Si le joueur est menotte, il saute son tour
+  if (j.menotte) {
+    j.menotte = false;
+    logMsg(`🔒 ${j.nom} est menotté : il saute son tour.`);
+    rendreTable();
+    joueurSuivant();
+    setTimeout(demarrerTour, 900);
+    return;
+  }
+
+  jeu.phase = 'objets';
+  rendreTable();
+  rendrePanneauObjets();
+}
+
+/* ---------- PHASE OBJETS (avant le tir) ---------- */
+function rendrePanneauObjets() {
+  const j = jeu.joueurs[jeu.courant];
+  // Qui a encore un objet a jouer ?
+  const dispo = jeu.joueurs
+    .map((joueur, i) => ({ joueur, i }))
+    .filter(x => !x.joueur.objetUtilise && x.joueur.objet);
+
+  let html = `<div class="tour-titre">Au tour de ${j.nom}</div>
+    <div class="tour-sous">Avant le tir, un objet à jouer ? (chacun peut, même hors de son tour)</div>`;
+
+  if (dispo.length === 0) {
+    html += `<div class="tour-sous" style="color:var(--texte-doux)">Aucun objet disponible.</div>`;
+  } else {
+    html += '<div class="liste-obj">';
+    dispo.forEach(x => {
+      const o = x.joueur.objet;
+      html += `<div class="obj-carte">
+        <div class="oicone">${o.icone}</div>
+        <div class="otxt">
+          <div class="onom">${o.nom} — ${x.joueur.nom}</div>
+          <div class="odesc">${o.desc}</div>
+        </div>
+        <button class="btn-neutre" onclick="jouerObjet(${x.i})">Jouer</button>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  html += `<button class="btn-principal" onclick="passerAuTir()">Personne, on tire →</button>`;
+  el('panneau').innerHTML = html;
+}
+
+// Un joueur (proprietaire) decide de jouer son objet
+function jouerObjet(iProprio) {
+  const proprio = jeu.joueurs[iProprio];
+  if (proprio.objetUtilise) return;
+  const o = proprio.objet;
+
+  if (o.id === 'loupe') {
+    proprio.objetUtilise = true;
+    logMsg(`🔍 ${proprio.nom} utilise la Loupe.`);
+    jeu.fileSecrets = [{ type: 'loupe', joueur: iProprio }];
+    rendreTable();
+    jouerSecretSuivant();
+
+  } else if (o.id === 'telephone') {
+    proprio.objetUtilise = true;
+    // Choisit une position au hasard plus bas dans la pile (pas le dessus si possible)
+    let pos = 0;
+    if (jeu.pile.length > 1) pos = 1 + Math.floor(Math.random() * (jeu.pile.length - 1));
+    logMsg(`📱 ${proprio.nom} utilise le Téléphone.`);
+    jeu.fileSecrets = [{ type: 'telephone', joueur: iProprio, position: pos }];
+    rendreTable();
+    jouerSecretSuivant();
+
+  } else if (o.id === 'inverseur') {
+    proprio.objetUtilise = true;
+    if (jeu.pile.length > 0) jeu.pile[0] = (jeu.pile[0] === 'reel') ? 'blanc' : 'reel';
+    logMsg(`🔄 ${proprio.nom} inverse la carte du dessus.`);
+    rendreTable();
+    rendrePanneauObjets();
+
+  } else if (o.id === 'biere') {
+    proprio.objetUtilise = true;
+    if (jeu.pile.length > 0) {
+      jeu.pile.shift();
+      logMsg(`🍺 ${proprio.nom} défausse la carte du dessus.`);
+    }
+    rendreTable();
+    if (jeu.pile.length === 0) { finManche(); return; }
+    rendrePanneauObjets();
+
+  } else if (o.id === 'scie') {
+    proprio.objetUtilise = true;
+    jeu.scieActive = true;
+    logMsg(`🪚 ${proprio.nom} arme la Scie : prochaine réelle doublée.`);
+    rendreTable();
+    rendrePanneauObjets();
+
+  } else if (o.id === 'menottes') {
+    // Menottes : il faut choisir une cible
+    rendreChoixMenottes(iProprio);
+  }
+}
+
+function rendreChoixMenottes(iProprio) {
+  const proprio = jeu.joueurs[iProprio];
+  let html = `<div class="tour-titre">🔒 Menottes de ${proprio.nom}</div>
+    <div class="tour-sous">Qui saute son prochain tour ?</div><div class="cibles">`;
+  jeu.joueurs.forEach((j, i) => {
+    html += `<button class="btn-neutre" onclick="appliquerMenottes(${iProprio},${i})">${j.nom}</button>`;
+  });
+  html += `</div><button class="btn-neutre" onclick="rendrePanneauObjets()">Annuler</button>`;
+  el('panneau').innerHTML = html;
+}
+function appliquerMenottes(iProprio, iCible) {
+  jeu.joueurs[iProprio].objetUtilise = true;
+  jeu.joueurs[iCible].menotte = true;
+  logMsg(`🔒 ${jeu.joueurs[iProprio].nom} menotte ${jeu.joueurs[iCible].nom}.`);
+  rendreTable();
+  rendrePanneauObjets();
+}
+
+/* ---------- PHASE TIR (choix de la cible) ---------- */
+function passerAuTir() {
+  jeu.phase = 'tir';
+  const j = jeu.joueurs[jeu.courant];
+  let html = `<div class="tour-titre">${j.nom} : qui sers-tu ?</div>
+    <div class="tour-sous">Te viser et tomber sur du blanc = tu rejoues.</div><div class="cibles">`;
+  html += `<button class="btn-principal" onclick="tirer(${jeu.courant})">Je me sers</button>`;
+  jeu.joueurs.forEach((joueur, i) => {
+    if (i !== jeu.courant) {
+      html += `<button class="btn-danger" onclick="tirer(${i})">Je sers ${joueur.nom}</button>`;
+    }
+  });
+  html += `</div>`;
+  el('panneau').innerHTML = html;
+}
+
+// LE TIR : on retourne la carte du dessus et on applique l effet
+function tirer(iCible) {
+  if (jeu.pile.length === 0) { finManche(); return; }
+  jeu.phase = 'attente';
+  const nature = jeu.pile.shift();          // on retire la carte du dessus
+  const soi = (iCible === jeu.courant);
+  const tireur = jeu.joueurs[jeu.courant];
+  const cible = jeu.joueurs[iCible];
+
+  // Animation de retournement de la carte
+  animerCarte(nature, () => {
+    if (nature === 'reel') {
+      let gorgees = 1;
+      if (jeu.scieActive) { gorgees = 2; jeu.scieActive = false; }
+      cible.gorgees += gorgees;
+      cible.dernierReel = Date.now();
+      logMsg(`<span class="bang">💥 RÉELLE !</span> ${cible.nom} boit ${gorgees} gorgée${gorgees > 1 ? 's' : ''}.`);
+    } else {
+      logMsg(`<span class="ok">⚪ À blanc.</span> ${soi ? tireur.nom + ' souffle.' : 'Rien pour ' + cible.nom + '.'}`);
+    }
+
+    rendreTable();
+
+    // Suite du tour : si on s est vise soi-meme sur du blanc, on rejoue.
+    const rejoue = (soi && nature === 'blanc');
+
+    setTimeout(() => {
+      cacherCarte();
+      if (jeu.pile.length === 0) { finManche(); return; }
+      if (!rejoue) joueurSuivant();
+      demarrerTour();
+    }, 1300);
+  });
+}
+
+/* ---------- ANIMATION DE LA CARTE ---------- */
+function animerCarte(nature, apres) {
+  const carte = el('carte-tir');
+  const avant = el('carte-avant');
+  const est = nature === 'reel';
+  avant.className = 'carte-face carte-avant-face ' + (est ? 'reel' : 'blanc');
+  avant.innerHTML = `<div>${est ? '🔴' : '⚪'}</div><div class="etiq">${est ? 'RÉEL ♠' : 'BLANC ♥'}</div>`;
+  el('pile').style.opacity = '0.25';
+  carte.style.display = 'block';
+  // petit delai pour que le navigateur applique l etat initial avant de tourner
+  requestAnimationFrame(() => {
+    setTimeout(() => carte.classList.add('reveal'), 60);
+  });
+  setTimeout(apres, 650);
+}
+function cacherCarte() {
+  const carte = el('carte-tir');
+  carte.classList.remove('reveal');
+  carte.style.display = 'none';
+  el('pile').style.opacity = '1';
+}
+
+/* ==========================================================
+   RENDU DE LA TABLE (vue de dessus)
+   ========================================================== */
+function rendreTable() {
+  const zone = el('table-zone');
+  // On enleve les anciens sieges (on garde pile + carte-tir)
+  [...zone.querySelectorAll('.siege')].forEach(s => s.remove());
+
+  // Pile au centre
+  const pile = el('pile');
+  if (jeu.pile.length > 0) {
+    pile.innerHTML = `<div class="pile-dos">♦</div><div class="pile-compte">${jeu.pile.length} carte${jeu.pile.length > 1 ? 's' : ''}</div>`;
+  } else {
+    pile.innerHTML = `<div class="pile-dos vide">vide</div>`;
+  }
+
+  // Sieges disposes en cercle
+  const n = jeu.joueurs.length;
+  jeu.joueurs.forEach((j, i) => {
+    // angle : on demarre en bas (le joueur courant regarde vers le bas)
+    const angle = (Math.PI / 2) + (2 * Math.PI * i / n);
+    const rx = 42, ry = 42; // rayon en % de la table
+    const x = 50 + rx * Math.cos(angle);
+    const y = 50 + ry * Math.sin(angle);
+
+    const s = document.createElement('div');
+    s.className = 'siege' + (i === jeu.courant ? ' actif' : '');
+    s.style.left = x + '%';
+    s.style.top = y + '%';
+
+    const initiale = j.nom.charAt(0).toUpperCase();
+    const badgeObj = (j.objet && !j.objetUtilise) ? `<div class="badge-obj">${j.objet.icone}</div>` : '';
+    const badgeMen = j.menotte ? `<div class="badge-menotte">🔒</div>` : '';
+    // hauteur du remplissage du verre (plafonne visuellement a 20 gorgees)
+    const remplissage = Math.min(100, (j.gorgees / 20) * 100);
+
+    s.innerHTML = `
+      <div class="jeton">${initiale}${badgeObj}${badgeMen}</div>
+      <div class="snom">${j.nom}</div>
+      <div class="sinfo">${j.gorgees} gorgée${j.gorgees > 1 ? 's' : ''}</div>
+      <div class="verre"><div class="biere" style="height:${remplissage}%"></div></div>`;
+    zone.appendChild(s);
+  });
+}
+
+/* ==========================================================
+   JOURNAL (petit fil des evenements)
+   ========================================================== */
+function logMsg(html) {
+  el('journal').innerHTML = html;
+}
+
+/* ==========================================================
+   FIN DE MANCHE ET FIN DE PARTIE
+   ========================================================== */
+function finManche() {
+  jeu.phase = 'attente';
+  // Tableau des gorgees cumulees, trie du plus arrose au moins
+  const ordre = jeu.joueurs
+    .map((j, i) => ({ j, i }))
+    .sort((a, b) => b.j.gorgees - a.j.gorgees);
+  let html = '';
+  ordre.forEach(x => {
+    html += `<tr><td>${x.j.nom}</td><td>${x.j.gorgees} gorgée${x.j.gorgees > 1 ? 's' : ''}</td></tr>`;
+  });
+  el('fin-tableau').innerHTML = html;
+  montrerEcran('manche-fin');
+}
+
+function nouvelleManche() {
+  // Le joueur au verre le plus vide recommence a charger.
+  // (le tour de jeu repart de lui)
+  jeu.courant = joueurLePlusVide();
+  ouvrirComposition();
+}
+
+function finPartie() {
+  const gagnant = jeu.joueurs.reduce((a, b) => (a.gorgees <= b.gorgees ? a : b));
+  alert('Partie terminée !\nLe plus sobre : ' + gagnant.nom + ' (' + gagnant.gorgees + ' gorgées).');
+  // Reset complet
+  jeu.joueurs = [];
+  rendreListeNoms(['', '']);
+  montrerEcran('accueil');
+}
+
+/* ==========================================================
+   DEMARRAGE
+   ========================================================== */
+rendreListeNoms(['', '']);
+montrerEcran('accueil');
+</script>
+</body>
+</html>
