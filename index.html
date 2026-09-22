@@ -77,6 +77,14 @@
   .btn-3d { background: #7a4fd6; color: #f4efff; }
   .btn-3d:hover { filter: brightness(1.12); }
   .pied { margin-top: 40px; color: var(--texte-doux); font-size: 0.8rem; text-align: center; }
+
+  /* Petits telephones : le titre en 2.8rem deborde sous 360 px de large. */
+  @media (max-width: 380px) {
+    body { padding: 20px 12px 32px; }
+    h1 { font-size: 2.1rem; }
+    .jeu { padding: 18px; }
+    .jeu-nom { font-size: 1.35rem; }
+  }
 </style>
 </head>
 <body>
@@ -98,7 +106,7 @@
       <div class="boutons">
         <a class="btn btn-en-ligne" href="kinito-en-ligne.html">Jouer en ligne (multijoueur)</a>
         <a class="btn btn-jouer" href="kinito.html">Jouer en local (un seul téléphone)</a>
-        <a class="btn btn-3d" href="kinito-3d-jeu.html">Version 3D <span class="badge">NOUVEAU</span></a>
+        <a class="btn btn-3d" href="kinito-3d-jeu.html">Version 3D</a>
       </div>
     </div>
 
@@ -113,6 +121,7 @@
       <div class="boutons">
         <a class="btn btn-en-ligne" href="beerbattle-en-ligne.html">Jouer en ligne (multijoueur)</a>
         <a class="btn btn-jouer" href="beerbattle.html">Jouer en local (un seul téléphone)</a>
+        <a class="btn btn-3d" href="beerbattle-3d-jeu.html">Version 3D <span class="badge">NOUVEAU</span></a>
       </div>
     </div>
     <!-- Buckshot -->

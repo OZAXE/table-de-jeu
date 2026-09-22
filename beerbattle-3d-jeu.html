@@ -1,0 +1,3024 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>BeerBattle 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; background: #08150f; }
+  canvas { display: block; }
+
+  #overlay {
+    position: fixed; inset: 0; pointer-events: none;
+    font-family: 'Kalam', system-ui, sans-serif;
+  }
+  #vignette {
+    position: fixed; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(3,12,8,0.78) 100%);
+  }
+
+  /* --- Liste des joueurs : nom, verre, armes posées --- */
+  #joueurs {
+    position: absolute; top: 18px; left: 18px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .joueur {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(8,24,17,0.76);
+    border: 1px solid #23624a;
+    border-radius: 10px;
+    padding: 6px 12px;
+    color: #cfe0d4; font-size: 16px;
+    transition: border-color 0.2s, color 0.2s;
+    min-width: 176px;
+  }
+  .joueur.actif { border-color: #d4af68; color: #ecd29a; box-shadow: 0 0 14px rgba(212,175,104,0.28); }
+  .joueur.mort { opacity: 0.4; }
+  .joueur.mort .nom { text-decoration: line-through; }
+  .joueur.absent { opacity: 0.5; font-style: italic; }
+  .joueur .pastille { width: 12px; height: 12px; border-radius: 50%; flex: 0 0 auto; }
+  .joueur .nom { flex: 1 1 auto; }
+  .joueur .armes { font-size: 12px; opacity: 0.85; letter-spacing: 1px; }
+  .joueur .jauge {
+    width: 46px; height: 7px; border-radius: 4px; flex: 0 0 auto;
+    background: #12382a; overflow: hidden;
+  }
+  .joueur .jauge span { display: block; height: 100%; background: #d0563b; transition: width 0.35s ease; }
+  .joueur .val { font-size: 12px; opacity: 0.8; min-width: 36px; text-align: right; }
+
+  /* --- Bandeau du haut --- */
+  #bandeau {
+    position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+    text-align: center; max-width: 52vw;
+  }
+  #message { color: #ecd29a; font-size: 21px; text-shadow: 0 2px 8px rgba(0,0,0,0.8); }
+  #rappel { color: #9bb0a4; font-size: 15px; margin-top: 4px; opacity: 0.95; }
+
+  /* --- Panneau du bas --- */
+  #panneau {
+    position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+    pointer-events: auto;
+    background: rgba(8,24,17,0.9);
+    border: 2px solid #2a7d5e;
+    border-radius: 16px;
+    padding: 14px 18px;
+    min-width: 320px; max-width: min(780px, 94vw);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.55);
+    text-align: center;
+  }
+  #panneau.cache { display: none; }
+  #panneau h2 { margin: 0 0 8px; font-size: 20px; color: #ecd29a; font-weight: 700; }
+  #panneau p { margin: 0 0 10px; color: #cfe0d4; font-size: 16px; }
+
+  .rangee { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  button {
+    pointer-events: auto;
+    font-family: 'Kalam', system-ui, sans-serif;
+    font-weight: 700; font-size: 18px;
+    color: #14281f;
+    background: linear-gradient(180deg, #e8c885, #c9a052);
+    border: 2px solid #8f6d28; border-radius: 12px;
+    padding: 11px 22px; cursor: pointer;
+    box-shadow: 0 4px 0 #6f5320, 0 8px 16px rgba(0,0,0,0.45);
+    transition: transform 0.08s, box-shadow 0.08s, filter 0.2s;
+  }
+  button:active { transform: translateY(3px); box-shadow: 0 1px 0 #6f5320, 0 3px 8px rgba(0,0,0,0.35); }
+  button:disabled { filter: grayscale(0.55) brightness(0.7); cursor: default; }
+  button.sombre {
+    color: #e6f0e8; background: linear-gradient(180deg, #1d5a44, #113526);
+    border-color: #2a7d5e; box-shadow: 0 4px 0 #0b2319, 0 8px 16px rgba(0,0,0,0.45);
+  }
+  button.sombre:active { box-shadow: 0 1px 0 #0b2319, 0 3px 8px rgba(0,0,0,0.35); }
+  button.danger {
+    color: #ffeede; background: linear-gradient(180deg, #d0563b, #96351f);
+    border-color: #7a2414; box-shadow: 0 4px 0 #571a0f, 0 8px 16px rgba(0,0,0,0.45);
+  }
+  button.danger:active { box-shadow: 0 1px 0 #571a0f, 0 3px 8px rgba(0,0,0,0.35); }
+  button.vert {
+    color: #052018; background: linear-gradient(180deg, #6fd39a, #3f9d69);
+    border-color: #2a7d4e; box-shadow: 0 4px 0 #154e33, 0 8px 16px rgba(0,0,0,0.45);
+  }
+  button.vert:active { box-shadow: 0 1px 0 #154e33, 0 3px 8px rgba(0,0,0,0.35); }
+
+  /* --- Main du joueur --- */
+  #main-titre { color: #9bb0a4; font-size: 13px; margin: 2px 0 6px; letter-spacing: 1px; }
+  #main {
+    display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+    margin-bottom: 10px; min-height: 84px;
+  }
+  .carte-jeu {
+    width: 56px; height: 80px; border-radius: 8px;
+    background: #f4f0e4; color: #14181f;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-weight: bold; box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+    cursor: pointer; border: 2px solid transparent;
+    transition: transform 0.1s ease, border-color 0.15s ease;
+    pointer-events: auto;
+  }
+  .carte-jeu:hover { transform: translateY(-6px); }
+  .carte-jeu.choisie { border-color: #d4af68; transform: translateY(-8px); box-shadow: 0 6px 16px rgba(212,175,104,0.45); }
+  .carte-jeu.inerte { cursor: default; opacity: 0.55; }
+  .carte-jeu.inerte:hover { transform: none; }
+  .carte-valeur { font-size: 1.3rem; line-height: 1; }
+  .carte-type { font-size: 0.55rem; margin-top: 4px; color: #5a5a4a; text-align: center; }
+  .carte-rouge { color: #b3322a; } .carte-noir { color: #14181f; }
+
+  .apercu-case {
+    margin: 4px 0 10px; padding: 8px 10px;
+    background: rgba(5,18,12,0.8); border: 1px solid #2a7d5e; border-radius: 10px;
+    color: #ecd29a; font-size: 15px;
+  }
+  .apercu-case .petit { display: block; color: #9bb0a4; font-size: 12px; }
+
+  input[type="text"] {
+    pointer-events: auto;
+    font-family: 'Kalam', system-ui, sans-serif;
+    font-size: 18px; text-align: center;
+    padding: 10px 14px; width: 210px; margin: 0 4px;
+    color: #e6f0e8; background: rgba(4,14,10,0.7);
+    border: 2px solid #2a7d5e; border-radius: 10px;
+  }
+  input[type="text"]::placeholder { color: #6b8a79; }
+  input#code-salon { width: 120px; letter-spacing: 6px; text-transform: uppercase; }
+
+  .code-salon {
+    font-size: 38px; color: #ecd29a; letter-spacing: 8px;
+    margin: 2px 0 6px; text-shadow: 0 2px 12px rgba(212,175,104,0.3);
+  }
+  .liste-attente { color: #cfe0d4; font-size: 17px; margin: 10px 0; line-height: 1.6; }
+  .qr {
+    display: block; margin: 10px auto 4px;
+    border-radius: 10px; border: 3px solid #e8f0e6;
+    width: 168px; height: 168px;
+  }
+  @media (max-width: 760px), (pointer: coarse) { .qr { width: 132px; height: 132px; } }
+
+  /* --- Regles --- */
+  #btn-regles {
+    position: absolute; top: 18px; right: 18px;
+    pointer-events: auto;
+    font-size: 15px; padding: 8px 16px;
+    color: #e6f0e8; background: rgba(8,24,17,0.82);
+    border: 1px solid #2a7d5e; border-radius: 10px;
+    box-shadow: none; cursor: pointer;
+  }
+  #btn-regles:active { transform: translateY(2px); box-shadow: none; }
+
+  #modale-regles {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(0,0,0,0.82);
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 20px; overflow-y: auto; pointer-events: auto;
+  }
+  #modale-regles.cache { display: none; }
+  .modale {
+    background: #0d2a1f; border: 1px solid #d4af68; border-radius: 14px;
+    padding: 22px; max-width: 470px; width: 100%; margin: auto;
+    color: #cfe0d4; line-height: 1.55;
+  }
+  .modale h2 { color: #ecd29a; font-size: 22px; margin: 0 0 12px; text-align: center; }
+  .modale h3 { color: #d4af68; font-size: 17px; margin: 16px 0 6px; }
+  .modale p { margin: 0 0 10px; font-size: 15px; }
+  .modale ul { margin: 0 0 10px 18px; font-size: 15px; padding: 0; }
+  .modale li { margin-bottom: 5px; }
+  .modale table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 14px; }
+  .modale th, .modale td { padding: 5px 7px; text-align: left; border-bottom: 1px solid rgba(212,175,104,0.2); }
+  .modale th { color: #ecd29a; }
+  .modale .accent { color: #d4af68; font-weight: 700; }
+
+  .note { font-size: 12px; color: #7f9488; margin-top: 10px; font-style: italic; }
+  .alerte { font-size: 13px; color: #e0a05a; margin-top: 8px; }
+
+  /* ================= Téléphones ================= */
+  @media (max-width: 760px), (pointer: coarse) {
+    #joueurs {
+      top: 54px; left: 8px; right: 8px;
+      flex-direction: row; flex-wrap: wrap; gap: 4px;
+      justify-content: center;
+    }
+    .joueur { padding: 3px 8px; font-size: 13px; border-radius: 8px; min-width: 0; gap: 5px; }
+    .joueur .jauge { width: 30px; height: 6px; }
+    .joueur .val { font-size: 11px; min-width: 30px; }
+    .joueur .armes { font-size: 11px; }
+
+    #bandeau { top: 12px; max-width: calc(100vw - 130px); left: 8px; transform: none; text-align: left; }
+    #message { font-size: 17px; }
+    #rappel { font-size: 12px; }
+
+    #btn-regles { top: 10px; right: 10px; font-size: 13px; padding: 6px 12px; }
+
+    #panneau {
+      bottom: 0; left: 0; right: 0; transform: none;
+      width: 100%; max-width: none; min-width: 0;
+      border-radius: 16px 16px 0 0; border-width: 2px 0 0 0;
+      padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+      max-height: 58vh; overflow-y: auto;
+    }
+    #panneau h2 { font-size: 17px; margin-bottom: 6px; }
+    #panneau p { font-size: 14px; margin-bottom: 8px; }
+
+    button { font-size: 15px; padding: 9px 14px; border-radius: 10px; }
+    .rangee { gap: 7px; }
+
+    .carte-jeu { width: 46px; height: 66px; }
+    .carte-valeur { font-size: 1.05rem; }
+    .carte-type { font-size: 0.48rem; }
+    #main { min-height: 70px; gap: 6px; }
+
+    input[type="text"] { width: 160px; font-size: 16px; }
+    input#code-salon { width: 104px; }
+    .code-salon { font-size: 30px; letter-spacing: 6px; }
+    .note { font-size: 11px; }
+
+    .modale { padding: 16px; }
+    .modale h2 { font-size: 19px; }
+    .modale h3 { font-size: 15px; }
+    .modale p, .modale ul { font-size: 14px; }
+  }
+
+  /* Écrans très bas (paysage sur téléphone) */
+  @media (max-height: 460px) {
+    #joueurs { top: 44px; }
+    #panneau { max-height: 76vh; padding: 8px 10px; }
+    .carte-jeu { width: 42px; height: 60px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="overlay">
+  <button id="btn-regles">Règles &#9432;</button>
+  <div id="joueurs"></div>
+  <div id="bandeau">
+    <div id="message">BeerBattle 3D</div>
+    <div id="rappel"></div>
+  </div>
+  <div id="panneau"></div>
+</div>
+<div id="vignette"></div>
+
+<div id="modale-regles" class="cache">
+  <div class="modale">
+    <h2>Règles de BeerBattle</h2>
+    <p>Chaque joueur a un verre de 20 gorgées. On s'attaque pour faire boire les autres : éliminé à 20. Le dernier debout gagne. De 3 à 5 joueurs sur un plateau 6×6 de cartes face cachée.</p>
+    <h3>Un tour : une seule action</h3>
+    <ul>
+      <li>Se déplacer (1 case gratuite, ou carte déplacement).</li>
+      <li>Attaquer (corps à corps ou arme).</li>
+      <li>Poser une arme (Roi ou Valet).</li>
+      <li>Jouer une Dame, ou ne rien faire.</li>
+    </ul>
+    <p>Après l'action, tu peux prendre la carte de ta case. Pas de diagonale : les distances se comptent en croix.</p>
+    <h3>Les cartes</h3>
+    <table>
+      <tr><th>Carte</th><th>Effet</th></tr>
+      <tr><td>2-5</td><td>Déplacement</td></tr>
+      <tr><td>6-10</td><td>Gorgées infligées</td></tr>
+      <tr><td>Valet</td><td>Arme : portée 2, dégâts entiers</td></tr>
+      <tr><td>Roi</td><td>Arme : portée 6, dégâts ÷ 2 arrondi sup.</td></tr>
+      <tr><td>As</td><td>Déplacement d'une case + corps à corps mi-verre</td></tr>
+      <tr><td>Dame</td><td>Remet un verre à zéro (le tien ou celui d'un autre)</td></tr>
+      <tr><td>Joker</td><td>Mi-verre à distance, via une arme posée</td></tr>
+    </table>
+    <h3>Attaques</h3>
+    <p><span class="accent">Corps à corps</span> (même case) : carte gorgée, ou mains nues — 1 gorgée, ou 5 si le plateau est vidé de ses cartes. <span class="accent">À distance</span> : il faut une arme posée, plus une carte gorgée ou un Joker. <span class="accent">Mi-verre</span> : la moitié de ce qu'il reste avant 20, arrondi au supérieur.</p>
+    <h3>Autour de la table</h3>
+    <p>Les verres posés au bord du plateau sont ceux des joueurs : ils se remplissent à mesure qu'on boit. Le tien est toujours devant toi, les autres tournent autour — dis les <span class="accent">prénoms</span>, jamais « celui de gauche ».</p>
+    <button id="fermer-regles">Fermer</button>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+const elModaleRegles = document.getElementById('modale-regles');
+document.getElementById('btn-regles').addEventListener('click',
+  () => elModaleRegles.classList.remove('cache'));
+document.getElementById('fermer-regles').addEventListener('click',
+  () => elModaleRegles.classList.add('cache'));
+elModaleRegles.addEventListener('click', e => {
+  if (e.target === elModaleRegles) elModaleRegles.classList.add('cache');
+});
+
+// =====================================================================
+// CONSTANTES DE LA SCÈNE
+// =====================================================================
+const TAILLE = 6;             // plateau 6x6, comme BB_TAILLE cote serveur
+const CASE = 0.42;            // cote d'une case
+const DEMI = (TAILLE - 1) / 2 * CASE;   // du centre au centre de la case du bord
+const PLATEAU_Y = 0.015;      // les cases reposent juste au-dessus du feutre
+
+const R_TABLE = 2.35;         // rayon du plateau de table
+const R_VERRE = 1.92;         // ou se pose le verre de chaque joueur
+const VERRE_MAX = 20;         // BB_VERRE_MAX
+
+const CAM_VITESSE = 0.12;
+
+// =====================================================================
+// SCÈNE / CAMÉRA / RENDU
+// =====================================================================
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x08150f);
+scene.fog = new THREE.FogExp2(0x08150f, 0.07);
+
+// Comme pour le Kinito 3D : la distance de la camera est calculee a partir
+// du format de l'ecran. En portrait le champ horizontal est etroit, il faut
+// beaucoup reculer, et le brouillard doit etre allege en consequence.
+const CAM_CIBLE = new THREE.Vector3(0, 0.12, 0);
+const LARGEUR_VUE = 2.6;   // demi-largeur a cadrer : plateau + verres + marge
+const HAUTEUR_VUE = 2.2;
+const CAM_POS = new THREE.Vector3(0, 3.3, 3.6);
+
+function distanceCadrage(cam) {
+  const vHalf = THREE.MathUtils.degToRad(cam.fov) / 2;
+  const hHalf = Math.atan(Math.tan(vHalf) * cam.aspect);
+  return Math.max(LARGEUR_VUE / Math.tan(hHalf), HAUTEUR_VUE / Math.tan(vHalf), 3.8);
+}
+
+const FOG_DENSITE_MAX = 0.07;
+
+function majCadrageTable(cam) {
+  const d = distanceCadrage(cam);
+  // Plongee assez forte : c'est un plateau, on veut lire la grille.
+  const dir = new THREE.Vector3(0, 0.74, 0.67).normalize();
+  CAM_POS.copy(CAM_CIBLE).addScaledVector(dir, d);
+  if (scene.fog) scene.fog.density = Math.min(FOG_DENSITE_MAX, 0.5 / d);
+}
+
+let camObjectifPos = CAM_POS.clone();
+let camObjectifCible = CAM_CIBLE.clone();
+const camCibleActuelle = CAM_CIBLE.clone();
+
+const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.1, 40);
+majCadrageTable(camera);
+camObjectifPos = CAM_POS.clone();
+camera.position.copy(CAM_POS);
+camera.lookAt(camCibleActuelle);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.3;
+document.body.appendChild(renderer.domElement);
+
+function redimensionner() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  majCadrageTable(camera);
+  camObjectifPos = CAM_POS.clone();
+  camObjectifCible = CAM_CIBLE.clone();
+}
+window.addEventListener('resize', redimensionner);
+window.addEventListener('orientationchange', redimensionner);
+
+scene.add(new THREE.AmbientLight(0x2a3a30, 1.1));
+const keyLight = new THREE.DirectionalLight(0xffd9a0, 3.0);
+keyLight.position.set(0.9, 3.8, 1.4);
+keyLight.target.position.set(0, 0, 0);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.set(2048, 2048);
+keyLight.shadow.camera.left = -3.2;
+keyLight.shadow.camera.right = 3.2;
+keyLight.shadow.camera.top = 3.2;
+keyLight.shadow.camera.bottom = -3.2;
+keyLight.shadow.camera.near = 0.5;
+keyLight.shadow.camera.far = 10;
+scene.add(keyLight, keyLight.target);
+
+// =====================================================================
+// TABLE ET TAPIS DE FEUTRE
+// =====================================================================
+function creerTextureBois() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#4a2f1c';
+  ctx.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 34; i++) {
+    ctx.strokeStyle = 'rgba(0,0,0,' + (0.05 + Math.random() * 0.08) + ')';
+    ctx.lineWidth = 1 + Math.random() * 2;
+    ctx.beginPath();
+    const y = Math.random() * 256;
+    ctx.moveTo(0, y);
+    ctx.bezierCurveTo(80, y + (Math.random() - 0.5) * 20, 180, y + (Math.random() - 0.5) * 20, 256, y + (Math.random() - 0.5) * 10);
+    ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(3, 3);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+const table = new THREE.Mesh(
+  new THREE.CylinderGeometry(R_TABLE, R_TABLE * 0.97, 0.26, 32),
+  new THREE.MeshStandardMaterial({ map: creerTextureBois(), roughness: 0.85, metalness: 0.05, flatShading: true })
+);
+table.position.y = -0.13;
+table.receiveShadow = true;
+scene.add(table);
+
+const rebord = new THREE.Mesh(
+  new THREE.TorusGeometry(R_TABLE, 0.05, 6, 36),
+  new THREE.MeshStandardMaterial({ color: 0x38210f, roughness: 0.8, flatShading: true })
+);
+rebord.rotation.x = Math.PI / 2;
+rebord.position.y = 0.005;
+scene.add(rebord);
+
+// Tapis de feutre vert sous la grille : c'est lui qui donne au plateau
+// son fond, et qui sert de repere visuel pour les bords du 6x6.
+const feutre = new THREE.Mesh(
+  new THREE.BoxGeometry(TAILLE * CASE + 0.22, 0.012, TAILLE * CASE + 0.22),
+  new THREE.MeshStandardMaterial({ color: 0x0f3a2a, roughness: 0.95, flatShading: true })
+);
+feutre.position.y = 0.006;
+feutre.receiveShadow = true;
+scene.add(feutre);
+
+const lisere = new THREE.Mesh(
+  new THREE.BoxGeometry(TAILLE * CASE + 0.3, 0.008, TAILLE * CASE + 0.3),
+  new THREE.MeshStandardMaterial({ color: 0x8f6d28, roughness: 0.6, metalness: 0.3, flatShading: true })
+);
+lisere.position.y = 0.002;
+scene.add(lisere);
+
+// =====================================================================
+// DÉCOR DU BAR (arrière-plan) — purement visuel, aucune ombre ni lumière.
+// =====================================================================
+const SOL_Y = -1.2;
+
+function boite(l, h, p, couleur, x, y, z, rugosite) {
+  const m = new THREE.Mesh(
+    new THREE.BoxGeometry(l, h, p),
+    new THREE.MeshStandardMaterial({ color: couleur, roughness: rugosite === undefined ? 0.85 : rugosite, flatShading: true })
+  );
+  m.position.set(x, y, z);
+  return m;
+}
+
+function creerBouteilleDeco(x, y, z, teinte, echelle) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: teinte, roughness: 0.3, metalness: 0.15, flatShading: true });
+  const corps = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.085, 0.34, 6), mat);
+  corps.position.y = 0.17;
+  const col = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.05, 0.16, 6), mat);
+  col.position.y = 0.41;
+  g.add(corps, col);
+  g.position.set(x, y, z);
+  g.scale.setScalar(echelle || 1);
+  return g;
+}
+
+function creerDecor() {
+  const decor = new THREE.Group();
+
+  const sol = new THREE.Mesh(
+    new THREE.PlaneGeometry(40, 40),
+    new THREE.MeshStandardMaterial({ color: 0x1d2b22, roughness: 0.95, flatShading: true })
+  );
+  sol.rotation.x = -Math.PI / 2;
+  sol.position.y = SOL_Y;
+  decor.add(sol);
+
+  decor.add(boite(26, 6.5, 0.4, 0x24382c, 0, SOL_Y + 3.25, -8.2));
+  decor.add(boite(9.5, 1.7, 0.9, 0x2f4a38, 0, SOL_Y + 0.85, -6.3));
+  decor.add(boite(9.9, 0.14, 1.1, 0x4a6b52, 0, SOL_Y + 1.77, -6.3, 0.55));
+
+  const barre = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.05, 0.05, 9.5, 8),
+    new THREE.MeshStandardMaterial({ color: 0x8a6a2a, roughness: 0.35, metalness: 0.6, flatShading: true })
+  );
+  barre.rotation.z = Math.PI / 2;
+  barre.position.set(0, SOL_Y + 0.28, -5.8);
+  decor.add(barre);
+
+  const TEINTES = [0x2e5c3a, 0x5c3a1e, 0x7a2a2a, 0x2a4a6a, 0x6a5a2a, 0x4a2a5a];
+  [1.15, 1.95, 2.75].forEach((hauteur, rangee) => {
+    const y = SOL_Y + hauteur;
+    decor.add(boite(9.5, 0.09, 0.45, 0x3a5443, 0, y, -7.85));
+    for (let i = 0; i < 13; i++) {
+      const x = -4.3 + i * 0.72 + (rangee % 2) * 0.22;
+      decor.add(creerBouteilleDeco(x, y + 0.045, -7.85, TEINTES[(i + rangee) % TEINTES.length], 0.85 + Math.random() * 0.3));
+    }
+  });
+
+  const bandeau = boite(9.5, 0.06, 0.05, 0x000000, 0, SOL_Y + 3.35, -7.7);
+  bandeau.material.emissive = new THREE.Color(0xffb44c);
+  bandeau.material.emissiveIntensity = 1.4;
+  decor.add(bandeau);
+
+  [-3.1, -1.6, 1.6, 3.1].forEach(x => {
+    const pied = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.06, 0.09, 1.05, 7),
+      new THREE.MeshStandardMaterial({ color: 0x2a3a2e, roughness: 0.6, metalness: 0.3, flatShading: true })
+    );
+    pied.position.set(x, SOL_Y + 0.52, -5.2);
+    const assise = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.26, 0.26, 0.11, 10),
+      new THREE.MeshStandardMaterial({ color: 0x4a6b52, roughness: 0.8, flatShading: true })
+    );
+    assise.position.set(x, SOL_Y + 1.09, -5.2);
+    decor.add(pied, assise);
+  });
+
+  [[-6.2, -4.5], [6.4, -4.0]].forEach(paire => {
+    const x = paire[0], z = paire[1];
+    const t = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.62, 0.55, 1.15, 12),
+      new THREE.MeshStandardMaterial({ color: 0x3f5a42, roughness: 0.85, flatShading: true })
+    );
+    t.position.set(x, SOL_Y + 0.58, z);
+    const cercle = new THREE.Mesh(
+      new THREE.TorusGeometry(0.615, 0.035, 5, 14),
+      new THREE.MeshStandardMaterial({ color: 0x7a6a3a, roughness: 0.5, metalness: 0.5, flatShading: true })
+    );
+    cercle.rotation.x = Math.PI / 2;
+    cercle.position.set(x, SOL_Y + 0.85, z);
+    decor.add(t, cercle);
+  });
+
+  // Suspension au-dessus du plateau
+  const cordon = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.012, 0.012, 1.4, 5),
+    new THREE.MeshStandardMaterial({ color: 0x14201a, roughness: 0.9 })
+  );
+  cordon.position.set(0, 3.55, 0);
+  const abat = new THREE.Mesh(
+    new THREE.ConeGeometry(0.52, 0.42, 12, 1, true),
+    new THREE.MeshStandardMaterial({ color: 0x3f5a42, roughness: 0.6, side: THREE.DoubleSide, flatShading: true })
+  );
+  abat.position.set(0, 2.72, 0);
+  const ampoule = new THREE.Mesh(
+    new THREE.SphereGeometry(0.13, 10, 8),
+    new THREE.MeshStandardMaterial({ color: 0xffe0b0, emissive: 0xffc070, emissiveIntensity: 2.4, roughness: 0.4 })
+  );
+  ampoule.position.set(0, 2.54, 0);
+  decor.add(cordon, abat, ampoule);
+
+  decor.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
+  scene.add(decor);
+}
+creerDecor();
+
+// =====================================================================
+// REPÈRE DU PLATEAU
+// ligne 0 est au fond (-z), ligne 5 côté caméra ; colonne 0 à gauche (-x).
+// La grille ne tourne PAS d'un joueur à l'autre : c'est un plateau posé sur
+// la table, tout le monde le lit pareil. Seuls les verres tournent (voir
+// creerVerres), pour que chacun ait le sien devant soi.
+// =====================================================================
+function posCase(ligne, colonne, y) {
+  return new THREE.Vector3(
+    (colonne - (TAILLE - 1) / 2) * CASE,
+    y === undefined ? PLATEAU_Y : y,
+    (ligne - (TAILLE - 1) / 2) * CASE
+  );
+}
+
+// =====================================================================
+// CASES : une dalle cliquable par case
+// =====================================================================
+const cellules = [];   // cellules[ligne][colonne] = { mesh, surbrillance }
+const groupeCases = new THREE.Group();
+scene.add(groupeCases);
+
+const COULEUR_CASE = 0x14513c;
+const COULEUR_CASE_SOMBRE = 0x113f2f;
+
+function creerCases() {
+  const geo = new THREE.BoxGeometry(CASE * 0.94, 0.01, CASE * 0.94);
+  for (let l = 0; l < TAILLE; l++) {
+    const rangee = [];
+    for (let c = 0; c < TAILLE; c++) {
+      const mat = new THREE.MeshStandardMaterial({
+        color: (l + c) % 2 === 0 ? COULEUR_CASE : COULEUR_CASE_SOMBRE,
+        roughness: 0.92, flatShading: true,
+      });
+      const m = new THREE.Mesh(geo, mat);
+      m.position.copy(posCase(l, c));
+      m.receiveShadow = true;
+      m.userData = { ligne: l, colonne: c };
+      groupeCases.add(m);
+      rangee.push({ mesh: m, materiau: mat, surbrillance: null });
+    }
+    cellules.push(rangee);
+  }
+}
+creerCases();
+
+function effacerSurbrillances() {
+  for (let l = 0; l < TAILLE; l++) {
+    for (let c = 0; c < TAILLE; c++) {
+      const cel = cellules[l][c];
+      cel.surbrillance = null;
+      cel.materiau.emissive = new THREE.Color(0x000000);
+    }
+  }
+}
+
+function surbrillerCase(l, c, couleur) {
+  const cel = cellules[l][c];
+  cel.surbrillance = couleur;
+  cel.materiau.emissive = new THREE.Color(couleur);
+  cel.materiau.emissiveIntensity = 1;
+}
+
+// =====================================================================
+// CARTES DU PLATEAU
+// Le serveur ne dit que « case pleine / case vide » : on ne dessine donc
+// que des dos. Seule la carte de MA case m'est révélée (bb_carte_case),
+// et seulement au moment du ramassage.
+// =====================================================================
+function creerTextureDos() {
+  const c = document.createElement('canvas');
+  c.width = 128; c.height = 176;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#1a5c44';
+  ctx.fillRect(0, 0, 128, 176);
+  ctx.strokeStyle = '#2a7d5e';
+  ctx.lineWidth = 5;
+  ctx.strokeRect(6, 6, 116, 164);
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineWidth = 3;
+  for (let i = -176; i < 128; i += 12) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + 176, 176); ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function creerTextureFace(carte) {
+  const c = document.createElement('canvas');
+  c.width = 128; c.height = 176;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#f4f0e4';
+  ctx.fillRect(0, 0, 128, 176);
+  ctx.strokeStyle = '#cbbfa4';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(4, 4, 120, 168);
+  ctx.fillStyle = carte && carte.rouge ? '#b3322a' : '#14181f';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = 'bold 68px Georgia, serif';
+  ctx.fillText(carte ? carte.symbole : '?', 64, 74);
+  ctx.fillStyle = '#5a5a4a';
+  ctx.font = 'bold 15px Georgia, serif';
+  ctx.fillText(carte ? libelleCourt(carte) : '', 64, 138);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+const TEXTURE_DOS = creerTextureDos();
+const GEO_CARTE = new THREE.BoxGeometry(CASE * 0.74, 0.014, CASE * 0.94);
+const MAT_TRANCHE = new THREE.MeshStandardMaterial({ color: 0xe8e0cc, roughness: 0.8 });
+
+// Une carte posée : dos visible sur le dessus. L'ordre des matériaux d'une
+// BoxGeometry est +x, -x, +y, -y, +z, -z : le dessus est l'indice 2.
+function creerCarteMesh() {
+  const matDessus = new THREE.MeshStandardMaterial({ map: TEXTURE_DOS, roughness: 0.75 });
+  const mats = [MAT_TRANCHE, MAT_TRANCHE, matDessus, MAT_TRANCHE, MAT_TRANCHE, MAT_TRANCHE];
+  const m = new THREE.Mesh(GEO_CARTE, mats);
+  m.castShadow = true;
+  return m;
+}
+
+const cartesMesh = [];   // cartesMesh[ligne][colonne] = mesh ou null
+for (let l = 0; l < TAILLE; l++) cartesMesh.push(new Array(TAILLE).fill(null));
+
+const groupeCartes = new THREE.Group();
+scene.add(groupeCartes);
+
+function poserCarte(l, c) {
+  if (cartesMesh[l][c]) return;
+  const m = creerCarteMesh();
+  m.position.copy(posCase(l, c, PLATEAU_Y + 0.014));
+  m.rotation.y = (Math.random() - 0.5) * 0.14;   // pose imparfaite, comme à la main
+  groupeCartes.add(m);
+  cartesMesh[l][c] = m;
+}
+
+// Retire la carte de la case : elle se soulève, se retourne, puis s'efface.
+function retirerCarte(l, c) {
+  const m = cartesMesh[l][c];
+  if (!m) return;
+  cartesMesh[l][c] = null;
+  animations.push({
+    t: 0, duree: 0.55,
+    maj: (a) => {
+      const k = a.t / a.duree;
+      m.position.y = PLATEAU_Y + 0.014 + k * 0.34;
+      m.rotation.x = k * Math.PI;
+      m.scale.setScalar(1 - k * 0.45);
+    },
+    fin: () => { groupeCartes.remove(m); },
+  });
+}
+
+function majCartesPlateau(plateau) {
+  if (!plateau) return;
+  for (let l = 0; l < TAILLE; l++) {
+    for (let c = 0; c < TAILLE; c++) {
+      const presente = !!plateau[l][c];
+      if (presente && !cartesMesh[l][c]) poserCarte(l, c);
+      else if (!presente && cartesMesh[l][c]) retirerCarte(l, c);
+    }
+  }
+}
+
+function viderPlateau() {
+  carteRevelee = null;
+  for (let l = 0; l < TAILLE; l++) {
+    for (let c = 0; c < TAILLE; c++) {
+      if (cartesMesh[l][c]) { groupeCartes.remove(cartesMesh[l][c]); cartesMesh[l][c] = null; }
+    }
+  }
+}
+
+// La carte de ma case, quand le serveur me la révèle : elle se retourne sur
+// place. Personne d'autre ne la voit — le serveur ne l'envoie qu'à moi.
+// Matériaux d'une BoxGeometry : +x, -x, +y, -y, +z, -z ; on peint donc la
+// face du DESSOUS (indice 3), qui devient le dessus après la bascule.
+let carteRevelee = null;
+
+function revelerCarte(l, c, carte) {
+  if (carteRevelee && carteRevelee.ligne === l && carteRevelee.colonne === c) return;
+  cacherCarteRevelee();
+  const m = cartesMesh[l][c];
+  if (!m || !carte) return;
+  m.material[3] = new THREE.MeshStandardMaterial({ map: creerTextureFace(carte), roughness: 0.75 });
+  carteRevelee = { ligne: l, colonne: c, mesh: m };
+  animations.push({
+    t: 0, duree: 0.4,
+    maj: (a) => {
+      const k = a.t / a.duree;
+      m.rotation.x = k * Math.PI;
+      m.position.y = PLATEAU_Y + 0.014 + Math.sin(k * Math.PI) * 0.1;
+    },
+    fin: () => { m.rotation.x = Math.PI; m.position.y = PLATEAU_Y + 0.014; },
+  });
+}
+
+function cacherCarteRevelee() {
+  if (!carteRevelee) return;
+  const m = carteRevelee.mesh;
+  carteRevelee = null;
+  // La carte peut avoir été ramassée entre-temps : son mesh n'est plus là.
+  if (!m.parent) return;
+  m.rotation.x = 0;
+  m.position.y = PLATEAU_Y + 0.014;
+}
+
+// =====================================================================
+// ÉTIQUETTES (sprites) — toujours face caméra
+// =====================================================================
+function dessinerEtiquette(ctx, texte, actif, mort) {
+  ctx.clearRect(0, 0, 512, 128);
+  ctx.font = 'bold 58px Kalam, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = actif ? 'rgba(90,72,20,0.88)' : 'rgba(8,24,17,0.76)';
+  ctx.fillRect(0, 22, 512, 84);
+  ctx.fillStyle = mort ? '#7f9488' : (actif ? '#ecd29a' : '#cfe0d4');
+  ctx.fillText(texte, 256, 64);
+  if (mort) {
+    ctx.strokeStyle = '#d0563b';
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(80, 64); ctx.lineTo(432, 64); ctx.stroke();
+  }
+}
+
+function creerEtiquette(texte) {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 128;
+  dessinerEtiquette(c.getContext('2d'), texte, false, false);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+  sprite.renderOrder = 10;
+  sprite.scale.set(0.82, 0.205, 1);
+  return sprite;
+}
+
+function majEtiquette(sprite, texte, actif, mort) {
+  const c = sprite.material.map.image;
+  dessinerEtiquette(c.getContext('2d'), texte, actif, mort);
+  sprite.material.map.needsUpdate = true;
+}
+
+// =====================================================================
+// TEXTE FLOTTANT — dégâts, effets, gros messages.
+// Sprite : il fait toujours face à la caméra, quelle que soit la place
+// du joueur autour de la table.
+// =====================================================================
+const textesFlottants = [];
+
+function creerSpriteTexte(gros, petit, couleur) {
+  const c = document.createElement('canvas');
+  c.width = 1024; c.height = 512;
+  const ctx = c.getContext('2d');
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = '#000';
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 6;
+  ctx.fillStyle = couleur;
+  ctx.font = 'bold 250px Kalam, Georgia, sans-serif';
+  ctx.fillText(gros, 512, petit ? 200 : 256);
+  if (petit) {
+    ctx.fillStyle = '#f2e6cf';
+    ctx.font = 'bold 74px Kalam, Georgia, sans-serif';
+    ctx.fillText(petit, 512, 400);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: tex, transparent: true, depthTest: false, depthWrite: false,
+  }));
+  sp.renderOrder = 999;
+  return sp;
+}
+
+// Texte qui monte au-dessus d'un point du plateau (dégâts sur une cible).
+function texteFlottant(position, gros, petit, couleur, echelle) {
+  const sp = creerSpriteTexte(String(gros), petit || '', couleur || '#ffdca0');
+  const e = echelle || 0.5;
+  sp.scale.set(e * 2, e, 1);
+  sp.position.copy(position);
+  sp.position.y += 0.4;
+  scene.add(sp);
+  textesFlottants.push({ sprite: sp, t: 0, duree: 1.5, depart: sp.position.clone() });
+}
+
+// Gros message au centre de la table, lisible par tous.
+const messageSprite = { courant: null };
+
+function messageCentral(gros, petit, couleur, duree) {
+  if (messageSprite.courant) scene.remove(messageSprite.courant.sprite);
+  const sp = creerSpriteTexte(String(gros), petit || '', couleur || '#ecd29a');
+  sp.position.set(0, 1.0, 0);
+  scene.add(sp);
+  messageSprite.courant = { sprite: sp, t: 0, duree: duree || 1.8 };
+}
+
+// =====================================================================
+// PIONS : un joueur sur le plateau
+// =====================================================================
+const COULEURS = [0xe0563b, 0x4fb3d4, 0xe0a23b, 0xb06fd4, 0xe8e2d0];
+const pions = [];    // pions[i] = { groupe, corps, tete, etiquette, mats, ... }
+
+function creerPion(couleur) {
+  const g = new THREE.Group();
+  const matCorps = new THREE.MeshStandardMaterial({ color: couleur, roughness: 0.6, flatShading: true });
+  // Silhouette de pion de jeu : socle large, corps conique, tête ronde.
+  const socle = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.135, 0.035, 12), matCorps);
+  socle.position.y = 0.018;
+  const corps = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.105, 0.2, 10), matCorps);
+  corps.position.y = 0.135;
+  const tete = new THREE.Mesh(new THREE.IcosahedronGeometry(0.068, 0), matCorps);
+  tete.position.y = 0.285;
+  [socle, corps, tete].forEach(m => { m.castShadow = true; });
+  g.add(socle, corps, tete);
+  g.userData.materiaux = [matCorps];
+  return g;
+}
+
+// Arme posée : un petit jeton devant le pion. Le Roi est doré (portée 6),
+// le Valet argenté (portée 2).
+function creerArmeMesh(type) {
+  const m = new THREE.Mesh(
+    new THREE.BoxGeometry(0.1, 0.03, 0.05),
+    new THREE.MeshStandardMaterial({
+      color: type === 'roi' ? 0xd4af68 : 0xb8c2c8,
+      roughness: 0.35, metalness: 0.7, flatShading: true,
+    })
+  );
+  m.castShadow = true;
+  return m;
+}
+
+function creerPions(noms) {
+  pions.forEach(p => scene.remove(p.groupe));
+  pions.length = 0;
+  noms.forEach((nom, i) => {
+    const groupe = new THREE.Group();
+    const corps = creerPion(COULEURS[i % COULEURS.length]);
+    const etiquette = creerEtiquette(nom);
+    etiquette.position.y = 0.56;
+    const armes = new THREE.Group();
+    groupe.add(corps, etiquette, armes);
+    groupe.visible = false;    // tant que le joueur n'est pas placé
+    scene.add(groupe);
+    pions.push({
+      index: i, nom, groupe, corps, etiquette, armes,
+      couleur: COULEURS[i % COULEURS.length],
+      objectif: new THREE.Vector3(),
+      pos: null,               // { ligne, colonne } connue
+      nbArmes: 0,
+      mort: false,
+    });
+  });
+}
+
+// Plusieurs pions peuvent partager une case : on les décale en couronne
+// pour qu'ils restent tous visibles, sinon ils se superposent exactement.
+function positionSurCase(ligne, colonne, rang, total) {
+  const base = posCase(ligne, colonne, 0.02);
+  if (total <= 1) return base;
+  const a = (rang / total) * Math.PI * 2;
+  base.x += Math.cos(a) * CASE * 0.24;
+  base.z += Math.sin(a) * CASE * 0.24;
+  return base;
+}
+
+function majPositionsPions(etat) {
+  // On regroupe par case pour répartir les pions qui la partagent.
+  const parCase = {};
+  etat.positions.forEach((p, i) => {
+    if (!p || etat.elimine[i]) return;
+    const cle = p.ligne + ':' + p.colonne;
+    (parCase[cle] = parCase[cle] || []).push(i);
+  });
+
+  etat.positions.forEach((p, i) => {
+    const pion = pions[i];
+    if (!pion) return;
+    if (!p) { pion.groupe.visible = false; return; }
+    pion.groupe.visible = true;
+    const cle = p.ligne + ':' + p.colonne;
+    const groupeCase = parCase[cle] || [i];
+    const rang = Math.max(0, groupeCase.indexOf(i));
+    const cible = positionSurCase(p.ligne, p.colonne, rang, groupeCase.length);
+    const nouveau = !pion.pos;
+    pion.pos = { ligne: p.ligne, colonne: p.colonne };
+    pion.objectif.copy(cible);
+    if (nouveau) pion.groupe.position.copy(cible);   // premier placement : pas de glissade
+  });
+}
+
+function majArmesPions(etat) {
+  etat.armes.forEach((liste, i) => {
+    const pion = pions[i];
+    if (!pion) return;
+    if (liste.length === pion.nbArmes) return;
+    pion.nbArmes = liste.length;
+    while (pion.armes.children.length) pion.armes.remove(pion.armes.children[0]);
+    liste.forEach((type, k) => {
+      const m = creerArmeMesh(type);
+      const a = (k / Math.max(1, liste.length)) * Math.PI * 2;
+      m.position.set(Math.cos(a) * 0.16, 0.02, Math.sin(a) * 0.16);
+      m.rotation.y = -a;
+      pion.armes.add(m);
+    });
+  });
+}
+
+// =====================================================================
+// VERRES : un par joueur, posé au bord du plateau.
+// C'est ici que tourne l'affichage : chacun voit SON verre devant lui
+// (angle 0 = côté caméra), les autres tournent autour. Les positions
+// relatives diffèrent donc d'un écran à l'autre — dire les prénoms.
+// =====================================================================
+const verres = [];
+
+function creerVerre() {
+  const g = new THREE.Group();
+  const verre = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.115, 0.1, 0.3, 12, 1, true),
+    new THREE.MeshPhysicalMaterial({
+      color: 0xdfeef7, roughness: 0.22, metalness: 0,
+      side: THREE.DoubleSide, transparent: true, opacity: 0.4,
+    })
+  );
+  verre.position.y = 0.15;
+  const fond = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.1, 0.1, 0.014, 12),
+    new THREE.MeshPhysicalMaterial({ color: 0xdfeef7, roughness: 0.22, transparent: true, opacity: 0.55 })
+  );
+  fond.position.y = 0.007;
+  // La bière : on ne la déplace pas, on l'étire par le bas (scale.y).
+  const biere = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.102, 0.094, 1, 12),
+    new THREE.MeshStandardMaterial({ color: 0xd08b1e, roughness: 0.4, flatShading: true })
+  );
+  biere.castShadow = true;
+  const mousse = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.104, 0.104, 0.028, 12),
+    new THREE.MeshStandardMaterial({ color: 0xf6ecd8, roughness: 0.9, flatShading: true })
+  );
+  const socle = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.128, 0.128, 0.012, 14),
+    new THREE.MeshStandardMaterial({ color: 0x14281f, roughness: 0.8, flatShading: true })
+  );
+  socle.position.y = -0.006;
+  g.add(socle, fond, verre, biere, mousse);
+  g.userData = { biere, mousse, verre };
+  return g;
+}
+
+function creerVerres(noms) {
+  verres.forEach(v => scene.remove(v.groupe));
+  verres.length = 0;
+  const n = noms.length;
+  for (let i = 0; i < n; i++) {
+    // Chacun se voit devant : on fait tourner le cercle des verres selon MOI.
+    const angle = (((i - MOI + n) % n) / n) * Math.PI * 2;
+    const dir = new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
+    const groupe = new THREE.Group();
+
+    const verre = creerVerre();
+    verre.position.copy(dir).multiplyScalar(R_VERRE);
+    const etiquette = creerEtiquette(noms[i]);
+    etiquette.position.copy(dir).multiplyScalar(R_VERRE);
+    etiquette.position.y = 0.52;
+    // Un jeton de couleur sous le verre : c'est le lien avec le pion.
+    const jeton = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.16, 0.16, 0.008, 16),
+      new THREE.MeshStandardMaterial({ color: COULEURS[i % COULEURS.length], roughness: 0.7, flatShading: true })
+    );
+    jeton.position.copy(dir).multiplyScalar(R_VERRE);
+    jeton.position.y = 0.004;
+
+    groupe.add(jeton, verre, etiquette);
+    scene.add(groupe);
+    verres.push({
+      index: i, nom: noms[i], groupe, verre, etiquette, jeton,
+      position: dir.clone().multiplyScalar(R_VERRE),
+      niveau: 0,          // niveau affiché, animé
+      objectif: 0,        // niveau visé (gorgées / VERRE_MAX)
+    });
+  }
+}
+
+function majNiveauxVerres(etat) {
+  etat.verres.forEach((g, i) => {
+    if (verres[i]) verres[i].objectif = Math.min(1, g / VERRE_MAX);
+  });
+}
+
+// Applique le niveau animé à la géométrie du verre.
+function dessinerVerre(v) {
+  const h = Math.max(0.001, v.niveau * 0.27);
+  const biere = v.verre.userData.biere;
+  const mousse = v.verre.userData.mousse;
+  biere.scale.y = h;
+  biere.position.y = 0.012 + h / 2;
+  mousse.position.y = 0.012 + h + 0.012;
+  mousse.visible = v.niveau > 0.02;
+  // Plus le verre se remplit, plus il vire au rouge : on voit venir les 20.
+  const t = Math.min(1, v.niveau);
+  biere.material.color.setRGB(0.82 + t * 0.18, 0.55 - t * 0.35, 0.12 - t * 0.1);
+}
+
+// =====================================================================
+// ANIMATIONS
+// Une file simple : chaque entrée a une durée, une mise à jour et une fin.
+// `animations` sert aux effets visuels ; `fileActions` (plus bas) sérialise
+// les messages pour qu'un état n'écrase pas l'animation du coup précédent.
+// =====================================================================
+const animations = [];
+
+function animationsEnCours() {
+  return animations.length > 0 || pionEnMouvement();
+}
+
+function pionEnMouvement() {
+  return pions.some(p => p.groupe.visible && p.groupe.position.distanceTo(p.objectif) > 0.02);
+}
+
+// Projectile : une capsule qui part de l'attaquant et retombe sur la cible.
+function tirerProjectile(depart, arrivee, couleur, apres) {
+  const m = new THREE.Mesh(
+    new THREE.SphereGeometry(0.045, 8, 6),
+    new THREE.MeshStandardMaterial({ color: couleur || 0xd4af68, emissive: couleur || 0xd4af68, emissiveIntensity: 0.6, roughness: 0.4 })
+  );
+  scene.add(m);
+  const a = depart.clone(); a.y += 0.24;
+  const b = arrivee.clone(); b.y += 0.24;
+  const hauteur = 0.18 + a.distanceTo(b) * 0.16;
+  animations.push({
+    t: 0, duree: 0.42,
+    maj: (an) => {
+      const k = an.t / an.duree;
+      m.position.lerpVectors(a, b, k);
+      m.position.y += Math.sin(k * Math.PI) * hauteur;
+    },
+    fin: () => { scene.remove(m); if (apres) apres(); },
+  });
+}
+
+// Secousse du pion frappé : lisible même sans lire le texte.
+// La secousse porte sur le corps, pas sur le groupe : la boucle de rendu
+// ramène le groupe vers sa case à chaque image, elle effacerait le tremblement.
+function encaisser(index) {
+  const pion = pions[index];
+  if (!pion) return;
+  animations.push({
+    t: 0, duree: 0.45,
+    maj: (an) => {
+      const k = an.t / an.duree;
+      const amp = (1 - k) * 0.05;
+      pion.corps.position.x = Math.sin(an.t * 46) * amp;
+      pion.corps.position.z = Math.cos(an.t * 39) * amp;
+      pion.corps.rotation.z = Math.sin(an.t * 34) * (1 - k) * 0.28;
+    },
+    // On ne touche pas à position.y : un pion tombé y garde son enfoncement.
+    fin: () => { pion.corps.position.x = 0; pion.corps.position.z = 0; pion.corps.rotation.z = 0; },
+  });
+}
+
+// Élimination : le pion tombe et reste couché.
+function faireTomber(index) {
+  const pion = pions[index];
+  if (!pion || pion.mort) return;
+  pion.mort = true;
+  animations.push({
+    t: 0, duree: 0.7,
+    maj: (an) => {
+      const k = Math.min(1, an.t / an.duree);
+      pion.corps.rotation.x = k * Math.PI / 2;
+      pion.corps.position.y = -k * 0.09;
+    },
+    fin: () => {
+      pion.corps.rotation.x = Math.PI / 2;
+      pion.corps.position.y = -0.09;
+      pion.corps.traverse(o => {
+        if (o.isMesh) { o.material.transparent = true; o.material.opacity = 0.45; }
+      });
+    },
+  });
+}
+
+function releverPion(index) {
+  const pion = pions[index];
+  if (!pion || !pion.mort) return;
+  pion.mort = false;
+  pion.corps.rotation.x = 0;
+  pion.corps.position.y = 0;
+  pion.corps.traverse(o => {
+    if (o.isMesh) { o.material.transparent = false; o.material.opacity = 1; }
+  });
+}
+
+// =====================================================================
+// FILE D'ATTENTE ORDONNÉE DES MESSAGES
+// Les messages arrivent en rafale (une attaque diffuse aussitôt l'état,
+// la main et la carte de la case) : sans ordre garanti, l'état suivant
+// repositionnerait les pions avant que l'animation ait joué.
+// =====================================================================
+const fileActions = [];
+let pompeActive = false;
+
+function quandLibre(fn, delai) {
+  fileActions.push({ fn, delai: delai || 0 });
+  pomper();
+}
+
+function pomper() {
+  if (pompeActive || fileActions.length === 0) return;
+  pompeActive = true;
+  (function attendre() {
+    if (animationsEnCours()) { setTimeout(attendre, 80); return; }
+    const tache = fileActions.shift();
+    setTimeout(() => {
+      tache.fn();
+      pompeActive = false;
+      pomper();
+    }, tache.delai);
+  })();
+}
+
+// =====================================================================
+// CLICS SUR LE PLATEAU
+// Deux cibles possibles : une case (placement, déplacement) et un pion
+// (attaque). Les deux mènent aux mêmes intentions que les boutons du
+// panneau — on peut jouer entièrement à la souris ou entièrement au doigt.
+// =====================================================================
+const rayon = new THREE.Raycaster();
+const souris = new THREE.Vector2();
+let casesCliquables = null;    // Map "l:c" -> fonction
+let pionsCliquables = null;    // Map index -> { fn, couleur }
+
+function reinitialiserClics() {
+  casesCliquables = null;
+  pionsCliquables = null;
+  effacerSurbrillances();
+  pions.forEach(p => {
+    p.corps.userData.materiaux.forEach(m => { m.emissive = new THREE.Color(0x000000); });
+  });
+}
+
+function armerCasesCliquables(map, couleur) {
+  casesCliquables = map;
+  map.forEach((fn, cle) => {
+    const parts = cle.split(':');
+    surbrillerCase(parseInt(parts[0], 10), parseInt(parts[1], 10), couleur);
+  });
+}
+
+function armerPionsCliquables(map) {
+  pionsCliquables = map;
+  map.forEach((entree, index) => {
+    const pion = pions[index];
+    if (!pion) return;
+    pion.corps.userData.materiaux.forEach(m => {
+      m.emissive = new THREE.Color(entree.couleur || 0xd0563b);
+      m.emissiveIntensity = 0.65;
+    });
+  });
+}
+
+function pointeur(ev) {
+  const t = ev.changedTouches ? ev.changedTouches[0] : ev;
+  souris.x = (t.clientX / window.innerWidth) * 2 - 1;
+  souris.y = -(t.clientY / window.innerHeight) * 2 + 1;
+}
+
+function surClic(ev) {
+  if (!casesCliquables && !pionsCliquables) return;
+  pointeur(ev);
+  rayon.setFromCamera(souris, camera);
+
+  // Les pions d'abord : ils sont posés sur les cases, un clic dessus vise
+  // le joueur, pas la case.
+  if (pionsCliquables && pionsCliquables.size) {
+    const cibles = [];
+    pionsCliquables.forEach((entree, index) => {
+      if (pions[index]) cibles.push(pions[index].corps);
+    });
+    const touche = rayon.intersectObjects(cibles, true)[0];
+    if (touche) {
+      let o = touche.object;
+      while (o && !o.userData.materiaux) o = o.parent;
+      const index = pions.findIndex(p => p.corps === o);
+      if (index >= 0 && pionsCliquables.has(index)) {
+        const entree = pionsCliquables.get(index);
+        reinitialiserClics();
+        entree.fn();
+        return;
+      }
+    }
+  }
+
+  if (casesCliquables && casesCliquables.size) {
+    const touche = rayon.intersectObjects(groupeCases.children, false)[0];
+    if (touche) {
+      const d = touche.object.userData;
+      const cle = d.ligne + ':' + d.colonne;
+      if (casesCliquables.has(cle)) {
+        const fn = casesCliquables.get(cle);
+        reinitialiserClics();
+        fn();
+      }
+    }
+  }
+}
+renderer.domElement.addEventListener('click', surClic);
+
+// =====================================================================
+// MOTEUR DE RÈGLES — miroir de la section BeerBattle de serveur.py
+//
+// Il ne communique que par messages, au format exact de la WebSocket
+// (bb_demarree, bb_etat, bb_ta_main, bb_carte_case, bb_victoire).
+// `envoyerIntention` est l'unique point de bascule : en solo il appelle ce
+// moteur, en ligne il fait un ws.send(). Rien dans la 3D ni dans l'UI ne
+// change entre les deux modes. Quand les règles bougent côté serveur, ce
+// miroir bouge dans le même commit.
+// =====================================================================
+const BB_TAILLE = 6;
+const BB_VERRE_MAX = 20;
+
+function bbCreerPaquet() {
+  const couleurs = ['coeur', 'carreau', 'trefle', 'pique'];
+  const rouges = ['coeur', 'carreau'];
+  const paquet = [];
+  couleurs.forEach(coul => {
+    const rouge = rouges.indexOf(coul) >= 0;
+    for (let v = 2; v <= 10; v++) {
+      const estDepl = v >= 2 && v <= 5;
+      paquet.push({
+        type: estDepl ? 'deplacement' : 'gorgee',
+        valeur: v, rouge,
+        libelle: estDepl ? 'Dépl. ' + v : v + ' gorgées',
+        symbole: String(v),
+      });
+    }
+    paquet.push({ type: 'valet', valeur: 0, rouge, libelle: 'Valet (arme 2)', symbole: 'V' });
+    paquet.push({ type: 'dame',  valeur: 0, rouge, libelle: 'Dame (vide verre)', symbole: 'D' });
+    paquet.push({ type: 'roi',   valeur: 0, rouge, libelle: 'Roi (arme 6)', symbole: 'R' });
+    paquet.push({ type: 'as',    valeur: 0, rouge, libelle: 'As (mi-verre CC)', symbole: 'A' });
+  });
+  paquet.push({ type: 'joker', valeur: 0, rouge: true,  libelle: 'Joker (mi-verre)', symbole: 'J' });
+  paquet.push({ type: 'joker', valeur: 0, rouge: false, libelle: 'Joker (mi-verre)', symbole: 'J' });
+  return paquet;
+}
+
+function melanger(t) {
+  for (let i = t.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = t[i]; t[i] = t[j]; t[j] = tmp;
+  }
+  return t;
+}
+
+function bbInitialiser(nbJoueurs) {
+  const paquet = melanger(bbCreerPaquet());
+  // 54 cartes en tout : 36 sur le plateau, le reste dans les mains. À 6
+  // joueurs (24 + 36 = 60) il n'y en aurait plus assez — c'est pour ça que
+  // le serveur plafonne la table à 5.
+  const maxCartes = nbJoueurs === 5 ? 3 : 4;
+
+  let index = 0;
+  const mains = [];
+  for (let i = 0; i < nbJoueurs; i++) {
+    const main = [];
+    for (let k = 0; k < maxCartes; k++) main.push(paquet[index++]);
+    mains.push(main);
+  }
+
+  const plateau = [];
+  for (let l = 0; l < BB_TAILLE; l++) {
+    const rangee = [];
+    for (let c = 0; c < BB_TAILLE; c++) rangee.push(paquet[index++]);
+    plateau.push(rangee);
+  }
+
+  const armes = [], verres = [], elimine = [], positions = [];
+  for (let i = 0; i < nbJoueurs; i++) { armes.push([]); verres.push(0); elimine.push(false); positions.push(null); }
+
+  return {
+    phase: 'placement',
+    nb_joueurs: nbJoueurs,
+    max_cartes: maxCartes,
+    plateau, mains, armes, verres, elimine, positions,
+    joueur_courant: 0,
+    joueur_en_placement: 0,
+    action_faite: false,
+    message: '',
+  };
+}
+
+function bbDistance(p1, p2) {
+  return Math.abs(p1.ligne - p2.ligne) + Math.abs(p1.colonne - p2.colonne);
+}
+
+function bbCaseOccupee(etat, ligne, colonne) {
+  for (let i = 0; i < etat.nb_joueurs; i++) {
+    if (etat.elimine[i]) continue;
+    const p = etat.positions[i];
+    if (p && p.ligne === ligne && p.colonne === colonne) return true;
+  }
+  return false;
+}
+
+function bbPlateauVide(etat) {
+  for (let l = 0; l < BB_TAILLE; l++) {
+    for (let c = 0; c < BB_TAILLE; c++) if (etat.plateau[l][c] !== null) return false;
+  }
+  return true;
+}
+
+function bbAppliquerGorgees(etat, cible, nombre) {
+  etat.verres[cible] += nombre;
+  if (etat.verres[cible] >= BB_VERRE_MAX) {
+    etat.verres[cible] = BB_VERRE_MAX;
+    etat.elimine[cible] = true;
+  }
+}
+
+function bbDegatsMiVerre(etat, cible) {
+  const restant = BB_VERRE_MAX - etat.verres[cible];
+  return Math.floor((restant + 1) / 2);   // arrondi supérieur
+}
+
+function bbMiVerre(etat, cible) {
+  bbAppliquerGorgees(etat, cible, bbDegatsMiVerre(etat, cible));
+}
+
+// Arme retenue pour un tir : le serveur prend LA PREMIÈRE de la liste qui
+// atteint la cible, dans l'ordre où elles ont été posées. Un Roi posé avant
+// un Valet servira donc même à courte portée, dégâts divisés par deux. On
+// reproduit cet ordre à l'identique, ici et dans l'aperçu de l'interface,
+// pour que le bouton n'annonce jamais autre chose que ce qui sera appliqué.
+function bbArmePourCible(typesArmes, distance) {
+  for (let i = 0; i < typesArmes.length; i++) {
+    const portee = typesArmes[i] === 'roi' ? 6 : 2;
+    if (distance <= portee) return typesArmes[i];
+  }
+  return null;
+}
+
+const serveur = {
+  noms: [],
+  etat: null,
+
+  demarrer(noms) {
+    const nb = noms.length;
+    if (nb < 3) {
+      this.noms = noms;
+      livrer(0, { type: 'erreur', message: 'BeerBattle nécessite au moins 3 joueurs.' });
+      return;
+    }
+    this.noms = noms;
+    this.etat = bbInitialiser(nb);
+    this.diffuser({ type: 'bb_demarree', joueurs: noms.slice() });
+    this.diffuser(this.etatPublic());
+    this.envoyerMains();
+  },
+
+  etatPublic() {
+    const e = this.etat;
+    const plateauMasque = e.plateau.map(rangee => rangee.map(c => c !== null));
+    return {
+      type: 'bb_etat',
+      phase: e.phase,
+      joueurs: this.noms.slice(),
+      plateau: plateauMasque,
+      positions: e.positions.map(p => p ? { ligne: p.ligne, colonne: p.colonne } : null),
+      verres: e.verres.slice(),
+      elimine: e.elimine.slice(),
+      armes: e.armes.map(liste => liste.map(a => a.type)),
+      joueur_courant: e.joueur_courant,
+      joueur_en_placement: e.joueur_en_placement,
+      action_faite: e.action_faite,
+      max_cartes: e.max_cartes,
+      verre_max: BB_VERRE_MAX,
+      message: e.message || '',
+    };
+  },
+
+  diffuser(msg) { this.noms.forEach((_, i) => livrer(i, msg)); },
+  prive(index, msg) { livrer(index, msg); },
+
+  envoyerMains() {
+    const e = this.etat;
+    for (let i = 0; i < e.nb_joueurs; i++) {
+      this.prive(i, { type: 'bb_ta_main', main: e.mains[i].slice(), mon_index: i });
+    }
+  },
+
+  envoyerCarteCase() {
+    const e = this.etat;
+    const idx = e.joueur_courant;
+    const pos = e.positions[idx];
+    if (!pos) return;
+    this.prive(idx, { type: 'bb_carte_case', carte: e.plateau[pos.ligne][pos.colonne] });
+  },
+
+  traiter(index, msg) {
+    switch (msg.type) {
+      case 'bb_demarrer':   return this.demarrer(this.noms);
+      case 'bb_placer':     return this.placer(index, msg.ligne, msg.colonne);
+      case 'bb_deplacer':   return this.deplacer(index, msg.ligne, msg.colonne, msg.via_carte, msg.index_carte);
+      case 'bb_attaquer':   return this.attaquer(index, msg.cible, msg.index_carte, msg.type_attaque);
+      case 'bb_as_deplacer': return this.asDeplacerFrapper(index, msg.ligne, msg.colonne, msg.cible, msg.index_carte);
+      case 'bb_poser_arme': return this.poserArme(index, msg.index_carte);
+      case 'bb_dame':       return this.dame(index, msg.cible, msg.index_carte);
+      case 'bb_ne_rien_faire': return this.neRienFaire(index);
+      case 'bb_ramasser':   return this.ramasser(index, msg.decision, msg.index_echange);
+    }
+  },
+
+  placer(index, ligne, colonne) {
+    const e = this.etat;
+    if (e.phase !== 'placement') return;
+    if (index !== e.joueur_en_placement) return;
+    if (bbCaseOccupee(e, ligne, colonne)) return;
+
+    e.positions[index] = { ligne, colonne };
+    e.joueur_en_placement += 1;
+
+    if (e.joueur_en_placement >= e.nb_joueurs) {
+      e.phase = 'jeu';
+      e.joueur_courant = 0;
+      e.action_faite = false;
+    }
+    this.diffuser(this.etatPublic());
+  },
+
+  // Le serveur ne vérifie PAS la distance d'un déplacement : c'est
+  // l'interface qui n'ouvre que les cases légales. On reproduit ce
+  // comportement tel quel — un miroir qui corrigerait le serveur mentirait
+  // sur ce qui se passe réellement en ligne.
+  deplacer(index, ligne, colonne, viaCarte, indexCarte) {
+    const e = this.etat;
+    if (e.phase !== 'jeu' || index !== e.joueur_courant) return;
+    if (e.action_faite) return;
+
+    e.positions[index] = { ligne, colonne };
+    if (viaCarte && indexCarte !== null && indexCarte !== undefined) {
+      if (indexCarte >= 0 && indexCarte < e.mains[index].length) e.mains[index].splice(indexCarte, 1);
+    }
+    e.action_faite = true;
+    this.diffuser(this.etatPublic());
+    this.envoyerMains();
+    this.envoyerCarteCase();
+  },
+
+  asDeplacerFrapper(index, ligne, colonne, cible, indexCarte) {
+    const e = this.etat;
+    if (e.phase !== 'jeu' || index !== e.joueur_courant || e.action_faite) return;
+
+    const moi = e.positions[index];
+    if (Math.abs(ligne - moi.ligne) + Math.abs(colonne - moi.colonne) > 1) return;
+
+    e.positions[index] = { ligne, colonne };
+
+    const posCible = e.positions[cible];
+    if (!posCible || posCible.ligne !== ligne || posCible.colonne !== colonne) {
+      // Pas de cible valable ici : le déplacement reste acquis, on ne frappe pas.
+      e.action_faite = true;
+      this.diffuser(this.etatPublic());
+      this.envoyerMains();
+      this.envoyerCarteCase();
+      return;
+    }
+
+    bbMiVerre(e, cible);
+    e.mains[index].splice(indexCarte, 1);
+    e.action_faite = true;
+    e.message = this.noms[index] + " fonce à l'As sur " + this.noms[cible];
+
+    if (this.verifierVictoire()) return;
+    this.diffuser(this.etatPublic());
+    this.envoyerMains();
+    this.envoyerCarteCase();
+  },
+
+  attaquer(index, cible, indexCarte, typeAttaque) {
+    const e = this.etat;
+    if (e.phase !== 'jeu' || index !== e.joueur_courant || e.action_faite) return;
+
+    const main = e.mains[index];
+
+    if (typeAttaque === 'cc_mains_nues') {
+      const degats = bbPlateauVide(e) ? 5 : 1;
+      bbAppliquerGorgees(e, cible, degats);
+      e.message = this.noms[index] + ' frappe à mains nues (' + degats + ')';
+
+    } else if (typeAttaque === 'cc_gorgee') {
+      const carte = main[indexCarte];
+      bbAppliquerGorgees(e, cible, carte.valeur);
+      main.splice(indexCarte, 1);
+      e.message = this.noms[index] + ' attaque (' + carte.valeur + ' gorgées)';
+
+    } else if (typeAttaque === 'arme') {
+      const carte = main[indexCarte];
+      const dist = bbDistance(e.positions[index], e.positions[cible]);
+      const armeType = bbArmePourCible(e.armes[index].map(a => a.type), dist);
+      if (!armeType) return;    // pas d'arme à portée
+      const degats = armeType === 'roi' ? Math.floor((carte.valeur + 1) / 2) : carte.valeur;
+      bbAppliquerGorgees(e, cible, degats);
+      main.splice(indexCarte, 1);
+      e.message = this.noms[index] + ' tire (' + degats + ' gorgées)';
+
+    } else if (typeAttaque === 'as') {
+      bbMiVerre(e, cible);
+      main.splice(indexCarte, 1);
+      e.message = this.noms[index] + " frappe à l'As (mi-verre)";
+
+    } else if (typeAttaque === 'joker') {
+      bbMiVerre(e, cible);
+      main.splice(indexCarte, 1);
+      e.message = this.noms[index] + ' tire au Joker (mi-verre)';
+    }
+
+    e.action_faite = true;
+
+    if (this.verifierVictoire()) return;
+    this.diffuser(this.etatPublic());
+    this.envoyerMains();
+    this.envoyerCarteCase();
+  },
+
+  poserArme(index, indexCarte) {
+    const e = this.etat;
+    if (e.phase !== 'jeu' || index !== e.joueur_courant || e.action_faite) return;
+    const carte = e.mains[index][indexCarte];
+    if (!carte || (carte.type !== 'roi' && carte.type !== 'valet')) return;
+    e.armes[index].push(carte);
+    e.mains[index].splice(indexCarte, 1);
+    e.action_faite = true;
+    this.diffuser(this.etatPublic());
+    this.envoyerMains();
+    this.envoyerCarteCase();
+  },
+
+  dame(index, cible, indexCarte) {
+    const e = this.etat;
+    if (e.phase !== 'jeu' || index !== e.joueur_courant || e.action_faite) return;
+    e.verres[cible] = 0;
+    e.mains[index].splice(indexCarte, 1);
+    e.action_faite = true;
+    e.message = this.noms[index] + ' remet à zéro le verre de ' + this.noms[cible];
+    this.diffuser(this.etatPublic());
+    this.envoyerMains();
+    this.envoyerCarteCase();
+  },
+
+  neRienFaire(index) {
+    const e = this.etat;
+    if (e.phase !== 'jeu' || index !== e.joueur_courant || e.action_faite) return;
+    e.action_faite = true;
+    this.diffuser(this.etatPublic());
+    this.envoyerCarteCase();
+  },
+
+  ramasser(index, decision, indexEchange) {
+    const e = this.etat;
+    if (index !== e.joueur_courant) return;
+    const pos = e.positions[index];
+    const carteSol = e.plateau[pos.ligne][pos.colonne];
+
+    if (decision === 'prendre' && carteSol !== null) {
+      if (e.mains[index].length < e.max_cartes) {
+        e.mains[index].push(carteSol);
+        e.plateau[pos.ligne][pos.colonne] = null;
+      }
+    } else if (decision === 'echanger' && carteSol !== null && indexEchange !== null && indexEchange !== undefined) {
+      const maCarte = e.mains[index][indexEchange];
+      e.plateau[pos.ligne][pos.colonne] = maCarte;
+      e.mains[index][indexEchange] = carteSol;
+    }
+
+    this.joueurSuivant();
+    e.action_faite = false;
+    e.message = '';
+    this.diffuser(this.etatPublic());
+    this.envoyerMains();
+  },
+
+  joueurSuivant() {
+    const e = this.etat;
+    const nb = e.nb_joueurs;
+    let suivant = (e.joueur_courant + 1) % nb;
+    let tours = 0;
+    while (e.elimine[suivant] && tours < nb) {
+      suivant = (suivant + 1) % nb;
+      tours += 1;
+    }
+    e.joueur_courant = suivant;
+  },
+
+  verifierVictoire() {
+    const e = this.etat;
+    const survivants = [];
+    for (let i = 0; i < e.nb_joueurs; i++) if (!e.elimine[i]) survivants.push(i);
+    if (survivants.length <= 1) {
+      const gagnant = survivants.length ? survivants[0] : null;
+      const nom = gagnant !== null ? this.noms[gagnant] : 'Personne';
+      e.phase = 'fini';
+      // Fidèle au serveur : il ne rediffuse PAS l'état après le coup fatal,
+      // il n'envoie que bb_victoire. Le dernier verre rempli n'arrive donc
+      // jamais aux clients — le client complète lui-même l'affichage à la
+      // réception de bb_victoire plutôt que de tricher ici.
+      this.diffuser({ type: 'bb_victoire', gagnant: nom });
+      return true;
+    }
+    return false;
+  },
+};
+
+// =====================================================================
+// AIGUILLAGE DES MESSAGES
+// Chaque joueur a « son » flux, comme une WebSocket. MOI n'est 0 qu'en
+// solo : en ligne c'est le serveur qui donne l'index (ton_index).
+// =====================================================================
+let MOI = 0;
+let mode = 'local';   // 'local' = bots dans la page, 'ligne' = WebSocket
+let ws = null;
+
+function livrer(index, msg) {
+  if (index === MOI) clientRecevoir(msg);
+  else botRecevoir(index, msg);
+}
+
+// Unique point de bascule entre le moteur local et le vrai serveur.
+function envoyerIntention(index, msg) {
+  if (mode === 'ligne') {
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+    return;
+  }
+  serveur.traiter(index, msg);
+}
+
+// =====================================================================
+// CLIENT : réception des messages + pilotage de la 3D
+// =====================================================================
+const elMessage = document.getElementById('message');
+const elRappel = document.getElementById('rappel');
+const elPanneau = document.getElementById('panneau');
+const elJoueurs = document.getElementById('joueurs');
+
+let etatCourant = null;      // dernier état APPLIQUÉ (sert de référence de diff)
+let maMain = [];
+let carteChoisie = null;
+let carteDeMaCase = null;    // contenu de ma case, révélé par le serveur
+let partieFinie = false;
+
+function libelleCourt(c) {
+  if (!c) return '';
+  switch (c.type) {
+    case 'deplacement': return 'dépl. ' + c.valeur;
+    case 'gorgee': return c.valeur + ' gorg.';
+    case 'as': return 'As';
+    case 'dame': return 'Dame';
+    case 'roi': return 'Roi';
+    case 'valet': return 'Valet';
+    case 'joker': return 'Joker';
+  }
+  return '';
+}
+
+function clientRecevoir(msg) {
+  switch (msg.type) {
+    // --- salon (en ligne uniquement) ---
+    case 'ton_index':
+      // Le serveur nous dit qui nous sommes : deux joueurs homonymes ne se
+      // mélangent plus, et le jeton permet de reprendre sa place.
+      MOI = msg.index;
+      if (msg.jeton) {
+        monJeton = msg.jeton;
+        ecrireSession({ code: codeSalon, nom: monNom, jeton: monJeton, serveur: serveurChoisi });
+      }
+      if (!enPartie) panneauAttente();
+      break;
+
+    case 'joueur_rejoint':
+      joueursSalon = msg.joueurs;
+      if (enPartie && msg.retour) elRappel.textContent = msg.nom + ' est revenu.';
+      if (!enPartie) panneauAttente();
+      break;
+
+    case 'joueur_parti':
+      joueursSalon = msg.joueurs;
+      if (enPartie) elRappel.textContent = msg.nom + ' a quitté la partie.';
+      if (!enPartie) panneauAttente();
+      break;
+
+    case 'bb_demarree':
+      quandLibre(() => demarrerScene(msg.joueurs));
+      break;
+
+    case 'bb_etat':
+      quandLibre(() => appliquerEtat(msg));
+      break;
+
+    case 'bb_ta_main':
+      // mon_index fait foi pour BeerBattle : c'est ce que le serveur envoie
+      // avec la main, y compris à un joueur qui vient de se reconnecter.
+      if (msg.mon_index !== undefined && msg.mon_index !== null) MOI = msg.mon_index;
+      quandLibre(() => { maMain = msg.main || []; carteChoisie = null; rafraichirPanneau(); });
+      break;
+
+    case 'bb_carte_case':
+      quandLibre(() => {
+        carteDeMaCase = msg.carte;
+        const moi = etatCourant && etatCourant.positions[MOI];
+        if (moi && msg.carte) revelerCarte(moi.ligne, moi.colonne, msg.carte);
+        rafraichirPanneau();
+      });
+      break;
+
+    case 'bb_victoire':
+      quandLibre(() => panneauVictoire(msg.gagnant));
+      break;
+
+    case 'erreur':
+      elRappel.textContent = msg.message;
+      break;
+  }
+}
+
+// =====================================================================
+// APPLICATION DE L'ÉTAT
+// Le serveur n'envoie pas d'événement « untel a frappé untel » : il envoie
+// l'état. Les coups se lisent donc dans l'écart entre deux états (verres
+// qui montent, joueur éliminé), ce qui donne exactement la même animation
+// en solo et en ligne — c'est le même message dans les deux cas.
+// =====================================================================
+function appliquerEtat(etat) {
+  const avant = etatCourant;
+
+  // Première arrivée, table qui change de taille (quelqu'un rejoint), ou
+  // index qui change (reconnexion : le serveur nous rend notre siège après
+  // coup) — dans les trois cas la rotation des verres est à refaire, sinon
+  // on ne serait plus devant le sien.
+  const tableObsolete = !pions.length || !etat.joueurs
+    || etat.joueurs.length !== pions.length || moiDeLaTable !== MOI;
+  if (tableObsolete) {
+    if (!enPartie) demarrerScene(etat.joueurs);
+    else construireTable(etat.joueurs);
+  }
+
+  etatCourant = etat;
+
+  majCartesPlateau(etat.plateau);
+  majPositionsPions(etat);
+  majArmesPions(etat);
+  majNiveauxVerres(etat);
+
+  if (avant && avant.verres) animerCoups(avant, etat);
+
+  majListeJoueurs(etat);
+  majBandeau(etat);
+  rafraichirPanneau();
+}
+
+function centrePion(i) {
+  const p = pions[i];
+  if (p && p.groupe.visible) return p.objectif.clone();
+  return new THREE.Vector3(0, 0, 0);
+}
+
+function animerCoups(avant, etat) {
+  const auteur = avant.joueur_courant;
+
+  etat.verres.forEach((v, i) => {
+    const ecart = v - (avant.verres[i] || 0);
+
+    if (ecart > 0) {
+      const posCible = centrePion(i);
+      const posAuteur = centrePion(auteur);
+      const memeCase = auteur === i || posAuteur.distanceTo(posCible) < CASE * 0.9;
+      const frapper = () => {
+        encaisser(i);
+        texteFlottant(posCible, '+' + ecart, 'gorgées', '#ff8a5c', 0.42);
+      };
+      if (memeCase) frapper();
+      else tirerProjectile(posAuteur, posCible, pions[auteur] ? pions[auteur].couleur : 0xd4af68, frapper);
+
+    } else if (ecart < 0 && v === 0) {
+      // Une Dame : le verre repart de zéro.
+      texteFlottant(centrePion(i), '0', 'verre vidé', '#6fd39a', 0.42);
+    }
+  });
+
+  etat.elimine.forEach((mort, i) => {
+    if (mort && !avant.elimine[i]) {
+      faireTomber(i);
+      messageCentral('K.O.', etat.joueurs[i] + ' est éliminé', '#d0563b', 2.0);
+    }
+  });
+}
+
+function majBandeau(etat) {
+  if (partieFinie) return;
+
+  if (etat.phase === 'placement') {
+    const qui = etat.joueurs[etat.joueur_en_placement];
+    elMessage.textContent = etat.joueur_en_placement === MOI
+      ? 'Place ton pion'
+      : 'Placement de ' + qui;
+    elRappel.textContent = 'Chacun choisit sa case de départ, à tour de rôle.';
+    return;
+  }
+
+  if (etat.phase === 'jeu') {
+    if (etat.joueur_courant === MOI) {
+      elMessage.textContent = etat.action_faite ? 'Ton action est faite' : 'À toi de jouer';
+    } else {
+      elMessage.textContent = 'Au tour de ' + etat.joueurs[etat.joueur_courant];
+    }
+    const restantes = compterCartesPlateau(etat);
+    const mainsNues = restantes === 0 ? 5 : 1;
+    elRappel.textContent = etat.message
+      ? etat.message
+      : restantes + ' carte(s) au sol · mains nues : ' + mainsNues + ' gorgée' + (mainsNues > 1 ? 's' : '');
+  }
+}
+
+function compterCartesPlateau(etat) {
+  let n = 0;
+  for (let l = 0; l < TAILLE; l++) for (let c = 0; c < TAILLE; c++) if (etat.plateau[l][c]) n++;
+  return n;
+}
+
+function majListeJoueurs(etat) {
+  elJoueurs.innerHTML = '';
+  etat.joueurs.forEach((nom, i) => {
+    const d = document.createElement('div');
+    d.className = 'joueur'
+      + (i === etat.joueur_courant && etat.phase === 'jeu' ? ' actif' : '')
+      + (etat.elimine[i] ? ' mort' : '');
+
+    const p = document.createElement('span');
+    p.className = 'pastille';
+    p.style.background = '#' + COULEURS[i % COULEURS.length].toString(16).padStart(6, '0');
+
+    const n = document.createElement('span');
+    n.className = 'nom';
+    n.textContent = nom + (i === MOI ? ' (toi)' : '');
+
+    const a = document.createElement('span');
+    a.className = 'armes';
+    const liste = etat.armes[i] || [];
+    a.textContent = liste.map(t => (t === 'roi' ? '♚' : '♞')).join('');
+    a.title = liste.length ? liste.join(', ') : '';
+
+    const j = document.createElement('span');
+    j.className = 'jauge';
+    const rempli = document.createElement('span');
+    rempli.style.width = Math.min(100, (etat.verres[i] / (etat.verre_max || VERRE_MAX)) * 100) + '%';
+    j.appendChild(rempli);
+
+    const v = document.createElement('span');
+    v.className = 'val';
+    v.textContent = etat.verres[i] + '/' + (etat.verre_max || VERRE_MAX);
+
+    d.append(p, n, a, j, v);
+    elJoueurs.appendChild(d);
+  });
+
+  // Les étiquettes 3D suivent le même état que la liste HTML.
+  etat.joueurs.forEach((nom, i) => {
+    if (pions[i]) majEtiquette(pions[i].etiquette, nom,
+      i === etat.joueur_courant && etat.phase === 'jeu', etat.elimine[i]);
+    if (verres[i]) majEtiquette(verres[i].etiquette,
+      nom + ' · ' + etat.verres[i], i === etat.joueur_courant && etat.phase === 'jeu', etat.elimine[i]);
+  });
+}
+
+// =====================================================================
+// PANNEAUX D'INTERFACE
+// =====================================================================
+function cacherPanneau() { elPanneau.className = 'cache'; elPanneau.innerHTML = ''; }
+
+function bouton(texte, classe, onClick) {
+  const b = document.createElement('button');
+  b.textContent = texte;
+  if (classe) b.className = classe;
+  b.addEventListener('click', onClick);
+  return b;
+}
+
+function ouvrirPanneau(titre) {
+  elPanneau.className = '';
+  elPanneau.innerHTML = '';
+  if (titre) {
+    const h = document.createElement('h2');
+    h.textContent = titre;
+    elPanneau.appendChild(h);
+  }
+  return elPanneau;
+}
+
+function aide(texte) {
+  const d = document.createElement('p');
+  d.style.cssText = 'color:#9bb0a4; font-size:14px; margin:6px 0 4px;';
+  d.textContent = texte;
+  return d;
+}
+
+// Affiche la main dans le panneau. Une carte choisie ouvre les actions
+// qu'elle permet ; on peut la déchoisir en recliquant dessus.
+function afficherMain(interactive) {
+  const titre = document.createElement('div');
+  titre.id = 'main-titre';
+  titre.textContent = maMain.length ? 'Ta main' : 'Main vide';
+  const zone = document.createElement('div');
+  zone.id = 'main';
+
+  maMain.forEach((carte, i) => {
+    const d = document.createElement('div');
+    d.className = 'carte-jeu' + (i === carteChoisie ? ' choisie' : '') + (interactive ? '' : ' inerte');
+    const v = document.createElement('div');
+    v.className = 'carte-valeur ' + (carte.rouge ? 'carte-rouge' : 'carte-noir');
+    v.textContent = carte.symbole;
+    const t = document.createElement('div');
+    t.className = 'carte-type';
+    t.textContent = libelleCourt(carte);
+    d.append(v, t);
+    if (interactive) {
+      d.addEventListener('click', () => {
+        carteChoisie = (carteChoisie === i) ? null : i;
+        rafraichirPanneau();
+      });
+    }
+    zone.appendChild(d);
+  });
+
+  elPanneau.append(titre, zone);
+}
+
+// Un seul point d'entrée : l'état et la main décident du panneau affiché.
+function rafraichirPanneau() {
+  if (partieFinie || !enPartie || !etatCourant) return;
+  const etat = etatCourant;
+  reinitialiserClics();
+
+  // La carte révélée n'appartient qu'à mon ramassage : dès que j'en sors,
+  // elle se remet face cachée comme pour tout le monde.
+  const monRamassage = etat.phase === 'jeu' && etat.joueur_courant === MOI && etat.action_faite;
+  if (!monRamassage) cacherCarteRevelee();
+
+  if (etat.phase === 'placement') {
+    if (etat.joueur_en_placement === MOI) panneauPlacement(etat);
+    else {
+      cacherPanneau();
+    }
+    return;
+  }
+
+  if (etat.phase !== 'jeu') { cacherPanneau(); return; }
+
+  if (etat.elimine[MOI]) { panneauElimine(); return; }
+
+  if (etat.joueur_courant !== MOI) { panneauAttenteTour(etat); return; }
+
+  if (etat.action_faite) panneauRamassage(etat);
+  else panneauActions(etat);
+}
+
+function panneauPlacement(etat) {
+  const p = ouvrirPanneau('Ton point de départ');
+  p.appendChild(aide('Touche une case libre du plateau pour y poser ton pion.'));
+  const map = new Map();
+  for (let l = 0; l < TAILLE; l++) {
+    for (let c = 0; c < TAILLE; c++) {
+      if (estCaseOccupee(etat, l, c)) continue;
+      const ll = l, cc = c;
+      map.set(l + ':' + c, () => envoyerIntention(MOI, { type: 'bb_placer', ligne: ll, colonne: cc }));
+    }
+  }
+  armerCasesCliquables(map, 0x1f6b4a);
+}
+
+function panneauAttenteTour(etat) {
+  const p = ouvrirPanneau(null);
+  p.appendChild(aide('Au tour de ' + etat.joueurs[etat.joueur_courant] + '.'));
+  afficherMain(false);
+}
+
+function panneauElimine() {
+  const p = ouvrirPanneau('Verre plein');
+  p.appendChild(aide('Ton verre est à 20 : tu es éliminé. Tu peux regarder la fin de la partie.'));
+}
+
+// --- Le tour : une seule action ---
+function panneauActions(etat) {
+  const p = ouvrirPanneau('À toi — une seule action');
+  afficherMain(true);
+
+  const carte = (carteChoisie !== null) ? maMain[carteChoisie] : null;
+  const zone = document.createElement('div');
+  zone.className = 'rangee';
+  const cibles = new Map();   // index joueur -> { fn, couleur } pour le clic 3D
+
+  // 1. Déplacement gratuit d'une case, toujours possible.
+  zone.appendChild(bouton("Me déplacer d'une case", 'sombre', () => ouvrirDeplacement(etat, 1, false)));
+
+  // 2. Corps à corps sur les joueurs de ma case.
+  const ici = joueursSurMaCase(etat);
+  const degMainsNues = compterCartesPlateau(etat) === 0 ? 5 : 1;
+  ici.forEach(j => {
+    const agir = () => envoyerIntention(MOI, { type: 'bb_attaquer', cible: j, type_attaque: 'cc_mains_nues' });
+    zone.appendChild(bouton('Mains nues sur ' + etat.joueurs[j] + ' (' + degMainsNues + ')', 'danger', agir));
+    if (!cibles.has(j)) cibles.set(j, { fn: agir, couleur: 0xd0563b });
+  });
+
+  // 3. Ce que permet la carte choisie.
+  if (carte) {
+    if (carte.type === 'deplacement') {
+      zone.appendChild(bouton("Déplacement jusqu'à " + carte.valeur, '', () => ouvrirDeplacement(etat, carte.valeur, true)));
+
+    } else if (carte.type === 'gorgee') {
+      ici.forEach(j => {
+        const agir = () => envoyerIntention(MOI, { type: 'bb_attaquer', cible: j, index_carte: carteChoisie, type_attaque: 'cc_gorgee' });
+        zone.appendChild(bouton('Corps à corps ' + etat.joueurs[j] + ' (' + carte.valeur + ')', 'danger', agir));
+        cibles.set(j, { fn: agir, couleur: 0xd0563b });
+      });
+      ciblesViaArmes(etat).forEach(entree => {
+        const j = entree.index;
+        const degats = entree.arme === 'roi' ? Math.floor((carte.valeur + 1) / 2) : carte.valeur;
+        const agir = () => envoyerIntention(MOI, { type: 'bb_attaquer', cible: j, index_carte: carteChoisie, type_attaque: 'arme' });
+        zone.appendChild(bouton('Tirer sur ' + etat.joueurs[j] + ' (' + degats + ')', 'danger', agir));
+        cibles.set(j, { fn: agir, couleur: 0xe0a23b });
+      });
+
+    } else if (carte.type === 'as') {
+      ici.forEach(j => {
+        const agir = () => envoyerIntention(MOI, { type: 'bb_attaquer', cible: j, index_carte: carteChoisie, type_attaque: 'as' });
+        zone.appendChild(bouton('As sur ' + etat.joueurs[j] + ' (mi-verre)', 'danger', agir));
+        cibles.set(j, { fn: agir, couleur: 0xd0563b });
+      });
+      adversairesAdjacents(etat).forEach(j => {
+        const pos = etat.positions[j];
+        const agir = () => envoyerIntention(MOI, {
+          type: 'bb_as_deplacer', ligne: pos.ligne, colonne: pos.colonne, cible: j, index_carte: carteChoisie,
+        });
+        zone.appendChild(bouton('Foncer sur ' + etat.joueurs[j] + ' (mi-verre)', 'danger', agir));
+        if (!cibles.has(j)) cibles.set(j, { fn: agir, couleur: 0xd0563b });
+      });
+
+    } else if (carte.type === 'joker') {
+      const atteignables = ciblesViaArmes(etat);
+      if (!atteignables.length) {
+        const mesArmes = etat.armes[MOI] || [];
+        elPanneau.appendChild(aide(mesArmes.length
+          ? 'Aucune cible à portée de tes armes pour le Joker.'
+          : 'Le Joker a besoin d’une arme posée (Roi ou Valet).'));
+      }
+      atteignables.forEach(entree => {
+        const j = entree.index;
+        const agir = () => envoyerIntention(MOI, { type: 'bb_attaquer', cible: j, index_carte: carteChoisie, type_attaque: 'joker' });
+        zone.appendChild(bouton('Joker sur ' + etat.joueurs[j] + ' (mi-verre)', 'danger', agir));
+        cibles.set(j, { fn: agir, couleur: 0xe0a23b });
+      });
+
+    } else if (carte.type === 'dame') {
+      etat.joueurs.forEach((nom, j) => {
+        if (etat.elimine[j]) return;
+        const agir = () => envoyerIntention(MOI, { type: 'bb_dame', cible: j, index_carte: carteChoisie });
+        zone.appendChild(bouton((j === MOI ? 'Vider mon verre' : 'Vider le verre de ' + nom), 'vert', agir));
+        cibles.set(j, { fn: agir, couleur: 0x6fd39a });
+      });
+
+    } else if (carte.type === 'roi' || carte.type === 'valet') {
+      const nom = carte.type === 'roi' ? 'le Roi (portée 6)' : 'le Valet (portée 2)';
+      zone.appendChild(bouton('Poser ' + nom, '', () =>
+        envoyerIntention(MOI, { type: 'bb_poser_arme', index_carte: carteChoisie })));
+    }
+  } else {
+    elPanneau.appendChild(aide('Choisis une carte pour voir ce qu’elle permet, ou déplace-toi.'));
+  }
+
+  zone.appendChild(bouton('Ne rien faire', 'sombre', () =>
+    envoyerIntention(MOI, { type: 'bb_ne_rien_faire' })));
+
+  elPanneau.appendChild(zone);
+  if (cibles.size) armerPionsCliquables(cibles);
+}
+
+// Ouvre les cases atteignables : on clique la destination sur le plateau.
+function ouvrirDeplacement(etat, distMax, viaCarte) {
+  reinitialiserClics();
+  const moi = etat.positions[MOI];
+  const map = new Map();
+  for (let l = 0; l < TAILLE; l++) {
+    for (let c = 0; c < TAILLE; c++) {
+      const dist = Math.abs(l - moi.ligne) + Math.abs(c - moi.colonne);
+      if (dist < 1 || dist > distMax) continue;
+      const ll = l, cc = c, carteUtilisee = viaCarte ? carteChoisie : null;
+      map.set(l + ':' + c, () => envoyerIntention(MOI, {
+        type: 'bb_deplacer', ligne: ll, colonne: cc,
+        via_carte: !!viaCarte, index_carte: carteUtilisee,
+      }));
+    }
+  }
+  armerCasesCliquables(map, 0x8f6d28);
+
+  const p = ouvrirPanneau('Où vas-tu ?');
+  p.appendChild(aide('Touche une case en surbrillance (max ' + distMax + ', sans diagonale).'));
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  r.appendChild(bouton('Annuler', 'sombre', () => rafraichirPanneau()));
+  p.appendChild(r);
+}
+
+// --- Après l'action : ramasser la carte de sa case ---
+function panneauRamassage(etat) {
+  const p = ouvrirPanneau('Ramassage');
+  const moi = etat.positions[MOI];
+  const aUneCarte = etat.plateau[moi.ligne][moi.colonne] === true;
+
+  if (aUneCarte && carteDeMaCase) {
+    const ap = document.createElement('div');
+    ap.className = 'apercu-case';
+    const petit = document.createElement('span');
+    petit.className = 'petit';
+    petit.textContent = 'Carte sous toi';
+    const gros = document.createElement('span');
+    gros.textContent = carteDeMaCase.symbole + ' — ' + carteDeMaCase.libelle;
+    ap.append(petit, gros);
+    p.appendChild(ap);
+  } else if (aUneCarte) {
+    p.appendChild(aide('Une carte est sous toi…'));
+  } else {
+    p.appendChild(aide('Ta case est vide.'));
+  }
+
+  afficherMain(false);
+
+  const zone = document.createElement('div');
+  zone.className = 'rangee';
+
+  if (aUneCarte && carteDeMaCase) {
+    const mainPleine = maMain.length >= (etat.max_cartes || 4);
+    if (!mainPleine) {
+      zone.appendChild(bouton('Prendre cette carte', '', () => {
+        carteDeMaCase = null;
+        envoyerIntention(MOI, { type: 'bb_ramasser', decision: 'prendre' });
+      }));
+    } else {
+      p.appendChild(aide('Main pleine : échange une de tes cartes contre celle-ci.'));
+      maMain.forEach((carte, i) => {
+        zone.appendChild(bouton('Donner ' + carte.symbole + ' (' + libelleCourt(carte) + ')', 'sombre', () => {
+          carteDeMaCase = null;
+          envoyerIntention(MOI, { type: 'bb_ramasser', decision: 'echanger', index_echange: i });
+        }));
+      });
+    }
+  }
+
+  zone.appendChild(bouton(aUneCarte ? 'Laisser et finir' : 'Finir mon tour',
+    aUneCarte ? 'sombre' : '', () => {
+      carteDeMaCase = null;
+      envoyerIntention(MOI, { type: 'bb_ramasser', decision: 'rien' });
+    }));
+
+  p.appendChild(zone);
+}
+
+function panneauVictoire(gagnant) {
+  partieFinie = true;
+  reinitialiserClics();
+  cacherCarteRevelee();
+
+  // Le serveur ne rediffuse pas l'état après le coup fatal : le dernier
+  // verre rempli et le dernier pion tombé n'arriveraient jamais. Une
+  // victoire veut dire qu'il ne reste qu'un debout, donc on peut terminer
+  // l'affichage sans rien inventer.
+  if (etatCourant) {
+    etatCourant.joueurs.forEach((nom, i) => {
+      if (nom === gagnant) return;
+      if (verres[i]) verres[i].objectif = 1;
+      faireTomber(i);
+    });
+  }
+
+  messageCentral('🏆', gagnant + ' gagne', '#ecd29a', 6);
+  elMessage.textContent = gagnant + ' remporte la partie';
+  elRappel.textContent = '';
+  const p = ouvrirPanneau('Fin de la partie');
+  p.appendChild(aide('Dernier debout : ' + gagnant + '.'));
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  r.appendChild(bouton('Nouvelle partie', '', () => location.reload()));
+  p.appendChild(r);
+}
+
+// =====================================================================
+// AIDES DE CIBLAGE — mêmes calculs que le serveur, côté affichage.
+// =====================================================================
+function estCaseOccupee(etat, l, c) {
+  for (let i = 0; i < etat.positions.length; i++) {
+    if (etat.elimine[i]) continue;
+    const p = etat.positions[i];
+    if (p && p.ligne === l && p.colonne === c) return true;
+  }
+  return false;
+}
+
+function joueursSurMaCase(etat) {
+  const moi = etat.positions[MOI];
+  const liste = [];
+  if (!moi) return liste;
+  for (let i = 0; i < etat.positions.length; i++) {
+    if (i === MOI || etat.elimine[i]) continue;
+    const p = etat.positions[i];
+    if (p && p.ligne === moi.ligne && p.colonne === moi.colonne) liste.push(i);
+  }
+  return liste;
+}
+
+function adversairesAdjacents(etat) {
+  const moi = etat.positions[MOI];
+  const liste = [];
+  if (!moi) return liste;
+  for (let i = 0; i < etat.positions.length; i++) {
+    if (i === MOI || etat.elimine[i]) continue;
+    const p = etat.positions[i];
+    if (!p) continue;
+    if (Math.abs(p.ligne - moi.ligne) + Math.abs(p.colonne - moi.colonne) === 1) liste.push(i);
+  }
+  return liste;
+}
+
+// Renvoie { index, arme } : l'arme retenue est celle que le serveur
+// choisira (la première de la liste qui atteint), pour que les dégâts
+// affichés soient ceux qui seront réellement appliqués.
+function ciblesViaArmes(etat) {
+  const moi = etat.positions[MOI];
+  const mesArmes = etat.armes[MOI] || [];
+  const cibles = [];
+  if (!moi || !mesArmes.length) return cibles;
+  for (let i = 0; i < etat.positions.length; i++) {
+    if (i === MOI || etat.elimine[i]) continue;
+    const p = etat.positions[i];
+    if (!p) continue;
+    const dist = Math.abs(p.ligne - moi.ligne) + Math.abs(p.colonne - moi.colonne);
+    if (dist < 1) continue;     // même case : c'est du corps à corps
+    const arme = bbArmePourCible(mesArmes, dist);
+    if (arme) cibles.push({ index: i, arme });
+  }
+  return cibles;
+}
+
+// =====================================================================
+// BOTS — de simples remplaçants locaux des autres joueurs.
+// Ils envoient exactement les mêmes intentions qu'un humain ; en ligne
+// ce bloc ne sert pas, remplacé par de vrais clients.
+// =====================================================================
+const mainsBot = {};       // main privée de chaque bot
+const carteCaseBot = {};   // carte sous chaque bot, révélée au ramassage
+
+function botRecevoir(index, msg) {
+  switch (msg.type) {
+    case 'bb_ta_main':
+      mainsBot[index] = msg.main || [];
+      break;
+
+    case 'bb_carte_case':
+      carteCaseBot[index] = msg.carte;
+      break;
+
+    case 'bb_etat':
+      if (msg.phase === 'placement' && msg.joueur_en_placement === index) {
+        quandLibre(() => botPlacer(index, msg), 650);
+      } else if (msg.phase === 'jeu' && msg.joueur_courant === index && !msg.elimine[index]) {
+        if (msg.action_faite) quandLibre(() => botRamasser(index, msg), 700);
+        else quandLibre(() => botJouer(index, msg), 850);
+      }
+      break;
+  }
+}
+
+// Placement : une case libre, aussi loin que possible des autres — on ne
+// commence pas collé à un adversaire.
+function botPlacer(index, etat) {
+  const libres = [];
+  for (let l = 0; l < TAILLE; l++) {
+    for (let c = 0; c < TAILLE; c++) {
+      if (estCaseOccupeeEtat(etat, l, c)) continue;
+      let plusProche = 99;
+      etat.positions.forEach((p, i) => {
+        if (i === index || !p) return;
+        plusProche = Math.min(plusProche, Math.abs(p.ligne - l) + Math.abs(p.colonne - c));
+      });
+      libres.push({ l, c, score: plusProche + Math.random() });
+    }
+  }
+  if (!libres.length) return;
+  libres.sort((a, b) => b.score - a.score);
+  const choix = libres[Math.floor(Math.random() * Math.min(4, libres.length))];
+  envoyerIntention(index, { type: 'bb_placer', ligne: choix.l, colonne: choix.c });
+}
+
+function estCaseOccupeeEtat(etat, l, c) {
+  for (let i = 0; i < etat.positions.length; i++) {
+    if (etat.elimine[i]) continue;
+    const p = etat.positions[i];
+    if (p && p.ligne === l && p.colonne === c) return true;
+  }
+  return false;
+}
+
+function botJouer(index, etat) {
+  const main = mainsBot[index] || [];
+  const moi = etat.positions[index];
+  if (!moi) return;
+
+  const vivants = [];
+  etat.positions.forEach((p, i) => {
+    if (i === index || etat.elimine[i] || !p) return;
+    vivants.push({ index: i, pos: p, dist: Math.abs(p.ligne - moi.ligne) + Math.abs(p.colonne - moi.colonne) });
+  });
+  if (!vivants.length) { envoyerIntention(index, { type: 'bb_ne_rien_faire' }); return; }
+
+  const surMaCase = vivants.filter(v => v.dist === 0);
+  const mesArmes = etat.armes[index] || [];
+  const idx = t => main.findIndex(c => c.type === t);
+
+  // Cible prioritaire : le verre le plus plein, c'est le plus près des 20.
+  const trier = liste => liste.slice().sort((a, b) => etat.verres[b.index] - etat.verres[a.index]);
+
+  // 1. Une Dame quand son propre verre devient dangereux.
+  const iDame = idx('dame');
+  if (iDame >= 0 && etat.verres[index] >= 11) {
+    envoyerIntention(index, { type: 'bb_dame', cible: index, index_carte: iDame });
+    return;
+  }
+
+  // 2. Tir à distance : arme posée + carte gorgée (ou Joker).
+  const portees = vivants.filter(v => v.dist >= 1 && bbArmePourCible(mesArmes, v.dist));
+  if (portees.length) {
+    const cible = trier(portees)[0];
+    const iJoker = idx('joker');
+    if (iJoker >= 0) {
+      envoyerIntention(index, { type: 'bb_attaquer', cible: cible.index, index_carte: iJoker, type_attaque: 'joker' });
+      return;
+    }
+    const iGorgee = meilleureGorgee(main);
+    if (iGorgee >= 0) {
+      envoyerIntention(index, { type: 'bb_attaquer', cible: cible.index, index_carte: iGorgee, type_attaque: 'arme' });
+      return;
+    }
+  }
+
+  // 3. Corps à corps sur quelqu'un de ma case.
+  if (surMaCase.length) {
+    const cible = trier(surMaCase)[0];
+    const iAs = idx('as');
+    if (iAs >= 0) {
+      envoyerIntention(index, { type: 'bb_attaquer', cible: cible.index, index_carte: iAs, type_attaque: 'as' });
+      return;
+    }
+    const iGorgee = meilleureGorgee(main);
+    if (iGorgee >= 0) {
+      envoyerIntention(index, { type: 'bb_attaquer', cible: cible.index, index_carte: iGorgee, type_attaque: 'cc_gorgee' });
+      return;
+    }
+    envoyerIntention(index, { type: 'bb_attaquer', cible: cible.index, type_attaque: 'cc_mains_nues' });
+    return;
+  }
+
+  // 4. L'As permet de foncer sur un voisin immédiat.
+  const iAs = idx('as');
+  const voisins = vivants.filter(v => v.dist === 1);
+  if (iAs >= 0 && voisins.length) {
+    const cible = trier(voisins)[0];
+    envoyerIntention(index, {
+      type: 'bb_as_deplacer', ligne: cible.pos.ligne, colonne: cible.pos.colonne,
+      cible: cible.index, index_carte: iAs,
+    });
+    return;
+  }
+
+  // 5. Poser une arme si on n'en a pas encore.
+  if (!mesArmes.length) {
+    const iRoi = idx('roi');
+    if (iRoi >= 0) { envoyerIntention(index, { type: 'bb_poser_arme', index_carte: iRoi }); return; }
+    const iValet = idx('valet');
+    if (iValet >= 0) { envoyerIntention(index, { type: 'bb_poser_arme', index_carte: iValet }); return; }
+  }
+
+  // 6. Sinon, se rapprocher de la cible la plus intéressante.
+  const cible = trier(vivants)[0];
+  const iDepl = main.findIndex(c => c.type === 'deplacement');
+  const portee = iDepl >= 0 ? main[iDepl].valeur : 1;
+  const dest = pasVers(moi, cible.pos, portee);
+  if (dest) {
+    envoyerIntention(index, {
+      type: 'bb_deplacer', ligne: dest.ligne, colonne: dest.colonne,
+      via_carte: iDepl >= 0, index_carte: iDepl >= 0 ? iDepl : null,
+    });
+    return;
+  }
+  envoyerIntention(index, { type: 'bb_ne_rien_faire' });
+}
+
+// La carte gorgée la plus forte de la main (les 6 à 10).
+function meilleureGorgee(main) {
+  let meilleur = -1, valeur = -1;
+  main.forEach((c, i) => {
+    if (c.type === 'gorgee' && c.valeur > valeur) { valeur = c.valeur; meilleur = i; }
+  });
+  return meilleur;
+}
+
+// Avance vers la cible sans diagonale, dans la limite de la portée.
+function pasVers(depuis, vers, portee) {
+  let l = depuis.ligne, c = depuis.colonne, reste = portee;
+  while (reste > 0 && (l !== vers.ligne || c !== vers.colonne)) {
+    if (l !== vers.ligne) l += vers.ligne > l ? 1 : -1;
+    else c += vers.colonne > c ? 1 : -1;
+    reste--;
+  }
+  if (l === depuis.ligne && c === depuis.colonne) return null;
+  return { ligne: l, colonne: c };
+}
+
+function botRamasser(index, etat) {
+  const pos = etat.positions[index];
+  const main = mainsBot[index] || [];
+  const carte = carteCaseBot[index];
+  const aUneCarte = pos && etat.plateau[pos.ligne][pos.colonne] === true;
+
+  if (aUneCarte && carte) {
+    if (main.length < (etat.max_cartes || 4)) {
+      carteCaseBot[index] = null;
+      envoyerIntention(index, { type: 'bb_ramasser', decision: 'prendre' });
+      return;
+    }
+    // Main pleine : on échange si la carte du sol vaut mieux que la pire en main.
+    const pire = pireCarte(main);
+    if (pire >= 0 && valeurCarte(carte) > valeurCarte(main[pire])) {
+      carteCaseBot[index] = null;
+      envoyerIntention(index, { type: 'bb_ramasser', decision: 'echanger', index_echange: pire });
+      return;
+    }
+  }
+  carteCaseBot[index] = null;
+  envoyerIntention(index, { type: 'bb_ramasser', decision: 'rien' });
+}
+
+// Barème interne aux bots : sert seulement à comparer deux cartes.
+function valeurCarte(c) {
+  if (!c) return 0;
+  switch (c.type) {
+    case 'joker': return 14;
+    case 'as': return 13;
+    case 'roi': return 12;
+    case 'dame': return 11;
+    case 'valet': return 9;
+    case 'gorgee': return c.valeur;
+    case 'deplacement': return c.valeur - 1;
+  }
+  return 0;
+}
+
+function pireCarte(main) {
+  let pire = -1, valeur = 999;
+  main.forEach((c, i) => {
+    const v = valeurCarte(c);
+    if (v < valeur) { valeur = v; pire = i; }
+  });
+  return pire;
+}
+
+// =====================================================================
+// ACCUEIL ET SALON
+// =====================================================================
+const NOMS_BOTS = ['Fury', 'Romanoff', 'Barton', 'Coulson'];
+
+const SERVEURS = {
+  render: { http: 'https://kinito-serveur.onrender.com', ws: 'wss://kinito-serveur.onrender.com' },
+  local:  { http: 'http://127.0.0.1:8000',               ws: 'ws://127.0.0.1:8000' },
+};
+let serveurChoisi = 'render';
+
+let monNom = '';
+let codeSalon = '';
+let estCreateur = false;
+let joueursSalon = [];
+let enPartie = false;
+let monJeton = null;
+
+// BeerBattle se joue de 3 à 5. Le plafond n'est pas décoratif : 54 cartes
+// en tout, 36 sur le plateau, il n'en resterait pas assez pour six mains.
+const JOUEURS_MIN = 3;
+const JOUEURS_MAX = 5;
+
+// Le jeton permet de retrouver sa place après une coupure ou un rechargement.
+// localStorage peut lever (navigation privée, site data bloqué) : tout est gardé.
+const CLE_SESSION = 'beerbattle3d.session';
+
+function lireSession() {
+  try { return JSON.parse(localStorage.getItem(CLE_SESSION) || 'null'); }
+  catch (e) { return null; }
+}
+function ecrireSession(s) {
+  try { localStorage.setItem(CLE_SESSION, JSON.stringify(s)); } catch (e) { /* tant pis */ }
+}
+function oublierSession() {
+  try { localStorage.removeItem(CLE_SESSION); } catch (e) { /* tant pis */ }
+}
+
+function champTexte(id, placeholder, longueurMax) {
+  const i = document.createElement('input');
+  i.type = 'text';
+  i.id = id;
+  i.placeholder = placeholder;
+  if (longueurMax) i.maxLength = longueurMax;
+  return i;
+}
+
+function afficherErreur(texte) { elRappel.textContent = texte; }
+
+function panneauAccueil() {
+  elMessage.textContent = 'BeerBattle 3D';
+  elRappel.textContent = 'Plateau 6×6, cartes cachées, verres qui se remplissent';
+  const p = ouvrirPanneau('Comment tu joues ?');
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  r.appendChild(bouton('En ligne', '', panneauEnLigne));
+  r.appendChild(bouton('Solo contre des bots', 'sombre', panneauSolo));
+  p.appendChild(r);
+
+  const s = lireSession();
+  if (s && s.code && s.jeton) {
+    const r2 = document.createElement('div');
+    r2.className = 'rangee';
+    r2.style.marginTop = '12px';
+    r2.appendChild(bouton('Reprendre la partie ' + s.code, 'sombre', () => {
+      monNom = s.nom; codeSalon = s.code; monJeton = s.jeton;
+      serveurChoisi = s.serveur || 'render';
+      estCreateur = false;
+      afficherErreur('Reconnexion...');
+      seConnecter();
+    }));
+    p.appendChild(r2);
+  }
+}
+
+// --- Solo : le moteur local et les bots, sans serveur ---
+function panneauSolo() {
+  const p = ouvrirPanneau('Combien de joueurs ?');
+  p.appendChild(aide('Toi + des bots qui tiennent la place des autres. De 3 à 5, comme à table.'));
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  [3, 4, 5].forEach(n => {
+    r.appendChild(bouton(String(n), n === 4 ? '' : 'sombre', () => demarrerSolo(n)));
+  });
+  p.appendChild(r);
+  const r2 = document.createElement('div');
+  r2.className = 'rangee';
+  r2.style.marginTop = '12px';
+  r2.appendChild(bouton('Retour', 'sombre', panneauAccueil));
+  p.appendChild(r2);
+}
+
+function demarrerSolo(nb) {
+  mode = 'local';
+  monJeton = null;
+  oublierSession();
+  MOI = 0;
+  cacherPanneau();
+  serveur.demarrer(['Toi'].concat(NOMS_BOTS.slice(0, nb - 1)));
+}
+
+// --- En ligne : même protocole que le client 2D ---
+function panneauRejoindreDirect(code) {
+  codeSalon = code;
+  elMessage.textContent = 'BeerBattle 3D';
+  elRappel.textContent = 'Salon ' + code;
+  const p = ouvrirPanneau('Rejoindre le salon');
+
+  const c = document.createElement('div');
+  c.className = 'code-salon';
+  c.textContent = code;
+  p.appendChild(c);
+
+  const l1 = document.createElement('div');
+  l1.className = 'rangee';
+  const pseudo = champTexte('pseudo', 'Ton prénom', 16);
+  pseudo.value = monNom;
+  l1.appendChild(pseudo);
+  p.appendChild(l1);
+
+  const l2 = document.createElement('div');
+  l2.className = 'rangee';
+  l2.style.marginTop = '10px';
+  l2.appendChild(bouton('Rejoindre', '', async () => {
+    if (!lireNom()) return;
+    afficherErreur('Connexion au serveur...');
+    try {
+      const rep = await fetch(SERVEURS[serveurChoisi].http + '/salon/' + codeSalon);
+      if (!(await rep.json()).existe) { afficherErreur('Ce salon n’existe plus'); return; }
+      estCreateur = false;
+      seConnecter();
+    } catch (e) {
+      afficherErreur('Serveur injoignable.');
+    }
+  }));
+  p.appendChild(l2);
+
+  const l3 = document.createElement('div');
+  l3.className = 'rangee';
+  l3.style.marginTop = '12px';
+  const bs = bouton('', 'sombre', () => {
+    serveurChoisi = serveurChoisi === 'render' ? 'local' : 'render';
+    majLibelleServeur(bs);
+  });
+  bs.style.fontSize = '14px'; bs.style.padding = '7px 14px';
+  majLibelleServeur(bs);
+  l3.appendChild(bs);
+  const br = bouton('Autre salon', 'sombre', panneauAccueil);
+  br.style.fontSize = '14px'; br.style.padding = '7px 14px';
+  l3.appendChild(br);
+  p.appendChild(l3);
+}
+
+function panneauEnLigne() {
+  const p = ouvrirPanneau('Jouer en ligne');
+
+  const l1 = document.createElement('div');
+  l1.className = 'rangee';
+  const pseudo = champTexte('pseudo', 'Ton prénom', 16);
+  pseudo.value = monNom;
+  l1.appendChild(pseudo);
+  p.appendChild(l1);
+
+  const l2 = document.createElement('div');
+  l2.className = 'rangee';
+  l2.style.marginTop = '10px';
+  l2.appendChild(bouton('Créer un salon', '', creerSalon));
+  p.appendChild(l2);
+
+  const l3 = document.createElement('div');
+  l3.className = 'rangee';
+  l3.style.marginTop = '10px';
+  l3.appendChild(champTexte('code-salon', 'CODE', 4));
+  l3.appendChild(bouton('Rejoindre', 'sombre', rejoindreSalon));
+  p.appendChild(l3);
+
+  const l4 = document.createElement('div');
+  l4.className = 'rangee';
+  l4.style.marginTop = '14px';
+  const btnServeur = bouton('', 'sombre', () => {
+    serveurChoisi = serveurChoisi === 'render' ? 'local' : 'render';
+    majLibelleServeur(btnServeur);
+  });
+  btnServeur.style.fontSize = '14px';
+  btnServeur.style.padding = '7px 14px';
+  majLibelleServeur(btnServeur);
+  l4.appendChild(btnServeur);
+  const retour = bouton('Retour', 'sombre', panneauAccueil);
+  retour.style.fontSize = '14px';
+  retour.style.padding = '7px 14px';
+  l4.appendChild(retour);
+  p.appendChild(l4);
+
+  const note = document.createElement('div');
+  note.className = 'note';
+  note.textContent = "Le serveur Render s'endort : la première connexion peut prendre 30 s.";
+  p.appendChild(note);
+}
+
+function majLibelleServeur(b) {
+  b.textContent = serveurChoisi === 'render' ? 'Serveur : Render' : 'Serveur : local';
+}
+
+function lireNom() {
+  const champ = document.getElementById('pseudo');
+  monNom = champ ? champ.value.trim() : '';
+  if (!monNom) { afficherErreur('Entre ton prénom'); return false; }
+  return true;
+}
+
+async function creerSalon() {
+  if (!lireNom()) return;
+  afficherErreur('Connexion au serveur...');
+  try {
+    const rep = await fetch(SERVEURS[serveurChoisi].http + '/creer-salon');
+    codeSalon = (await rep.json()).code;
+    estCreateur = true;
+    seConnecter();
+  } catch (e) {
+    afficherErreur("Serveur injoignable. S'il dort, réessaie dans 30 s.");
+  }
+}
+
+async function rejoindreSalon() {
+  if (!lireNom()) return;
+  const champ = document.getElementById('code-salon');
+  codeSalon = (champ ? champ.value : '').trim().toUpperCase();
+  if (codeSalon.length !== 4) { afficherErreur('Le code fait 4 lettres'); return; }
+  afficherErreur('Connexion au serveur...');
+  try {
+    const rep = await fetch(SERVEURS[serveurChoisi].http + '/salon/' + codeSalon);
+    if (!(await rep.json()).existe) { afficherErreur('Salon introuvable'); return; }
+    estCreateur = false;
+    seConnecter();
+  } catch (e) {
+    afficherErreur('Serveur injoignable.');
+  }
+}
+
+function seConnecter() {
+  let url = SERVEURS[serveurChoisi].ws + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom);
+  if (monJeton) url += '?jeton=' + encodeURIComponent(monJeton);
+  ws = new WebSocket(url);
+  ws.onopen = () => { mode = 'ligne'; if (!enPartie) panneauAttente(); };
+  ws.onmessage = e => clientRecevoir(JSON.parse(e.data));
+  ws.onerror = () => afficherErreur('Erreur de connexion au serveur');
+  ws.onclose = () => { if (enPartie && !partieFinie) panneauReconnexion(); };
+}
+
+function panneauReconnexion() {
+  elMessage.textContent = 'Connexion perdue';
+  const p = ouvrirPanneau('Déconnecté');
+  p.appendChild(aide('Ta place est gardée : reconnecte-toi avec le même prénom.'));
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  r.appendChild(bouton('Reconnecter', '', () => { cacherPanneau(); seConnecter(); }));
+  r.appendChild(bouton('Quitter', 'sombre', () => {
+    enPartie = false; oublierSession(); monJeton = null; panneauAccueil();
+  }));
+  p.appendChild(r);
+}
+
+// Adresse du site publié, utilisée seulement comme repli : quand la page est
+// ouverte en fichier local (double-clic), un QR vers file:// ne mènerait
+// nulle part sur le téléphone de celui qui scanne.
+const SITE_PUBLIE = 'https://ozaxe.github.io/table-de-jeu/beerbattle-3d-jeu.html';
+
+function lienSalon(code) {
+  const fichierLocal = location.protocol === 'file:';
+  const base = fichierLocal ? SITE_PUBLIE : location.origin + location.pathname;
+  return { url: base + '?salon=' + encodeURIComponent(code), repli: fichierLocal };
+}
+
+function panneauAttente() {
+  const p = ouvrirPanneau('Salon');
+  const code = document.createElement('div');
+  code.className = 'code-salon';
+  code.textContent = codeSalon;
+  p.appendChild(code);
+
+  p.appendChild(aide('Donne ce code aux autres pour qu’ils rejoignent. De 3 à 5 joueurs.'));
+
+  const lien = lienSalon(codeSalon);
+  if (typeof QRious !== 'undefined') {
+    const cv = document.createElement('canvas');
+    cv.className = 'qr';
+    try {
+      new QRious({ element: cv, value: lien.url, size: 340, level: 'M',
+                   background: '#e8f0e6', foreground: '#0d2a1f' });
+      p.appendChild(cv);
+      p.appendChild(aide(lien.repli
+        ? 'Ce QR mène au site en ligne : la page est ouverte en fichier local, il n’y a pas d’adresse à partager.'
+        : 'Ou fais scanner ce code : ils n’auront que leur prénom à entrer.'));
+      if (lien.repli && serveurChoisi === 'local') {
+        const garde = document.createElement('div');
+        garde.className = 'alerte';
+        garde.textContent = 'Attention : tu joues sur le serveur local, mais ceux qui scannent arriveront sur le serveur en ligne.';
+        p.appendChild(garde);
+      }
+      const rl = document.createElement('div');
+      rl.className = 'rangee';
+      const bl = bouton('Copier le lien', 'sombre', async () => {
+        try { await navigator.clipboard.writeText(lien.url); afficherErreur('Lien copié'); }
+        catch (e) { afficherErreur(lien.url); }
+      });
+      bl.style.fontSize = '14px';
+      bl.style.padding = '7px 14px';
+      rl.appendChild(bl);
+      p.appendChild(rl);
+    } catch (e) { /* pas de QR : le code à 4 lettres suffit */ }
+  }
+
+  const liste = document.createElement('div');
+  liste.className = 'liste-attente';
+  liste.textContent = joueursSalon.length
+    ? joueursSalon.map((n, i) => (i === MOI ? n + ' (toi)' : n)).join(' · ')
+    : 'En attente de joueurs...';
+  p.appendChild(liste);
+
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  r.style.marginTop = '12px';
+  if (estCreateur) {
+    const trop = joueursSalon.length > JOUEURS_MAX;
+    const b = bouton('Démarrer la partie', '', () =>
+      envoyerIntention(MOI, { type: 'bb_demarrer' }));
+    b.disabled = joueursSalon.length < JOUEURS_MIN || trop;
+    r.appendChild(b);
+    if (joueursSalon.length < JOUEURS_MIN) {
+      p.appendChild(aide('Encore ' + (JOUEURS_MIN - joueursSalon.length) + ' joueur(s) avant de pouvoir lancer.'));
+    } else if (trop) {
+      const al = document.createElement('div');
+      al.className = 'alerte';
+      al.textContent = 'Vous êtes ' + joueursSalon.length + ' : BeerBattle plafonne à ' + JOUEURS_MAX
+        + ' (il n’y a pas assez de cartes au-delà). Qu’un joueur quitte le salon.';
+      p.appendChild(al);
+    }
+  } else {
+    p.appendChild(aide('En attente du créateur du salon...'));
+  }
+  p.appendChild(r);
+}
+
+// =====================================================================
+// MISE EN PLACE DE LA TABLE
+// =====================================================================
+// Index utilisé pour orienter la table : la rotation des verres en dépend,
+// on la refait si le serveur nous donne un autre siège qu'au moment du dessin.
+let moiDeLaTable = -1;
+
+function construireTable(noms) {
+  creerPions(noms);
+  creerVerres(noms);
+  verres.forEach(v => { v.niveau = 0; v.objectif = 0; dessinerVerre(v); });
+  moiDeLaTable = MOI;
+}
+
+function demarrerScene(noms) {
+  enPartie = true;
+  partieFinie = false;
+  etatCourant = null;
+  maMain = [];
+  carteChoisie = null;
+  carteDeMaCase = null;
+  cacherPanneau();
+  reinitialiserClics();
+  viderPlateau();
+  construireTable(noms);
+  camObjectifPos = CAM_POS.clone();
+  camObjectifCible = CAM_CIBLE.clone();
+}
+
+// Plateau garni à l'accueil : la table a l'air prête, pas vide.
+function remplirPlateauDeco() {
+  for (let l = 0; l < TAILLE; l++) for (let c = 0; c < TAILLE; c++) poserCarte(l, c);
+}
+
+// =====================================================================
+// BOUCLE DE RENDU
+// =====================================================================
+const clock = new THREE.Clock();
+
+function animer() {
+  requestAnimationFrame(animer);
+  const dt = Math.min(clock.getDelta(), 0.033);
+
+  // --- animations ponctuelles (projectiles, secousses, cartes) ---
+  for (let i = animations.length - 1; i >= 0; i--) {
+    const a = animations[i];
+    a.t += dt;
+    if (a.maj) a.maj(a);
+    if (a.t >= a.duree) {
+      animations.splice(i, 1);
+      if (a.fin) a.fin();
+    }
+  }
+
+  // --- glissade des pions vers leur case ---
+  pions.forEach(p => {
+    if (!p.groupe.visible) return;
+    if (p.groupe.position.distanceTo(p.objectif) > 0.002) {
+      p.groupe.position.lerp(p.objectif, 0.16);
+    }
+  });
+
+  // --- remplissage progressif des verres ---
+  verres.forEach(v => {
+    if (Math.abs(v.niveau - v.objectif) > 0.001) {
+      v.niveau += (v.objectif - v.niveau) * 0.09;
+      dessinerVerre(v);
+    }
+  });
+
+  // --- textes flottants ---
+  for (let i = textesFlottants.length - 1; i >= 0; i--) {
+    const f = textesFlottants[i];
+    f.t += dt;
+    const k = f.t / f.duree;
+    f.sprite.position.y = f.depart.y + k * 0.45;
+    f.sprite.material.opacity = k < 0.1 ? k / 0.1 : Math.max(0, Math.min(1, (1 - k) / 0.45));
+    if (f.t >= f.duree) {
+      scene.remove(f.sprite);
+      textesFlottants.splice(i, 1);
+    }
+  }
+
+  // --- message central ---
+  if (messageSprite.courant) {
+    const m = messageSprite.courant;
+    m.t += dt;
+    const k = m.t, D = m.duree;
+    let opac = 1;
+    if (k < 0.12) opac = k / 0.12;
+    else if (k > D - 0.35) opac = Math.max(0, (D - k) / 0.35);
+    m.sprite.material.opacity = opac;
+    // Taille indexée sur le recul de la caméra : en portrait elle est loin,
+    // sans ça le texte deviendrait illisible sur téléphone.
+    const dist = camera.position.distanceTo(camCibleActuelle);
+    m.sprite.scale.set(dist * 0.30, dist * 0.15, 1);
+    m.sprite.position.set(0, 0.85 + Math.min(k, 0.5) * 0.25, 0);
+    if (k >= D) { scene.remove(m.sprite); messageSprite.courant = null; }
+  }
+
+  // --- caméra ---
+  camera.position.lerp(camObjectifPos, CAM_VITESSE);
+  camCibleActuelle.lerp(camObjectifCible, CAM_VITESSE);
+  camera.lookAt(camCibleActuelle);
+
+  renderer.render(scene, camera);
+}
+
+// =====================================================================
+// DÉMARRAGE
+// =====================================================================
+remplirPlateauDeco();
+
+// Page servie en local : on vise le serveur local par défaut, ça évite
+// d'avoir à basculer le réglage à chaque essai.
+if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) serveurChoisi = 'local';
+
+const salonDansUrl = new URLSearchParams(location.search).get('salon');
+if (salonDansUrl && /^[A-Za-z]{4}$/.test(salonDansUrl)) {
+  panneauRejoindreDirect(salonDansUrl.toUpperCase());
+} else {
+  panneauAccueil();
+}
+animer();
+</script>
+</body>
+</html>
