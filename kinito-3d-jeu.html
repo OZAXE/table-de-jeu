@@ -593,6 +593,51 @@ function creerDecor() {
 creerDecor();
 
 // =====================================================================
+// ANNONCE FLOTTANTE — au-dessus du centre de la table, vue par tous.
+// C'est un sprite : il fait toujours face à la caméra, quelle que soit la
+// place du joueur autour de la table.
+// =====================================================================
+const annonceCanvas = document.createElement('canvas');
+annonceCanvas.width = 1024;
+annonceCanvas.height = 512;
+const annonceTexture = new THREE.CanvasTexture(annonceCanvas);
+annonceTexture.colorSpace = THREE.SRGBColorSpace;
+const annonceSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: annonceTexture, transparent: true, depthTest: false, depthWrite: false,
+}));
+annonceSprite.renderOrder = 999;   // toujours par-dessus la scène
+annonceSprite.visible = false;
+scene.add(annonceSprite);
+
+let annonceAnim = null;
+
+function dessinerAnnonce(gros, petit, couleur) {
+  const ctx = annonceCanvas.getContext('2d');
+  ctx.clearRect(0, 0, 1024, 512);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = '#000';
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 6;
+  ctx.fillStyle = couleur;
+  ctx.font = 'bold 290px Kalam, Georgia, sans-serif';
+  ctx.fillText(gros, 512, petit ? 205 : 256);
+  if (petit) {
+    ctx.fillStyle = '#f2e6cf';
+    ctx.font = 'bold 74px Kalam, Georgia, sans-serif';
+    ctx.fillText(petit, 512, 405);
+  }
+  annonceTexture.needsUpdate = true;
+}
+
+function afficherAnnonce3D(gros, petit, couleur, duree) {
+  dessinerAnnonce(String(gros), petit || '', couleur || '#ffdca0');
+  annonceSprite.visible = true;
+  annonceSprite.material.opacity = 0;
+  annonceAnim = { t: 0, duree: duree || 1.4 };
+}
+
+// =====================================================================
 // ÉTIQUETTES (sprites) — toujours face caméra
 // =====================================================================
 function creerEtiquette(texte) {
@@ -1130,10 +1175,9 @@ const serveur = {
       index_annonceur: e.joueur_courant,
       reacteur: this.noms[ir],
       index_reacteur: ir,
-      // En ligne le serveur ne transmet PAS le score annoncé (l'annonce est
-      // verbale, c'est la "règle d'attention"). Ce champ n'existe que pour
-      // pouvoir jouer seul contre des bots, qui n'ont pas de voix.
-      score_annonce_oral: score,
+      // Le serveur diffuse aussi ce champ : le client 3D l'affiche
+      // brièvement au-dessus de la table, pour tout le monde.
+      score_annonce: score,
     });
     this.prive(ir, {
       type: 'a_toi_de_reagir',
@@ -1316,13 +1360,18 @@ function clientRecevoir(msg) {
       quandLibre(() => lancerLesDes(desDuScore(msg.score), () => panneauAnnonce()));
       break;
 
-    case 'annonce':
-      // En ligne ce champ n'existe pas : l'annonce est verbale.
-      dernierOral = msg.score_annonce_oral === undefined ? null : msg.score_annonce_oral;
+    case 'annonce': {
+      const annonce = msg.score_annonce !== undefined ? msg.score_annonce : msg.score_annonce_oral;
+      dernierOral = annonce === undefined ? null : annonce;
+      if (annonce !== null && annonce !== undefined) {
+        const l = libelleScore(annonce);
+        quandLibre(() => afficherAnnonce3D(l.n, msg.annonceur + (l.sub ? ' · ' + l.sub : ''), '#ffdca0', 1.4));
+      }
       if (msg.index_reacteur !== MOI) {
         elRappel.textContent = `${msg.annonceur} annonce à ${msg.reacteur}…`;
       }
       break;
+    }
 
     case 'a_toi_de_reagir':
       quandLibre(() => panneauReaction(msg.annonceur, msg.premiere_annonce));
@@ -1334,7 +1383,12 @@ function clientRecevoir(msg) {
 
     case 'effet_special': {
       const valeurs = desDuScore(msg.effet === '51' ? 51 : 31);
-      const suite = () => { elMessage.textContent = msg.message; };
+      const suite = () => {
+        elMessage.textContent = msg.message;
+        const couleur = msg.effet === '51' ? '#ff9a5c' : '#7fd4ff';
+        const legende = msg.effet === '51' ? 'tout le monde boit' : 'changement de sens';
+        afficherAnnonce3D(msg.effet, legende, couleur, 2.2);
+      };
       // serveur.py n'indique pas qui a lancé, et il a déjà fait tourner le tour
       // avant de diffuser : sans ce champ on ne peut pas retrouver le lanceur.
       const lanceur = msg.lanceur !== undefined
@@ -2171,6 +2225,22 @@ function animer() {
   } else if (!enLancer) {
     // --- voyage du gobelet vers le joueur courant ---
     gobelet.position.lerp(gobeletObjectif, 0.1);
+  }
+
+  // --- annonce flottante ---
+  if (annonceAnim) {
+    annonceAnim.t += dt;
+    const k = annonceAnim.t, D = annonceAnim.duree;
+    let opac = 1;
+    if (k < 0.12) opac = k / 0.12;
+    else if (k > D - 0.3) opac = Math.max(0, (D - k) / 0.3);
+    annonceSprite.material.opacity = opac;
+    // Taille indexée sur le recul de la caméra : en portrait elle est loin,
+    // sans ça le nombre deviendrait illisible sur téléphone.
+    const dist = camera.position.distanceTo(camCibleActuelle);
+    annonceSprite.scale.set(dist * 0.36, dist * 0.18, 1);
+    annonceSprite.position.set(0, 1.45 + Math.min(k, 0.5) * 0.3, 0);
+    if (k >= D) { annonceSprite.visible = false; annonceAnim = null; }
   }
 
   // --- caméra ---
