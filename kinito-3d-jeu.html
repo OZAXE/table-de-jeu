@@ -2,11 +2,12 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <title>Kinito 3D</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 <style>
   html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; background: #140d08; }
   canvas { display: block; }
@@ -129,15 +130,118 @@
     margin: 2px 0 6px; text-shadow: 0 2px 12px rgba(255,160,60,0.3);
   }
   .liste-attente { color: #d8bd95; font-size: 17px; margin: 10px 0; line-height: 1.6; }
+  .qr {
+    display: block; margin: 10px auto 4px;
+    border-radius: 10px; border: 3px solid #f2e8d5;
+    width: 168px; height: 168px;
+  }
+  @media (max-width: 760px), (pointer: coarse) {
+    .qr { width: 132px; height: 132px; }
+  }
+
+  /* --- Regles --- */
+  #btn-regles {
+    position: absolute; top: 18px; right: 18px;
+    pointer-events: auto;
+    font-size: 15px; padding: 8px 16px;
+    color: #f2e6cf; background: rgba(20,12,7,0.78);
+    border: 1px solid #6b4526; border-radius: 10px;
+    box-shadow: none; cursor: pointer;
+  }
+  #btn-regles:active { transform: translateY(2px); box-shadow: none; }
+
+  #modale-regles {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(0,0,0,0.8);
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 20px; overflow-y: auto; pointer-events: auto;
+  }
+  #modale-regles.cache { display: none; }
+  .modale {
+    background: #1c120a; border: 1px solid #a8681f; border-radius: 14px;
+    padding: 22px; max-width: 460px; width: 100%; margin: auto;
+    color: #d8bd95; line-height: 1.55;
+  }
+  .modale h2 { color: #ffdca0; font-size: 22px; margin: 0 0 12px; text-align: center; }
+  .modale h3 { color: #e8b877; font-size: 17px; margin: 16px 0 6px; }
+  .modale p { margin: 0 0 10px; font-size: 15px; }
+  .modale ul { margin: 0 0 10px 18px; font-size: 15px; padding: 0; }
+  .modale li { margin-bottom: 5px; }
+  .modale table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 14px; }
+  .modale th, .modale td { padding: 5px 6px; text-align: center; border-bottom: 1px solid rgba(224,162,59,0.2); }
+  .modale th { color: #ffdca0; }
+  .modale .accent { color: #e8b877; font-weight: 700; }
 
   .note {
     font-size: 12px; color: #9a7d5c; margin-top: 10px; font-style: italic;
+  }
+
+  /* ================= Téléphones ================= */
+  @media (max-width: 760px), (pointer: coarse) {
+    #overlay { padding: 0; }
+
+    /* La liste des joueurs passe en bandeau horizontal sous le titre,
+       sinon elle recouvre la table sur un écran étroit. */
+    #joueurs {
+      top: 56px; left: 8px; right: 8px;
+      flex-direction: row; flex-wrap: wrap; gap: 4px;
+      justify-content: center;
+    }
+    .joueur { padding: 3px 8px; font-size: 13px; border-radius: 8px; }
+    .joueur .gorgees { margin-left: 6px; font-size: 12px; }
+
+    #bandeau { top: 12px; max-width: calc(100vw - 130px); left: 8px; transform: none; text-align: left; }
+    #message { font-size: 17px; }
+    #rappel { font-size: 12px; }
+
+    #btn-regles { top: 10px; right: 10px; font-size: 13px; padding: 6px 12px; }
+
+    /* Le panneau prend toute la largeur en bas : c'est la zone atteignable
+       au pouce, et ça laisse le haut de l'écran à la table. */
+    #panneau {
+      bottom: 0; left: 0; right: 0; transform: none;
+      width: 100%; max-width: none; min-width: 0;
+      border-radius: 16px 16px 0 0; border-width: 2px 0 0 0;
+      padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+      max-height: 62vh; overflow-y: auto;
+    }
+    #panneau h2 { font-size: 17px; margin-bottom: 6px; }
+    #panneau p { font-size: 14px; margin-bottom: 8px; }
+
+    button { font-size: 16px; padding: 10px 16px; border-radius: 10px; }
+    .rangee { gap: 8px; }
+
+    #grille-scores {
+      grid-template-columns: repeat(auto-fit, minmax(58px, 1fr));
+      gap: 5px; max-height: 34vh;
+    }
+    .score-btn { font-size: 15px; padding: 7px 2px; }
+    .score-btn .sub { font-size: 9px; }
+
+    #mon-score { font-size: 26px; }
+    input[type="text"] { width: 160px; font-size: 16px; }
+    input#code-salon { width: 104px; }
+    .code-salon { font-size: 30px; letter-spacing: 6px; }
+    .note { font-size: 11px; }
+
+    .modale { padding: 16px; }
+    .modale h2 { font-size: 19px; }
+    .modale h3 { font-size: 15px; }
+    .modale p, .modale ul { font-size: 14px; }
+  }
+
+  /* Écrans très bas (paysage sur téléphone) : on comprime encore. */
+  @media (max-height: 460px) {
+    #joueurs { top: 44px; }
+    #panneau { max-height: 74vh; padding: 8px 12px; }
+    #grille-scores { max-height: 38vh; }
   }
 </style>
 </head>
 <body>
 
 <div id="overlay">
+  <button id="btn-regles">Règles &#9432;</button>
   <div id="joueurs"></div>
   <div id="bandeau">
     <div id="message">Kinito 3D</div>
@@ -147,11 +251,64 @@
 </div>
 <div id="vignette"></div>
 
+<div id="modale-regles" class="cache">
+  <div class="modale">
+    <h2>Règles du Kinito</h2>
+    <p>Fais le plus gros score sans te faire prendre à mentir, et sans annoncer moins que le joueur précédent. Celui qui perd boit.</p>
+    <h3>Un tour</h3>
+    <p>Tu lances, tu vois ton score (toi seul). Il se lit gros chiffre en premier : un 4 et un 2 font 42. Tu annonces un score <span class="accent">à voix haute</span>, vrai ou faux. Le joueur suivant, qui doit avoir écouté, réagit.</p>
+    <h3>Les réactions</h3>
+    <ul>
+      <li><span class="accent">Je prends</span> : il te croit et doit faire mieux.</li>
+      <li><span class="accent">Menteur</span> : il t'accuse. On révèle le vrai score.</li>
+      <li><span class="accent">Moins</span> : il t'accuse d'avoir annoncé sous le précédent. Il doit citer le score précédent exact, sinon c'est lui qui boit.</li>
+    </ul>
+    <p>Démasqué menteur, tu bois le maximum entre la pénalité de ton vrai jet et celle de ton annonce, en version doublée.</p>
+    <h3>Hiérarchie (faible vers fort)</h3>
+    <p>31, puis 32, 41, 42, 43, 52, 53, 54, 61 à 65, puis les doubles 11, 22, 33, 44, 55, 66, puis 21 (le plus fort). Égalités permises.</p>
+    <h3>Tableau des gorgées</h3>
+    <table>
+      <tr><th>Score</th><th>Simple</th><th>Menteur</th></tr>
+      <tr><td>32</td><td>3</td><td>6</td></tr>
+      <tr><td>41-43</td><td>4</td><td>8</td></tr>
+      <tr><td>52-54</td><td>5</td><td>10</td></tr>
+      <tr><td>61-65</td><td>6</td><td>12</td></tr>
+      <tr><td>11</td><td>7</td><td>14</td></tr>
+      <tr><td>22</td><td>8</td><td>16</td></tr>
+      <tr><td>33</td><td>9</td><td>18</td></tr>
+      <tr><td>44</td><td>10</td><td>20</td></tr>
+      <tr><td>55</td><td>11</td><td>22</td></tr>
+      <tr><td>66</td><td>12</td><td>24</td></tr>
+    </table>
+    <h3>Difficulté</h3>
+    <p>Le créateur du salon choisit avant de lancer : <span class="accent">Facile</span> divise les gorgées par deux, <span class="accent">Normal</span> les réduit d'un quart, <span class="accent">Difficile</span> applique le tableau tel quel. Le cul sec du 21 reste un cul sec dans tous les cas.</p>
+    <h3>Scores spéciaux</h3>
+    <ul>
+      <li><span class="accent">21</span> : le plus fort. Sanction : cul sec.</li>
+      <li><span class="accent">51</span> : annule tout, on repart de zéro, tout le monde boit 1 gorgée.</li>
+      <li><span class="accent">31</span> : change le sens de rotation et relance les annonces.</li>
+    </ul>
+    <p>Ni 31 ni 51 ne peuvent être annoncés : ils se résolvent dès le lancer.</p>
+    <h3>Assumer avoir perdu</h3>
+    <p>Si tu as fait moins que le score à battre, avoue : tu bois la colonne simple du score à battre, sans double peine.</p>
+    <button id="fermer-regles">Fermer</button>
+  </div>
+</div>
+
 <script type="importmap">
 { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
 </script>
 <script type="module">
 import * as THREE from 'three';
+
+const elModaleRegles = document.getElementById('modale-regles');
+document.getElementById('btn-regles').addEventListener('click',
+  () => elModaleRegles.classList.remove('cache'));
+document.getElementById('fermer-regles').addEventListener('click',
+  () => elModaleRegles.classList.add('cache'));
+elModaleRegles.addEventListener('click', e => {
+  if (e.target === elModaleRegles) elModaleRegles.classList.add('cache');
+});
 
 // =====================================================================
 // CONSTANTES DE LA SCÈNE
@@ -190,13 +347,40 @@ scene.background = new THREE.Color(0x140d08);
 // garder la table isolée dans son halo de lumière.
 scene.fog = new THREE.FogExp2(0x140d08, 0.075);
 
-const CAM_TABLE_POS = new THREE.Vector3(0, 2.9, 5.0);
+// Distance calculee pour que la table tienne dans le champ quel que soit le
+// format : en portrait le champ horizontal est etroit, il faut reculer.
 const CAM_TABLE_CIBLE = new THREE.Vector3(0, 0.5, 0);
+const LARGEUR_VUE = 3.1;   // demi-largeur a cadrer (table + avatars + marge)
+const HAUTEUR_VUE = 2.1;
+const CAM_TABLE_POS = new THREE.Vector3(0, 2.9, 5.0);
+
+function distanceCadrage(cam) {
+  const vHalf = THREE.MathUtils.degToRad(cam.fov) / 2;
+  const hHalf = Math.atan(Math.tan(vHalf) * cam.aspect);
+  return Math.max(LARGEUR_VUE / Math.tan(hHalf), HAUTEUR_VUE / Math.tan(vHalf), 4.2);
+}
+
+const FOG_DENSITE_MAX = 0.075;   // reglage d'origine, pour un ecran large
+
+function majCadrageTable(cam) {
+  const d = distanceCadrage(cam);
+  // On garde la meme inclinaison (legere plongee) en s'eloignant.
+  const dir = new THREE.Vector3(0, 0.46, 0.89).normalize();
+  CAM_TABLE_POS.copy(CAM_TABLE_CIBLE).addScaledVector(dir, d);
+
+  // En portrait la camera doit beaucoup reculer : a densite constante, le
+  // brouillard mangerait la table (65 % a 13 unites). On l'allege pour que
+  // la table reste lisible, sans rien changer sur un ecran large.
+  if (scene.fog) scene.fog.density = Math.min(FOG_DENSITE_MAX, 0.536 / d);
+}
+let regardeDedans = false;   // vue plongeante dans le gobelet ?
 let camObjectifPos = CAM_TABLE_POS.clone();
 let camObjectifCible = CAM_TABLE_CIBLE.clone();
 const camCibleActuelle = CAM_TABLE_CIBLE.clone();
 
 const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.1, 40);
+majCadrageTable(camera);
+camObjectifPos = CAM_TABLE_POS.clone();
 camera.position.copy(CAM_TABLE_POS);
 camera.lookAt(camCibleActuelle);
 
@@ -210,11 +394,19 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.35;
 document.body.appendChild(renderer.domElement);
 
-window.addEventListener('resize', () => {
+function redimensionner() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-});
+  majCadrageTable(camera);
+  // Si on regarde la table, on suit le nouveau cadrage tout de suite.
+  if (!regardeDedans) {
+    camObjectifPos = CAM_TABLE_POS.clone();
+    camObjectifCible = CAM_TABLE_CIBLE.clone();
+  }
+}
+window.addEventListener('resize', redimensionner);
+window.addEventListener('orientationchange', redimensionner);
 
 // Une DirectionalLight (irradiance) évite les surprises d'échelle des lumières
 // ponctuelles en candela des versions récentes de three.js.
@@ -784,6 +976,16 @@ const SCORE_CHANGE_SENS = 31;
 // 31 et 51 se resolvent des le lancer : on ne peut pas les annoncer.
 // 31 reste dans ECHELLE car il sert de plancher au classement.
 const SCORES_ANNONCABLES = ECHELLE.filter(s => s !== 31);
+
+// Difficulte : multiplicateur applique aux gorgees en fin de manche.
+const DIFFICULTES = { facile: 0.5, normal: 0.75, difficile: 1 };
+const DIFFICULTE_DEFAUT = 'difficile';
+
+function appliquerDifficulte(etat, gorgees) {
+  if (gorgees === null || gorgees <= 0) return gorgees;  // null = cul sec
+  const mult = etat.multiplicateur === undefined ? 1 : etat.multiplicateur;
+  return Math.max(1, Math.floor(gorgees * mult + 0.5));
+}
 const SCORE_ANNULE = 51;
 
 const rang = s => ECHELLE.indexOf(s);
@@ -812,9 +1014,12 @@ const serveur = {
   noms: [],
   etat: null,
 
-  demarrer(noms) {
+  demarrer(noms, difficulte) {
     this.noms = noms;
+    const d = DIFFICULTES[difficulte] === undefined ? DIFFICULTE_DEFAUT : difficulte;
     this.etat = {
+      difficulte: d,
+      multiplicateur: DIFFICULTES[d],
       nb_joueurs: noms.length,
       phase: 'lancer',
       joueur_courant: 0,
@@ -852,6 +1057,7 @@ const serveur = {
       phase: e.phase,
       message: e.message || '',
       partis: e.partis.slice(),
+      difficulte: e.difficulte,
     };
   },
 
@@ -993,6 +1199,7 @@ const serveur = {
 
   finManche(indexPerdant, menteur, message, gorgees, scoreReel, scoreBase) {
     const e = this.etat;
+    gorgees = appliquerDifficulte(e, gorgees);
     e.joueur_courant = this.joueurSuivant(indexPerdant);
     e.phase = 'resultat';
     this.diffuser({
@@ -1181,7 +1388,8 @@ function appliquerEtat(etat) {
   if (etat.message) elMessage.textContent = etat.message;
   const sensTxt = etat.sens === 1 ? '↻ horaire' : '↺ anti-horaire';
   const prec = etat.premiere_annonce ? 'aucune annonce à battre' : `à battre : ${etat.annonce_precedente}`;
-  elRappel.textContent = `${sensTxt} · ${prec}`;
+  const diff = etat.difficulte ? ` · ${etat.difficulte}` : '';
+  elRappel.textContent = `${sensTxt} · ${prec}${diff}`;
 
   if (etat.phase !== 'lancer') return;
 
@@ -1405,6 +1613,7 @@ function panneauResultat(msg) {
 // Le panneau d'annonce est réduit à un simple bouton de retour : sinon la
 // grille des scores couvre justement la vue qu'on vient chercher.
 function regarderLesDes() {
+  regardeDedans = true;
   const c = sieges[MOI].posGobelet;
   camObjectifPos = new THREE.Vector3(c.x, GLASS_BOTTOM_Y + GLASS_HEIGHT + 0.55, c.z + 0.22);
   camObjectifCible = new THREE.Vector3(c.x, FLOOR_Y, c.z);
@@ -1420,6 +1629,7 @@ function regarderLesDes() {
 }
 
 function vueTable() {
+  regardeDedans = false;
   camObjectifPos = CAM_TABLE_POS.clone();
   camObjectifCible = CAM_TABLE_CIBLE.clone();
 }
@@ -1521,6 +1731,32 @@ let estCreateur = false;
 let joueursSalon = [];
 let enPartie = false;
 let monJeton = null;
+let difficulteChoisie = 'normal';
+
+const LIBELLES_DIFFICULTE = {
+  facile: 'Facile (gorgées ÷ 2)',
+  normal: 'Normal (gorgées −25 %)',
+  difficile: 'Difficile (tableau complet)',
+};
+
+function rangeeDifficulte() {
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  r.style.marginTop = '10px';
+  Object.keys(LIBELLES_DIFFICULTE).forEach(cle => {
+    const b = bouton(LIBELLES_DIFFICULTE[cle].split(' (')[0],
+      cle === difficulteChoisie ? '' : 'sombre', () => {
+        difficulteChoisie = cle;
+        if (enPartie) return;
+        if (mode === 'ligne') panneauAttente(); else panneauSolo();
+      });
+    b.style.fontSize = '15px';
+    b.style.padding = '8px 16px';
+    b.title = LIBELLES_DIFFICULTE[cle];
+    r.appendChild(b);
+  });
+  return r;
+}
 
 // Le jeton permet de retrouver sa place apres une coupure ou un rechargement.
 // localStorage peut lever (navigation privee, site data bloque) : tout est garde.
@@ -1589,6 +1825,11 @@ function panneauSolo() {
     r.appendChild(bouton(String(n), n === 4 ? '' : 'sombre', () => demarrerSolo(n)));
   });
   p.appendChild(r);
+  const lbl = document.createElement('p');
+  lbl.textContent = 'Difficulté : ' + LIBELLES_DIFFICULTE[difficulteChoisie];
+  lbl.style.margin = '14px 0 0';
+  p.appendChild(lbl);
+  p.appendChild(rangeeDifficulte());
   const r2 = document.createElement('div');
   r2.className = 'rangee';
   r2.style.marginTop = '10px';
@@ -1602,10 +1843,61 @@ function demarrerSolo(nb) {
   oublierSession();
   MOI = 0;
   cacherPanneau();
-  serveur.demarrer(['Toi'].concat(NOMS_BOTS.slice(0, nb - 1)));
+  serveur.demarrer(['Toi'].concat(NOMS_BOTS.slice(0, nb - 1)), difficulteChoisie);
 }
 
 // --- En ligne : meme protocole que le client 2D ---
+function panneauRejoindreDirect(code) {
+  codeSalon = code;
+  elMessage.textContent = 'Kinito 3D';
+  elRappel.textContent = 'Salon ' + code;
+  const p = ouvrirPanneau('Rejoindre le salon');
+
+  const c = document.createElement('div');
+  c.className = 'code-salon';
+  c.textContent = code;
+  p.appendChild(c);
+
+  const l1 = document.createElement('div');
+  l1.className = 'rangee';
+  const pseudo = champTexte('pseudo', 'Ton prenom', 16);
+  pseudo.value = monNom;
+  l1.appendChild(pseudo);
+  p.appendChild(l1);
+
+  const l2 = document.createElement('div');
+  l2.className = 'rangee';
+  l2.style.marginTop = '10px';
+  l2.appendChild(bouton('Rejoindre', '', async () => {
+    if (!lireNom()) return;
+    afficherErreur('Connexion au serveur...');
+    try {
+      const rep = await fetch(SERVEURS[serveurChoisi].http + '/salon/' + codeSalon);
+      if (!(await rep.json()).existe) { afficherErreur('Ce salon n’existe plus'); return; }
+      estCreateur = false;
+      seConnecter();
+    } catch (e) {
+      afficherErreur('Serveur injoignable.');
+    }
+  }));
+  p.appendChild(l2);
+
+  const l3 = document.createElement('div');
+  l3.className = 'rangee';
+  l3.style.marginTop = '12px';
+  const bs = bouton('', 'sombre', () => {
+    serveurChoisi = serveurChoisi === 'render' ? 'local' : 'render';
+    majLibelleServeur(bs);
+  });
+  bs.style.fontSize = '14px'; bs.style.padding = '7px 14px';
+  majLibelleServeur(bs);
+  l3.appendChild(bs);
+  const br = bouton('Autre salon', 'sombre', panneauAccueil);
+  br.style.fontSize = '14px'; br.style.padding = '7px 14px';
+  l3.appendChild(br);
+  p.appendChild(l3);
+}
+
 function panneauEnLigne() {
   const p = ouvrirPanneau('Jouer en ligne');
 
@@ -1719,6 +2011,18 @@ function panneauReconnexion() {
   p.appendChild(r);
 }
 
+// Adresse du site publie, utilisee seulement comme repli : quand la page est
+// ouverte en fichier local (double-clic), un QR vers file:// ne menerait
+// nulle part sur le telephone de celui qui scanne.
+const SITE_PUBLIE = 'https://ozaxe.github.io/table-de-jeu/kinito-3d-jeu.html';
+
+// Lien d'invitation : la meme page, avec le code du salon deja rempli.
+function lienSalon(code) {
+  const fichierLocal = location.protocol === 'file:';
+  const base = fichierLocal ? SITE_PUBLIE : location.origin + location.pathname;
+  return { url: base + '?salon=' + encodeURIComponent(code), repli: fichierLocal };
+}
+
 function panneauAttente() {
   const p = ouvrirPanneau('Salon');
   const code = document.createElement('div');
@@ -1730,6 +2034,40 @@ function panneauAttente() {
   aide.textContent = 'Donne ce code aux autres pour qu\u2019ils rejoignent.';
   p.appendChild(aide);
 
+  const lien = lienSalon(codeSalon);
+  if (typeof QRious !== 'undefined') {
+    const cv = document.createElement('canvas');
+    cv.className = 'qr';
+    try {
+      new QRious({ element: cv, value: lien.url, size: 340, level: 'M',
+                   background: '#f2e8d5', foreground: '#241408' });
+      p.appendChild(cv);
+      const aide2 = document.createElement('p');
+      aide2.style.fontSize = '14px';
+      aide2.textContent = lien.repli
+        ? 'Ce QR mene au site en ligne : la page est ouverte en fichier local, il n'+String.fromCharCode(39)+'y a pas d'+String.fromCharCode(39)+'adresse a partager.'
+        : 'Ou fais scanner ce code : ils n'+String.fromCharCode(39)+'auront que leur prenom a entrer.';
+      p.appendChild(aide2);
+      if (lien.repli && serveurChoisi === 'local') {
+        const garde = document.createElement('p');
+        garde.style.fontSize = '13px';
+        garde.style.color = '#e0a05a';
+        garde.textContent = 'Attention : tu joues sur le serveur local, mais ceux qui scannent arriveront sur le serveur en ligne.';
+        p.appendChild(garde);
+      }
+      const rl = document.createElement('div');
+      rl.className = 'rangee';
+      const bl = bouton('Copier le lien', 'sombre', async () => {
+        try { await navigator.clipboard.writeText(lien.url); afficherErreur('Lien copie'); }
+        catch (e) { afficherErreur(lien.url); }
+      });
+      bl.style.fontSize = '14px';
+      bl.style.padding = '7px 14px';
+      rl.appendChild(bl);
+      p.appendChild(rl);
+    } catch (e) { /* pas de QR : le code a 4 lettres suffit */ }
+  }
+
   const liste = document.createElement('div');
   liste.className = 'liste-attente';
   liste.textContent = joueursSalon.length
@@ -1737,10 +2075,20 @@ function panneauAttente() {
     : 'En attente de joueurs...';
   p.appendChild(liste);
 
+  if (estCreateur) {
+    const lbl = document.createElement('p');
+    lbl.textContent = 'Difficulté : ' + LIBELLES_DIFFICULTE[difficulteChoisie];
+    lbl.style.margin = '6px 0 0';
+    p.appendChild(lbl);
+    p.appendChild(rangeeDifficulte());
+  }
+
   const r = document.createElement('div');
   r.className = 'rangee';
+  r.style.marginTop = '12px';
   if (estCreateur) {
-    const b = bouton('Demarrer la partie', '', () => envoyerIntention(MOI, { type: 'demarrer' }));
+    const b = bouton('Demarrer la partie', '', () =>
+      envoyerIntention(MOI, { type: 'demarrer', difficulte: difficulteChoisie }));
     b.disabled = joueursSalon.length < 2;
     r.appendChild(b);
   } else {
@@ -1835,7 +2183,17 @@ function animer() {
 
 creerSieges(['Toi', 'Fury', 'Romanoff', 'Barton']);
 placerGobelet(0, true);
-panneauAccueil();
+
+// Page servie en local : on vise le serveur local par defaut, ca evite
+// d'avoir a basculer le reglage a chaque essai.
+if (/^(localhost|127.0.0.1|[::1])$/.test(location.hostname)) serveurChoisi = 'local';
+
+const salonDansUrl = new URLSearchParams(location.search).get('salon');
+if (salonDansUrl && /^[A-Za-z]{4}$/.test(salonDansUrl)) {
+  panneauRejoindreDirect(salonDansUrl.toUpperCase());
+} else {
+  panneauAccueil();
+}
 animer();
 </script>
 </body>
