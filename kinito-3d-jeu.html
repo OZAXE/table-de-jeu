@@ -291,7 +291,18 @@
     <p>Ni 31 ni 51 ne peuvent être annoncés : ils se résolvent dès le lancer.</p>
     <h3>Assumer avoir perdu</h3>
     <p>Si tu as fait moins que le score à battre, avoue : tu bois la colonne simple du score à battre, sans double peine.</p>
-    <button id="fermer-regles">Fermer</button>
+    <!-- Rempli a l'ouverture de la modale : partie en ligne seulement. -->
+    <div id="bloc-qr-regles" class="cache">
+      <h3>Inviter quelqu'un</h3>
+      <p>Salon <span class="accent" id="qr-code-salon">----</span> — fais scanner ce code, le prénom suffira.</p>
+      <canvas id="qr-regles" class="qr"></canvas>
+      <div id="qr-note-regles" class="note"></div>
+      <div class="rangee" style="margin-top:8px;">
+        <button id="copier-lien-regles" class="sombre">Copier le lien</button>
+      </div>
+    </div>
+
+    <button id="fermer-regles" style="margin-top:14px;">Fermer</button>
   </div>
 </div>
 
@@ -302,8 +313,10 @@
 import * as THREE from 'three';
 
 const elModaleRegles = document.getElementById('modale-regles');
-document.getElementById('btn-regles').addEventListener('click',
-  () => elModaleRegles.classList.remove('cache'));
+document.getElementById('btn-regles').addEventListener('click', () => {
+  majQRModale();
+  elModaleRegles.classList.remove('cache');
+});
 document.getElementById('fermer-regles').addEventListener('click',
   () => elModaleRegles.classList.add('cache'));
 elModaleRegles.addEventListener('click', e => {
@@ -2039,6 +2052,17 @@ async function rejoindreSalon() {
 }
 
 function seConnecter() {
+  // Si on a déjà un jeton pour CE salon, on le renvoie, quel que soit le
+  // chemin emprunté pour revenir (bouton « Reprendre », code retapé, lien
+  // ?salon=). Sans lui le serveur ne nous reconnaît pas et nous AJOUTE en
+  // tant que nouveau joueur : on se retrouve en double dans la partie qu'on
+  // vient de quitter, l'ancienne place restant occupée par un fantôme.
+  // C'était le cas tant que seul le bouton d'accueil passait le jeton.
+  if (!monJeton) {
+    const s = lireSession();
+    if (s && s.code === codeSalon && s.jeton) monJeton = s.jeton;
+  }
+
   let url = SERVEURS[serveurChoisi].ws + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom);
   if (monJeton) url += '?jeton=' + encodeURIComponent(monJeton);
   ws = new WebSocket(url);
@@ -2075,6 +2099,58 @@ function lienSalon(code) {
   const fichierLocal = location.protocol === 'file:';
   const base = fichierLocal ? SITE_PUBLIE : location.origin + location.pathname;
   return { url: base + '?salon=' + encodeURIComponent(code), repli: fichierLocal };
+}
+
+// Le QR du salon reste joignable une fois la partie lancée, sous les règles :
+// le panneau du bas est pris par le jeu, et c'est justement en cours de
+// partie qu'on a besoin de renvoyer le lien à un retardataire, ou à
+// quelqu'un qui s'est fait couper et n'a plus l'adresse.
+function majQRModale() {
+  const bloc = document.getElementById('bloc-qr-regles');
+  if (!bloc) return;
+
+  // En solo il n'y a pas de salon à partager.
+  if (mode !== 'ligne' || !codeSalon) { bloc.className = 'cache'; return; }
+  bloc.className = '';
+  document.getElementById('qr-code-salon').textContent = codeSalon;
+
+  const lien = lienSalon(codeSalon);
+  const cv = document.getElementById('qr-regles');
+  const note = document.getElementById('qr-note-regles');
+
+  cv.style.display = 'none';
+  if (typeof QRious !== 'undefined') {
+    try {
+      new QRious({ element: cv, value: lien.url, size: 340, level: 'M',
+                   background: '#f2e8d5', foreground: '#241408' });
+      cv.style.display = '';
+    } catch (e) { /* pas de QR : le code à 4 lettres suffit */ }
+  }
+
+  const avertissements = [];
+  if (lien.repli) {
+    avertissements.push('Ce QR mène au site en ligne : la page est ouverte en fichier local, il n’y a pas d’adresse à partager.');
+    if (serveurChoisi === 'local') {
+      avertissements.push('Tu joues sur le serveur local : ceux qui scannent arriveront sur le serveur en ligne.');
+    }
+  }
+  // Contrairement au BeerBattle, le Kinito accepte un arrivant en cours de
+  // route : le serveur agrandit la table et il joue au tour suivant.
+  if (enPartie) {
+    avertissements.push('Partie en cours : celui qui rejoint maintenant entre directement dans la table.');
+  }
+  note.textContent = avertissements.join(' ');
+
+  // onclick plutôt qu'addEventListener : la modale peut être rouverte dix
+  // fois, on ne veut pas empiler dix gestionnaires sur le même bouton.
+  document.getElementById('copier-lien-regles').onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(lien.url);
+      note.textContent = 'Lien copié : ' + lien.url;
+    } catch (e) {
+      note.textContent = lien.url;
+    }
+  };
 }
 
 function panneauAttente() {
