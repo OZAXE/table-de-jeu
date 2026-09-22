@@ -1,0 +1,1842 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kinito 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; background: #140d08; }
+  canvas { display: block; }
+
+  #overlay {
+    position: fixed; inset: 0; pointer-events: none;
+    font-family: 'Kalam', system-ui, sans-serif;
+  }
+  #vignette {
+    position: fixed; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(10,6,3,0.75) 100%);
+  }
+
+  /* --- Liste des joueurs --- */
+  #joueurs {
+    position: absolute; top: 18px; left: 18px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .joueur {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(20,12,7,0.72);
+    border: 1px solid #5a3c22;
+    border-radius: 10px;
+    padding: 6px 12px;
+    color: #d8bd95; font-size: 16px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .joueur.actif { border-color: #ffc46b; color: #ffdca0; box-shadow: 0 0 14px rgba(255,170,80,0.25); }
+  .joueur .pastille { width: 12px; height: 12px; border-radius: 50%; flex: 0 0 auto; }
+  .joueur .gorgees { margin-left: auto; opacity: 0.75; font-size: 14px; }
+
+  /* --- Bandeau du haut --- */
+  #bandeau {
+    position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+    text-align: center; max-width: 60vw;
+  }
+  #message {
+    color: #f2d9b0; font-size: 21px; text-shadow: 0 2px 8px rgba(0,0,0,0.75);
+  }
+  #rappel {
+    color: #c9a876; font-size: 15px; margin-top: 4px; opacity: 0.9;
+  }
+
+  /* --- Panneau du bas --- */
+  #panneau {
+    position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+    pointer-events: auto;
+    background: rgba(20,12,7,0.85);
+    border: 2px solid #6b4526;
+    border-radius: 16px;
+    padding: 16px 20px;
+    min-width: 320px; max-width: min(760px, 92vw);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+    text-align: center;
+  }
+  #panneau.cache { display: none; }
+  #panneau h2 { margin: 0 0 10px; font-size: 20px; color: #ffdca0; font-weight: 700; }
+  #panneau p { margin: 0 0 12px; color: #d8bd95; font-size: 16px; }
+
+  .rangee { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  button {
+    pointer-events: auto;
+    font-family: 'Kalam', system-ui, sans-serif;
+    font-weight: 700; font-size: 18px;
+    color: #2a1608;
+    background: linear-gradient(180deg, #ffcf7a, #e8a648);
+    border: 2px solid #a8681f; border-radius: 12px;
+    padding: 11px 24px; cursor: pointer;
+    box-shadow: 0 4px 0 #8a5518, 0 8px 16px rgba(0,0,0,0.4);
+    transition: transform 0.08s, box-shadow 0.08s, filter 0.2s;
+  }
+  button:active { transform: translateY(3px); box-shadow: 0 1px 0 #8a5518, 0 3px 8px rgba(0,0,0,0.35); }
+  button:disabled { filter: grayscale(0.55) brightness(0.7); cursor: default; }
+  button.sombre {
+    color: #f2e6cf; background: linear-gradient(180deg, #4a3221, #2f2013);
+    border-color: #7a5230; box-shadow: 0 4px 0 #1c130b, 0 8px 16px rgba(0,0,0,0.4);
+  }
+  button.sombre:active { box-shadow: 0 1px 0 #1c130b, 0 3px 8px rgba(0,0,0,0.35); }
+  button.danger {
+    color: #ffeede; background: linear-gradient(180deg, #c2452c, #8e2d1c);
+    border-color: #7a2414; box-shadow: 0 4px 0 #571a0f, 0 8px 16px rgba(0,0,0,0.4);
+  }
+  button.danger:active { box-shadow: 0 1px 0 #571a0f, 0 3px 8px rgba(0,0,0,0.35); }
+
+  /* --- Grille des annonces --- */
+  #grille-scores {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
+    gap: 7px; margin: 12px 0; max-height: 40vh; overflow-y: auto;
+  }
+  .score-btn {
+    font-size: 17px; padding: 9px 4px; border-radius: 10px;
+    box-shadow: 0 3px 0 #8a5518;
+  }
+  .score-btn .sub { display: block; font-size: 11px; opacity: 0.72; font-weight: 400; }
+  .score-btn.vrai { outline: 3px solid #7ad07a; outline-offset: 1px; }
+  .score-btn.risque { filter: brightness(0.62) saturate(0.5); }
+
+  #mon-score {
+    font-size: 30px; color: #ffdca0; margin: 4px 0 2px;
+    text-shadow: 0 2px 10px rgba(255,160,60,0.3);
+  }
+  #mon-score .petit { display: block; font-size: 14px; color: #c9a876; }
+
+  #regarder-zone { margin-top: 12px; }
+
+  input[type="text"] {
+    pointer-events: auto;
+    font-family: 'Kalam', system-ui, sans-serif;
+    font-size: 18px; text-align: center;
+    padding: 10px 14px; width: 210px; margin: 0 4px;
+    color: #f2e6cf; background: rgba(10,6,3,0.6);
+    border: 2px solid #6b4526; border-radius: 10px;
+  }
+  input[type="text"]::placeholder { color: #8a6c4a; }
+  input#code-salon { width: 120px; letter-spacing: 6px; text-transform: uppercase; }
+
+  .code-salon {
+    font-size: 38px; color: #ffdca0; letter-spacing: 8px;
+    margin: 2px 0 6px; text-shadow: 0 2px 12px rgba(255,160,60,0.3);
+  }
+  .liste-attente { color: #d8bd95; font-size: 17px; margin: 10px 0; line-height: 1.6; }
+
+  .note {
+    font-size: 12px; color: #9a7d5c; margin-top: 10px; font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<div id="overlay">
+  <div id="joueurs"></div>
+  <div id="bandeau">
+    <div id="message">Kinito 3D</div>
+    <div id="rappel"></div>
+  </div>
+  <div id="panneau"></div>
+</div>
+<div id="vignette"></div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+// =====================================================================
+// CONSTANTES DE LA SCÈNE
+// =====================================================================
+const GLASS_OUTER_R = 0.30;
+const GLASS_WALL = 0.02;
+const GLASS_INNER_R = GLASS_OUTER_R - GLASS_WALL;
+const GLASS_HEIGHT = 0.75;
+const GLASS_BOTTOM_Y = 0;
+const FLOOR_Y = GLASS_BOTTOM_Y + 0.015;
+
+const DICE_EDGE = 0.14;
+const DICE_RADIUS = DICE_EDGE * 0.72;
+
+const GRAVITY = -16;
+const WALL_REST = 0.35;
+const FLOOR_REST = 0.3;
+const FLOOR_FRICTION = 0.65;
+const ANG_DAMPING = 0.965;
+const ROLL_DURATION = 1.5;
+const RESULT_DELAY = 0.15;
+
+const R_TABLE = 2.0;    // rayon du plateau
+const R_GOBELET = 1.32; // où se pose le gobelet à dés devant chaque joueur
+const R_CHOPE = 1.66;   // chope de bière de chaque joueur
+const R_AVATAR = 2.42;  // avatars, juste derrière le bord de table
+
+const CAM_VITESSE = 0.12;
+
+// =====================================================================
+// SCÈNE / CAMÉRA / RENDU
+// =====================================================================
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x140d08);
+// Assez léger pour que le décor du fond reste lisible, assez dense pour
+// garder la table isolée dans son halo de lumière.
+scene.fog = new THREE.FogExp2(0x140d08, 0.075);
+
+const CAM_TABLE_POS = new THREE.Vector3(0, 2.9, 5.0);
+const CAM_TABLE_CIBLE = new THREE.Vector3(0, 0.5, 0);
+let camObjectifPos = CAM_TABLE_POS.clone();
+let camObjectifCible = CAM_TABLE_CIBLE.clone();
+const camCibleActuelle = CAM_TABLE_CIBLE.clone();
+
+const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.1, 40);
+camera.position.copy(CAM_TABLE_POS);
+camera.lookAt(camCibleActuelle);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.35;
+document.body.appendChild(renderer.domElement);
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// Une DirectionalLight (irradiance) évite les surprises d'échelle des lumières
+// ponctuelles en candela des versions récentes de three.js.
+scene.add(new THREE.AmbientLight(0x3a2818, 1.0));
+const keyLight = new THREE.DirectionalLight(0xffb066, 3.4);
+keyLight.position.set(0.8, 3.4, 1.2);
+keyLight.target.position.set(0, 0.3, 0);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.set(2048, 2048);
+keyLight.shadow.camera.left = -3.4;
+keyLight.shadow.camera.right = 3.4;
+keyLight.shadow.camera.top = 3.4;
+keyLight.shadow.camera.bottom = -3.4;
+keyLight.shadow.camera.near = 0.5;
+keyLight.shadow.camera.far = 9;
+scene.add(keyLight, keyLight.target);
+
+// =====================================================================
+// TABLE
+// =====================================================================
+function creerTextureBois() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#5b3a22';
+  ctx.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 34; i++) {
+    ctx.strokeStyle = `rgba(0,0,0,${0.05 + Math.random() * 0.08})`;
+    ctx.lineWidth = 1 + Math.random() * 2;
+    ctx.beginPath();
+    const y = Math.random() * 256;
+    ctx.moveTo(0, y);
+    ctx.bezierCurveTo(80, y + (Math.random() - 0.5) * 20, 180, y + (Math.random() - 0.5) * 20, 256, y + (Math.random() - 0.5) * 10);
+    ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(3, 3);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+const table = new THREE.Mesh(
+  new THREE.CylinderGeometry(R_TABLE, R_TABLE * 0.97, 0.26, 28),
+  new THREE.MeshStandardMaterial({ map: creerTextureBois(), roughness: 0.85, metalness: 0.05, flatShading: true })
+);
+table.position.y = -0.13;
+table.receiveShadow = true;
+scene.add(table);
+
+const rebord = new THREE.Mesh(
+  new THREE.TorusGeometry(R_TABLE, 0.05, 6, 32),
+  new THREE.MeshStandardMaterial({ color: 0x42281a, roughness: 0.8, flatShading: true })
+);
+rebord.rotation.x = Math.PI / 2;
+rebord.position.y = 0.005;
+scene.add(rebord);
+
+// =====================================================================
+// DÉCOR DU BAR (arrière-plan, derrière les joueurs)
+// Purement visuel : rien ici ne projette d'ombre ni n'ajoute de lumière,
+// l'éclairage reste la seule source chaude au-dessus de la table.
+// =====================================================================
+const SOL_Y = -1.2;
+
+function boite(l, h, p, couleur, x, y, z, rugosite) {
+  const m = new THREE.Mesh(
+    new THREE.BoxGeometry(l, h, p),
+    new THREE.MeshStandardMaterial({ color: couleur, roughness: rugosite === undefined ? 0.85 : rugosite, flatShading: true })
+  );
+  m.position.set(x, y, z);
+  return m;
+}
+
+function creerBouteilleDeco(x, y, z, teinte, echelle) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: teinte, roughness: 0.3, metalness: 0.15, flatShading: true });
+  const corps = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.085, 0.34, 6), mat);
+  corps.position.y = 0.17;
+  const col = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.05, 0.16, 6), mat);
+  col.position.y = 0.41;
+  g.add(corps, col);
+  g.position.set(x, y, z);
+  g.scale.setScalar(echelle || 1);
+  return g;
+}
+
+function creerDecor() {
+  const decor = new THREE.Group();
+
+  // Sol et mur du fond
+  const sol = new THREE.Mesh(
+    new THREE.PlaneGeometry(40, 40),
+    new THREE.MeshStandardMaterial({ color: 0x2b1a11, roughness: 0.95, flatShading: true })
+  );
+  sol.rotation.x = -Math.PI / 2;
+  sol.position.y = SOL_Y;
+  decor.add(sol);
+
+  decor.add(boite(26, 6.5, 0.4, 0x3a2418, 0, SOL_Y + 3.25, -8.2));
+
+  // Comptoir du bar
+  decor.add(boite(9.5, 1.7, 0.9, 0x4a2f1c, 0, SOL_Y + 0.85, -6.3));
+  decor.add(boite(9.9, 0.14, 1.1, 0x6f4728, 0, SOL_Y + 1.77, -6.3, 0.55));
+  // Repose-pieds en laiton
+  const barre = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.05, 0.05, 9.5, 8),
+    new THREE.MeshStandardMaterial({ color: 0x8a6a2a, roughness: 0.35, metalness: 0.6, flatShading: true })
+  );
+  barre.rotation.z = Math.PI / 2;
+  barre.position.set(0, SOL_Y + 0.28, -5.8);
+  decor.add(barre);
+
+  // Étagères à bouteilles contre le mur
+  const TEINTES = [0x2e5c3a, 0x5c3a1e, 0x7a2a2a, 0x2a4a6a, 0x6a5a2a, 0x4a2a5a];
+  [1.15, 1.95, 2.75].forEach((hauteur, rangee) => {
+    const y = SOL_Y + hauteur;
+    decor.add(boite(9.5, 0.09, 0.45, 0x5a3a22, 0, y, -7.85));
+    for (let i = 0; i < 13; i++) {
+      const x = -4.3 + i * 0.72 + (rangee % 2) * 0.22;
+      decor.add(creerBouteilleDeco(x, y + 0.045, -7.85, TEINTES[(i + rangee) % TEINTES.length], 0.85 + Math.random() * 0.3));
+    }
+  });
+
+  // Bandeau lumineux derrière les étagères : un simple matériau émissif,
+  // pas une vraie lumière, pour ne pas complexifier l'éclairage.
+  const bandeau = boite(9.5, 0.06, 0.05, 0x000000, 0, SOL_Y + 3.35, -7.7);
+  bandeau.material.emissive = new THREE.Color(0xff9a3c);
+  bandeau.material.emissiveIntensity = 1.4;
+  decor.add(bandeau);
+
+  // Tabourets de bar
+  [-3.1, -1.6, 1.6, 3.1].forEach(x => {
+    const pied = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.06, 0.09, 1.05, 7),
+      new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.6, metalness: 0.3, flatShading: true })
+    );
+    pied.position.set(x, SOL_Y + 0.52, -5.2);
+    const assise = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.26, 0.26, 0.11, 10),
+      new THREE.MeshStandardMaterial({ color: 0x6b3a26, roughness: 0.8, flatShading: true })
+    );
+    assise.position.set(x, SOL_Y + 1.09, -5.2);
+    decor.add(pied, assise);
+  });
+
+  // Quelques tonneaux dans les coins
+  [[-6.2, -4.5], [6.4, -4.0]].forEach(([x, z]) => {
+    const t = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.62, 0.55, 1.15, 12),
+      new THREE.MeshStandardMaterial({ color: 0x5a3a20, roughness: 0.85, flatShading: true })
+    );
+    t.position.set(x, SOL_Y + 0.58, z);
+    const cercle = new THREE.Mesh(
+      new THREE.TorusGeometry(0.615, 0.035, 5, 14),
+      new THREE.MeshStandardMaterial({ color: 0x7a6a3a, roughness: 0.5, metalness: 0.5, flatShading: true })
+    );
+    cercle.rotation.x = Math.PI / 2;
+    cercle.position.set(x, SOL_Y + 0.85, z);
+    decor.add(t, cercle);
+  });
+
+  // Suspension au-dessus de la table : abat-jour + ampoule émissive.
+  const cordon = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.012, 0.012, 1.4, 5),
+    new THREE.MeshStandardMaterial({ color: 0x1a1008, roughness: 0.9 })
+  );
+  cordon.position.set(0, 3.25, 0);
+  const abat = new THREE.Mesh(
+    new THREE.ConeGeometry(0.52, 0.42, 12, 1, true),
+    new THREE.MeshStandardMaterial({ color: 0x6b3f22, roughness: 0.6, side: THREE.DoubleSide, flatShading: true })
+  );
+  abat.position.set(0, 2.42, 0);
+  const ampoule = new THREE.Mesh(
+    new THREE.SphereGeometry(0.13, 10, 8),
+    new THREE.MeshStandardMaterial({ color: 0xffd9a0, emissive: 0xffb066, emissiveIntensity: 2.4, roughness: 0.4 })
+  );
+  ampoule.position.set(0, 2.24, 0);
+  decor.add(cordon, abat, ampoule);
+
+  decor.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
+  scene.add(decor);
+}
+creerDecor();
+
+// =====================================================================
+// ÉTIQUETTES (sprites) — toujours face caméra
+// =====================================================================
+function creerEtiquette(texte) {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 128;
+  const ctx = c.getContext('2d');
+  ctx.font = 'bold 60px Kalam, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(20,12,7,0.72)';
+  ctx.fillRect(0, 22, 512, 84);
+  ctx.fillStyle = '#e8cda2';
+  ctx.fillText(texte, 256, 64);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+  sprite.scale.set(1.0, 0.25, 1);
+  return sprite;
+}
+
+function majEtiquette(sprite, texte, actif) {
+  const c = sprite.material.map.image;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, 512, 128);
+  ctx.font = 'bold 60px Kalam, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = actif ? 'rgba(90,55,15,0.85)' : 'rgba(20,12,7,0.72)';
+  ctx.fillRect(0, 22, 512, 84);
+  ctx.fillStyle = actif ? '#ffdca0' : '#e8cda2';
+  ctx.fillText(texte, 256, 64);
+  sprite.material.map.needsUpdate = true;
+}
+
+// =====================================================================
+// SIÈGES : avatar low-poly + chope + emplacement du gobelet
+// =====================================================================
+const COULEURS = [0x4a7ec2, 0xc25a4a, 0x5aa86a, 0xb58ac2, 0xc2a44a, 0x4ab0b5];
+const sieges = [];
+
+function creerAvatar(couleur) {
+  const g = new THREE.Group();
+  const matCorps = new THREE.MeshStandardMaterial({ color: couleur, roughness: 0.75, flatShading: true });
+  // Le buste descend sous le plateau : le bas se perd dans l'ombre, ce qui
+  // évite l'effet "personnage qui flotte" sans avoir à modéliser de chaise.
+  const corps = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.34, 1.5, 7), matCorps);
+  corps.position.y = -0.2;
+  corps.castShadow = true;
+  const tete = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(0.17, 0),
+    new THREE.MeshStandardMaterial({ color: 0xe0b48c, roughness: 0.7, flatShading: true })
+  );
+  tete.position.y = 0.72;
+  tete.castShadow = true;
+  g.add(corps, tete);
+  g.userData.materiaux = [matCorps];
+  return g;
+}
+
+function creerChope() {
+  const g = new THREE.Group();
+  const verre = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.11, 0.1, 0.26, 8, 1, true),
+    new THREE.MeshPhysicalMaterial({ color: 0xdfeef7, roughness: 0.3, metalness: 0, side: THREE.DoubleSide, transparent: true, opacity: 0.45 })
+  );
+  verre.position.y = 0.13;
+  const biere = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.098, 0.09, 0.2, 8),
+    new THREE.MeshStandardMaterial({ color: 0xd08b1e, roughness: 0.4, flatShading: true })
+  );
+  biere.position.y = 0.11;
+  biere.castShadow = true;
+  const mousse = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.1, 0.1, 0.035, 8),
+    new THREE.MeshStandardMaterial({ color: 0xf6ecd8, roughness: 0.9, flatShading: true })
+  );
+  mousse.position.y = 0.222;
+  g.add(verre, biere, mousse);
+  g.userData.biere = biere;
+  return g;
+}
+
+function creerSieges(noms) {
+  sieges.forEach(s => scene.remove(s.groupe));
+  sieges.length = 0;
+  const n = noms.length;
+  for (let i = 0; i < n; i++) {
+    // Le joueur local est toujours placé côté caméra (+z), quel que soit
+    // l'index que le serveur lui a donné : on fait tourner l'affichage.
+    const angle = (((i - MOI + n) % n) / n) * Math.PI * 2;
+    const dir = new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
+    const groupe = new THREE.Group();
+
+    const avatar = creerAvatar(COULEURS[i % COULEURS.length]);
+    avatar.position.copy(dir).multiplyScalar(R_AVATAR);
+    const etiquette = creerEtiquette(noms[i]);
+    etiquette.position.copy(dir).multiplyScalar(R_AVATAR);
+    etiquette.position.y = 1.12;
+    const chope = creerChope();
+    chope.position.copy(dir).multiplyScalar(R_CHOPE);
+    chope.position.x += dir.z * 0.3;
+    chope.position.z -= dir.x * 0.3;
+
+    groupe.add(avatar, etiquette, chope);
+    scene.add(groupe);
+
+    sieges.push({
+      index: i, nom: noms[i], groupe, avatar, etiquette, chope,
+      posGobelet: dir.clone().multiplyScalar(R_GOBELET),
+      couleur: COULEURS[i % COULEURS.length],
+      gorgees: 0,
+    });
+  }
+}
+
+// =====================================================================
+// GOBELET À DÉS (voyage de joueur en joueur) + LES DEUX DÉS
+// =====================================================================
+const gobelet = new THREE.Group();
+scene.add(gobelet);
+
+// Dépoli et opaque à dessein : le contenu doit rester caché aux autres joueurs.
+const matVerre = new THREE.MeshPhysicalMaterial({
+  color: 0xdcefff, roughness: 0.45, metalness: 0,
+  side: THREE.DoubleSide, clearcoat: 0.5, clearcoatRoughness: 0.3,
+});
+const paroi = new THREE.Mesh(
+  new THREE.CylinderGeometry(GLASS_OUTER_R, GLASS_OUTER_R, GLASS_HEIGHT, 24, 1, true),
+  matVerre
+);
+paroi.position.y = GLASS_BOTTOM_Y + GLASS_HEIGHT / 2;
+paroi.castShadow = true;
+gobelet.add(paroi);
+
+const fond = new THREE.Mesh(
+  new THREE.CircleGeometry(GLASS_INNER_R, 24),
+  new THREE.MeshPhysicalMaterial({ color: 0xdff3ff, roughness: 0.3 })
+);
+fond.rotation.x = -Math.PI / 2;
+fond.position.y = FLOOR_Y - 0.005;
+gobelet.add(fond);
+
+const PIP_LAYOUTS = {
+  1: [[0.5, 0.5]],
+  2: [[0.28, 0.28], [0.72, 0.72]],
+  3: [[0.28, 0.28], [0.5, 0.5], [0.72, 0.72]],
+  4: [[0.28, 0.28], [0.72, 0.28], [0.28, 0.72], [0.72, 0.72]],
+  5: [[0.28, 0.28], [0.72, 0.28], [0.5, 0.5], [0.28, 0.72], [0.72, 0.72]],
+  6: [[0.28, 0.25], [0.72, 0.25], [0.28, 0.5], [0.72, 0.5], [0.28, 0.75], [0.72, 0.75]],
+};
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function creerTextureFace(valeur) {
+  const size = 256;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#f2e8d5';
+  roundRect(ctx, 4, 4, size - 8, size - 8, size * 0.14);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+  ctx.lineWidth = size * 0.025;
+  ctx.stroke();
+  ctx.fillStyle = '#3a2418';
+  PIP_LAYOUTS[valeur].forEach(([px, py]) => {
+    ctx.beginPath();
+    ctx.arc(px * size, py * size, size * 0.085, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+// Ordre des faces BoxGeometry : +x,-x,+y,-y,+z,-z — faces opposées = 7
+const FACE_ORDER_VALUES = [1, 6, 2, 5, 3, 4];
+const FACE_AXES = [
+  { axis: new THREE.Vector3(1, 0, 0), value: 1 },
+  { axis: new THREE.Vector3(-1, 0, 0), value: 6 },
+  { axis: new THREE.Vector3(0, 1, 0), value: 2 },
+  { axis: new THREE.Vector3(0, -1, 0), value: 5 },
+  { axis: new THREE.Vector3(0, 0, 1), value: 3 },
+  { axis: new THREE.Vector3(0, 0, -1), value: 4 },
+];
+const HAUT = new THREE.Vector3(0, 1, 0);
+
+function creerDeObjet(x, z) {
+  const materiaux = FACE_ORDER_VALUES.map(v => new THREE.MeshStandardMaterial({
+    map: creerTextureFace(v), roughness: 0.5, metalness: 0.05,
+  }));
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(DICE_EDGE, DICE_EDGE, DICE_EDGE), materiaux);
+  mesh.castShadow = true;
+  mesh.position.set(x, FLOOR_Y + DICE_RADIUS, z);
+  gobelet.add(mesh);
+  return {
+    mesh, vel: new THREE.Vector3(), angVel: new THREE.Vector3(),
+    radius: DICE_RADIUS, settling: false, done: false,
+    targetQuat: null, valeurImposee: 2,
+  };
+}
+
+const des = [creerDeObjet(-0.09, 0.03), creerDeObjet(0.09, -0.03)];
+function montrerDes(visible) { des.forEach(d => { d.mesh.visible = visible; }); }
+montrerDes(false);
+
+// =====================================================================
+// PHYSIQUE DES DÉS (repère local du gobelet)
+// =====================================================================
+function integrerDe(d, dt) {
+  d.vel.y += GRAVITY * dt;
+  d.mesh.position.addScaledVector(d.vel, dt);
+
+  const horiz = Math.hypot(d.mesh.position.x, d.mesh.position.z);
+  const maxHoriz = GLASS_INNER_R - d.radius;
+  if (horiz > maxHoriz && horiz > 1e-4) {
+    const nx = d.mesh.position.x / horiz, nz = d.mesh.position.z / horiz;
+    d.mesh.position.x = nx * maxHoriz;
+    d.mesh.position.z = nz * maxHoriz;
+    const vDotN = d.vel.x * nx + d.vel.z * nz;
+    if (vDotN > 0) {
+      d.vel.x -= (1 + WALL_REST) * vDotN * nx;
+      d.vel.z -= (1 + WALL_REST) * vDotN * nz;
+    }
+    d.angVel.multiplyScalar(0.75);
+  }
+
+  const contactY = FLOOR_Y + d.radius;
+  if (d.mesh.position.y < contactY) {
+    d.mesh.position.y = contactY;
+    if (d.vel.y < 0) d.vel.y = -d.vel.y * FLOOR_REST;
+    d.vel.x *= FLOOR_FRICTION;
+    d.vel.z *= FLOOR_FRICTION;
+    d.angVel.multiplyScalar(FLOOR_FRICTION);
+  }
+
+  const angle = d.angVel.length() * dt;
+  if (angle > 1e-4) {
+    const axe = d.angVel.clone().normalize();
+    d.mesh.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(axe, angle));
+  }
+  d.angVel.multiplyScalar(ANG_DAMPING);
+}
+
+function collisionDes(a, b) {
+  const delta = new THREE.Vector3().subVectors(a.mesh.position, b.mesh.position);
+  const dist = delta.length();
+  const minDist = a.radius + b.radius;
+  if (dist > 1e-4 && dist < minDist) {
+    const n = delta.multiplyScalar(1 / dist);
+    const chevauchement = (minDist - dist) / 2;
+    a.mesh.position.addScaledVector(n, chevauchement);
+    b.mesh.position.addScaledVector(n, -chevauchement);
+    const relVel = new THREE.Vector3().subVectors(a.vel, b.vel);
+    const sep = relVel.dot(n);
+    if (sep < 0) {
+      const impulsion = n.clone().multiplyScalar(-sep * 0.9);
+      a.vel.add(impulsion);
+      b.vel.sub(impulsion);
+      // à-coup proportionnel à l'impact : nul au repos, pour ne pas
+      // réinjecter d'énergie tant que les deux dés se touchent
+      const kick = Math.min(-sep, 2);
+      a.angVel.addScaledVector(new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5), kick);
+      b.angVel.addScaledVector(new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5), kick);
+    }
+  }
+}
+
+// Le résultat vient du moteur (comme le serveur en ligne fera autorité) :
+// on ne lit pas la face sortie par la physique, on amène la face imposée vers le haut.
+function demarrerSnap(d) {
+  const face = FACE_AXES.find(f => f.value === d.valeurImposee) || FACE_AXES[2];
+  const normaleMonde = face.axis.clone().applyQuaternion(d.mesh.quaternion).normalize();
+  const deltaQ = new THREE.Quaternion().setFromUnitVectors(normaleMonde, HAUT);
+  d.targetQuat = deltaQ.multiply(d.mesh.quaternion.clone());
+  d.settling = true;
+  d.vel.set(0, 0, 0);
+  d.angVel.set(0, 0, 0);
+}
+
+// =====================================================================
+// ANIMATIONS : lancer de dés, secousse du gobelet, voyage du gobelet
+// =====================================================================
+let animationEnCours = false;
+let rollTimer = 0;
+let enLancer = false;
+let finDelai = null;
+let apresAnimation = null;
+let secousse = null;
+
+function lancerLesDes(valeurs, apres) {
+  montrerDes(true);
+  animationEnCours = true;
+  enLancer = true;
+  rollTimer = 0;
+  finDelai = null;
+  apresAnimation = apres || null;
+  des.forEach((d, i) => {
+    d.valeurImposee = valeurs[i];
+    d.mesh.position.set(
+      (Math.random() - 0.5) * GLASS_INNER_R * 0.6,
+      GLASS_BOTTOM_Y + GLASS_HEIGHT * 1.25,
+      (Math.random() - 0.5) * GLASS_INNER_R * 0.6
+    );
+    d.vel.set((Math.random() - 0.5) * 1.2, -0.4 - Math.random() * 0.4, (Math.random() - 0.5) * 1.2);
+    d.angVel.set((Math.random() - 0.5) * 16, (Math.random() - 0.5) * 16, (Math.random() - 0.5) * 16);
+    d.settling = false;
+    d.done = false;
+    d.targetQuat = null;
+  });
+}
+
+// Lancer d'un autre joueur : on voit le gobelet être secoué, jamais les dés.
+function secouerGobelet(apres) {
+  montrerDes(false);
+  animationEnCours = true;
+  apresAnimation = apres || null;
+  secousse = { t: 0, duree: 1.3 };
+}
+
+function placerGobelet(index, immediat) {
+  const s = sieges[index];
+  if (!s) return;
+  gobeletObjectif.copy(s.posGobelet);
+  if (immediat) gobelet.position.copy(gobeletObjectif);
+}
+const gobeletObjectif = new THREE.Vector3();
+
+// File d'attente ORDONNÉE. Les messages arrivent en rafale (un lancer diffuse
+// aussitôt l'état suivant) : sans ordre garanti, l'état suivant déplacerait le
+// gobelet avant que l'animation du coup précédent ait joué.
+const fileActions = [];
+let pompeActive = false;
+
+function quandLibre(fn, delai) {
+  fileActions.push({ fn, delai: delai || 0 });
+  pomper();
+}
+
+function pomper() {
+  if (pompeActive || fileActions.length === 0) return;
+  pompeActive = true;
+  (function attendre() {
+    const gobeletArrive = gobelet.position.distanceTo(gobeletObjectif) <= 0.02;
+    if (animationEnCours || !gobeletArrive) { setTimeout(attendre, 100); return; }
+    const tache = fileActions.shift();
+    setTimeout(() => {
+      tache.fn();
+      pompeActive = false;
+      pomper();
+    }, tache.delai);
+  })();
+}
+
+// =====================================================================
+// MOTEUR DE RÈGLES — miroir de la section Kinito de serveur.py
+//
+// Il ne communique que par messages, au format exact de la WebSocket.
+// Passage en ligne : supprimer ce bloc, envoyer `envoyerIntention` dans
+// ws.send(), et brancher ws.onmessage sur `clientRecevoir`. Le reste du
+// fichier (3D + UI) n'a pas à changer.
+// =====================================================================
+const TABLEAU_GORGEES = {
+  32: [3, 6],
+  41: [4, 8], 42: [4, 8], 43: [4, 8],
+  52: [5, 10], 53: [5, 10], 54: [5, 10],
+  61: [6, 12], 62: [6, 12], 63: [6, 12], 64: [6, 12], 65: [6, 12],
+  11: [7, 14], 22: [8, 16], 33: [9, 18], 44: [10, 20], 55: [11, 22], 66: [12, 24],
+  21: [9, 18],
+};
+const ECHELLE = [31, 32, 41, 42, 43, 52, 53, 54, 61, 62, 63, 64, 65, 11, 22, 33, 44, 55, 66, 21];
+const SCORE_CHANGE_SENS = 31;
+// 31 et 51 se resolvent des le lancer : on ne peut pas les annoncer.
+// 31 reste dans ECHELLE car il sert de plancher au classement.
+const SCORES_ANNONCABLES = ECHELLE.filter(s => s !== 31);
+const SCORE_ANNULE = 51;
+
+const rang = s => ECHELLE.indexOf(s);
+
+function lancerDesScore() {
+  const d1 = 1 + Math.floor(Math.random() * 6);
+  const d2 = 1 + Math.floor(Math.random() * 6);
+  return Math.max(d1, d2) * 10 + Math.min(d1, d2);
+}
+
+function penalite(score, menteur) {
+  if (score === 21) return null; // cul sec
+  const e = TABLEAU_GORGEES[score];
+  if (!e) return 0;
+  return menteur ? e[1] : e[0];
+}
+
+function calculerGorgeesMenteur(reel, annonce) {
+  if (reel === 21 || annonce === 21) return null;
+  const a = (TABLEAU_GORGEES[reel] || [0, 0])[1];
+  const b = (TABLEAU_GORGEES[annonce] || [0, 0])[1];
+  return Math.max(a, b);
+}
+
+const serveur = {
+  noms: [],
+  etat: null,
+
+  demarrer(noms) {
+    this.noms = noms;
+    this.etat = {
+      nb_joueurs: noms.length,
+      phase: 'lancer',
+      joueur_courant: 0,
+      sens: 1,
+      score_reel: 0,
+      score_annonce: 0,
+      annonce_precedente: 0,
+      premiere_annonce: true,
+      message: '',
+      partis: noms.map(() => false),   // places laissees vides en cours de partie
+    };
+    this.diffuser({ type: 'partie_demarree', jeu: 'kinito', joueurs: noms.slice() });
+    this.diffuser(this.etatPublic());
+  },
+
+  joueurSuivant(index) {
+    const e = this.etat;
+    let suivant = index;
+    for (let k = 0; k < e.nb_joueurs; k++) {
+      suivant = (suivant + e.sens + e.nb_joueurs) % e.nb_joueurs;
+      if (!e.partis[suivant]) return suivant;
+    }
+    return (index + e.sens + e.nb_joueurs) % e.nb_joueurs;
+  },
+
+  etatPublic() {
+    const e = this.etat;
+    return {
+      type: 'etat',
+      joueurs: this.noms.slice(),
+      joueur_courant: e.joueur_courant,
+      sens: e.sens,
+      annonce_precedente: e.annonce_precedente,
+      premiere_annonce: e.premiere_annonce,
+      phase: e.phase,
+      message: e.message || '',
+      partis: e.partis.slice(),
+    };
+  },
+
+  diffuser(msg) { this.noms.forEach((_, i) => livrer(i, msg)); },
+  prive(index, msg) { livrer(index, msg); },
+
+  traiter(index, msg) {
+    switch (msg.type) {
+      case 'lancer': return this.lancer(index);
+      case 'annoncer': return this.annoncer(index, msg.score);
+      case 'reaction': return this.reaction(index, msg.choix, msg.score_cite);
+      case 'abandonner': return this.abandonner(index);
+      case 'nouvelle_manche': return this.nouvelleManche();
+    }
+  },
+
+  lancer(index) {
+    const e = this.etat;
+    if (index !== e.joueur_courant) return;
+
+    const score = lancerDesScore();
+    e.score_reel = score;
+
+    if (score === SCORE_ANNULE) {
+      e.score_annonce = score;
+      e.premiere_annonce = true;
+      e.annonce_precedente = 0;
+      e.joueur_courant = this.joueurSuivant(e.joueur_courant);
+      e.message = '51 : tout le monde boit 1 gorgée, on repart de zéro !';
+      // L'état est embarqué dans le message (et non rediffusé à part) : une
+      // rediffusion écraserait aussitôt ce message chez les clients existants.
+      e.phase = 'lancer';
+      this.diffuser({ type: 'effet_special', effet: '51', message: e.message, lanceur: index, etat: this.etatPublic() });
+      return;
+    }
+
+    if (score === SCORE_CHANGE_SENS) {
+      e.score_annonce = score;
+      e.sens = -e.sens;
+      // Le 31 relance les annonces : il ne se pose pas comme score a battre.
+      e.annonce_precedente = 0;
+      e.premiere_annonce = true;
+      e.message = `31 : changement de sens (${e.sens === 1 ? 'horaire' : 'anti-horaire'}) !`;
+      e.joueur_courant = this.joueurSuivant(e.joueur_courant);
+      e.phase = 'lancer';
+      this.diffuser({ type: 'effet_special', effet: '31', message: e.message, sens: e.sens, lanceur: index, etat: this.etatPublic() });
+      return;
+    }
+
+    e.phase = 'annonce';
+    this.prive(index, {
+      type: 'ton_score', score, scores_possibles: SCORES_ANNONCABLES,
+      premiere_annonce: e.premiere_annonce,
+    });
+  },
+
+  annoncer(index, score) {
+    const e = this.etat;
+    if (index !== e.joueur_courant) return;
+    if (!SCORES_ANNONCABLES.includes(score)) {
+      this.prive(index, { type: 'erreur', message: 'Ce score ne peut pas etre annonce.' });
+      return;
+    }
+    e.score_annonce = score;
+    e.phase = 'reaction';
+    const ir = this.joueurSuivant(e.joueur_courant);
+    this.diffuser({
+      type: 'annonce',
+      annonceur: this.noms[e.joueur_courant],
+      index_annonceur: e.joueur_courant,
+      reacteur: this.noms[ir],
+      index_reacteur: ir,
+      // En ligne le serveur ne transmet PAS le score annoncé (l'annonce est
+      // verbale, c'est la "règle d'attention"). Ce champ n'existe que pour
+      // pouvoir jouer seul contre des bots, qui n'ont pas de voix.
+      score_annonce_oral: score,
+    });
+    this.prive(ir, {
+      type: 'a_toi_de_reagir',
+      annonceur: this.noms[e.joueur_courant],
+      premiere_annonce: e.premiere_annonce,
+    });
+  },
+
+  reaction(index, choix, scoreCite) {
+    const e = this.etat;
+    const ir = this.joueurSuivant(e.joueur_courant);
+    if (index !== ir) return;
+
+    const scoreReel = e.score_reel;
+    const scoreAnnonce = e.score_annonce;
+    const annoncePrec = e.annonce_precedente;
+    const nomAnnonceur = this.noms[e.joueur_courant];
+    const nomReacteur = this.noms[ir];
+
+    if (choix === 'prends') {
+      e.annonce_precedente = scoreAnnonce;
+      e.premiere_annonce = false;
+      e.joueur_courant = ir;
+      e.phase = 'lancer';
+      this.diffuser({ type: 'joueur_prend', nom: nomReacteur });
+      this.diffuser(this.etatPublic());
+
+    } else if (choix === 'menteur') {
+      if (scoreReel !== scoreAnnonce) {
+        this.finManche(e.joueur_courant, true, `${nomAnnonceur} a été démasqué !`,
+          calculerGorgeesMenteur(scoreReel, scoreAnnonce), scoreReel, scoreAnnonce);
+      } else {
+        this.finManche(ir, false, `${nomReacteur} a accusé à tort`,
+          penalite(scoreAnnonce, false), scoreReel, scoreAnnonce);
+      }
+
+    } else if (choix === 'moins') {
+      if (e.premiere_annonce) {
+        this.finManche(ir, false, `${nomReacteur} a accusé alors qu'il n'y avait pas d'annonce`,
+          penalite(scoreAnnonce, false), null, scoreAnnonce);
+        return;
+      }
+      if (scoreCite !== annoncePrec) {
+        this.finManche(ir, false, `${nomReacteur} n'a pas cité le bon score précédent`,
+          penalite(scoreAnnonce, false), null, scoreAnnonce);
+      } else if (rang(scoreAnnonce) < rang(annoncePrec)) {
+        this.finManche(e.joueur_courant, true, `${nomAnnonceur} a annoncé moins que le précédent`,
+          penalite(annoncePrec, true), null, annoncePrec);
+      } else {
+        this.finManche(ir, false, `${nomReacteur} a accusé à tort`,
+          penalite(scoreAnnonce, false), null, scoreAnnonce);
+      }
+    }
+  },
+
+  abandonner(index) {
+    const e = this.etat;
+    if (index !== e.joueur_courant) return;
+    if (e.premiere_annonce) return;
+    this.finManche(index, false, `${this.noms[index]} assume avoir fait moins`,
+      penalite(e.annonce_precedente, false), null, e.annonce_precedente);
+  },
+
+  finManche(indexPerdant, menteur, message, gorgees, scoreReel, scoreBase) {
+    const e = this.etat;
+    e.joueur_courant = this.joueurSuivant(indexPerdant);
+    e.phase = 'resultat';
+    this.diffuser({
+      type: 'fin_manche',
+      perdant: this.noms[indexPerdant],
+      index_perdant: indexPerdant,
+      menteur, message,
+      gorgees,                 // null = cul sec (cas du 21)
+      score_reel: scoreReel,   // null si on ne révèle pas
+      score_base: scoreBase,
+    });
+  },
+
+  nouvelleManche() {
+    const e = this.etat;
+    e.premiere_annonce = true;
+    e.annonce_precedente = 0;
+    e.score_reel = 0;
+    e.score_annonce = 0;
+    e.phase = 'lancer';
+    e.message = '';
+    this.diffuser(this.etatPublic());
+  },
+};
+
+// Aiguillage des messages : chaque joueur a "son" flux, comme une WebSocket.
+// MOI n'est 0 qu'en solo : en ligne c'est le serveur qui donne l'index (ton_index).
+let MOI = 0;
+let mode = 'local';   // 'local' = bots dans la page, 'ligne' = WebSocket
+let ws = null;
+
+function livrer(index, msg) {
+  if (index === MOI) clientRecevoir(msg);
+  else botRecevoir(index, msg);
+}
+
+// Unique point de bascule entre le moteur local et le vrai serveur.
+function envoyerIntention(index, msg) {
+  if (mode === 'ligne') {
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+    return;
+  }
+  serveur.traiter(index, msg);
+}
+
+// =====================================================================
+// CLIENT : réception des messages + pilotage de la 3D
+// =====================================================================
+const elMessage = document.getElementById('message');
+const elRappel = document.getElementById('rappel');
+const elPanneau = document.getElementById('panneau');
+const elJoueurs = document.getElementById('joueurs');
+
+let etatCourant = null;
+let monScore = null;         // score réel, connu de moi seul
+let premiereAnnonceLocale = true;
+// Liste autorisee telle que le serveur la donne : c'est lui qui fait autorite.
+let scoresPossibles = SCORES_ANNONCABLES;
+let dernierOral = null;      // annonce entendue (artifice prototype)
+
+function libelleScore(s) {
+  if (s === 21) return { n: '21', sub: 'Kinito' };
+  if (s === 31) return { n: '31', sub: 'sens' };
+  if (s % 11 === 0) return { n: String(s), sub: 'double' };
+  return { n: String(s), sub: '' };
+}
+function desDuScore(score) {
+  const grand = Math.floor(score / 10), petit = score % 10;
+  return Math.random() < 0.5 ? [grand, petit] : [petit, grand];
+}
+
+function clientRecevoir(msg) {
+  switch (msg.type) {
+    // --- salon (en ligne uniquement) ---
+    case 'ton_index':
+      // Le serveur nous dit qui nous sommes : plus besoin de se reconnaitre
+      // a son prenom, et deux joueurs homonymes ne se melangent plus.
+      MOI = msg.index;
+      if (msg.jeton) {
+        monJeton = msg.jeton;
+        ecrireSession({ code: codeSalon, nom: monNom, jeton: monJeton, serveur: serveurChoisi });
+      }
+      if (!enPartie) panneauAttente();
+      break;
+
+    case 'joueur_rejoint':
+      joueursSalon = msg.joueurs;
+      if (enPartie && msg.retour) elRappel.textContent = msg.nom + ' est revenu.';
+      if (!enPartie) panneauAttente();
+      break;
+
+    case 'joueur_parti':
+      joueursSalon = msg.joueurs;
+      if (enPartie) elRappel.textContent = msg.nom + ' a quitte la partie.';
+      if (!enPartie) panneauAttente();
+      break;
+
+    case 'partie_demarree':
+      demarrerScene(msg.joueurs);
+      break;
+
+    case 'etat':
+      etatCourant = msg;
+      quandLibre(() => appliquerEtat(msg));
+      break;
+
+    case 'ton_score':
+      monScore = msg.score;
+      premiereAnnonceLocale = msg.premiere_annonce;
+      scoresPossibles = msg.scores_possibles || SCORES_ANNONCABLES;
+      // Deux étapes distinctes : la file attend que le gobelet soit arrivé
+      // avant de lancer les dés dedans.
+      quandLibre(() => placerGobelet(MOI));
+      quandLibre(() => lancerLesDes(desDuScore(msg.score), () => panneauAnnonce()));
+      break;
+
+    case 'annonce':
+      // En ligne ce champ n'existe pas : l'annonce est verbale.
+      dernierOral = msg.score_annonce_oral === undefined ? null : msg.score_annonce_oral;
+      if (msg.index_reacteur !== MOI) {
+        elRappel.textContent = `${msg.annonceur} annonce à ${msg.reacteur}…`;
+      }
+      break;
+
+    case 'a_toi_de_reagir':
+      quandLibre(() => panneauReaction(msg.annonceur, msg.premiere_annonce));
+      break;
+
+    case 'joueur_prend':
+      elRappel.textContent = `${msg.nom} prend.`;
+      break;
+
+    case 'effet_special': {
+      const valeurs = desDuScore(msg.effet === '51' ? 51 : 31);
+      const suite = () => { elMessage.textContent = msg.message; };
+      // serveur.py n'indique pas qui a lancé, et il a déjà fait tourner le tour
+      // avant de diffuser : sans ce champ on ne peut pas retrouver le lanceur.
+      const lanceur = msg.lanceur !== undefined
+        ? msg.lanceur
+        : (etatCourant ? etatCourant.joueur_courant : MOI);
+      quandLibre(() => placerGobelet(lanceur));
+      if (lanceur === MOI) quandLibre(() => lancerLesDes(valeurs, suite));
+      else quandLibre(() => secouerGobelet(suite));
+      // Le serveur embarque l'état dans le message : on laisse le temps de lire
+      // l'effet avant de reprendre la main.
+      if (msg.etat) quandLibre(() => appliquerEtat(msg.etat), 1600);
+      break;
+    }
+
+    case 'fin_manche':
+      quandLibre(() => panneauResultat(msg));
+      break;
+
+    case 'erreur':
+      elRappel.textContent = msg.message;
+      break;
+  }
+}
+
+function appliquerEtat(etat) {
+  etatCourant = etat;
+
+  // Quelqu'un a rejoint ou la table a change de taille : on refait les sieges.
+  // On reporte les compteurs de gorgees des places deja connues.
+  if (etat.joueurs && etat.joueurs.length !== sieges.length) {
+    const anciennes = sieges.map(s => s.gorgees);
+    creerSieges(etat.joueurs);
+    sieges.forEach((s, i) => { s.gorgees = anciennes[i] || 0; });
+    placerGobelet(etat.joueur_courant, true);
+  }
+
+  majListeJoueurs(etat);
+  const partis = etat.partis || [];
+  sieges.forEach((s, i) => {
+    const parti = !!partis[i];
+    majEtiquette(s.etiquette, parti ? s.nom + ' (parti)' : s.nom, i === etat.joueur_courant);
+    s.groupe.visible = true;
+    s.avatar.traverse(o => { if (o.isMesh) { o.material.transparent = parti; o.material.opacity = parti ? 0.22 : 1; } });
+    s.avatar.userData.materiaux.forEach(m => {
+      m.emissive = new THREE.Color(i === etat.joueur_courant && !parti ? 0x3a2408 : 0x000000);
+    });
+  });
+  placerGobelet(etat.joueur_courant);
+  montrerDes(false);
+
+  if (etat.message) elMessage.textContent = etat.message;
+  const sensTxt = etat.sens === 1 ? '↻ horaire' : '↺ anti-horaire';
+  const prec = etat.premiere_annonce ? 'aucune annonce à battre' : `à battre : ${etat.annonce_precedente}`;
+  elRappel.textContent = `${sensTxt} · ${prec}`;
+
+  if (etat.phase !== 'lancer') return;
+
+  if (etat.joueur_courant === MOI) {
+    elMessage.textContent = 'À toi de jouer';
+    panneauLancer(etat);
+  } else {
+    elMessage.textContent = `Au tour de ${etat.joueurs[etat.joueur_courant]}`;
+    cacherPanneau();
+  }
+}
+
+function majListeJoueurs(etat) {
+  elJoueurs.innerHTML = '';
+  etat.joueurs.forEach((nom, i) => {
+    const d = document.createElement('div');
+    d.className = 'joueur' + (i === etat.joueur_courant ? ' actif' : '');
+    const p = document.createElement('span');
+    p.className = 'pastille';
+    p.style.background = '#' + COULEURS[i % COULEURS.length].toString(16).padStart(6, '0');
+    const n = document.createElement('span');
+    const parti = etat.partis && etat.partis[i];
+    n.textContent = nom + (i === MOI ? ' (toi)' : '') + (parti ? ' — parti' : '');
+    if (parti) { d.style.opacity = '0.45'; }
+    const g = document.createElement('span');
+    g.className = 'gorgees';
+    g.textContent = `🍺 ${sieges[i] ? sieges[i].gorgees : 0}`;
+    d.append(p, n, g);
+    elJoueurs.appendChild(d);
+  });
+}
+
+// =====================================================================
+// PANNEAUX D'INTERFACE
+// =====================================================================
+function cacherPanneau() { elPanneau.className = 'cache'; elPanneau.innerHTML = ''; }
+
+function bouton(texte, classe, onClick) {
+  const b = document.createElement('button');
+  b.textContent = texte;
+  if (classe) b.className = classe;
+  b.addEventListener('click', onClick);
+  return b;
+}
+
+function ouvrirPanneau(titre) {
+  elPanneau.className = '';
+  elPanneau.innerHTML = '';
+  if (titre) {
+    const h = document.createElement('h2');
+    h.textContent = titre;
+    elPanneau.appendChild(h);
+  }
+  return elPanneau;
+}
+
+function panneauLancer(etat) {
+  const p = ouvrirPanneau('À toi');
+  const txt = document.createElement('p');
+  txt.textContent = etat.premiere_annonce
+    ? 'Tu ouvres la manche : secoue le gobelet.'
+    : `Tu dois battre ${etat.annonce_precedente}.`;
+  p.appendChild(txt);
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  r.appendChild(bouton('🎲 Secouer le gobelet', '', () => {
+    cacherPanneau();
+    envoyerIntention(MOI, { type: 'lancer' });
+  }));
+  p.appendChild(r);
+}
+
+function panneauAnnonce() {
+  const p = ouvrirPanneau('Ton score (secret)');
+  const s = document.createElement('div');
+  s.id = 'mon-score';
+  const lib = libelleScore(monScore);
+  s.innerHTML = `${lib.n}${lib.sub ? ` <span class="petit">${lib.sub}</span>` : ''}`;
+  p.appendChild(s);
+
+  const info = document.createElement('p');
+  info.textContent = premiereAnnonceLocale
+    ? 'Annonce ce que tu veux — la vérité ou un bluff.'
+    : `Annonce à voix haute. À battre : ${etatCourant.annonce_precedente}.`;
+  p.appendChild(info);
+
+  const grille = document.createElement('div');
+  grille.id = 'grille-scores';
+  const seuil = premiereAnnonceLocale ? -1 : rang(etatCourant.annonce_precedente);
+  scoresPossibles.forEach(sc => {
+    const l = libelleScore(sc);
+    const b = document.createElement('button');
+    b.className = 'score-btn' + (sc === monScore ? ' vrai' : '') + (rang(sc) < seuil ? ' risque' : '');
+    b.innerHTML = `${l.n}${l.sub ? `<span class="sub">${l.sub}</span>` : ''}`;
+    b.title = rang(sc) < seuil ? 'Plus bas que l\'annonce précédente : punissable par "Moins"' : '';
+    b.addEventListener('click', () => {
+      cacherPanneau();
+      vueTable();
+      envoyerIntention(MOI, { type: 'annoncer', score: sc });
+    });
+    grille.appendChild(b);
+  });
+  p.appendChild(grille);
+
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  r.appendChild(bouton('👁 Regarder les dés', 'sombre', regarderLesDes));
+  if (!premiereAnnonceLocale) {
+    r.appendChild(bouton('J\'assume, j\'ai fait moins', 'sombre', () => {
+      cacherPanneau();
+      vueTable();
+      envoyerIntention(MOI, { type: 'abandonner' });
+    }));
+  }
+  p.appendChild(r);
+
+  const note = document.createElement('div');
+  note.className = 'note';
+  note.textContent = 'La case verte est ton vrai score. Personne d\'autre ne le voit.';
+  p.appendChild(note);
+}
+
+function panneauReaction(annonceur, premiereAnnonce) {
+  const p = ouvrirPanneau(`${annonceur} a annoncé`);
+
+  const oral = document.createElement('p');
+  if (dernierOral !== null) {
+    const l = libelleScore(dernierOral);
+    oral.innerHTML = `Il annonce <strong style="color:#ffdca0;font-size:22px">${l.n}</strong>${l.sub ? ` (${l.sub})` : ''}.`;
+  } else {
+    oral.textContent = 'Écoute son annonce.';
+  }
+  p.appendChild(oral);
+
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  r.appendChild(bouton('Je prends', '', () => {
+    cacherPanneau();
+    envoyerIntention(MOI, { type: 'reaction', choix: 'prends' });
+  }));
+  r.appendChild(bouton('Menteur !', 'danger', () => {
+    cacherPanneau();
+    envoyerIntention(MOI, { type: 'reaction', choix: 'menteur' });
+  }));
+  if (!premiereAnnonce) {
+    r.appendChild(bouton('Moins', 'sombre', () => panneauMoins(annonceur)));
+  }
+  p.appendChild(r);
+
+  const note = document.createElement('div');
+  note.className = 'note';
+  note.textContent = 'Prototype : en ligne, l\'annonce est dite à l\'oral, le serveur ne la transmet pas.';
+  p.appendChild(note);
+}
+
+function panneauMoins(annonceur) {
+  const p = ouvrirPanneau('Quel était le score précédent ?');
+  const info = document.createElement('p');
+  info.textContent = 'Tu dois citer exactement l\'annonce d\'avant. Si tu te trompes, tu bois.';
+  p.appendChild(info);
+
+  const grille = document.createElement('div');
+  grille.id = 'grille-scores';
+  scoresPossibles.forEach(sc => {
+    const l = libelleScore(sc);
+    const b = document.createElement('button');
+    b.className = 'score-btn';
+    b.innerHTML = `${l.n}${l.sub ? `<span class="sub">${l.sub}</span>` : ''}`;
+    b.addEventListener('click', () => {
+      cacherPanneau();
+      envoyerIntention(MOI, { type: 'reaction', choix: 'moins', score_cite: sc });
+    });
+    grille.appendChild(b);
+  });
+  p.appendChild(grille);
+
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  r.appendChild(bouton('← Retour', 'sombre', () => panneauReaction(annonceur, false)));
+  p.appendChild(r);
+}
+
+function panneauResultat(msg) {
+  // serveur.py n'envoie que le NOM du perdant : on retombe dessus si l'index manque.
+  const iPerdant = msg.index_perdant !== undefined
+    ? msg.index_perdant
+    : sieges.findIndex(s => s.nom === msg.perdant);
+  if (sieges[iPerdant] && typeof msg.gorgees === 'number') {
+    sieges[iPerdant].gorgees += msg.gorgees;
+    if (etatCourant) majListeJoueurs(etatCourant);
+  }
+  montrerDes(false);
+  elMessage.textContent = msg.message;
+
+  const p = ouvrirPanneau(msg.menteur ? '🤥 Démasqué' : 'Fin de manche');
+  const t = document.createElement('p');
+  const peine = msg.gorgees === null ? 'CUL SEC 🍻' : `${msg.gorgees} gorgées`;
+  t.innerHTML = `<strong style="color:#ffdca0">${msg.perdant}</strong> boit : ${peine}`;
+  p.appendChild(t);
+
+  if (msg.score_reel !== null && msg.score_reel !== undefined) {
+    const d = document.createElement('p');
+    d.textContent = `Le vrai score était ${msg.score_reel} (annoncé : ${msg.score_base}).`;
+    p.appendChild(d);
+  } else if (msg.score_base) {
+    const d = document.createElement('p');
+    d.textContent = `Score de référence : ${msg.score_base}.`;
+    p.appendChild(d);
+  }
+
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  r.appendChild(bouton('Nouvelle manche', '', () => {
+    cacherPanneau();
+    envoyerIntention(MOI, { type: 'nouvelle_manche' });
+  }));
+  p.appendChild(r);
+}
+
+// --- Vue plongeante dans le gobelet (réservée au lanceur) ---
+// Le panneau d'annonce est réduit à un simple bouton de retour : sinon la
+// grille des scores couvre justement la vue qu'on vient chercher.
+function regarderLesDes() {
+  const c = sieges[MOI].posGobelet;
+  camObjectifPos = new THREE.Vector3(c.x, GLASS_BOTTOM_Y + GLASS_HEIGHT + 0.55, c.z + 0.22);
+  camObjectifCible = new THREE.Vector3(c.x, FLOOR_Y, c.z);
+
+  const p = ouvrirPanneau(null);
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  r.appendChild(bouton('↩ Revenir à l\'annonce', 'sombre', () => {
+    vueTable();
+    panneauAnnonce();
+  }));
+  p.appendChild(r);
+}
+
+function vueTable() {
+  camObjectifPos = CAM_TABLE_POS.clone();
+  camObjectifCible = CAM_TABLE_CIBLE.clone();
+}
+
+// =====================================================================
+// BOTS — de simples remplaçants locaux des autres joueurs.
+// Ils envoient exactement les mêmes intentions qu'un humain ; en ligne
+// ce bloc disparaît, remplacé par de vrais clients.
+// =====================================================================
+const scoresBot = {}; // score privé de chaque bot, comme son "ton_score" à lui
+
+function botRecevoir(index, msg) {
+  switch (msg.type) {
+    // Après un 31/51 l'état est embarqué dans l'effet : sans ça le bot
+    // dont c'est le tour ne verrait jamais qu'il doit lancer.
+    case 'effet_special':
+      if (msg.etat) botRecevoir(index, msg.etat);
+      break;
+
+    case 'etat':
+      if (msg.phase === 'lancer' && msg.joueur_courant === index) {
+        quandLibre(() => envoyerIntention(index, { type: 'lancer' }), 900);
+      }
+      break;
+
+    case 'ton_score':
+      scoresBot[index] = msg.score;
+      // Le client local anime le gobelet du bot sans jamais montrer les dés.
+      quandLibre(() => placerGobelet(index));
+      quandLibre(() => secouerGobelet(() => botAnnonce(index, msg)));
+      break;
+
+    case 'a_toi_de_reagir':
+      quandLibre(() => botReaction(index), 1100);
+      break;
+  }
+}
+
+function botAnnonce(index, msg) {
+  const e = serveur.etat;
+  const vrai = scoresBot[index];
+  const seuil = msg.premiere_annonce ? -1 : rang(e.annonce_precedente);
+
+  if (rang(vrai) > seuil) {
+    // Score suffisant : la vérité, avec parfois un petit bluff vers le haut.
+    const bluff = Math.random() < 0.22;
+    const options = SCORES_ANNONCABLES.filter(s => rang(s) > rang(vrai));
+    const choix = bluff && options.length ? options[Math.floor(Math.random() * Math.min(3, options.length))] : vrai;
+    envoyerIntention(index, { type: 'annoncer', score: choix });
+    return;
+  }
+
+  // Score insuffisant : soit on bluffe juste au-dessus, soit on assume.
+  if (!msg.premiere_annonce && Math.random() < 0.18) {
+    envoyerIntention(index, { type: 'abandonner' });
+    return;
+  }
+  const possibles = SCORES_ANNONCABLES.filter(s => rang(s) > seuil);
+  const choix = possibles.length
+    ? possibles[Math.floor(Math.random() * Math.min(3, possibles.length))]
+    : SCORES_ANNONCABLES[SCORES_ANNONCABLES.length - 1];
+  envoyerIntention(index, { type: 'annoncer', score: choix });
+}
+
+function botReaction(index) {
+  const e = serveur.etat;
+  const annonce = e.score_annonce; // un vrai client l'aurait entendu à l'oral
+  const r = rang(annonce);
+
+  // Plus l'annonce est haute, plus on doute.
+  let pMenteur = 0.08 + Math.max(0, r - 12) * 0.07;
+  if (annonce === 21) pMenteur = 0.55;
+
+  if (!e.premiere_annonce && rang(annonce) < rang(e.annonce_precedente) && Math.random() < 0.7) {
+    envoyerIntention(index, { type: 'reaction', choix: 'moins', score_cite: e.annonce_precedente });
+    return;
+  }
+  if (Math.random() < pMenteur) {
+    envoyerIntention(index, { type: 'reaction', choix: 'menteur' });
+    return;
+  }
+  envoyerIntention(index, { type: 'reaction', choix: 'prends' });
+}
+
+// =====================================================================
+// ACCUEIL ET SALON
+// =====================================================================
+const NOMS_BOTS = ['Fury', 'Romanoff', 'Barton', 'Coulson', 'Hill'];
+
+const SERVEURS = {
+  render: { http: 'https://kinito-serveur.onrender.com', ws: 'wss://kinito-serveur.onrender.com' },
+  local:  { http: 'http://127.0.0.1:8000',               ws: 'ws://127.0.0.1:8000' },
+};
+let serveurChoisi = 'render';
+
+let monNom = '';
+let codeSalon = '';
+let estCreateur = false;
+let joueursSalon = [];
+let enPartie = false;
+let monJeton = null;
+
+// Le jeton permet de retrouver sa place apres une coupure ou un rechargement.
+// localStorage peut lever (navigation privee, site data bloque) : tout est garde.
+const CLE_SESSION = 'kinito3d.session';
+
+function lireSession() {
+  try { return JSON.parse(localStorage.getItem(CLE_SESSION) || 'null'); }
+  catch (e) { return null; }
+}
+function ecrireSession(s) {
+  try { localStorage.setItem(CLE_SESSION, JSON.stringify(s)); } catch (e) { /* tant pis */ }
+}
+function oublierSession() {
+  try { localStorage.removeItem(CLE_SESSION); } catch (e) { /* tant pis */ }
+}
+
+function champTexte(id, placeholder, longueurMax) {
+  const i = document.createElement('input');
+  i.type = 'text';
+  i.id = id;
+  i.placeholder = placeholder;
+  if (longueurMax) i.maxLength = longueurMax;
+  return i;
+}
+
+function afficherErreur(texte) {
+  elRappel.textContent = texte;
+}
+
+function panneauAccueil() {
+  elMessage.textContent = 'Kinito 3D';
+  elRappel.textContent = 'Dés dans le gobelet, bluff et gorgées';
+  const p = ouvrirPanneau('Comment tu joues ?');
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  r.appendChild(bouton('En ligne', '', panneauEnLigne));
+  r.appendChild(bouton('Solo contre des bots', 'sombre', panneauSolo));
+  p.appendChild(r);
+
+  // Partie quittee en cours : on propose de reprendre sa place.
+  const s = lireSession();
+  if (s && s.code && s.jeton) {
+    const r2 = document.createElement('div');
+    r2.className = 'rangee';
+    r2.style.marginTop = '12px';
+    r2.appendChild(bouton('Reprendre la partie ' + s.code, 'sombre', () => {
+      monNom = s.nom; codeSalon = s.code; monJeton = s.jeton;
+      serveurChoisi = s.serveur || 'render';
+      estCreateur = false;
+      afficherErreur('Reconnexion...');
+      seConnecter();
+    }));
+    p.appendChild(r2);
+  }
+}
+
+// --- Solo : le moteur local et les bots, sans serveur ---
+function panneauSolo() {
+  const p = ouvrirPanneau('Combien de joueurs ?');
+  const info = document.createElement('p');
+  info.textContent = 'Toi + des bots qui tiennent la place des autres joueurs.';
+  p.appendChild(info);
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  [2, 3, 4, 5, 6].forEach(n => {
+    r.appendChild(bouton(String(n), n === 4 ? '' : 'sombre', () => demarrerSolo(n)));
+  });
+  p.appendChild(r);
+  const r2 = document.createElement('div');
+  r2.className = 'rangee';
+  r2.style.marginTop = '10px';
+  r2.appendChild(bouton('Retour', 'sombre', panneauAccueil));
+  p.appendChild(r2);
+}
+
+function demarrerSolo(nb) {
+  mode = 'local';
+  monJeton = null;
+  oublierSession();
+  MOI = 0;
+  cacherPanneau();
+  serveur.demarrer(['Toi'].concat(NOMS_BOTS.slice(0, nb - 1)));
+}
+
+// --- En ligne : meme protocole que le client 2D ---
+function panneauEnLigne() {
+  const p = ouvrirPanneau('Jouer en ligne');
+
+  const l1 = document.createElement('div');
+  l1.className = 'rangee';
+  const pseudo = champTexte('pseudo', 'Ton prenom', 16);
+  pseudo.value = monNom;
+  l1.appendChild(pseudo);
+  p.appendChild(l1);
+
+  const l2 = document.createElement('div');
+  l2.className = 'rangee';
+  l2.style.marginTop = '10px';
+  l2.appendChild(bouton('Creer un salon', '', creerSalon));
+  p.appendChild(l2);
+
+  const l3 = document.createElement('div');
+  l3.className = 'rangee';
+  l3.style.marginTop = '10px';
+  l3.appendChild(champTexte('code-salon', 'CODE', 4));
+  l3.appendChild(bouton('Rejoindre', 'sombre', rejoindreSalon));
+  p.appendChild(l3);
+
+  const l4 = document.createElement('div');
+  l4.className = 'rangee';
+  l4.style.marginTop = '14px';
+  const btnServeur = bouton('', 'sombre', () => {
+    serveurChoisi = serveurChoisi === 'render' ? 'local' : 'render';
+    majLibelleServeur(btnServeur);
+  });
+  btnServeur.style.fontSize = '14px';
+  btnServeur.style.padding = '7px 14px';
+  majLibelleServeur(btnServeur);
+  l4.appendChild(btnServeur);
+  const retour = bouton('Retour', 'sombre', panneauAccueil);
+  retour.style.fontSize = '14px';
+  retour.style.padding = '7px 14px';
+  l4.appendChild(retour);
+  p.appendChild(l4);
+
+  const note = document.createElement('div');
+  note.className = 'note';
+  note.textContent = "Le serveur Render s'endort : la premiere connexion peut prendre 30 s.";
+  p.appendChild(note);
+}
+
+function majLibelleServeur(b) {
+  b.textContent = serveurChoisi === 'render' ? 'Serveur : Render' : 'Serveur : local';
+}
+
+function lireNom() {
+  const champ = document.getElementById('pseudo');
+  monNom = champ ? champ.value.trim() : '';
+  if (!monNom) { afficherErreur('Entre ton prenom'); return false; }
+  return true;
+}
+
+async function creerSalon() {
+  if (!lireNom()) return;
+  afficherErreur('Connexion au serveur...');
+  try {
+    const rep = await fetch(SERVEURS[serveurChoisi].http + '/creer-salon');
+    codeSalon = (await rep.json()).code;
+    estCreateur = true;
+    seConnecter();
+  } catch (e) {
+    afficherErreur("Serveur injoignable. S'il dort, reessaie dans 30 s.");
+  }
+}
+
+async function rejoindreSalon() {
+  if (!lireNom()) return;
+  const champ = document.getElementById('code-salon');
+  codeSalon = (champ ? champ.value : '').trim().toUpperCase();
+  if (codeSalon.length !== 4) { afficherErreur('Le code fait 4 lettres'); return; }
+  afficherErreur('Connexion au serveur...');
+  try {
+    const rep = await fetch(SERVEURS[serveurChoisi].http + '/salon/' + codeSalon);
+    if (!(await rep.json()).existe) { afficherErreur('Salon introuvable'); return; }
+    estCreateur = false;
+    seConnecter();
+  } catch (e) {
+    afficherErreur('Serveur injoignable.');
+  }
+}
+
+function seConnecter() {
+  let url = SERVEURS[serveurChoisi].ws + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom);
+  if (monJeton) url += '?jeton=' + encodeURIComponent(monJeton);
+  ws = new WebSocket(url);
+  ws.onopen = () => { mode = 'ligne'; if (!enPartie) panneauAttente(); };
+  ws.onmessage = e => clientRecevoir(JSON.parse(e.data));
+  ws.onerror = () => afficherErreur('Erreur de connexion au serveur');
+  ws.onclose = () => {
+    if (enPartie) panneauReconnexion();
+  };
+}
+
+function panneauReconnexion() {
+  elMessage.textContent = 'Connexion perdue';
+  const p = ouvrirPanneau('Deconnecte');
+  const t = document.createElement('p');
+  t.textContent = 'Ta place est gardee : les autres continuent sans toi en attendant.';
+  p.appendChild(t);
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  r.appendChild(bouton('Reconnecter', '', () => { cacherPanneau(); seConnecter(); }));
+  r.appendChild(bouton('Quitter', 'sombre', () => {
+    enPartie = false; oublierSession(); monJeton = null; panneauAccueil();
+  }));
+  p.appendChild(r);
+}
+
+function panneauAttente() {
+  const p = ouvrirPanneau('Salon');
+  const code = document.createElement('div');
+  code.className = 'code-salon';
+  code.textContent = codeSalon;
+  p.appendChild(code);
+
+  const aide = document.createElement('p');
+  aide.textContent = 'Donne ce code aux autres pour qu\u2019ils rejoignent.';
+  p.appendChild(aide);
+
+  const liste = document.createElement('div');
+  liste.className = 'liste-attente';
+  liste.textContent = joueursSalon.length
+    ? joueursSalon.map((n, i) => (i === MOI ? n + ' (toi)' : n)).join(' \u00b7 ')
+    : 'En attente de joueurs...';
+  p.appendChild(liste);
+
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  if (estCreateur) {
+    const b = bouton('Demarrer la partie', '', () => envoyerIntention(MOI, { type: 'demarrer' }));
+    b.disabled = joueursSalon.length < 2;
+    r.appendChild(b);
+  } else {
+    const att = document.createElement('p');
+    att.textContent = 'En attente du createur du salon...';
+    p.appendChild(att);
+  }
+  p.appendChild(r);
+}
+
+function demarrerScene(noms) {
+  enPartie = true;
+  cacherPanneau();
+  creerSieges(noms);
+  sieges.forEach(s => { s.gorgees = 0; });
+  placerGobelet(MOI, true);
+  vueTable();
+}
+
+// =====================================================================
+// BOUCLE DE RENDU
+// =====================================================================
+const clock = new THREE.Clock();
+
+function animer() {
+  requestAnimationFrame(animer);
+  const dt = Math.min(clock.getDelta(), 0.033);
+
+  // --- physique des dés ---
+  if (enLancer) {
+    rollTimer += dt;
+    des.forEach(d => { if (!d.settling) integrerDe(d, dt); });
+    collisionDes(des[0], des[1]);
+
+    // Chaque dé se redresse dès qu'il est immobile lui-même ; ROLL_DURATION
+    // n'est qu'un filet de sécurité.
+    des.forEach(d => {
+      if (!d.settling) {
+        const immobile = d.vel.length() < 0.05 && d.angVel.length() < 0.3;
+        if ((immobile && rollTimer > 0.3) || rollTimer > ROLL_DURATION) demarrerSnap(d);
+      }
+    });
+
+    des.forEach(d => {
+      if (d.settling && !d.done) {
+        d.mesh.quaternion.slerp(d.targetQuat, 0.55);
+        d.mesh.position.y += (FLOOR_Y + d.radius - d.mesh.position.y) * 0.55;
+        if (d.mesh.quaternion.angleTo(d.targetQuat) < 0.03) d.done = true;
+      }
+    });
+
+    if (des.every(d => d.done)) {
+      if (finDelai === null) finDelai = 0;
+      finDelai += dt;
+      if (finDelai >= RESULT_DELAY) {
+        enLancer = false;
+        animationEnCours = false;
+        const cb = apresAnimation; apresAnimation = null;
+        if (cb) cb();
+      }
+    }
+  }
+
+  // --- secousse du gobelet (lancer d'un autre joueur) ---
+  if (secousse) {
+    secousse.t += dt;
+    const k = secousse.t / secousse.duree;
+    const amp = Math.sin(Math.min(k, 1) * Math.PI) * 0.09;
+    gobelet.position.y = Math.abs(Math.sin(secousse.t * 22)) * amp;
+    gobelet.rotation.z = Math.sin(secousse.t * 19) * amp * 1.4;
+    gobelet.rotation.x = Math.cos(secousse.t * 17) * amp;
+    if (secousse.t >= secousse.duree) {
+      gobelet.position.y = 0;
+      gobelet.rotation.set(0, 0, 0);
+      secousse = null;
+      animationEnCours = false;
+      const cb = apresAnimation; apresAnimation = null;
+      if (cb) cb();
+    }
+  } else if (!enLancer) {
+    // --- voyage du gobelet vers le joueur courant ---
+    gobelet.position.lerp(gobeletObjectif, 0.1);
+  }
+
+  // --- caméra ---
+  camera.position.lerp(camObjectifPos, CAM_VITESSE);
+  camCibleActuelle.lerp(camObjectifCible, CAM_VITESSE);
+  camera.lookAt(camCibleActuelle);
+
+  renderer.render(scene, camera);
+}
+
+creerSieges(['Toi', 'Fury', 'Romanoff', 'Barton']);
+placerGobelet(0, true);
+panneauAccueil();
+animer();
+</script>
+</body>
+</html>
