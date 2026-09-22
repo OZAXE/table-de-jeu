@@ -1776,7 +1776,7 @@ function clientRecevoir(msg) {
       break;
 
     case 'bb_etat':
-      quandLibre(() => appliquerEtat(msg));
+      quandLibre(() => appliquerEtat(normaliserEtat(msg)));
       break;
 
     case 'bb_ta_main':
@@ -1812,6 +1812,24 @@ function clientRecevoir(msg) {
 // qui montent, joueur éliminé), ce qui donne exactement la même animation
 // en solo et en ligne — c'est le même message dans les deux cas.
 // =====================================================================
+// Le serveur construit `joueurs` à partir de la liste des CONNECTÉS, mais
+// verres / positions / elimine / armes à partir de nb_joueurs, figé au
+// démarrage. Quelqu'un qui arrive en pleine partie allonge donc le premier
+// sans allonger les autres (serveur.py n'agrandit l'état que pour le
+// Kinito) : sans ce recadrage il apparaît en joueur fantôme, sans verre ni
+// pion, avec un « undefined/20 » dans la liste. On fait foi des tableaux de
+// jeu : au-delà, ce sont des spectateurs.
+function normaliserEtat(etat) {
+  const n = etat.verres ? etat.verres.length : 0;
+  if (etat.joueurs && etat.joueurs.length > n) {
+    etat.spectateurs = etat.joueurs.slice(n);
+    etat.joueurs = etat.joueurs.slice(0, n);
+  } else {
+    etat.spectateurs = [];
+  }
+  return etat;
+}
+
 function appliquerEtat(etat) {
   const avant = etatCourant;
 
@@ -1897,9 +1915,11 @@ function majBandeau(etat) {
     }
     const restantes = compterCartesPlateau(etat);
     const mainsNues = restantes === 0 ? 5 : 1;
-    elRappel.textContent = etat.message
+    const spect = (etat.spectateurs && etat.spectateurs.length)
+      ? ' · ' + etat.spectateurs.join(', ') + ' regarde(nt)' : '';
+    elRappel.textContent = (etat.message
       ? etat.message
-      : restantes + ' carte(s) au sol · mains nues : ' + mainsNues + ' gorgée' + (mainsNues > 1 ? 's' : '');
+      : restantes + ' carte(s) au sol · mains nues : ' + mainsNues + ' gorgée' + (mainsNues > 1 ? 's' : '')) + spect;
   }
 }
 
@@ -2037,6 +2057,10 @@ function rafraichirPanneau() {
 
   if (etat.phase !== 'jeu') { cacherPanneau(); return; }
 
+  // Arrivé après le début : le serveur ne nous a pas fait de place dans la
+  // partie en cours. Mieux vaut le dire que de laisser croire à un bug.
+  if (MOI >= etat.joueurs.length) { panneauSpectateur(); return; }
+
   if (etat.elimine[MOI]) { panneauElimine(); return; }
 
   if (etat.joueur_courant !== MOI) { panneauAttenteTour(etat); return; }
@@ -2068,6 +2092,19 @@ function panneauAttenteTour(etat) {
 function panneauElimine() {
   const p = ouvrirPanneau('Verre plein');
   p.appendChild(aide('Ton verre est à 20 : tu es éliminé. Tu peux regarder la fin de la partie.'));
+}
+
+function panneauSpectateur() {
+  const p = ouvrirPanneau('Spectateur');
+  p.appendChild(aide('La partie avait déjà commencé quand tu es arrivé : BeerBattle distribue les cartes au lancement, on ne peut pas ajouter un joueur en cours de route. Tu suis la partie, et tu joueras la prochaine.'));
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  r.appendChild(bouton('Quitter le salon', 'sombre', () => {
+    enPartie = false; partieFinie = false; oublierSession(); monJeton = null;
+    if (ws) { try { ws.close(); } catch (e) { /* deja ferme */ } }
+    panneauAccueil();
+  }));
+  p.appendChild(r);
 }
 
 // --- Le tour : une seule action ---
@@ -2792,6 +2829,17 @@ async function rejoindreSalon() {
 }
 
 function seConnecter() {
+  // Si on a déjà un jeton pour CE salon, on le renvoie, quel que soit le
+  // chemin emprunté pour revenir (bouton « Reprendre », code retapé, lien
+  // ?salon=). Sans lui le serveur ne nous reconnaît pas et nous AJOUTE en
+  // tant que nouveau joueur : on se retrouve en double dans la partie
+  // qu'on vient de quitter, l'ancienne place restant occupée par un
+  // fantôme. C'était le cas quand seul le bouton d'accueil passait le jeton.
+  if (!monJeton) {
+    const s = lireSession();
+    if (s && s.code === codeSalon && s.jeton) monJeton = s.jeton;
+  }
+
   let url = SERVEURS[serveurChoisi].ws + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom);
   if (monJeton) url += '?jeton=' + encodeURIComponent(monJeton);
   ws = new WebSocket(url);
