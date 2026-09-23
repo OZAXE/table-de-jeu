@@ -289,7 +289,19 @@
     <p><span class="accent">Corps à corps</span> (même case) : carte gorgée, ou mains nues — 1 gorgée, ou 5 si le plateau est vidé de ses cartes. <span class="accent">À distance</span> : il faut une arme posée, plus une carte gorgée ou un Joker. <span class="accent">Mi-verre</span> : la moitié de ce qu'il reste avant 20, arrondi au supérieur.</p>
     <h3>Autour de la table</h3>
     <p>Les verres posés au bord du plateau sont ceux des joueurs : ils se remplissent à mesure qu'on boit. Le tien est toujours devant toi, les autres tournent autour — dis les <span class="accent">prénoms</span>, jamais « celui de gauche ».</p>
-    <button id="fermer-regles">Fermer</button>
+
+    <!-- Rempli a l'ouverture de la modale : partie en ligne seulement. -->
+    <div id="bloc-qr-regles" class="cache">
+      <h3>Inviter quelqu'un</h3>
+      <p>Salon <span class="accent" id="qr-code-salon">----</span> — fais scanner ce code, le prénom suffira.</p>
+      <canvas id="qr-regles" class="qr"></canvas>
+      <div id="qr-note-regles" class="note"></div>
+      <div class="rangee" style="margin-top:8px;">
+        <button id="copier-lien-regles" class="sombre">Copier le lien</button>
+      </div>
+    </div>
+
+    <button id="fermer-regles" style="margin-top:14px;">Fermer</button>
   </div>
 </div>
 
@@ -300,8 +312,10 @@
 import * as THREE from 'three';
 
 const elModaleRegles = document.getElementById('modale-regles');
-document.getElementById('btn-regles').addEventListener('click',
-  () => elModaleRegles.classList.remove('cache'));
+document.getElementById('btn-regles').addEventListener('click', () => {
+  majQRModale();
+  elModaleRegles.classList.remove('cache');
+});
 document.getElementById('fermer-regles').addEventListener('click',
   () => elModaleRegles.classList.add('cache'));
 elModaleRegles.addEventListener('click', e => {
@@ -1801,6 +1815,10 @@ function clientRecevoir(msg) {
 
     case 'erreur':
       elRappel.textContent = msg.message;
+      // Une relance refusée (pas assez de monde, ou plus de 5) laisserait
+      // l'écran vide, panneau caché : on redonne la fin de partie pour
+      // pouvoir lire le motif et réessayer.
+      if (partieFinie && dernierGagnant) quandLibre(() => panneauVictoire(dernierGagnant));
       break;
   }
 }
@@ -2282,8 +2300,11 @@ function panneauRamassage(etat) {
   p.appendChild(zone);
 }
 
+let dernierGagnant = null;
+
 function panneauVictoire(gagnant) {
   partieFinie = true;
+  dernierGagnant = gagnant;
   reinitialiserClics();
   cacherCarteRevelee();
 
@@ -2304,9 +2325,25 @@ function panneauVictoire(gagnant) {
   elRappel.textContent = '';
   const p = ouvrirPanneau('Fin de la partie');
   p.appendChild(aide('Dernier debout : ' + gagnant + '.'));
+
+  // Celui qui regardait entre dans la partie suivante : le serveur repart de
+  // tous les connectés. C'est le seul moment où il peut être intégré, les
+  // cartes étant distribuées au lancement.
+  const spectateurs = (etatCourant && etatCourant.spectateurs) || [];
+  if (spectateurs.length) {
+    p.appendChild(aide(spectateurs.join(', ') + (spectateurs.length > 1 ? ' entrent' : ' entre')
+      + ' dans la partie suivante.'));
+  }
+
   const r = document.createElement('div');
   r.className = 'rangee';
-  r.appendChild(bouton('Nouvelle partie', '', () => location.reload()));
+  r.appendChild(bouton('Relancer une partie', '', () => {
+    cacherPanneau();
+    elMessage.textContent = 'Nouvelle partie…';
+    if (mode === 'ligne') envoyerIntention(MOI, { type: 'bb_demarrer' });
+    else serveur.demarrer(serveur.noms.slice());
+  }));
+  r.appendChild(bouton("Retour à l'accueil", 'sombre', () => location.reload()));
   p.appendChild(r);
 }
 
@@ -2871,6 +2908,58 @@ function lienSalon(code) {
   const fichierLocal = location.protocol === 'file:';
   const base = fichierLocal ? SITE_PUBLIE : location.origin + location.pathname;
   return { url: base + '?salon=' + encodeURIComponent(code), repli: fichierLocal };
+}
+
+// Le QR du salon reste joignable une fois la partie lancée, sous les règles :
+// le panneau du bas est pris par le jeu, et c'est justement en cours de
+// partie qu'on a besoin de renvoyer le lien à quelqu'un qui s'est fait
+// couper et n'a plus l'adresse.
+function majQRModale() {
+  const bloc = document.getElementById('bloc-qr-regles');
+  if (!bloc) return;
+
+  // En solo il n'y a pas de salon à partager.
+  if (mode !== 'ligne' || !codeSalon) { bloc.className = 'cache'; return; }
+  bloc.className = '';
+  document.getElementById('qr-code-salon').textContent = codeSalon;
+
+  const lien = lienSalon(codeSalon);
+  const cv = document.getElementById('qr-regles');
+  const note = document.getElementById('qr-note-regles');
+
+  cv.style.display = 'none';
+  if (typeof QRious !== 'undefined') {
+    try {
+      new QRious({ element: cv, value: lien.url, size: 340, level: 'M',
+                   background: '#e8f0e6', foreground: '#0d2a1f' });
+      cv.style.display = '';
+    } catch (e) { /* pas de QR : le code à 4 lettres suffit */ }
+  }
+
+  const avertissements = [];
+  if (lien.repli) {
+    avertissements.push('Ce QR mène au site en ligne : la page est ouverte en fichier local, il n’y a pas d’adresse à partager.');
+    if (serveurChoisi === 'local') {
+      avertissements.push('Tu joues sur le serveur local : ceux qui scannent arriveront sur le serveur en ligne.');
+    }
+  }
+  // Dire la vérité plutôt que de laisser espérer : BeerBattle distribue
+  // toutes les cartes au lancement, on ne peut pas insérer un joueur après.
+  if (enPartie && !partieFinie) {
+    avertissements.push('Partie en cours : celui qui rejoint maintenant sera spectateur et jouera la prochaine. Pour quelqu’un qui s’est fait couper, en revanche, ce lien lui rend sa place.');
+  }
+  note.textContent = avertissements.join(' ');
+
+  // onclick plutôt qu'addEventListener : la modale peut être rouverte dix
+  // fois, on ne veut pas empiler dix gestionnaires sur le même bouton.
+  document.getElementById('copier-lien-regles').onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(lien.url);
+      note.textContent = 'Lien copié : ' + lien.url;
+    } catch (e) {
+      note.textContent = lien.url;
+    }
+  };
 }
 
 function panneauAttente() {
