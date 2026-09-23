@@ -1,0 +1,3832 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Picolopoly</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<style>
+  /* Palette claire et lumineuse : volontairement à l'opposé du bar sombre
+     du Kinito et de Buckshot. */
+  :root {
+    --ciel: #bfe3f5;
+    --papier: rgba(255, 255, 255, 0.92);
+    --papier-plein: #ffffff;
+    --encre: #2b2622;
+    --doux: #756a60;
+    --trait: #e6dccd;
+    --accent: #f0a020;
+    --accent-fonce: #c77d00;
+    --vert: #2e9a55;
+    --rouge: #d8453b;
+    --biere: #fff1c9;
+  }
+  html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; background: var(--ciel); }
+  canvas { display: block; }
+  #overlay { position: fixed; inset: 0; pointer-events: none; font-family: 'Fredoka', system-ui, sans-serif; color: var(--encre); }
+
+  /* --- Joueurs --- */
+  #joueurs { position: absolute; top: 14px; left: 14px; display: flex; flex-direction: column; gap: 6px; max-width: 250px; }
+  .joueur {
+    background: var(--papier); border: 2px solid transparent; border-radius: 12px;
+    padding: 6px 10px; box-shadow: 0 3px 10px rgba(40, 60, 80, 0.12); font-size: 15px;
+    display: grid; grid-template-columns: 14px 1fr auto; gap: 1px 8px; align-items: center;
+  }
+  .joueur.actif { border-color: var(--accent); box-shadow: 0 3px 14px rgba(240, 160, 32, 0.35); }
+  .joueur.faillite { opacity: 0.45; text-decoration: line-through; }
+  .joueur.absent { opacity: 0.55; font-style: italic; }
+  .joueur .pastille { width: 13px; height: 13px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.25); }
+  .joueur .nom { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .joueur .argent { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .joueur .ligne2 { grid-column: 2 / 4; font-size: 12.5px; color: var(--doux); display: flex; flex-wrap: wrap; gap: 3px 8px; align-items: center; }
+  .joueur .titres { display: inline-flex; gap: 2px; flex-wrap: wrap; }
+  .joueur .titre { width: 7px; height: 10px; border-radius: 2px; }
+  .joueur .titre.hyp { opacity: 0.35; }
+
+  /* --- Bandeau --- */
+  #bandeau { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); text-align: center; max-width: 46vw; }
+  #chrono {
+    display: inline-block; background: var(--papier); border-radius: 20px; padding: 3px 14px;
+    font-weight: 700; font-variant-numeric: tabular-nums; font-size: 16px; box-shadow: 0 3px 10px rgba(40,60,80,0.12);
+  }
+  #chrono.presse { color: var(--rouge); }
+  #message { margin-top: 6px; font-size: 18px; font-weight: 600; text-shadow: 0 1px 0 #fff, 0 0 12px rgba(255,255,255,0.9); }
+  #rappel { margin-top: 2px; font-size: 14.5px; color: #3d4d57; text-shadow: 0 0 8px rgba(255,255,255,0.95); min-height: 18px; }
+  #rappel.erreur { color: var(--rouge); font-weight: 600; }
+
+  #boutons-haut { position: absolute; top: 14px; right: 14px; display: flex; gap: 8px; }
+  .btn-haut {
+    pointer-events: auto; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+    background: var(--papier); color: var(--encre); border: 2px solid var(--trait); border-radius: 12px; padding: 7px 12px;
+    box-shadow: 0 3px 10px rgba(40,60,80,0.12);
+  }
+  .btn-haut.actif { border-color: var(--accent); }
+
+  /* --- Panneau du bas --- */
+  #panneau {
+    position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+    pointer-events: auto; background: var(--papier); border-radius: 18px;
+    padding: 14px 18px; min-width: 320px; max-width: min(760px, 94vw); max-height: 52vh; overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(40, 60, 80, 0.22); text-align: center; box-sizing: border-box;
+  }
+  #panneau.cache { display: none; }
+  #panneau h2 { margin: 0 0 8px; font-size: 20px; font-weight: 700; }
+  #panneau p { margin: 0 0 10px; font-size: 16px; }
+  .rangee { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 6px 0; }
+  .delai { font-size: 12.5px; color: var(--doux); margin-top: 6px; }
+
+  button {
+    pointer-events: auto; font-family: 'Fredoka', system-ui, sans-serif; font-weight: 600; font-size: 17px;
+    color: #fff; background: linear-gradient(180deg, #f5b440, #e8921a);
+    border: 0; border-radius: 12px; padding: 10px 20px; cursor: pointer;
+    box-shadow: 0 4px 0 var(--accent-fonce), 0 6px 14px rgba(0,0,0,0.12);
+    transition: transform 0.08s, box-shadow 0.08s, filter 0.2s;
+  }
+  button:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--accent-fonce); }
+  button:disabled { filter: grayscale(0.7) opacity(0.6); cursor: default; }
+  button.clair { color: var(--encre); background: #fff; box-shadow: 0 4px 0 #d9cfbf, 0 6px 14px rgba(0,0,0,0.08); border: 1px solid var(--trait); }
+  button.clair:active { box-shadow: 0 1px 0 #d9cfbf; }
+  button.clair.choisi { background: #fff4d9; border-color: var(--accent); }
+  button.danger { background: linear-gradient(180deg, #e56a60, #cc3d33); box-shadow: 0 4px 0 #9c2c24, 0 6px 14px rgba(0,0,0,0.12); }
+  button.petit { font-size: 14px; padding: 6px 12px; }
+  .pastille-bouton { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; border: 1px solid rgba(0,0,0,0.2); }
+
+  .liste-gestion { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; text-align: left; margin: 6px 0; font-size: 15px; }
+  .liste-gestion .actions { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
+  .liste-gestion .couleur { display: inline-block; width: 10px; height: 14px; border-radius: 3px; margin-right: 6px; vertical-align: -2px; }
+  .liste-gestion small { color: var(--doux); }
+  .stepper { display: inline-flex; align-items: center; gap: 8px; }
+  .stepper b { min-width: 42px; display: inline-block; font-size: 18px; }
+  .stepper button { padding: 4px 12px; font-size: 18px; }
+  .colonnes { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; text-align: left; }
+  .colonnes > div { flex: 1 1 200px; }
+  .colonnes h3 { font-size: 14px; color: var(--doux); margin: 6px 0; font-weight: 600; }
+
+  input[type="text"], select {
+    pointer-events: auto; font-family: 'Fredoka', system-ui, sans-serif; font-size: 18px; text-align: center;
+    padding: 9px 12px; width: 210px; margin: 0 4px; color: var(--encre); background: #fff;
+    border: 2px solid var(--trait); border-radius: 12px;
+  }
+  select { width: auto; max-width: 70vw; font-size: 16px; text-align: left; }
+  input#code-salon { width: 110px; letter-spacing: 6px; text-transform: uppercase; }
+  .code-salon { font-size: 40px; font-weight: 700; letter-spacing: 8px; color: var(--accent-fonce); margin: 2px 0 6px; }
+  .liste-attente { font-size: 17px; margin: 10px 0; line-height: 1.6; }
+  .qr { display: block; margin: 10px auto 4px; border-radius: 12px; border: 3px solid #fff; width: 168px; height: 168px; box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
+  .note { font-size: 12px; color: var(--doux); margin-top: 10px; font-style: italic; }
+  .alerte { font-size: 13px; color: var(--accent-fonce); margin-top: 8px; }
+  .classement { margin: 6px auto 10px; border-collapse: collapse; font-size: 16px; }
+  .classement td { padding: 4px 10px; text-align: left; border-bottom: 1px solid var(--trait); }
+  .classement td.n { text-align: right; font-weight: 700; }
+
+  /* --- Carte Chance / Caisse --- */
+  #carte {
+    position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%) scale(0.9);
+    width: min(340px, 84vw); background: #fff; border-radius: 16px; padding: 16px 20px 20px;
+    box-shadow: 0 16px 40px rgba(40,60,80,0.3); text-align: center; opacity: 0; transition: opacity 0.25s, transform 0.25s;
+    border-top: 12px solid var(--accent);
+  }
+  #carte.visible { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  #carte.caisse { border-top-color: #4da3e0; }
+  #carte .paquet { font-size: 14px; letter-spacing: 2px; text-transform: uppercase; color: var(--doux); font-weight: 600; }
+  #carte .qui { font-size: 13px; color: var(--doux); margin-top: 2px; }
+  #carte .texte { font-size: 19px; margin-top: 10px; line-height: 1.35; }
+
+  /* --- Gorgées (à moi) --- */
+  #toast {
+    position: absolute; left: 50%; top: 22%; transform: translateX(-50%);
+    background: var(--biere); border: 3px solid var(--accent); border-radius: 16px; padding: 10px 22px;
+    font-size: 24px; font-weight: 700; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+    opacity: 0; transition: opacity 0.25s;
+  }
+  #toast.visible { opacity: 1; }
+  #toast small { display: block; font-size: 14px; font-weight: 500; color: var(--doux); }
+
+  /* --- Fiche d'une case --- */
+  #fiche {
+    position: absolute; top: 64px; right: 14px; width: 250px; pointer-events: auto;
+    background: #fff; border-radius: 14px; box-shadow: 0 10px 30px rgba(40,60,80,0.25); overflow: hidden; font-size: 14.5px;
+  }
+  #fiche .tete { padding: 10px 34px 10px 12px; font-weight: 700; font-size: 17px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.35); position: relative; }
+  #fiche .fermer { position: absolute; top: 6px; right: 6px; padding: 2px 9px; font-size: 16px; box-shadow: none; background: rgba(255,255,255,0.3); }
+  #fiche .corps { padding: 8px 12px 12px; }
+  #fiche table { width: 100%; border-collapse: collapse; }
+  #fiche td { padding: 2px 0; }
+  #fiche td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  #fiche tr.courant td { font-weight: 700; color: var(--accent-fonce); }
+  #fiche .etat { margin: 8px 0 4px; color: var(--doux); }
+  #fiche .rangee { justify-content: flex-start; }
+
+  /* --- Règles --- */
+  #modale-regles {
+    position: fixed; inset: 0; z-index: 50; background: rgba(40, 60, 80, 0.45);
+    display: flex; align-items: flex-start; justify-content: center; padding: 20px; overflow-y: auto; pointer-events: auto;
+  }
+  #modale-regles.cache { display: none; }
+  .modale {
+    background: #fff; border-radius: 16px; padding: 22px; max-width: 520px; width: 100%; margin: auto;
+    color: var(--encre); line-height: 1.5; font-family: 'Fredoka', system-ui, sans-serif; box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+  }
+  .modale h2 { font-size: 24px; margin: 0 0 10px; text-align: center; }
+  .modale h3 { color: var(--accent-fonce); font-size: 17px; margin: 16px 0 6px; }
+  .modale p { margin: 0 0 10px; font-size: 15px; }
+  .modale ul { margin: 0 0 10px 18px; font-size: 15px; padding: 0; }
+  .modale li { margin-bottom: 4px; }
+  .modale table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 14.5px; }
+  .modale td { padding: 4px 6px; border-bottom: 1px solid var(--trait); vertical-align: top; }
+  .modale td:first-child { white-space: nowrap; font-weight: 600; }
+  .modale .accent { color: var(--accent-fonce); font-weight: 600; }
+
+  .cache { display: none !important; }
+
+  /* ================= Téléphones ================= */
+  @media (max-width: 760px), (pointer: coarse) {
+    #joueurs { top: 50px; left: 6px; right: 6px; max-width: none; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 4px; }
+    .joueur { font-size: 12.5px; padding: 3px 8px; gap: 0 5px; border-radius: 9px; grid-template-columns: 10px auto auto; }
+    .joueur .pastille { width: 10px; height: 10px; }
+    .joueur .ligne2 { display: none; }
+    #bandeau { top: 8px; left: 8px; transform: none; text-align: left; max-width: calc(100vw - 150px); }
+    #chrono { font-size: 14px; padding: 2px 10px; }
+    #message { font-size: 14px; margin-top: 3px; }
+    #rappel { font-size: 12px; }
+    #boutons-haut { top: 8px; right: 8px; gap: 5px; }
+    .btn-haut { font-size: 13px; padding: 5px 9px; }
+    #panneau {
+      bottom: 0; left: 0; right: 0; transform: none; width: 100%; max-width: none; min-width: 0;
+      border-radius: 18px 18px 0 0; padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px)); max-height: 55vh;
+    }
+    #panneau h2 { font-size: 17px; margin-bottom: 6px; }
+    #panneau p { font-size: 14px; margin-bottom: 8px; }
+    button { font-size: 15px; padding: 8px 14px; }
+    #fiche { top: auto; bottom: 8px; right: 8px; left: 8px; width: auto; max-height: 50vh; overflow-y: auto; }
+    #carte .texte { font-size: 17px; }
+    #toast { font-size: 19px; top: 26%; }
+    input[type="text"] { width: 160px; font-size: 16px; }
+    .code-salon { font-size: 32px; }
+    .qr { width: 132px; height: 132px; }
+    .modale { padding: 16px; }
+  }
+  @media (max-height: 460px) {
+    #joueurs { top: 40px; }
+    #panneau { max-height: 72vh; padding: 8px 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="overlay">
+  <div id="joueurs"></div>
+  <div id="bandeau">
+    <div id="chrono" class="cache">⏱ 60:00</div>
+    <div id="message">Picolopoly</div>
+    <div id="rappel"></div>
+  </div>
+  <div id="boutons-haut">
+    <button id="btn-vue" class="btn-haut cache" title="Suivre le pion actif">🔍</button>
+    <button id="btn-regles" class="btn-haut">Règles ⓘ</button>
+  </div>
+  <div id="carte"><div class="paquet"></div><div class="qui"></div><div class="texte"></div></div>
+  <div id="toast"></div>
+  <div id="fiche" class="cache"></div>
+  <div id="panneau" class="cache"></div>
+</div>
+
+<div id="modale-regles" class="cache">
+  <div class="modale">
+    <h2>🍻 Règles de Picolopoly</h2>
+    <p>Le Monopoly classique, dans les bars de Poitiers : on achète, on construit, on fait payer les loyers. Chaque interaction se paie aussi <span class="accent">en gorgées</span>. La partie dure <span class="accent">une heure</span> : au bout du chrono, le plus gros patrimoine gagne (argent + propriétés + constructions). Une faillite élimine, et se boit cul sec.</p>
+
+    <h3>Un tour</h3>
+    <p>Lance les deux dés et avance. Un double : tu relances ; trois doubles d'affilée : prison. Après ton premier passage au Départ, un <span class="accent">dé rapide</span> s'ajoute :</p>
+    <ul>
+      <li><b>1, 2, 3</b> : autant de cases en plus.</li>
+      <li><b>🚌 Bus</b> : avance d'un seul dé, ou de la somme, au choix.</li>
+      <li><b>🎩 Monopoly</b> : après ta case, file jusqu'à la prochaine propriété libre (ou, s'il n'y en a plus, la prochaine où tu paies).</li>
+      <li><b>Triple</b> (les trois dés pareils) : va où tu veux.</li>
+    </ul>
+    <p>Une propriété libre s'achète ou se laisse ; laissée, elle reste à vendre pour le suivant. Pas d'enchères. Construire demande tout le groupe de couleur, en restant égal d'une case à l'autre.</p>
+
+    <h3>Les gorgées</h3>
+    <table>
+      <tr><td>Loyer</td><td>1 gorgée par tranche de 50 € (au moins 1, au plus 5). Le propriétaire fait boire 1 gorgée à qui il veut.</td></tr>
+      <tr><td>Départ</td><td>Toast : tout le monde boit 1 gorgée avec celui qui passe.</td></tr>
+      <tr><td>Taxes</td><td>1 gorgée par tranche de 50 €.</td></tr>
+      <tr><td>Prison</td><td>1 gorgée en entrant.</td></tr>
+      <tr><td>Échange conclu</td><td>Toast : tout le monde boit 1 gorgée.</td></tr>
+      <tr><td>Faillite</td><td>Cul sec.</td></tr>
+      <tr><td>Construire, Parc gratuit</td><td>Rien.</td></tr>
+    </table>
+
+    <h3>La prison, un abri</h3>
+    <p>En prison tu ne bouges pas, donc tu ne paies aucun loyer, et <span class="accent">aucune carte ne peut te viser</span>. Pour sortir : un double, 50 €, ou une carte de sortie (au troisième essai raté, tu paies et tu sors). Avec une carte de sortie en poche au moment d'y être envoyé, tu peux t'en servir tout de suite : ni prison, ni gorgée.</p>
+
+    <h3>Les cartes</h3>
+    <p>Un gain d'argent te fait souvent distribuer des gorgées, une perte te fait souvent boire, mais pas toujours. Et six cartes spéciales :</p>
+    <table>
+      <tr><td>Distribution générale</td><td>Tous tes adversaires boivent 1 gorgée.</td></tr>
+      <tr><td>Retour de bâton</td><td>Un adversaire boit le double de ta dernière pénalité (2 si tu n'as encore rien bu).</td></tr>
+      <tr><td>Duel</td><td>Chacun lance un dé : le plus petit boit 3 gorgées.</td></tr>
+      <tr><td>Cadeau empoisonné</td><td>100 € de la banque, mais tu bois 3 gorgées.</td></tr>
+      <tr><td>Immunité</td><td>Ta prochaine pénalité ne se boit pas, quelle qu'elle soit.</td></tr>
+      <tr><td>Sommelier</td><td>Tu répartis 6 gorgées entre tes adversaires.</td></tr>
+    </table>
+
+    <h3>Échanges</h3>
+    <p>Au début de ton tour, avant de lancer, tu peux proposer un échange de propriétés (avec ou sans argent). S'il est accepté : toast collectif.</p>
+
+    <h3>Autour de la table</h3>
+    <p>Le plateau est le même sur tous les écrans : dis le <span class="accent">nom des cases</span>. Touche une case pour voir sa fiche (loyers, propriétaire). Quelqu'un qui ne répond pas est joué d'office au bout d'un moment : la table ne reste jamais figée.</p>
+
+    <!-- Rempli à l'ouverture de la modale : partie en ligne seulement. -->
+    <div id="bloc-qr-regles" class="cache">
+      <h3>Inviter quelqu'un</h3>
+      <p>Salon <span class="accent" id="qr-code-salon">----</span> — fais scanner ce code, le prénom suffira.</p>
+      <canvas id="qr-regles" class="qr"></canvas>
+      <div id="qr-note-regles" class="note"></div>
+      <div class="rangee"><button id="copier-lien-regles" class="clair">Copier le lien</button></div>
+    </div>
+
+    <div class="rangee" style="margin-top:14px;">
+      <button id="fermer-regles">Fermer</button>
+      <button id="quitter-table" class="clair cache">Quitter la table</button>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+// =====================================================================
+// MOTEUR DE RÈGLES — miroir de table-de-jeu-serveur/serveur/picolopoly.py
+//
+// Traduction fonction par fonction du module Python, jusqu'à l'ordre des
+// tirages au hasard et au texte des messages : tests/test-miroir-pp.mjs
+// rejoue des parties enregistrées côté Python et exige, coup après coup,
+// les mêmes messages et un état identique. Quand une règle bouge dans
+// picolopoly.py, elle bouge ici dans le même commit.
+//
+// Le moteur ne communique que par messages, au format exact de la
+// WebSocket. `envoyerIntention` est l'unique point de bascule : en solo il
+// appelle ce moteur, en ligne il fait un ws.send().
+// =====================================================================
+const PP_JOUEURS_MIN = 2;
+const PP_JOUEURS_MAX = 6;
+
+// Monopoly classique français
+const PP_ARGENT_DEPART = 1500;
+const PP_SALAIRE = 200;
+const PP_AMENDE_PRISON = 50;
+const PP_ESSAIS_PRISON = 3;
+const PP_LOYER_GARE = 25;
+const PP_MULT_COMPAGNIE = [4, 10];
+const PP_INTERET_LEVEE = 10;
+
+// Gorgées
+const PP_GORGEE_PAR_TRANCHE = 50;
+const PP_GORGEES_MAX = 5;
+const PP_GORGEES_MIROIR = 1;
+const PP_GORGEES_DEPART = 1;
+const PP_GORGEES_PRISON = 1;
+const PP_GORGEES_ECHANGE = 1;
+const PP_GORGEES_DISTRIBUTION = 1;
+const PP_GORGEES_DUEL = 3;
+const PP_GORGEES_CADEAU = 3;
+const PP_GORGEES_SOMMELIER = 6;
+const PP_RETOUR_DEFAUT = 2;
+
+// Rythme
+const PP_DUREE_PARTIE = 3600;
+const PP_DELAI_CHOIX = 30;
+const PP_DELAI_TOUR = 90;
+const PP_DELAI_ABSENT = 3;
+const PP_ECHANGES_PAR_TOUR = 3;
+const PP_DE_RAPIDE = [1, 2, 3, 'bus', 'monopoly', 'monopoly'];
+const PP_BUS_CASE_LIBRE = false;
+
+const PP_ACHETABLES = ['propriete', 'gare', 'compagnie'];
+
+// Le hasard passe par cet objet et nulle part ailleurs : le test du miroir
+// le remplace par les tirages enregistrés côté Python.
+const hasard = {
+  randint(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); },
+  choice(seq) { return seq[Math.floor(Math.random() * seq.length)]; },
+  shuffle(t) {
+    for (let i = t.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const x = t[i]; t[i] = t[j]; t[j] = x;
+    }
+  },
+};
+
+// --- Plateau : 40 cases, montants du Monopoly classique français ---
+function ppProp(nom, groupe, prix, loyers, maison) {
+  return { type: 'propriete', nom, groupe, prix, loyers, maison };
+}
+function ppGare(nom) { return { type: 'gare', nom, groupe: 'gare', prix: 200 }; }
+function ppCompagnie(nom) { return { type: 'compagnie', nom, groupe: 'compagnie', prix: 150 }; }
+function ppCase(type, nom, extra) { return Object.assign({ type, nom }, extra || {}); }
+
+const PP_CASES = [
+  ppCase('depart', 'Départ'),
+  ppProp('Club House', 'marron', 60, [2, 10, 30, 90, 160, 250], 50),
+  ppCase('caisse', 'Caisse de communauté'),
+  ppProp('Le Palais de la Bière', 'marron', 60, [4, 20, 60, 180, 320, 450], 50),
+  ppCase('taxe', 'Impôt sur le revenu', { montant: 200 }),
+  ppGare('Gare de Poitiers'),
+  ppProp('La Minute Blonde', 'bleu_clair', 100, [6, 30, 90, 270, 400, 550], 50),
+  ppCase('chance', 'Chance'),
+  ppProp("Drop'N Shoot Café", 'bleu_clair', 100, [6, 30, 90, 270, 400, 550], 50),
+  ppProp('Le Republic Corner', 'bleu_clair', 120, [8, 40, 100, 300, 450, 600], 50),
+  ppCase('prison', 'Prison / Simple visite'),
+  ppProp('Wallabys', 'rose', 140, [10, 50, 150, 450, 625, 750], 100),
+  ppCompagnie('La Cave de la Grand Rue'),
+  ppProp('Chez Alphonse', 'rose', 140, [10, 50, 150, 450, 625, 750], 100),
+  ppProp('Le Bar des Papas', 'rose', 160, [12, 60, 180, 500, 700, 900], 100),
+  ppGare('Notre-Dame'),
+  ppProp("L'Est Ouest", 'orange', 180, [14, 70, 200, 550, 750, 950], 100),
+  ppCase('caisse', 'Caisse de communauté'),
+  ppProp("Rémi's Pub", 'orange', 180, [14, 70, 200, 550, 750, 950], 100),
+  ppProp('La Mie Câline', 'orange', 200, [16, 80, 220, 600, 800, 1000], 100),
+  ppCase('parc', 'Parc gratuit'),
+  ppProp("L'Istanbul", 'rouge', 220, [18, 90, 250, 700, 875, 1050], 150),
+  ppCase('chance', 'Chance'),
+  ppProp('Le CAP Ristobar', 'rouge', 220, [18, 90, 250, 700, 875, 1050], 150),
+  ppProp('Le Baffalou', 'rouge', 240, [20, 100, 300, 750, 925, 1100], 150),
+  ppGare('Palais de Justice'),
+  ppProp("L'Île au Tison / Guinguette Pictave", 'jaune', 260, [22, 110, 330, 800, 975, 1150], 150),
+  ppProp('Au WC', 'jaune', 260, [22, 110, 330, 800, 975, 1150], 150),
+  ppCompagnie('V and B Poitiers'),
+  ppProp('Aux Heures Heureuses', 'jaune', 280, [24, 120, 360, 850, 1025, 1200], 150),
+  ppCase('allez_prison', 'Allez en prison'),
+  ppProp('Chill Bar', 'vert', 300, [26, 130, 390, 900, 1100, 1275], 200),
+  ppProp('Crafty Brewpub', 'vert', 300, [26, 130, 390, 900, 1100, 1275], 200),
+  ppCase('caisse', 'Caisse de communauté'),
+  ppProp('Le Reza', 'vert', 320, [28, 150, 450, 1000, 1200, 1400], 200),
+  ppGare('Hôtel de Ville'),
+  ppCase('chance', 'Chance'),
+  ppProp('Le Rooftop', 'bleu_fonce', 350, [35, 175, 500, 1100, 1300, 1500], 200),
+  ppCase('taxe', 'Taxe de luxe', { montant: 100 }),
+  ppProp('Les 3 Boulevards', 'bleu_fonce', 400, [50, 200, 600, 1400, 1700, 2000], 200),
+];
+const PP_CASE_PRISON = 10;
+
+const PP_GROUPES = {};
+PP_CASES.forEach((c, i) => {
+  if (PP_ACHETABLES.includes(c.type)) (PP_GROUPES[c.groupe] = PP_GROUPES[c.groupe] || []).push(i);
+});
+
+// --- Cartes ---
+const PP_CHANCE = [
+  { id: 'ch_depart', effet: 'aller', case: 0,
+    texte: "Avancez jusqu'à la case Départ." },
+  { id: 'ch_3bd', effet: 'aller', case: 39,
+    texte: 'Rendez-vous aux 3 Boulevards.' },
+  { id: 'ch_baffalou', effet: 'aller', case: 24,
+    texte: 'Rendez-vous au Baffalou. Si vous passez par la case Départ, recevez 200 €.' },
+  { id: 'ch_wallabys', effet: 'aller', case: 11,
+    texte: 'Rendez-vous au Wallabys. Si vous passez par la case Départ, recevez 200 €.' },
+  { id: 'ch_gare', effet: 'aller', case: 15,
+    texte: "Prenez le bus jusqu'à " + PP_CASES[15].nom + '.' },
+  { id: 'ch_recule', effet: 'reculer', n: 3,
+    texte: 'Reculez de trois cases.' },
+  { id: 'ch_prison', effet: 'prison',
+    texte: 'Allez en prison. Ne passez pas par la case Départ.' },
+  { id: 'ch_sortie', effet: 'sortie_prison',
+    texte: 'Vous êtes libéré de prison. Gardez cette carte.' },
+  { id: 'ch_dividende', effet: 'gain', montant: 50, mode: 'distribuer',
+    texte: 'La banque vous verse un dividende de 50 €. Offrez la gorgée à qui vous voulez.' },
+  { id: 'ch_immeuble', effet: 'gain', montant: 150, mode: 'distribuer',
+    texte: 'Votre immeuble vous rapporte 150 €. Distribuez vos gorgées.' },
+  { id: 'ch_flechettes', effet: 'gain', montant: 100, mode: 'boire',
+    texte: "Vous gagnez le tournoi de fléchettes : 100 €. La tournée d'honneur est pour vous : buvez." },
+  { id: 'ch_exces', effet: 'perte', montant: 15, mode: 'boire',
+    texte: 'Amende pour excès de vitesse : 15 €. Buvez.' },
+  { id: 'ch_reparations', effet: 'reparations', maison: 25, hotel: 100, mode: 'boire',
+    texte: 'Réparations : 25 € par maison, 100 € par hôtel. Buvez à la facture.' },
+  { id: 'ch_tournee', effet: 'perte', montant: 50, mode: 'distribuer',
+    texte: 'Vous payez une tournée : 50 €. Au moins, vous choisissez qui trinque.' },
+  { id: 'ch_retour', effet: 'retour_baton',
+    texte: 'Retour de bâton : un adversaire boit le double de votre dernière pénalité.' },
+  { id: 'ch_duel', effet: 'duel',
+    texte: 'Duel : défiez un adversaire au dé. Le plus petit score boit '
+           + PP_GORGEES_DUEL + ' gorgées.' },
+  { id: 'ch_immunite', effet: 'immunite',
+    texte: "Immunité : vous ne boirez pas votre prochaine pénalité, quelle qu'elle soit." },
+];
+
+const PP_CAISSE = [
+  { id: 'ca_depart', effet: 'aller', case: 0,
+    texte: "Avancez jusqu'à la case Départ." },
+  { id: 'ca_prison', effet: 'prison',
+    texte: 'Allez en prison. Ne passez pas par la case Départ.' },
+  { id: 'ca_sortie', effet: 'sortie_prison',
+    texte: 'Vous êtes libéré de prison. Gardez cette carte.' },
+  { id: 'ca_erreur', effet: 'gain', montant: 200, mode: 'distribuer',
+    texte: 'Erreur de la banque en votre faveur : 200 €. Distribuez vos gorgées.' },
+  { id: 'ca_heritage', effet: 'gain', montant: 100, mode: 'distribuer',
+    texte: 'Vous héritez de 100 €. Distribuez vos gorgées.' },
+  { id: 'ca_stock', effet: 'gain', montant: 50, mode: 'distribuer',
+    texte: 'La vente de votre stock vous rapporte 50 €. Offrez la gorgée.' },
+  { id: 'ca_assurance', effet: 'gain', montant: 100, mode: 'distribuer',
+    texte: 'Votre assurance-vie vous rapporte 100 €. Distribuez vos gorgées.' },
+  { id: 'ca_beaute', effet: 'gain', montant: 10, mode: 'boire',
+    texte: 'Deuxième prix de beauté : 10 €. Buvez à votre santé.' },
+  { id: 'ca_hopital', effet: 'perte', montant: 100, mode: 'boire',
+    texte: "Frais d'hôpital : 100 €. Buvez." },
+  { id: 'ca_medecin', effet: 'perte', montant: 50, mode: 'boire',
+    texte: 'Visite chez le médecin : 50 €. Buvez.' },
+  { id: 'ca_scolarite', effet: 'perte', montant: 50, mode: 'distribuer',
+    texte: "Frais de scolarité : 50 €. Consolez-vous en faisant boire quelqu'un." },
+  { id: 'ca_voirie', effet: 'reparations', maison: 40, hotel: 115, mode: 'boire',
+    texte: 'Travaux de voirie : 40 € par maison, 115 € par hôtel. Buvez à la facture.' },
+  { id: 'ca_distribution', effet: 'distribution_generale',
+    texte: 'Distribution générale : tous vos adversaires boivent une gorgée.' },
+  { id: 'ca_cadeau', effet: 'cadeau', montant: 100,
+    texte: 'Cadeau empoisonné : la banque vous offre 100 €, mais vous buvez '
+           + PP_GORGEES_CADEAU + ' gorgées.' },
+  { id: 'ca_sommelier', effet: 'sommelier',
+    texte: 'Sommelier : répartissez ' + PP_GORGEES_SOMMELIER
+           + ' gorgées entre vos adversaires comme il vous plaît.' },
+];
+
+const PP_CARTES = {};
+PP_CHANCE.concat(PP_CAISSE).forEach(c => { PP_CARTES[c.id] = c; });
+
+// --- Outils ---
+
+function ppGorgeesPour(montant) {
+  if (montant <= 0) return 0;
+  return Math.min(PP_GORGEES_MAX, Math.max(1, Math.floor(montant / PP_GORGEE_PAR_TRANCHE)));
+}
+
+function ppTous(msg) { return { a: null, msg }; }
+function ppPrive(i, msg) { return { a: i, msg }; }
+
+function ppNom(etat, i) {
+  if (i === null || i === undefined) return 'la banque';
+  return i < etat.noms.length ? etat.noms[i] : '?';
+}
+
+function ppVivants(etat) {
+  const r = [];
+  for (let i = 0; i < etat.nb_joueurs; i++) if (!etat.faillite[i]) r.push(i);
+  return r;
+}
+
+// Une carte ne peut pas viser un joueur en prison : c'est tout l'intérêt d'y rester.
+function ppAdversaires(etat, i, parCarte) {
+  return ppVivants(etat).filter(j => j !== i && !(parCarte && etat.en_prison[j]));
+}
+
+// int() de Python : un booléen, None, un texte non entier -> refus (null).
+function ppEntier(v) {
+  if (v === null || v === undefined || typeof v === 'boolean') return null;
+  if (typeof v === 'number') return Number.isFinite(v) ? Math.trunc(v) : null;
+  if (typeof v === 'string' && /^\s*[+-]?\d+\s*$/.test(v)) return parseInt(v, 10);
+  return null;
+}
+
+// Le « or » de Python : 0, '', [], {} et None sont faux (en JS, [] et {} sont vrais).
+function ppOu(v, defaut) {
+  const faux = v === null || v === undefined || v === false || v === 0 || v === ''
+    || (Array.isArray(v) && v.length === 0)
+    || (typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0);
+  return faux ? defaut : v;
+}
+
+function ppNbPossedees(etat, joueur, groupe) {
+  return PP_GROUPES[groupe].filter(c => etat.proprietes[c].proprietaire === joueur).length;
+}
+
+function ppGroupeComplet(etat, joueur, groupe) {
+  return ppNbPossedees(etat, joueur, groupe) === PP_GROUPES[groupe].length;
+}
+
+function ppMaisonsGroupe(etat, groupe) {
+  return PP_GROUPES[groupe].map(c => etat.proprietes[c].maisons);
+}
+
+function ppLoyer(etat, c) {
+  const p = etat.proprietes[c];
+  const o = p.proprietaire;
+  if (o === null || p.hypotheque) return 0;
+  const cs = PP_CASES[c];
+  if (cs.type === 'propriete') {
+    if (p.maisons > 0) return cs.loyers[p.maisons];
+    const base = cs.loyers[0];
+    return ppGroupeComplet(etat, o, cs.groupe) ? base * 2 : base;
+  }
+  if (cs.type === 'gare') {
+    return PP_LOYER_GARE * 2 ** (ppNbPossedees(etat, o, 'gare') - 1);
+  }
+  const des = ppOu(etat.des, {});
+  const somme = ppOu(ppOu(des.d1, 0) + ppOu(des.d2, 0), 7);
+  const mult = ppNbPossedees(etat, o, 'compagnie') === 2 ? PP_MULT_COMPAGNIE[1] : PP_MULT_COMPAGNIE[0];
+  return mult * somme;
+}
+
+function ppPatrimoine(etat, i) {
+  let total = etat.argent[i];
+  etat.proprietes.forEach((p, c) => {
+    if (p === null || p.proprietaire !== i) return;
+    const cs = PP_CASES[c];
+    total += p.hypotheque ? Math.floor(cs.prix / 2) : cs.prix;
+    total += p.maisons * (cs.maison || 0);
+  });
+  return total;
+}
+
+// --- Initialisation ---
+
+function ppInitialiser(noms, maintenant) {
+  const nb = noms.length;
+  const chance = PP_CHANCE.map(c => c.id);
+  const caisse = PP_CAISSE.map(c => c.id);
+  hasard.shuffle(chance);
+  hasard.shuffle(caisse);
+  const etat = {
+    nb_joueurs: nb,
+    noms: noms.slice(),
+    argent: new Array(nb).fill(PP_ARGENT_DEPART),
+    positions: new Array(nb).fill(0),
+    en_prison: new Array(nb).fill(false),
+    tours_prison: new Array(nb).fill(0),
+    cartes_sortie: Array.from({ length: nb }, () => []),
+    immunites: new Array(nb).fill(0),
+    derniere_penalite: new Array(nb).fill(0),
+    faillite: new Array(nb).fill(false),
+    de_rapide: new Array(nb).fill(false),
+    gorgees: new Array(nb).fill(0),
+    partis: new Array(nb).fill(false),
+    proprietes: PP_CASES.map(c => (PP_ACHETABLES.includes(c.type)
+      ? { proprietaire: null, maisons: 0, hypotheque: false } : null)),
+    courant: 0,
+    phase: 'tour',
+    a_lance: false,
+    rejouer: false,
+    doubles: 0,
+    echanges_tour: 0,
+    des: null,
+    attente: null,
+    dette: null,
+    suite: [],
+    paquets: { chance, caisse },   // SECRET : jamais diffusé
+    debut: maintenant,
+    fin_prevue: maintenant + PP_DUREE_PARTIE,
+    echeance: null,
+    version: 0,
+    message: 'La partie commence : à ' + noms[0] + ' de lancer les dés.',
+    classement: null,
+  };
+  ppArmer(etat, maintenant);
+  return etat;
+}
+
+function ppAjouterJoueur(etat, nom) {
+  etat.nb_joueurs += 1;
+  etat.noms.push(nom);
+  etat.argent.push(PP_ARGENT_DEPART);
+  etat.positions.push(0);
+  etat.en_prison.push(false);
+  etat.tours_prison.push(0);
+  etat.cartes_sortie.push([]);
+  etat.immunites.push(0);
+  etat.derniere_penalite.push(0);
+  etat.faillite.push(false);
+  etat.de_rapide.push(false);
+  etat.gorgees.push(0);
+  etat.partis.push(false);
+  etat.message = nom + ' rejoint la partie.';
+  etat.version += 1;
+}
+
+function ppEtatPublic(etat, maintenant) {
+  const echeance = etat.echeance;
+  return {
+    type: 'pp_etat',
+    joueurs: etat.noms,
+    argent: etat.argent,
+    positions: etat.positions,
+    en_prison: etat.en_prison,
+    tours_prison: etat.tours_prison,
+    cartes_sortie: etat.cartes_sortie.map(c => c.length),
+    immunites: etat.immunites,
+    faillite: etat.faillite,
+    de_rapide: etat.de_rapide,
+    gorgees: etat.gorgees,
+    partis: etat.partis,
+    proprietes: etat.proprietes,
+    courant: etat.courant,
+    phase: etat.phase,
+    a_lance: etat.a_lance,
+    doubles: etat.doubles,
+    des: etat.des,
+    attente: etat.attente,
+    dette: etat.dette,
+    message: etat.message,
+    temps_restant: Math.max(0, Math.trunc(etat.fin_prevue - maintenant)),
+    delai_restant: echeance === null ? null : Math.max(0, Math.trunc(echeance - maintenant)),
+    classement: etat.classement,
+  };
+}
+
+// --- Boire, payer, se déplacer ---
+
+function ppBoire(etat, ev, liste, raison, culSec) {
+  culSec = !!culSec;
+  const boivent = [];
+  for (const [i, n] of liste) {
+    if (etat.faillite[i] || (n <= 0 && !culSec)) continue;
+    if (etat.immunites[i] > 0) {
+      etat.immunites[i] -= 1;
+      boivent.push({ joueur: i, nombre: 0, immunise: true, cul_sec: false });
+      continue;
+    }
+    boivent.push({ joueur: i, nombre: n, immunise: false, cul_sec: culSec });
+    if (!culSec) {
+      etat.gorgees[i] += n;
+      etat.derniere_penalite[i] = n;
+    }
+  }
+  if (boivent.length) ev.push(ppTous({ type: 'pp_gorgees', raison, boivent }));
+}
+
+function ppPayer(etat, ev, i, montant, creancier, motif) {
+  if (montant <= 0) return;
+  if (etat.argent[i] >= montant) {
+    etat.argent[i] -= montant;
+    if (creancier !== null) etat.argent[creancier] += montant;
+    ev.push(ppTous({ type: 'pp_paiement', de: i, vers: creancier, montant, motif }));
+  } else {
+    etat.dette = { joueur: i, montant, creancier, motif };
+    etat.message = ppNom(etat, i) + ' doit ' + montant + ' € à '
+      + ppNom(etat, creancier) + ' : vendez ou hypothéquez, ou déclarez faillite.';
+  }
+}
+
+function ppAvancerVers(etat, ev, i, dest, motif) {
+  const pos = etat.positions[i];
+  etat.positions[i] = dest;
+  ev.push(ppTous({ type: 'pp_deplacement', joueur: i, de: pos, vers: dest, sens: 1, motif }));
+  if (dest < pos) ppPasserDepart(etat, ev, i);
+}
+
+function ppPasserDepart(etat, ev, i) {
+  etat.argent[i] += PP_SALAIRE;
+  ev.push(ppTous({ type: 'pp_paiement', de: null, vers: i, montant: PP_SALAIRE, motif: 'depart' }));
+  if (!etat.de_rapide[i]) {
+    etat.de_rapide[i] = true;
+    ev.push(ppTous({ type: 'pp_de_rapide', joueur: i }));
+  }
+  ppBoire(etat, ev, ppVivants(etat).map(j => [j, PP_GORGEES_DEPART]), 'toast_depart');
+}
+
+function ppEnvoyerPrison(etat, ev, i) {
+  etat.suite = [];
+  etat.rejouer = false;
+  etat.doubles = 0;
+  if (etat.cartes_sortie[i].length) {
+    etat.attente = { type: 'prison_carte', joueur: i };
+    etat.message = ppNom(etat, i) + ' va en prison... mais a une carte pour en sortir.';
+    return;
+  }
+  ppEmprisonner(etat, ev, i);
+}
+
+function ppEmprisonner(etat, ev, i) {
+  const pos = etat.positions[i];
+  etat.positions[i] = PP_CASE_PRISON;
+  etat.en_prison[i] = true;
+  etat.tours_prison[i] = 0;
+  ev.push(ppTous({ type: 'pp_deplacement', joueur: i, de: pos, vers: PP_CASE_PRISON, sens: 0, motif: 'prison' }));
+  etat.message = ppNom(etat, i) + ' va en prison.';
+  ppBoire(etat, ev, [[i, PP_GORGEES_PRISON]], 'prison');
+}
+
+function ppRendreCarteSortie(etat, i) {
+  const paquet = etat.cartes_sortie[i].pop();
+  const cid = paquet === 'chance' ? 'ch_sortie' : 'ca_sortie';
+  etat.paquets[paquet].push(cid);
+}
+
+// --- La file de résolution ---
+
+function ppDerouler(etat, ev) {
+  while (etat.phase === 'resolution' && etat.attente === null && etat.dette === null) {
+    if (!etat.suite.length) {
+      const i = etat.courant;
+      if (etat.rejouer && !etat.en_prison[i]) {
+        etat.rejouer = false;
+        etat.phase = 'tour';
+        etat.message = 'Double ! ' + ppNom(etat, i) + ' relance.';
+      } else {
+        etat.rejouer = false;
+        etat.phase = 'fin_tour';
+      }
+      return;
+    }
+    const etape = etat.suite.shift();
+    ppExecuter(etat, ev, etape);
+  }
+}
+
+function ppExecuter(etat, ev, etape) {
+  const i = etat.courant;
+  const t = etape.t;
+  if (t === 'arrivee') {
+    ppArrivee(etat, ev);
+  } else if (t === 'avancer') {
+    ppAvancerVers(etat, ev, i, (etat.positions[i] + etape.n) % 40, 'des');
+    etat.suite.unshift({ t: 'arrivee' });
+  } else if (t === 'payer') {
+    ppPayer(etat, ev, i, etape.montant, etape.creancier, etape.motif);
+  } else if (t === 'miroir') {
+    const o = etape.proprio;
+    if (!etat.faillite[o]) ppDemanderCible(etat, o, 'miroir', PP_GORGEES_MIROIR, false);
+  } else if (t === 'monopoly') {
+    ppMonsieurMonopoly(etat, ev, i);
+  }
+}
+
+function ppArrivee(etat, ev) {
+  const i = etat.courant;
+  const c = etat.positions[i];
+  const cs = PP_CASES[c];
+  const t = cs.type;
+  if (PP_ACHETABLES.includes(t)) {
+    const p = etat.proprietes[c];
+    const o = p.proprietaire;
+    if (o === null) {
+      if (etat.argent[i] >= cs.prix) {
+        etat.attente = { type: 'achat', joueur: i, case: c, prix: cs.prix };
+        etat.message = ppNom(etat, i) + ' peut acheter ' + cs.nom + ' (' + cs.prix + ' €).';
+      } else {
+        etat.message = ppNom(etat, i) + " n'a pas de quoi acheter " + cs.nom + '.';
+      }
+    } else if (o !== i && !p.hypotheque) {
+      const loyer = ppLoyer(etat, c);
+      etat.message = ppNom(etat, i) + ' paie ' + loyer + ' € de loyer à ' + ppNom(etat, o) + '.';
+      ppBoire(etat, ev, [[i, ppGorgeesPour(loyer)]], 'loyer');
+      etat.suite.unshift(
+        { t: 'payer', montant: loyer, creancier: o, motif: 'loyer' },
+        { t: 'miroir', proprio: o },
+      );
+    }
+  } else if (t === 'taxe') {
+    etat.message = ppNom(etat, i) + ' paie ' + cs.nom + ' : ' + cs.montant + ' €.';
+    ppBoire(etat, ev, [[i, ppGorgeesPour(cs.montant)]], 'taxe');
+    etat.suite.unshift({ t: 'payer', montant: cs.montant, creancier: null, motif: 'taxe' });
+  } else if (t === 'chance' || t === 'caisse') {
+    ppPiocher(etat, ev, i, t);
+  } else if (t === 'allez_prison') {
+    ppEnvoyerPrison(etat, ev, i);
+  }
+}
+
+// Dé rapide, symbole Monopoly : prochaine propriété libre, sinon la
+// prochaine où l'on doit payer.
+function ppMonsieurMonopoly(etat, ev, i) {
+  const pos = etat.positions[i];
+  const ordre = [];
+  for (let k = 1; k < 40; k++) ordre.push((pos + k) % 40);
+  const P = etat.proprietes;
+  let dest = ordre.find(c => P[c] !== null && P[c].proprietaire === null);
+  if (dest === undefined) {
+    dest = ordre.find(c => P[c] !== null && P[c].proprietaire !== null
+      && P[c].proprietaire !== i && !P[c].hypotheque);
+  }
+  if (dest === undefined) {
+    etat.message = 'Monsieur Monopoly ne trouve rien à visiter.';
+    return;
+  }
+  ppAvancerVers(etat, ev, i, dest, 'monopoly');
+  etat.suite.unshift({ t: 'arrivee' });
+}
+
+function ppDemanderCible(etat, qui, raison, nombre, parCarte) {
+  if (parCarte === undefined) parCarte = true;
+  const cibles = ppAdversaires(etat, qui, parCarte);
+  if (!cibles.length) {
+    etat.message = "Personne à cibler : tout le monde est à l'abri.";
+    return;
+  }
+  etat.attente = { type: 'cible', joueur: qui, raison, nombre, cibles };
+}
+
+function ppPiocher(etat, ev, i, paquet) {
+  const ids = etat.paquets[paquet];
+  const cid = ids.shift();
+  const carte = PP_CARTES[cid];
+  const effet = carte.effet;
+  if (effet !== 'sortie_prison') ids.push(cid);
+  ev.push(ppTous({ type: 'pp_carte', joueur: i, paquet,
+                   carte: { id: cid, effet, texte: carte.texte } }));
+  etat.message = ppNom(etat, i) + ' : ' + carte.texte;
+
+  if (effet === 'aller') {
+    ppAvancerVers(etat, ev, i, carte.case, 'carte');
+    etat.suite.unshift({ t: 'arrivee' });
+  } else if (effet === 'reculer') {
+    const pos = etat.positions[i];
+    const dest = ((pos - carte.n) % 40 + 40) % 40;
+    etat.positions[i] = dest;
+    ev.push(ppTous({ type: 'pp_deplacement', joueur: i, de: pos, vers: dest, sens: -1, motif: 'carte' }));
+    etat.suite.unshift({ t: 'arrivee' });
+  } else if (effet === 'prison') {
+    ppEnvoyerPrison(etat, ev, i);
+  } else if (effet === 'sortie_prison') {
+    etat.cartes_sortie[i].push(paquet);
+  } else if (effet === 'gain') {
+    etat.argent[i] += carte.montant;
+    const g = ppGorgeesPour(carte.montant);
+    if (carte.mode === 'boire') ppBoire(etat, ev, [[i, g]], 'carte');
+    else ppDemanderCible(etat, i, 'distribuer', g);
+  } else if (effet === 'perte' || effet === 'reparations') {
+    let montant;
+    if (effet === 'perte') {
+      montant = carte.montant;
+    } else {
+      montant = 0;
+      for (const p of etat.proprietes) {
+        if (p !== null && p.proprietaire === i) {
+          montant += p.maisons === 5 ? carte.hotel : p.maisons * carte.maison;
+        }
+      }
+    }
+    const g = ppGorgeesPour(montant);
+    etat.suite.unshift({ t: 'payer', montant, creancier: null, motif: 'carte' });
+    if (carte.mode === 'boire') ppBoire(etat, ev, [[i, g]], 'carte');
+    else if (g > 0) ppDemanderCible(etat, i, 'distribuer', g);
+  } else if (effet === 'distribution_generale') {
+    const cibles = ppAdversaires(etat, i, true);
+    ppBoire(etat, ev, cibles.map(j => [j, PP_GORGEES_DISTRIBUTION]), 'distribution');
+  } else if (effet === 'retour_baton') {
+    const dernier = etat.derniere_penalite[i];
+    ppDemanderCible(etat, i, 'retour', dernier > 0 ? 2 * dernier : PP_RETOUR_DEFAUT);
+  } else if (effet === 'duel') {
+    ppDemanderCible(etat, i, 'duel', PP_GORGEES_DUEL);
+  } else if (effet === 'cadeau') {
+    etat.argent[i] += carte.montant;
+    ppBoire(etat, ev, [[i, PP_GORGEES_CADEAU]], 'cadeau');
+  } else if (effet === 'immunite') {
+    etat.immunites[i] += 1;
+  } else if (effet === 'sommelier') {
+    const cibles = ppAdversaires(etat, i, true);
+    if (cibles.length) {
+      etat.attente = { type: 'sommelier', joueur: i, total: PP_GORGEES_SOMMELIER, cibles };
+    } else {
+      etat.message = "Personne à servir : tout le monde est à l'abri.";
+    }
+  }
+}
+
+// --- Actions des joueurs : un texte d'erreur, ou null si acceptée ---
+
+function ppLibre(etat) { return etat.attente === null && etat.dette === null; }
+
+function ppLancer(etat, ev, i) {
+  if (etat.phase !== 'tour' || etat.courant !== i || !ppLibre(etat)) {
+    return "Ce n'est pas le moment de lancer.";
+  }
+  etat.a_lance = true;
+  etat.phase = 'resolution';
+  etat.rejouer = false;
+  const d1 = hasard.randint(1, 6), d2 = hasard.randint(1, 6);
+
+  if (etat.en_prison[i]) {
+    etat.des = { d1, d2, rapide: null };
+    ev.push(ppTous({ type: 'pp_des', joueur: i, d1, d2, rapide: null }));
+    if (d1 === d2) {
+      etat.en_prison[i] = false;
+      etat.tours_prison[i] = 0;
+      etat.message = ppNom(etat, i) + ' fait un double et sort de prison.';
+      etat.suite = [{ t: 'avancer', n: d1 + d2 }];
+    } else {
+      etat.tours_prison[i] += 1;
+      if (etat.tours_prison[i] >= PP_ESSAIS_PRISON) {
+        etat.en_prison[i] = false;
+        etat.tours_prison[i] = 0;
+        etat.message = ppNom(etat, i) + ' paie ' + PP_AMENDE_PRISON + ' € et sort de prison.';
+        etat.suite = [{ t: 'payer', montant: PP_AMENDE_PRISON, creancier: null, motif: 'prison' },
+                      { t: 'avancer', n: d1 + d2 }];
+      } else {
+        etat.message = ppNom(etat, i) + ' reste en prison.';
+        etat.suite = [];
+      }
+    }
+    ppDerouler(etat, ev);
+    return null;
+  }
+
+  const rapide = etat.de_rapide[i] ? hasard.choice(PP_DE_RAPIDE) : null;
+  etat.des = { d1, d2, rapide };
+  ev.push(ppTous({ type: 'pp_des', joueur: i, d1, d2, rapide }));
+  const pos = etat.positions[i];
+
+  if (typeof rapide === 'number' && d1 === d2 && d2 === rapide) {
+    // Triple : n'importe où sur le plateau, et le tour s'arrête là.
+    etat.doubles = 0;
+    etat.attente = { type: 'deplacement', joueur: i, raison: 'triple',
+                     options: Array.from({ length: 40 }, (_, k) => k) };
+    etat.message = 'Triple ! ' + ppNom(etat, i) + ' va où il veut.';
+    return null;
+  }
+
+  if (d1 === d2) {
+    etat.doubles += 1;
+    if (etat.doubles >= 3) {
+      etat.message = "Trois doubles d'affilée : " + ppNom(etat, i) + ' va en prison.';
+      ppEnvoyerPrison(etat, ev, i);
+      ppDerouler(etat, ev);
+      return null;
+    }
+    etat.rejouer = true;
+  }
+
+  if (rapide === 'bus') {
+    let options;
+    if (PP_BUS_CASE_LIBRE) {
+      options = Array.from({ length: 40 }, (_, k) => k);
+    } else {
+      options = [...new Set([(pos + d1) % 40, (pos + d2) % 40, (pos + d1 + d2) % 40])]
+        .sort((a, b) => a - b);
+    }
+    etat.attente = { type: 'deplacement', joueur: i, raison: 'bus', options };
+    etat.message = 'Bus ! ' + ppNom(etat, i) + ' choisit sa case.';
+    return null;
+  }
+
+  const n = d1 + d2 + (typeof rapide === 'number' ? rapide : 0);
+  etat.suite = [{ t: 'avancer', n }];
+  if (rapide === 'monopoly') etat.suite.push({ t: 'monopoly' });
+  ppDerouler(etat, ev);
+  return null;
+}
+
+function ppTerminer(etat, ev, i) {
+  if (etat.phase !== 'fin_tour' || etat.courant !== i || !ppLibre(etat)) {
+    return 'Vous ne pouvez pas terminer votre tour maintenant.';
+  }
+  ppTourSuivant(etat, ev);
+  return null;
+}
+
+// Main au prochain joueur en jeu et présent (un absent est sauté).
+function ppTourSuivant(etat, ev) {
+  const n = etat.nb_joueurs;
+  const c = etat.courant;
+  const candidats = [];
+  for (let k = 1; k <= n; k++) candidats.push((c + k) % n);
+  let suivant = candidats.find(j => !etat.faillite[j] && !etat.partis[j]);
+  if (suivant === undefined) {
+    suivant = candidats.find(j => !etat.faillite[j]);
+    if (suivant === undefined) suivant = c;
+  }
+  etat.courant = suivant;
+  etat.phase = 'tour';
+  etat.a_lance = false;
+  etat.rejouer = false;
+  etat.doubles = 0;
+  etat.echanges_tour = 0;
+  etat.suite = [];
+  etat.message = 'À ' + ppNom(etat, suivant) + ' de jouer.';
+  ev.push(ppTous({ type: 'pp_tour', joueur: suivant }));
+}
+
+function ppPrisonPayer(etat, ev, i) {
+  if (etat.phase !== 'tour' || etat.courant !== i || !ppLibre(etat)
+      || !etat.en_prison[i] || etat.a_lance) {
+    return 'Vous ne pouvez pas payer votre sortie maintenant.';
+  }
+  if (etat.argent[i] < PP_AMENDE_PRISON) return "Pas assez d'argent pour payer la sortie.";
+  ppPayer(etat, ev, i, PP_AMENDE_PRISON, null, 'prison');
+  etat.en_prison[i] = false;
+  etat.tours_prison[i] = 0;
+  etat.message = ppNom(etat, i) + ' paie et sort de prison.';
+  return null;
+}
+
+function ppPrisonCarte(etat, ev, i) {
+  if (etat.phase !== 'tour' || etat.courant !== i || !ppLibre(etat)
+      || !etat.en_prison[i] || etat.a_lance) {
+    return 'Vous ne pouvez pas utiliser la carte maintenant.';
+  }
+  if (!etat.cartes_sortie[i].length) return "Vous n'avez pas de carte de sortie.";
+  ppRendreCarteSortie(etat, i);
+  etat.en_prison[i] = false;
+  etat.tours_prison[i] = 0;
+  etat.message = ppNom(etat, i) + ' utilise sa carte et sort de prison.';
+  return null;
+}
+
+// --- Gestion : maisons et hypothèques ---
+
+function ppPeutGerer(etat, i, enDetteAussi) {
+  if (etat.attente !== null) return false;
+  if (etat.dette !== null) return enDetteAussi && etat.dette.joueur === i;
+  return (etat.phase === 'tour' || etat.phase === 'fin_tour') && etat.courant === i;
+}
+
+function ppCaseAMoi(etat, i, message, types) {
+  types = types || PP_ACHETABLES;
+  const c = ppEntier(message.case);
+  if (c === null || !(c >= 0 && c < 40) || !types.includes(PP_CASES[c].type)) return null;
+  if (etat.proprietes[c].proprietaire !== i) return null;
+  return c;
+}
+
+function ppConstruire(etat, ev, i, message) {
+  if (!ppPeutGerer(etat, i, false)) return 'Vous ne pouvez construire que pendant votre tour.';
+  const c = ppCaseAMoi(etat, i, message, ['propriete']);
+  if (c === null) return "Cette propriété n'est pas à vous.";
+  const cs = PP_CASES[c];
+  const g = cs.groupe;
+  const p = etat.proprietes[c];
+  if (!ppGroupeComplet(etat, i, g)) return 'Il faut posséder tout le groupe pour construire.';
+  if (PP_GROUPES[g].some(k => etat.proprietes[k].hypotheque)) return "Levez d'abord les hypothèques du groupe.";
+  if (p.maisons >= 5) return 'Il y a déjà un hôtel.';
+  if (p.maisons > Math.min(...ppMaisonsGroupe(etat, g))) return "Construisez d'abord sur les autres cases du groupe.";
+  if (etat.argent[i] < cs.maison) return "Pas assez d'argent.";
+  etat.argent[i] -= cs.maison;
+  p.maisons += 1;
+  ev.push(ppTous({ type: 'pp_construction', joueur: i, case: c, maisons: p.maisons }));
+  etat.message = ppNom(etat, i) + (p.maisons === 5 ? ' pose un hôtel sur ' : ' construit sur ') + cs.nom + '.';
+  return null;
+}
+
+function ppVendre(etat, ev, i, message) {
+  if (!ppPeutGerer(etat, i, true)) return 'Vous ne pouvez pas vendre maintenant.';
+  const c = ppCaseAMoi(etat, i, message, ['propriete']);
+  if (c === null) return "Cette propriété n'est pas à vous.";
+  const cs = PP_CASES[c];
+  const p = etat.proprietes[c];
+  if (p.maisons === 0) return 'Rien à vendre sur cette case.';
+  if (p.maisons < Math.max(...ppMaisonsGroupe(etat, cs.groupe))) return "Vendez d'abord sur les autres cases du groupe.";
+  p.maisons -= 1;
+  etat.argent[i] += Math.floor(cs.maison / 2);
+  ev.push(ppTous({ type: 'pp_construction', joueur: i, case: c, maisons: p.maisons }));
+  etat.message = ppNom(etat, i) + ' revend une construction sur ' + cs.nom + '.';
+  ppVerifierDette(etat, ev);
+  return null;
+}
+
+function ppHypothequer(etat, ev, i, message) {
+  if (!ppPeutGerer(etat, i, true)) return 'Vous ne pouvez pas hypothéquer maintenant.';
+  const c = ppCaseAMoi(etat, i, message);
+  if (c === null) return "Cette propriété n'est pas à vous.";
+  const cs = PP_CASES[c];
+  const p = etat.proprietes[c];
+  if (p.hypotheque) return 'Déjà hypothéquée.';
+  if (cs.type === 'propriete' && ppMaisonsGroupe(etat, cs.groupe).some(m => m)) {
+    return "Vendez d'abord les constructions du groupe.";
+  }
+  p.hypotheque = true;
+  etat.argent[i] += Math.floor(cs.prix / 2);
+  ev.push(ppTous({ type: 'pp_hypotheque', joueur: i, case: c, hypotheque: true }));
+  etat.message = ppNom(etat, i) + ' hypothèque ' + cs.nom + '.';
+  ppVerifierDette(etat, ev);
+  return null;
+}
+
+function ppCoutLevee(c) {
+  const moitie = Math.floor(PP_CASES[c].prix / 2);
+  return Math.floor((moitie * (100 + PP_INTERET_LEVEE) + 99) / 100);
+}
+
+function ppLever(etat, ev, i, message) {
+  if (!ppPeutGerer(etat, i, false)) return 'Vous ne pouvez lever une hypothèque que pendant votre tour.';
+  const c = ppCaseAMoi(etat, i, message);
+  if (c === null) return "Cette propriété n'est pas à vous.";
+  const p = etat.proprietes[c];
+  if (!p.hypotheque) return "Cette propriété n'est pas hypothéquée.";
+  const cout = ppCoutLevee(c);
+  if (etat.argent[i] < cout) return "Pas assez d'argent.";
+  etat.argent[i] -= cout;
+  p.hypotheque = false;
+  ev.push(ppTous({ type: 'pp_hypotheque', joueur: i, case: c, hypotheque: false }));
+  etat.message = ppNom(etat, i) + " lève l'hypothèque de " + PP_CASES[c].nom + '.';
+  return null;
+}
+
+// --- Dette et faillite ---
+
+function ppVerifierDette(etat, ev) {
+  const d = etat.dette;
+  if (d === null || etat.argent[d.joueur] < d.montant) return;
+  etat.dette = null;
+  ppPayer(etat, ev, d.joueur, d.montant, d.creancier, d.motif);
+  ppDerouler(etat, ev);
+}
+
+function ppDeclarerFaillite(etat, ev, i) {
+  const d = etat.dette;
+  if (d === null || d.joueur !== i) return "Vous n'êtes pas en dette.";
+  ppFaillite(etat, ev, i, d.creancier);
+  return null;
+}
+
+function ppFaillite(etat, ev, i, creancier) {
+  etat.proprietes.forEach((p, c) => {
+    if (p !== null && p.proprietaire === i && p.maisons) {
+      etat.argent[i] += p.maisons * Math.floor(PP_CASES[c].maison / 2);
+      p.maisons = 0;
+    }
+  });
+  ppBoire(etat, ev, [[i, 0]], 'faillite', true);
+
+  const versJoueur = creancier !== null && !etat.faillite[creancier];
+  if (versJoueur) etat.argent[creancier] += etat.argent[i];
+  for (const p of etat.proprietes) {
+    if (p !== null && p.proprietaire === i) {
+      if (versJoueur) {
+        p.proprietaire = creancier;
+      } else {
+        // Pas d'enchères : ce qui revient à la banque redevient libre.
+        p.proprietaire = null;
+        p.hypotheque = false;
+      }
+    }
+  }
+  while (etat.cartes_sortie[i].length) {
+    if (versJoueur) etat.cartes_sortie[creancier].push(etat.cartes_sortie[i].pop());
+    else ppRendreCarteSortie(etat, i);
+  }
+
+  etat.argent[i] = 0;
+  etat.faillite[i] = true;
+  etat.en_prison[i] = false;
+  etat.dette = null;
+  ev.push(ppTous({ type: 'pp_faillite', joueur: i, creancier }));
+  etat.message = ppNom(etat, i) + ' fait faillite : cul sec !';
+
+  if (ppVivants(etat).length <= 1) {
+    ppFin(etat, ev, 'faillites');
+    return;
+  }
+  if (etat.courant === i) {
+    etat.attente = null;
+    ppTourSuivant(etat, ev);
+  }
+}
+
+// Par défaut, pour un débiteur qui ne répond pas : on vend ce qu'il faut.
+function ppLiquider(etat, ev, i) {
+  while (etat.dette !== null) {
+    const ventes = [];
+    etat.proprietes.forEach((p, c) => {
+      if (p !== null && p.proprietaire === i && p.maisons > 0
+          && p.maisons === Math.max(...ppMaisonsGroupe(etat, PP_CASES[c].groupe))) ventes.push(c);
+    });
+    if (ventes.length) { ppVendre(etat, ev, i, { case: ventes[0] }); continue; }
+    const hypos = [];
+    etat.proprietes.forEach((p, c) => {
+      if (p !== null && p.proprietaire === i && !p.hypotheque) hypos.push(c);
+    });
+    if (hypos.length) { ppHypothequer(etat, ev, i, { case: hypos[0] }); continue; }
+    ppFaillite(etat, ev, i, etat.dette.creancier);
+    return;
+  }
+}
+
+function ppFin(etat, ev, raison) {
+  const classement = [];
+  for (let i = 0; i < etat.nb_joueurs; i++) {
+    classement.push({ joueur: i, patrimoine: ppPatrimoine(etat, i), faillite: etat.faillite[i] });
+  }
+  // sorted(..., reverse=True) de Python : décroissant, stable.
+  classement.sort((a, b) => {
+    const ka = a.faillite ? 0 : 1, kb = b.faillite ? 0 : 1;
+    if (ka !== kb) return kb - ka;
+    return b.patrimoine - a.patrimoine;
+  });
+  etat.phase = 'fin';
+  etat.attente = null;
+  etat.dette = null;
+  etat.suite = [];
+  etat.echeance = null;
+  etat.classement = classement;
+  const gagnant = classement[0].joueur;
+  etat.message = (raison === 'chrono' ? 'Temps écoulé ! ' : '') + ppNom(etat, gagnant) + ' remporte la partie.';
+  ev.push(ppTous({ type: 'pp_fin', raison, gagnant, classement }));
+}
+
+// --- Échanges ---
+
+function ppLireEchange(etat, i, message) {
+  const cible = ppEntier(message.cible);
+  if (cible === null || !(cible >= 0 && cible < etat.nb_joueurs) || cible === i || etat.faillite[cible]) {
+    return [null, "Partenaire d'échange invalide."];
+  }
+  if (etat.partis[cible]) return [null, 'Ce joueur est absent.'];
+  let donne = ppOu(message.donne, []);
+  let recoit = ppOu(message.recoit, []);
+  if (!Array.isArray(donne) || !Array.isArray(recoit)) return [null, 'Proposition invalide.'];
+  donne = donne.map(ppEntier);
+  recoit = recoit.map(ppEntier);
+  const aDonne = ppEntier(ppOu(message.argent_donne, 0));
+  const aRecu = ppEntier(ppOu(message.argent_recu, 0));
+  if (donne.includes(null) || recoit.includes(null) || aDonne === null || aRecu === null) {
+    return [null, 'Proposition invalide.'];
+  }
+  if (new Set(donne).size !== donne.length || new Set(recoit).size !== recoit.length) {
+    return [null, 'Proposition invalide.'];
+  }
+  if (!(donne.length || recoit.length || aDonne || aRecu)) return [null, 'Proposition vide.'];
+  if (aDonne < 0 || aRecu < 0) return [null, 'Montant invalide.'];
+  for (const [cases, proprio] of [[donne, i], [recoit, cible]]) {
+    for (const c of cases) {
+      if (!(c >= 0 && c < 40) || etat.proprietes[c] === null) return [null, 'Case invalide.'];
+      if (etat.proprietes[c].proprietaire !== proprio) {
+        return [null, PP_CASES[c].nom + " n'appartient pas à " + ppNom(etat, proprio) + '.'];
+      }
+      if (PP_CASES[c].type === 'propriete' && ppMaisonsGroupe(etat, PP_CASES[c].groupe).some(m => m)) {
+        return [null, "Vendez d'abord les constructions du groupe de " + PP_CASES[c].nom + '.'];
+      }
+    }
+  }
+  if (aDonne > etat.argent[i] || aRecu > etat.argent[cible]) {
+    return [null, "Pas assez d'argent pour cet échange."];
+  }
+  return [{ proposant: i, cible, donne, recoit, argent_donne: aDonne, argent_recu: aRecu }, null];
+}
+
+function ppProposerEchange(etat, ev, i, message) {
+  if (etat.phase !== 'tour' || etat.courant !== i || etat.a_lance || !ppLibre(etat)) {
+    return "On ne propose un échange qu'au début de son tour.";
+  }
+  if (etat.echanges_tour >= PP_ECHANGES_PAR_TOUR) return "Assez d'échanges pour ce tour.";
+  const [prop, err] = ppLireEchange(etat, i, message);
+  if (err) return err;
+  etat.echanges_tour += 1;
+  etat.attente = { type: 'echange', joueur: prop.cible, proposition: prop };
+  etat.message = ppNom(etat, i) + ' propose un échange à ' + ppNom(etat, prop.cible) + '.';
+  return null;
+}
+
+function ppConclureEchange(etat, ev, prop) {
+  const i = prop.proposant, cible = prop.cible;
+  const err = ppLireEchange(etat, i, prop)[1];
+  if (err) {
+    etat.message = 'Échange annulé : ' + err;
+    return;
+  }
+  for (const c of prop.donne) etat.proprietes[c].proprietaire = cible;
+  for (const c of prop.recoit) etat.proprietes[c].proprietaire = i;
+  etat.argent[i] += prop.argent_recu - prop.argent_donne;
+  etat.argent[cible] += prop.argent_donne - prop.argent_recu;
+  ev.push(ppTous({ type: 'pp_echange', accepte: true, proposition: prop }));
+  etat.message = 'Marché conclu entre ' + ppNom(etat, i) + ' et ' + ppNom(etat, cible) + ' : tournée générale !';
+  ppBoire(etat, ev, ppVivants(etat).map(j => [j, PP_GORGEES_ECHANGE]), 'toast_echange');
+}
+
+// --- Réponse à un choix ---
+
+function ppChoix(etat, ev, i, message) {
+  const a = etat.attente;
+  if (a === null || a.joueur !== i) return 'Aucun choix ne vous est demandé.';
+  let v = message.valeur;
+  const t = a.type;
+
+  if (t === 'achat' || t === 'prison_carte' || t === 'echange') {
+    if (typeof v !== 'boolean') return 'Réponse attendue : oui ou non.';
+  } else if (t === 'cible') {
+    v = ppEntier(v);
+    if (!a.cibles.includes(v)) return 'Cible invalide.';
+  } else if (t === 'deplacement') {
+    v = ppEntier(v);
+    if (!a.options.includes(v)) return 'Case invalide.';
+  } else if (t === 'sommelier') {
+    if (v === null || typeof v !== 'object' || Array.isArray(v)) return 'Répartition invalide.';
+    const repartition = {};
+    for (const [kb, nb] of Object.entries(v)) {
+      const k = ppEntier(kb), n = ppEntier(nb);
+      if (!a.cibles.includes(k) || n === null || n < 0) return 'Répartition invalide.';
+      repartition[k] = (repartition[k] || 0) + n;
+    }
+    if (Object.values(repartition).reduce((s, x) => s + x, 0) !== a.total) {
+      return 'Il faut répartir exactement ' + a.total + ' gorgées.';
+    }
+    v = repartition;
+  }
+
+  etat.attente = null;
+  if (t === 'achat') {
+    const c = a.case;
+    if (v && etat.argent[i] >= a.prix) {
+      etat.argent[i] -= a.prix;
+      etat.proprietes[c].proprietaire = i;
+      ev.push(ppTous({ type: 'pp_achat', joueur: i, case: c, prix: a.prix }));
+      etat.message = ppNom(etat, i) + ' achète ' + PP_CASES[c].nom + '.';
+    } else {
+      etat.message = ppNom(etat, i) + ' laisse passer ' + PP_CASES[c].nom + '.';
+    }
+  } else if (t === 'cible') {
+    if (a.raison === 'duel') {
+      ppDuel(etat, ev, i, v, a.nombre);
+    } else {
+      etat.message = ppNom(etat, i) + ' fait boire ' + ppNom(etat, v) + '.';
+      ppBoire(etat, ev, [[v, a.nombre]], a.raison);
+    }
+  } else if (t === 'sommelier') {
+    etat.message = ppNom(etat, i) + ' fait le service.';
+    const liste = Object.keys(v).map(Number).sort((x, y) => x - y).map(k => [k, v[k]]);
+    ppBoire(etat, ev, liste, 'sommelier');
+  } else if (t === 'deplacement') {
+    ppAvancerVers(etat, ev, i, v, a.raison);
+    etat.suite.unshift({ t: 'arrivee' });
+  } else if (t === 'prison_carte') {
+    if (v) {
+      ppRendreCarteSortie(etat, i);
+      const pos = etat.positions[i];
+      etat.positions[i] = PP_CASE_PRISON;     // simple visite
+      ev.push(ppTous({ type: 'pp_deplacement', joueur: i, de: pos, vers: PP_CASE_PRISON, sens: 0, motif: 'carte_sortie' }));
+      etat.message = ppNom(etat, i) + ' sort sa carte : ni prison, ni gorgée.';
+    } else {
+      ppEmprisonner(etat, ev, i);
+    }
+  } else if (t === 'echange') {
+    if (v) {
+      ppConclureEchange(etat, ev, a.proposition);
+    } else {
+      ev.push(ppTous({ type: 'pp_echange', accepte: false, proposition: a.proposition }));
+      etat.message = ppNom(etat, i) + " refuse l'échange.";
+    }
+  }
+
+  ppDerouler(etat, ev);
+  return null;
+}
+
+function ppDuel(etat, ev, i, cible, nombre) {
+  const lancers = [];
+  let a, b;
+  for (;;) {
+    a = hasard.randint(1, 6);
+    b = hasard.randint(1, 6);
+    lancers.push([a, b]);
+    if (a !== b) break;
+  }
+  const perdant = a < b ? i : cible;
+  ev.push(ppTous({ type: 'pp_duel', joueur: i, cible, lancers, perdant }));
+  etat.message = 'Duel : ' + ppNom(etat, perdant) + ' perd et boit.';
+  ppBoire(etat, ev, [[perdant, nombre]], 'duel');
+}
+
+function ppValeurDefaut(etat, a) {
+  const t = a.type;
+  if (t === 'achat' || t === 'echange') return false;
+  if (t === 'prison_carte') return true;
+  if (t === 'cible') return hasard.choice(a.cibles);
+  if (t === 'deplacement') return hasard.choice(a.options);
+  if (t === 'sommelier') {
+    const rep = {};
+    for (let k = 0; k < a.total; k++) {
+      const j = hasard.choice(a.cibles);
+      rep[j] = (rep[j] || 0) + 1;
+    }
+    return rep;
+  }
+  return null;
+}
+
+// --- Points d'entrée ---
+
+const PP_ACTIONS = {
+  pp_lancer: ppLancer,
+  pp_terminer: ppTerminer,
+  pp_choix: ppChoix,
+  pp_construire: ppConstruire,
+  pp_vendre: ppVendre,
+  pp_hypothequer: ppHypothequer,
+  pp_lever: ppLever,
+  pp_prison_payer: ppPrisonPayer,
+  pp_prison_carte: ppPrisonCarte,
+  pp_proposer_echange: ppProposerEchange,
+  pp_faillite: ppDeclarerFaillite,
+};
+
+function ppAction(etat, i, message, maintenant) {
+  const ev = [];
+  if (etat.phase === 'fin') return ev;
+  if (maintenant >= etat.fin_prevue) {
+    ppFin(etat, ev, 'chrono');
+    etat.version += 1;
+    return ev;
+  }
+  if (!Number.isInteger(i) || i >= etat.nb_joueurs || etat.faillite[i]) return ev;
+  const action = Object.prototype.hasOwnProperty.call(PP_ACTIONS, message.type) ? PP_ACTIONS[message.type] : null;
+  if (action === null) return ev;
+  const erreur = action(etat, ev, i, message);
+  if (erreur) return [ppPrive(i, { type: 'erreur', message: erreur })];
+  etat.version += 1;
+  ppArmer(etat, maintenant);
+  return ev;
+}
+
+function ppAttendu(etat) {
+  if (etat.phase === 'fin') return null;
+  if (etat.attente !== null) return [etat.attente.joueur, PP_DELAI_CHOIX];
+  if (etat.dette !== null) return [etat.dette.joueur, PP_DELAI_TOUR];
+  return [etat.courant, PP_DELAI_TOUR];
+}
+
+function ppArmer(etat, maintenant) {
+  const att = ppAttendu(etat);
+  if (att === null) { etat.echeance = null; return; }
+  let [joueur, delai] = att;
+  if (etat.partis[joueur]) delai = PP_DELAI_ABSENT;
+  etat.echeance = maintenant + delai;
+}
+
+function ppProchaineEcheance(etat) {
+  if (etat.phase === 'fin') return null;
+  if (etat.echeance === null) return etat.fin_prevue;
+  return Math.min(etat.echeance, etat.fin_prevue);
+}
+
+function ppExpirer(etat, maintenant) {
+  const ev = [];
+  if (etat.phase === 'fin') return ev;
+  if (maintenant >= etat.fin_prevue) {
+    ppFin(etat, ev, 'chrono');
+    etat.version += 1;
+    return ev;
+  }
+  if (etat.echeance === null || maintenant < etat.echeance) return ev;
+  if (etat.attente !== null) {
+    const a = etat.attente;
+    ppChoix(etat, ev, a.joueur, { valeur: ppValeurDefaut(etat, a) });
+  } else if (etat.dette !== null) {
+    ppLiquider(etat, ev, etat.dette.joueur);
+  } else if (etat.phase === 'tour') {
+    ppLancer(etat, ev, etat.courant);
+  } else if (etat.phase === 'fin_tour') {
+    ppTourSuivant(etat, ev);
+  }
+  etat.version += 1;
+  ppArmer(etat, maintenant);
+  return ev;
+}
+
+// --- Le « serveur » local : l'équivalent de la colle pp_* de serveur.py ---
+const serveur = {
+  etat: null,
+  minuteur: null,
+  horloge() { return Date.now() / 1000; },
+
+  demarrer(noms) {
+    if (noms.length < PP_JOUEURS_MIN || noms.length > PP_JOUEURS_MAX) {
+      this.envoyer(0, { type: 'erreur', message: 'Picolopoly se joue de 2 à 6.' });
+      return;
+    }
+    this.etat = ppInitialiser(noms, this.horloge());
+    this.diffuser({ type: 'pp_demarree', joueurs: noms.slice(), plateau: PP_CASES });
+    this.publier([]);
+  },
+
+  traiter(index, msg) {
+    const e = this.etat;
+    if (!e || !msg || typeof msg.type !== 'string') return;
+    const v = e.version;
+    const ev = ppAction(e, index, msg, this.horloge());
+    if (e.version !== v) this.publier(ev);
+    else ev.forEach(x => this.envoyer(x.a, x.msg));
+  },
+
+  publier(ev) {
+    for (const x of ev) {
+      if (x.a === null) this.diffuser(x.msg);
+      else this.envoyer(x.a, x.msg);
+    }
+    this.diffuser(ppEtatPublic(this.etat, this.horloge()));
+    this.programmer();
+  },
+
+  // Un seul minuteur, calé sur la prochaine échéance (choix par défaut ou chrono).
+  programmer() {
+    if (this.minuteur !== null) clearTimeout(this.minuteur);
+    this.minuteur = null;
+    const echeance = ppProchaineEcheance(this.etat);
+    if (echeance === null) return;
+    const ms = Math.max(0, echeance - this.horloge()) * 1000 + 50;
+    this.minuteur = setTimeout(() => this.reveil(), Math.min(ms, 2 ** 31 - 1));
+  },
+
+  reveil() {
+    this.minuteur = null;
+    const e = this.etat;
+    const v = e.version;
+    const ev = ppExpirer(e, this.horloge());
+    if (e.version !== v) this.publier(ev);
+    else this.programmer();
+  },
+
+  // Une copie par destinataire, comme un passage par le réseau : sinon un
+  // message mis en file garderait une référence vers l'état qui bouge.
+  diffuser(msg) {
+    const n = this.etat ? this.etat.nb_joueurs : 0;
+    for (let i = 0; i < n; i++) livrer(i, JSON.parse(JSON.stringify(msg)));
+  },
+
+  envoyer(index, msg) {
+    livrer(index, JSON.parse(JSON.stringify(msg)));
+  },
+};
+
+// =====================================================================
+// AIGUILLAGE DES MESSAGES
+// Chaque joueur a « son » flux, comme une WebSocket. MOI n'est 0 qu'en
+// solo : en ligne c'est le serveur qui donne l'index (ton_index).
+// =====================================================================
+let MOI = 0;
+let mode = 'local';   // 'local' = bots dans la page, 'ligne' = WebSocket
+let ws = null;
+
+function livrer(index, msg) {
+  if (index === MOI) clientRecevoir(msg);
+  else botRecevoir(index, msg);
+}
+
+// Unique point de bascule entre le moteur local et le vrai serveur.
+function envoyerIntention(index, msg) {
+  if (mode === 'ligne') {
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+    return;
+  }
+  serveur.traiter(index, msg);
+}
+
+// File ordonnée : un lancer arrive en rafale (pp_des, pp_deplacement,
+// pp_gorgees, pp_carte..., puis pp_etat). Chaque message attend la fin des
+// animations du précédent : sans ça l'état replacerait le pion avant qu'il
+// ait fini d'avancer.
+const fileActions = [];
+let pompeActive = false;
+
+function animationsEnCours() { return animations.length > 0; }
+
+function quandLibre(fn, delai) {
+  fileActions.push({ fn, delai: delai || 0 });
+  pomper();
+}
+
+function pomper() {
+  if (pompeActive || fileActions.length === 0) return;
+  pompeActive = true;
+  (function patienter() {
+    if (animationsEnCours()) { setTimeout(patienter, 60); return; }
+    const tache = fileActions.shift();
+    // La file a pu être vidée entre-temps (partie solo relancée).
+    if (!tache) { pompeActive = false; return; }
+    setTimeout(() => {
+      tache.fn();
+      pompeActive = false;
+      pomper();
+    }, tache.delai);
+  })();
+}
+
+// =====================================================================
+// SCÈNE / CAMÉRA / RENDU
+// =====================================================================
+const COULEUR_CIEL = 0xbfe3f5;
+const COULEURS_JOUEURS = ['#e8543f', '#2f7fd8', '#23a35a', '#e0b000', '#9b4dca', '#f07f2c'];
+const COULEURS_GROUPES = {
+  marron: '#8b5a2b', bleu_clair: '#7ec8e3', rose: '#d6479b', orange: '#f28c28',
+  rouge: '#e03c31', jaune: '#f2c200', vert: '#1fa055', bleu_fonce: '#1d4e9e',
+  gare: '#5c6770', compagnie: '#8a3b52',
+};
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(COULEUR_CIEL);
+scene.fog = new THREE.Fog(COULEUR_CIEL, 30, 80);
+
+// Le plateau fait 11 de côté. La distance de la caméra vient du format de
+// l'écran (comme les autres jeux) : en portrait il faut reculer beaucoup
+// plus, et le brouillard recule avec, sinon la ville mangerait le plateau.
+const DEMI = 5.5;
+const CAM_CIBLE = new THREE.Vector3(0, 0, 0.35);
+const CAM_POS = new THREE.Vector3(0, 12, 8);
+const CAM_DIR = new THREE.Vector3(0, 1.0, 0.62).normalize();
+const LARGEUR_VUE = 6.2;
+const HAUTEUR_VUE = 5.4;
+const CAM_VITESSE = 0.08;
+
+function distanceCadrage(cam) {
+  const vHalf = THREE.MathUtils.degToRad(cam.fov) / 2;
+  const hHalf = Math.atan(Math.tan(vHalf) * cam.aspect);
+  return Math.max(LARGEUR_VUE / Math.tan(hHalf), HAUTEUR_VUE / Math.tan(vHalf), 9);
+}
+
+let vueSuivi = false;       // false : tout le plateau ; true : gros plan sur le pion actif
+let distanceVue = 14;
+
+function majCadrageTable(cam) {
+  distanceVue = distanceCadrage(cam);
+  CAM_POS.copy(CAM_CIBLE).addScaledVector(CAM_DIR, distanceVue);
+  scene.fog.near = distanceVue + 8;
+  scene.fog.far = distanceVue + 55;
+}
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
+majCadrageTable(camera);
+const camObjectifPos = CAM_POS.clone();
+const camObjectifCible = CAM_CIBLE.clone();
+const camCibleActuelle = CAM_CIBLE.clone();
+camera.position.copy(CAM_POS);
+camera.lookAt(camCibleActuelle);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+document.body.appendChild(renderer.domElement);
+
+function redimensionner() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  majCadrageTable(camera);
+}
+window.addEventListener('resize', redimensionner);
+window.addEventListener('orientationchange', redimensionner);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0xb9d9a0, 1.6));
+const soleil = new THREE.DirectionalLight(0xfff1d6, 2.4);
+soleil.position.set(-6, 14, 8);
+soleil.target.position.set(0, 0, 0);
+soleil.castShadow = true;
+soleil.shadow.mapSize.set(2048, 2048);
+soleil.shadow.camera.left = -8;
+soleil.shadow.camera.right = 8;
+soleil.shadow.camera.top = 8;
+soleil.shadow.camera.bottom = -8;
+soleil.shadow.camera.near = 1;
+soleil.shadow.camera.far = 40;
+soleil.shadow.bias = -0.0005;
+scene.add(soleil, soleil.target);
+
+function matiere(couleur, rugosite) {
+  return new THREE.MeshStandardMaterial({ color: couleur, roughness: rugosite === undefined ? 0.8 : rugosite, flatShading: true });
+}
+
+// =====================================================================
+// LA VILLE MINIATURE — purement décorative, générée avec une graine fixe
+// pour être la même sur tous les écrans. Aucune ombre : elle est loin, et
+// les téléphones n'aiment pas les ombres.
+// =====================================================================
+function hasardDecor(graine) {
+  let a = graine;
+  return () => {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+const voitures = [];
+const R_ROUTE = 11.2;       // milieu de la route qui fait le tour de la place
+
+function creerVille() {
+  const ville = new THREE.Group();
+  const alea = hasardDecor(42);
+
+  const gazon = new THREE.Mesh(new THREE.PlaneGeometry(220, 220), matiere(0xa9d98b, 1));
+  gazon.rotation.x = -Math.PI / 2;
+  gazon.position.y = -0.62;
+  ville.add(gazon);
+
+  const place = new THREE.Mesh(new THREE.BoxGeometry(19.6, 0.1, 19.6), matiere(0xf1e8d6, 0.95));
+  place.position.y = -0.57;
+  ville.add(place);
+
+  // Route en carré autour de la place, avec ses pointillés.
+  const matRoute = matiere(0x9aa3aa, 0.95);
+  const matTrait = matiere(0xffffff, 0.6);
+  const L = 2 * R_ROUTE + 2.4;
+  [[0, -R_ROUTE, L, 2.4], [0, R_ROUTE, L, 2.4], [-R_ROUTE, 0, 2.4, L], [R_ROUTE, 0, 2.4, L]].forEach(([x, z, lx, lz]) => {
+    const r = new THREE.Mesh(new THREE.BoxGeometry(lx, 0.08, lz), matRoute);
+    r.position.set(x, -0.56, z);
+    ville.add(r);
+  });
+  for (let k = -R_ROUTE + 0.8; k < R_ROUTE; k += 1.6) {
+    [[k, -R_ROUTE, 0.7, 0.1], [k, R_ROUTE, 0.7, 0.1], [-R_ROUTE, k, 0.1, 0.7], [R_ROUTE, k, 0.1, 0.7]].forEach(([x, z, lx, lz]) => {
+      const t = new THREE.Mesh(new THREE.BoxGeometry(lx, 0.02, lz), matTrait);
+      t.position.set(x, -0.51, z);
+      ville.add(t);
+    });
+  }
+
+  // Arbres sur la place, aux quatre coins du plateau.
+  function arbre(x, z, echelle) {
+    const g = new THREE.Group();
+    const tronc = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.14, 0.7, 6), matiere(0x8b5a2b));
+    tronc.position.y = 0.35;
+    const vert = [0x5fb85a, 0x4ca34d, 0x74c267, 0x3f9a4a][Math.floor(alea() * 4)];
+    const houppe = new THREE.Mesh(new THREE.IcosahedronGeometry(0.55, 0), matiere(vert));
+    houppe.position.y = 1.05;
+    g.add(tronc, houppe);
+    g.position.set(x, -0.52, z);
+    g.scale.setScalar(echelle);
+    ville.add(g);
+  }
+  [[-8, -8], [8, -8], [-8, 8], [8, 8], [0, -8.4], [-8.4, 0], [8.4, 0]].forEach(([x, z]) => arbre(x, z, 1.1 + alea() * 0.3));
+
+  // Pâtés de maisons autour de la route : pastels, toits plats ou à pans.
+  const PASTELS = [0xf6c9a8, 0xf9e0a2, 0xcde6f5, 0xf5b7c4, 0xd8f0c6, 0xe9d5f7, 0xfdfdfd, 0xf2d0b5, 0xbfe0d8];
+  const TOITS = [0xd8664f, 0x8a6a5a, 0x5c7a99, 0xc98f4a];
+  const matsFacade = PASTELS.map(c => matiere(c, 0.9));
+  const matsToit = TOITS.map(c => matiere(c, 0.9));
+  const matFenetre = new THREE.MeshStandardMaterial({ color: 0x7fb7d9, roughness: 0.3, metalness: 0.1 });
+  for (let x = -40; x <= 40; x += 4.2) {
+    for (let z = -40; z <= 40; z += 4.2) {
+      if (Math.abs(x) < 14 && Math.abs(z) < 14) continue;
+      if (alea() < 0.18) { arbre(x + alea() * 2 - 1, z + alea() * 2 - 1, 1 + alea() * 0.6); continue; }
+      const loin = Math.max(Math.abs(x), Math.abs(z));
+      const l = 1.8 + alea() * 1.6, p = 1.8 + alea() * 1.6;
+      const h = 0.9 + alea() * (loin > 22 ? 5 : 2.4);
+      const b = new THREE.Mesh(new THREE.BoxGeometry(l, h, p), matsFacade[Math.floor(alea() * matsFacade.length)]);
+      b.position.set(x + alea() - 0.5, -0.57 + h / 2, z + alea() - 0.5);
+      ville.add(b);
+      // Une rangée de fenêtres sur la face qui regarde le plateau.
+      const vers = new THREE.Vector3(-x, 0, -z).normalize();
+      const face = Math.abs(vers.x) > Math.abs(vers.z) ? new THREE.Vector3(Math.sign(vers.x), 0, 0) : new THREE.Vector3(0, 0, Math.sign(vers.z));
+      for (let etage = 0.55; etage < h - 0.2; etage += 0.8) {
+        const f = new THREE.Mesh(new THREE.BoxGeometry(face.x ? 0.04 : l * 0.7, 0.28, face.z ? 0.04 : p * 0.7), matFenetre);
+        f.position.set(b.position.x + face.x * (l / 2 + 0.01), -0.57 + etage, b.position.z + face.z * (p / 2 + 0.01));
+        ville.add(f);
+      }
+      if (h < 2.2 && alea() < 0.7) {
+        const toit = new THREE.Mesh(new THREE.ConeGeometry(Math.max(l, p) * 0.75, 0.9, 4), matsToit[Math.floor(alea() * matsToit.length)]);
+        toit.rotation.y = Math.PI / 4;
+        toit.scale.set(l / Math.max(l, p), 1, p / Math.max(l, p));
+        toit.position.set(b.position.x, -0.57 + h + 0.45, b.position.z);
+        ville.add(toit);
+      }
+    }
+  }
+
+  // Quelques voitures qui tournent sur la route.
+  const COULEURS_VOITURES = [0xe8543f, 0x2f7fd8, 0xf2c200, 0xffffff, 0x23a35a];
+  for (let k = 0; k < 5; k++) {
+    const v = new THREE.Group();
+    const caisse = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.3, 0.5), matiere(COULEURS_VOITURES[k], 0.5));
+    caisse.position.y = 0.25;
+    const habitacle = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.24, 0.44), matiere(0xdfe9f0, 0.3));
+    habitacle.position.set(-0.05, 0.5, 0);
+    v.add(caisse, habitacle);
+    ville.add(v);
+    voitures.push({ groupe: v, t: k / 5, vitesse: 0.012 + alea() * 0.01, voie: k % 2 ? 0.55 : -0.55 });
+  }
+
+  scene.add(ville);
+}
+creerVille();
+
+// Position sur le carré de la route, t de 0 à 1 (un tour).
+function placerVoiture(v) {
+  const s = ((v.t % 1) + 1) % 1 * 4;
+  const cote = Math.floor(s), f = s - cote;
+  const a = R_ROUTE + v.voie;
+  const P = [[-a, -a], [a, -a], [a, a], [-a, a]];
+  const [x0, z0] = P[cote], [x1, z1] = P[(cote + 1) % 4];
+  v.groupe.position.set(x0 + (x1 - x0) * f, -0.52, z0 + (z1 - z0) * f);
+  v.groupe.rotation.y = -Math.atan2(z1 - z0, x1 - x0);
+}
+
+// =====================================================================
+// LE PLATEAU
+// Départ en bas à droite, comme la boîte : les cases 1 à 9 filent vers la
+// gauche, puis on remonte, on traverse le haut et on redescend à droite.
+// Les noms sont tous écrits à l'endroit pour la caméra (qui ne tourne pas).
+// =====================================================================
+const COIN = 1.45;
+const LARGE = (2 * DEMI - 2 * COIN) / 9;
+const Y_PLATEAU = 0;
+
+// Géométrie d'une case : centre, taille, et deux axes. u longe le bord du
+// plateau ; v pointe vers l'EXTÉRIEUR. La bande de couleur est côté intérieur.
+function geoCase(k) {
+  const h = DEMI, cc = COIN / 2;
+  if (k === 0) return { x: h - cc, z: h - cc, l: COIN, p: COIN, u: [1, 0], v: [0, 1], coin: true };
+  if (k === 10) return { x: -h + cc, z: h - cc, l: COIN, p: COIN, u: [1, 0], v: [0, 1], coin: true };
+  if (k === 20) return { x: -h + cc, z: -h + cc, l: COIN, p: COIN, u: [1, 0], v: [0, 1], coin: true };
+  if (k === 30) return { x: h - cc, z: -h + cc, l: COIN, p: COIN, u: [1, 0], v: [0, 1], coin: true };
+  if (k < 10) return { x: h - COIN - (k - 1) * LARGE - LARGE / 2, z: h - cc, l: LARGE, p: COIN, u: [1, 0], v: [0, 1], cote: 'bas' };
+  if (k < 20) return { x: -h + cc, z: h - COIN - (k - 11) * LARGE - LARGE / 2, l: COIN, p: LARGE, u: [0, 1], v: [-1, 0], cote: 'gauche' };
+  if (k < 30) return { x: -h + COIN + (k - 21) * LARGE + LARGE / 2, z: -h + cc, l: LARGE, p: COIN, u: [1, 0], v: [0, -1], cote: 'haut' };
+  return { x: h - cc, z: -h + COIN + (k - 31) * LARGE + LARGE / 2, l: COIN, p: LARGE, u: [0, 1], v: [1, 0], cote: 'droite' };
+}
+
+// Point d'une case en coordonnées (u, v) locales -> monde.
+function pointCase(k, du, dv, y) {
+  const g = geoCase(k);
+  return new THREE.Vector3(g.x + g.u[0] * du + g.v[0] * dv, y || 0, g.z + g.u[1] * du + g.v[1] * dv);
+}
+
+function ecrireLignes(ctx, texte, cx, cy, largeurMax, hauteurMax, taille, graisse) {
+  // Réduit la police jusqu'à ce que le texte tienne dans le cadre.
+  for (let t = taille; t >= 12; t -= 2) {
+    ctx.font = (graisse || 600) + ' ' + t + 'px Fredoka, system-ui, sans-serif';
+    const mots = texte.split(' ');
+    const lignes = [];
+    let ligne = '';
+    for (const m of mots) {
+      const essai = ligne ? ligne + ' ' + m : m;
+      if (ctx.measureText(essai).width > largeurMax && ligne) { lignes.push(ligne); ligne = m; } else ligne = essai;
+    }
+    if (ligne) lignes.push(ligne);
+    const trop = lignes.some(l => ctx.measureText(l).width > largeurMax);
+    if ((lignes.length * t * 1.12 <= hauteurMax && !trop) || t === 12) {
+      const y0 = cy - (lignes.length - 1) * t * 0.56;
+      lignes.forEach((l, n) => ctx.fillText(l, cx, y0 + n * t * 1.12));
+      return;
+    }
+  }
+}
+
+const ICONES_CASES = {
+  depart: '➜', caisse: '📦', chance: '❓', taxe: '💰', gare: '🚏', compagnie: '🍷',
+  prison: '🔒', parc: '🌳', allez_prison: '👮',
+};
+
+function textureCase(k) {
+  const c = PP_CASES[k], g = geoCase(k);
+  const PX = 200;
+  const W = Math.round(g.l * PX), H = Math.round(g.p * PX);
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#fdf8ec';
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = '#4a443d';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(1.5, 1.5, W - 3, H - 3);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#2b2622';
+
+  // Zone de texte : toute la case, moins la bande de couleur côté intérieur.
+  let zx = 0, zy = 0, zw = W, zh = H;
+  if (c.type === 'propriete') {
+    ctx.fillStyle = COULEURS_GROUPES[c.groupe];
+    const b = 0.22;
+    if (g.cote === 'bas') { ctx.fillRect(0, 0, W, H * b); zy = H * b; zh = H * (1 - b); }
+    else if (g.cote === 'haut') { ctx.fillRect(0, H * (1 - b), W, H * b); zh = H * (1 - b); }
+    else if (g.cote === 'gauche') { ctx.fillRect(W * (1 - b), 0, W * b, H); zw = W * (1 - b); }
+    else { ctx.fillRect(0, 0, W * b, H); zx = W * b; zw = W * (1 - b); }
+    ctx.strokeRect(1.5, 1.5, W - 3, H - 3);
+    ctx.fillStyle = '#2b2622';
+  }
+  const cx = zx + zw / 2;
+  const marge = 10;
+
+  if (g.coin) {
+    const EMO = { depart: '🏁', prison: '🔒', parc: '🌳', allez_prison: '👮' }[c.type];
+    ctx.font = '84px serif';
+    ctx.fillText(EMO, W / 2, H * 0.4);
+    ctx.fillStyle = '#2b2622';
+    ecrireLignes(ctx, c.type === 'prison' ? 'Prison · Simple visite' : c.nom, W / 2, H * 0.72, W - 24, H * 0.24, 34, 700);
+    if (c.type === 'depart') {
+      ctx.fillStyle = '#2e9a55';
+      ctx.font = '700 28px Fredoka, sans-serif';
+      ctx.fillText('+' + PP_SALAIRE + ' €', W / 2, H * 0.9);
+    }
+    return cv;
+  }
+
+  const prix = c.prix ? c.prix + ' €' : (c.montant ? c.montant + ' €' : '');
+  const icone = c.type === 'propriete' ? null : ICONES_CASES[c.type];
+  // Les cases en longueur (colonnes de gauche et de droite) sont plus larges
+  // que hautes : l'icône et le texte s'y mettent côte à côte.
+  const enLargeur = zw > zh;
+  if (icone && !enLargeur) {
+    ctx.font = Math.round(Math.min(zw, zh) * 0.34) + 'px serif';
+    ctx.fillText(icone, cx, zy + zh * 0.26);
+    ecrireLignes(ctx, c.nom, cx, zy + zh * 0.6, zw - marge * 2, zh * 0.28, 26);
+  } else if (icone) {
+    ctx.font = Math.round(zh * 0.42) + 'px serif';
+    ctx.fillText(icone, zx + zh * 0.4, zy + zh * 0.5);
+    ecrireLignes(ctx, c.nom, zx + zh * 0.8 + (zw - zh * 0.8) / 2, zy + zh * 0.4, zw - zh * 0.8 - marge, zh * 0.55, 26);
+  } else {
+    ecrireLignes(ctx, c.nom, cx, zy + zh * (enLargeur ? 0.4 : 0.42), zw - marge * 2, zh * (enLargeur ? 0.6 : 0.6), 28);
+  }
+  if (prix) {
+    ctx.fillStyle = c.type === 'taxe' ? '#d8453b' : '#5a524a';
+    ctx.font = '600 24px Fredoka, sans-serif';
+    ctx.fillText(prix, enLargeur && icone ? zx + zh * 0.8 + (zw - zh * 0.8) / 2 : cx, zy + zh * (enLargeur ? 0.82 : 0.88));
+  }
+  return cv;
+}
+
+function textureCentre() {
+  const S = 1024;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#e4f3e6';
+  ctx.fillRect(0, 0, S, S);
+  ctx.save();
+  ctx.translate(S / 2, S / 2);
+  ctx.rotate(-Math.PI / 4);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#e8543f';
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 18;
+  ctx.font = '700 150px Fredoka, sans-serif';
+  ctx.strokeText('PICOLOPOLY', 0, -10);
+  ctx.fillText('PICOLOPOLY', 0, -10);
+  ctx.fillStyle = '#5a7a62';
+  ctx.font = '500 44px Fredoka, sans-serif';
+  ctx.fillText('les bars de Poitiers', 0, 90);
+  ctx.restore();
+  // Emplacements des deux paquets.
+  ctx.setLineDash([18, 12]);
+  ctx.lineWidth = 6;
+  [['#f39c33', 0.27, 0.27, 'CHANCE'], ['#4da3e0', 0.73, 0.73, 'CAISSE']].forEach(([coul, px, py, t]) => {
+    ctx.save();
+    ctx.translate(S * px, S * py);
+    ctx.rotate(-Math.PI / 4);
+    ctx.strokeStyle = coul;
+    ctx.strokeRect(-95, -130, 190, 260);
+    ctx.restore();
+  });
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  return tex;
+}
+
+const tuiles = [];           // un plan par case (cible des clics)
+const barresProprio = [];    // liseré de la couleur du propriétaire
+const voilesHypo = [];       // voile gris d'une case hypothéquée
+const constructions = [];    // { maisons: [4], hotel }
+const surbrillances = [];    // voile doré pulsant (case à choisir)
+
+function creerPlateau() {
+  const socle = new THREE.Mesh(new THREE.BoxGeometry(2 * DEMI + 0.9, 0.5, 2 * DEMI + 0.9), matiere(0xd8b27a, 0.7));
+  socle.position.y = -0.3;
+  socle.receiveShadow = true;
+  scene.add(socle);
+  const planche = new THREE.Mesh(new THREE.BoxGeometry(2 * DEMI + 0.1, 0.1, 2 * DEMI + 0.1), matiere(0xfdf8ec, 0.9));
+  planche.position.y = -0.05;
+  planche.receiveShadow = true;
+  scene.add(planche);
+
+  const centre = new THREE.Mesh(new THREE.PlaneGeometry(2 * DEMI - 2 * COIN, 2 * DEMI - 2 * COIN),
+    new THREE.MeshStandardMaterial({ map: textureCentre(), roughness: 0.95 }));
+  centre.rotation.x = -Math.PI / 2;
+  centre.position.y = Y_PLATEAU + 0.002;
+  centre.receiveShadow = true;
+  scene.add(centre);
+
+  const matHypo = new THREE.MeshBasicMaterial({ color: 0x8a8580, transparent: true, opacity: 0.55, depthWrite: false });
+  const geoMaison = new THREE.BoxGeometry(0.15, 0.12, 0.15);
+  const geoToit = new THREE.ConeGeometry(0.13, 0.1, 4);
+  const matMaison = matiere(0x2e9a55, 0.6);
+  const matHotel = matiere(0xd8453b, 0.6);
+
+  for (let k = 0; k < 40; k++) {
+    const g = geoCase(k);
+    const tex = new THREE.CanvasTexture(textureCase(k));
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
+    const tuile = new THREE.Mesh(new THREE.PlaneGeometry(g.l, g.p), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9 }));
+    tuile.rotation.x = -Math.PI / 2;
+    tuile.position.set(g.x, Y_PLATEAU + 0.004, g.z);
+    tuile.receiveShadow = true;
+    tuile.userData.case = k;
+    scene.add(tuile);
+    tuiles.push(tuile);
+
+    const sb = new THREE.Mesh(new THREE.PlaneGeometry(g.l * 0.96, g.p * 0.96),
+      new THREE.MeshBasicMaterial({ color: 0xffc233, transparent: true, opacity: 0.4, depthWrite: false }));
+    sb.rotation.x = -Math.PI / 2;
+    sb.position.set(g.x, Y_PLATEAU + 0.01, g.z);
+    sb.visible = false;
+    scene.add(sb);
+    surbrillances.push(sb);
+
+    if (!PP_CASES[k].prix) { barresProprio.push(null); voilesHypo.push(null); constructions.push(null); continue; }
+
+    // Le liseré du propriétaire, sur le bord extérieur de la case.
+    const long = (g.cote === 'gauche' || g.cote === 'droite') ? [0.12, g.p * 0.9] : [g.l * 0.9, 0.12];
+    const barre = new THREE.Mesh(new THREE.BoxGeometry(long[0], 0.05, long[1]), matiere(0xffffff, 0.5));
+    barre.position.copy(pointCase(k, 0, COIN / 2 - 0.1, Y_PLATEAU + 0.03));
+    barre.visible = false;
+    barre.castShadow = true;
+    scene.add(barre);
+    barresProprio.push(barre);
+
+    const voile = new THREE.Mesh(new THREE.PlaneGeometry(g.l, g.p), matHypo);
+    voile.rotation.x = -Math.PI / 2;
+    voile.position.set(g.x, Y_PLATEAU + 0.012, g.z);
+    voile.visible = false;
+    scene.add(voile);
+    voilesHypo.push(voile);
+
+    // Maisons alignées sur la bande de couleur, hôtel au milieu.
+    const bloc = { maisons: [], hotel: null };
+    const vBande = -COIN / 2 + COIN * 0.11;
+    for (let m = 0; m < 4; m++) {
+      const maison = new THREE.Group();
+      const corps = new THREE.Mesh(geoMaison, matMaison);
+      corps.position.y = 0.06;
+      const toit = new THREE.Mesh(geoToit, matMaison);
+      toit.position.y = 0.17;
+      toit.rotation.y = Math.PI / 4;
+      maison.add(corps, toit);
+      maison.position.copy(pointCase(k, (m - 1.5) * 0.2, vBande, Y_PLATEAU));
+      maison.traverse(o => { if (o.isMesh) o.castShadow = true; });
+      maison.visible = false;
+      scene.add(maison);
+      bloc.maisons.push(maison);
+    }
+    const hotel = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.24, 0.2), matHotel);
+    hotel.position.copy(pointCase(k, 0, vBande, Y_PLATEAU + 0.12));
+    if (g.cote === 'gauche' || g.cote === 'droite') hotel.rotation.y = Math.PI / 2;
+    hotel.castShadow = true;
+    hotel.visible = false;
+    scene.add(hotel);
+    bloc.hotel = hotel;
+    constructions.push(bloc);
+  }
+}
+creerPlateau();
+
+// Les deux paquets, sur les emplacements dessinés au centre (à 27 % et
+// 73 % de sa largeur, en diagonale).
+const DEMI_CENTRE = DEMI - COIN;
+const PAQUET_POS = {
+  chance: new THREE.Vector3(-DEMI_CENTRE * 0.46, 0, -DEMI_CENTRE * 0.46),
+  caisse: new THREE.Vector3(DEMI_CENTRE * 0.46, 0, DEMI_CENTRE * 0.46),
+};
+
+function textureDosCarte(coul, texte) {
+  const cv = document.createElement('canvas');
+  cv.width = 190; cv.height = 260;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = coul;
+  ctx.fillRect(0, 0, 190, 260);
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 8;
+  ctx.strokeRect(10, 10, 170, 240);
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = '700 34px Fredoka, sans-serif';
+  ctx.fillText(texte, 95, 130);
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+const matsPaquet = {
+  chance: new THREE.MeshStandardMaterial({ map: textureDosCarte('#f39c33', 'CHANCE'), roughness: 0.7 }),
+  caisse: new THREE.MeshStandardMaterial({ map: textureDosCarte('#4da3e0', 'CAISSE'), roughness: 0.7 }),
+};
+const matTranche = matiere(0xfdf8ec, 0.8);
+
+function creerCarte3D(paquet) {
+  // Boîte : le dos (+y) porte la texture du paquet.
+  const m = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.018, 1.3),
+    [matTranche, matTranche, matsPaquet[paquet], matTranche, matTranche, matTranche]);
+  m.castShadow = true;
+  return m;
+}
+
+for (const paquet of ['chance', 'caisse']) {
+  for (let n = 0; n < 6; n++) {
+    const c = creerCarte3D(paquet);
+    c.position.copy(PAQUET_POS[paquet]);
+    c.position.y = 0.012 + n * 0.02;
+    c.rotation.y = -Math.PI / 4 + (Math.random() - 0.5) * 0.06;
+    scene.add(c);
+  }
+}
+
+// =====================================================================
+// LES DÉS : deux blancs et le dé rapide rouge. Le résultat vient du
+// moteur, pas de la physique : on les fait rouler puis on les pose sur la
+// face décidée (comme au Kinito).
+// =====================================================================
+// Faces dans l'ordre des matériaux d'une BoxGeometry : +x, -x, +y, -y, +z, -z.
+const FACES_BLANC = [3, 4, 1, 6, 2, 5];
+const FACES_RAPIDE = ['bus', 'monopoly', 1, 'monopoly', 2, 3];
+// Rotation qui amène chaque face (même ordre) sur le dessus.
+const ROTATION_FACE = [
+  new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2),
+  new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2),
+  new THREE.Quaternion(),
+  new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI),
+  new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2),
+  new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2),
+];
+const POINTS_DE = {
+  1: [[0.5, 0.5]], 2: [[0.28, 0.28], [0.72, 0.72]], 3: [[0.26, 0.26], [0.5, 0.5], [0.74, 0.74]],
+  4: [[0.28, 0.28], [0.72, 0.28], [0.28, 0.72], [0.72, 0.72]],
+  5: [[0.27, 0.27], [0.73, 0.27], [0.5, 0.5], [0.27, 0.73], [0.73, 0.73]],
+  6: [[0.28, 0.24], [0.72, 0.24], [0.28, 0.5], [0.72, 0.5], [0.28, 0.76], [0.72, 0.76]],
+};
+
+function textureFaceDe(valeur, fond, encre) {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 128;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = fond;
+  ctx.fillRect(0, 0, 128, 128);
+  ctx.fillStyle = encre;
+  if (typeof valeur === 'number') {
+    for (const [x, y] of POINTS_DE[valeur]) {
+      ctx.beginPath();
+      ctx.arc(x * 128, y * 128, 11, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else {
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '78px serif';
+    ctx.fillText(valeur === 'bus' ? '🚌' : '🎩', 64, 70);
+  }
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+function creerDe(faces, fond, encre) {
+  const mats = faces.map(v => new THREE.MeshStandardMaterial({ map: textureFaceDe(v, fond, encre), roughness: 0.4 }));
+  const m = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.46, 0.46), mats);
+  m.castShadow = true;
+  m.position.set(0, -2, 0);      // rangé sous la table tant qu'on n'a pas lancé
+  scene.add(m);
+  return m;
+}
+
+const des = [creerDe(FACES_BLANC, '#ffffff', '#2b2622'), creerDe(FACES_BLANC, '#ffffff', '#2b2622'),
+             creerDe(FACES_RAPIDE, '#d8453b', '#ffffff')];
+const REPOS_DES = [new THREE.Vector3(-0.75, 0.23, 1.25), new THREE.Vector3(0.0, 0.23, 1.5), new THREE.Vector3(0.78, 0.23, 1.2)];
+
+function orientationDe(faces, valeur) {
+  const idx = [];
+  faces.forEach((v, i) => { if (v === valeur) idx.push(i); });
+  const i = idx[Math.floor(Math.random() * idx.length)];
+  const lacet = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), (Math.random() - 0.5) * 0.9);
+  return lacet.multiply(ROTATION_FACE[i].clone());
+}
+
+function lancerDes(msg) {
+  const valeurs = [msg.d1, msg.d2, msg.rapide];
+  des.forEach((de, n) => {
+    if (n === 2 && valeurs[2] === null) { de.position.y = -2; return; }
+    const fin = orientationDe(n === 2 ? FACES_RAPIDE : FACES_BLANC, valeurs[n]);
+    const depart = new THREE.Vector3(REPOS_DES[n].x * 0.4 + (Math.random() - 0.5), 2.6, REPOS_DES[n].z + 1.6);
+    const spin = new THREE.Vector3(Math.random() * 14 - 7, Math.random() * 14 - 7, Math.random() * 14 - 7);
+    const qDepart = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.random() * 6, Math.random() * 6, Math.random() * 6));
+    animer(0.95 + n * 0.08, a => {
+      const k = Math.min(1, a.t / a.duree);
+      const pos = depart.clone().lerp(REPOS_DES[n], k);
+      // Deux rebonds qui s'amortissent.
+      pos.y = REPOS_DES[n].y + Math.abs(Math.cos(k * Math.PI * 1.5)) * 2.4 * (1 - k) * (1 - k);
+      de.position.copy(pos);
+      if (k < 0.72) {
+        const e = new THREE.Euler(spin.x * k, spin.y * k, spin.z * k);
+        de.quaternion.copy(qDepart).multiply(new THREE.Quaternion().setFromEuler(e));
+      } else {
+        de.quaternion.slerp(fin, (k - 0.72) / 0.28);
+      }
+    }, () => { de.position.copy(REPOS_DES[n]); de.quaternion.copy(fin); });
+  });
+}
+
+// =====================================================================
+// PIONS : une petite quille par joueur. Chaque joueur a sa place fixe dans
+// une case (son numéro), donc deux pions ne se chevauchent jamais.
+// =====================================================================
+const pions = [];
+const PLACES = [[-0.2, 0.05], [0.2, 0.05], [-0.2, 0.38], [0.2, 0.38], [-0.2, -0.28], [0.2, -0.28]];
+
+function positionPion(k, i, enPrison) {
+  const [du, dv] = PLACES[i % PLACES.length];
+  if (k === PP_CASE_PRISON) {
+    // Derrière les barreaux : le quart intérieur de la case ; en visite : le long des bords.
+    if (enPrison) return pointCase(k, 0.28 + (i % 2) * 0.22 - 0.11, -0.3 + Math.floor(i / 2) * 0.18 - 0.1, Y_PLATEAU);
+    const bord = [[-0.52, 0.52], [-0.52, 0.22], [-0.52, -0.08], [-0.22, 0.52], [0.08, 0.52], [0.38, 0.52]][i % 6];
+    return pointCase(k, bord[0], bord[1], Y_PLATEAU);
+  }
+  if (geoCase(k).coin) return pointCase(k, du * 1.4, dv * 0.9 + 0.12, Y_PLATEAU);
+  return pointCase(k, du, dv, Y_PLATEAU);
+}
+
+function creerPion(i) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: COULEURS_JOUEURS[i % 6], roughness: 0.35, metalness: 0.05 });
+  const socle = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.15, 0.06, 18), mat);
+  socle.position.y = 0.03;
+  const corps = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.11, 0.26, 16), mat);
+  corps.position.y = 0.19;
+  const tete = new THREE.Mesh(new THREE.SphereGeometry(0.085, 16, 12), mat);
+  tete.position.y = 0.37;
+  g.add(socle, corps, tete);
+  g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  scene.add(g);
+  return { groupe: g, case: 0, prison: false, index: i };
+}
+
+function placerPion(p, k, prison) {
+  p.case = k;
+  p.prison = prison;
+  p.groupe.position.copy(positionPion(k, p.index, prison));
+}
+
+// Anneau doré sous le pion dont c'est le tour.
+const anneauActif = new THREE.Mesh(new THREE.RingGeometry(0.17, 0.23, 28),
+  new THREE.MeshBasicMaterial({ color: 0xffb020, transparent: true, opacity: 0.9, depthWrite: false }));
+anneauActif.rotation.x = -Math.PI / 2;
+anneauActif.visible = false;
+scene.add(anneauActif);
+
+// Un saut de case en case vers l'avant (ou l'arrière), ou un seul bond.
+function animerDeplacement(msg) {
+  const p = pions[msg.joueur];
+  if (!p) return;
+  const versPrison = msg.motif === 'prison';
+  const chemin = [];
+  if (msg.sens === 0) {
+    chemin.push({ k: msg.vers, prison: versPrison });
+  } else {
+    let k = msg.de;
+    let garde = 0;
+    while (k !== msg.vers && garde++ < 40) {
+      k = (k + msg.sens + 40) % 40;
+      chemin.push({ k, prison: false });
+    }
+  }
+  if (!chemin.length) return;
+  const parSaut = Math.min(0.17, 2.6 / chemin.length);
+  const depart = p.groupe.position.clone();
+  const etapes = [depart].concat(chemin.map(c => positionPion(c.k, p.index, c.prison)));
+  const hauteur = msg.sens === 0 ? 1.2 : 0.3;
+  const dureeSaut = msg.sens === 0 ? 0.7 : parSaut;
+  animer(dureeSaut * chemin.length, a => {
+    const s = Math.min(chemin.length - 0.0001, a.t / dureeSaut);
+    const n = Math.floor(s), f = s - n;
+    const pos = etapes[n].clone().lerp(etapes[n + 1], f);
+    pos.y += Math.sin(Math.PI * f) * hauteur;
+    p.groupe.position.copy(pos);
+  }, () => {
+    const der = chemin[chemin.length - 1];
+    placerPion(p, der.k, der.prison);
+  });
+}
+
+// =====================================================================
+// ANIMATIONS, TEXTES FLOTTANTS, MESSAGE CENTRAL
+// =====================================================================
+const animations = [];
+
+function animer(duree, maj, fin) {
+  const a = { t: 0, duree, maj, fin };
+  animations.push(a);
+  return a;
+}
+
+// Une pause dans la file : laisse le temps de lire sans rien bouger.
+function patienterFile(duree) { animer(duree, null, null); }
+
+const textesFlottants = [];
+
+function creerSpriteTexte(gros, petit, couleur) {
+  const cv = document.createElement('canvas');
+  cv.width = 1024; cv.height = 512;
+  const ctx = cv.getContext('2d');
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  ctx.font = '700 200px Fredoka, sans-serif';
+  ctx.lineWidth = 34;
+  ctx.strokeStyle = '#ffffff';
+  ctx.strokeText(gros, 512, petit ? 200 : 256);
+  ctx.fillStyle = couleur;
+  ctx.fillText(gros, 512, petit ? 200 : 256);
+  if (petit) {
+    ctx.font = '600 76px Fredoka, sans-serif';
+    ctx.lineWidth = 18;
+    ctx.strokeText(petit, 512, 400);
+    ctx.fillStyle = '#2b2622';
+    ctx.fillText(petit, 512, 400);
+  }
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false }));
+  sp.renderOrder = 999;
+  return sp;
+}
+
+function texteFlottant(position, gros, petit, couleur) {
+  const sp = creerSpriteTexte(String(gros), petit || '', couleur || '#e8921a');
+  const e = distanceVue * 0.05;
+  sp.scale.set(e * 2, e, 1);
+  sp.position.copy(position);
+  sp.position.y += 0.8;
+  scene.add(sp);
+  textesFlottants.push({ sprite: sp, t: 0, duree: 1.9, depart: sp.position.clone() });
+}
+
+const messageSprite = { courant: null };
+
+function messageCentral(gros, petit, couleur, duree) {
+  if (messageSprite.courant) scene.remove(messageSprite.courant.sprite);
+  const sp = creerSpriteTexte(String(gros), petit || '', couleur || '#e8543f');
+  scene.add(sp);
+  messageSprite.courant = { sprite: sp, t: 0, duree: duree || 1.8 };
+}
+
+function positionTete(i) {
+  const p = pions[i];
+  return p ? p.groupe.position.clone() : new THREE.Vector3(0, 0, 0);
+}
+
+// =====================================================================
+// CLIENT : réception des messages
+// =====================================================================
+const elMessage = document.getElementById('message');
+const elRappel = document.getElementById('rappel');
+const elChrono = document.getElementById('chrono');
+const elPanneau = document.getElementById('panneau');
+const elJoueurs = document.getElementById('joueurs');
+const elCarte = document.getElementById('carte');
+const elToast = document.getElementById('toast');
+const elFiche = document.getElementById('fiche');
+const elBtnVue = document.getElementById('btn-vue');
+
+let etatCourant = null;      // dernier état APPLIQUÉ (celui qu'on voit)
+let chronoBase = null;       // { restant, recuA } : le chrono se décompte localement
+let delaiBase = null;
+let enPartie = false;
+let ficheOuverte = null;     // index de la case affichée dans la fiche
+
+const RAISONS = {
+  loyer: 'loyer', miroir: 'le proprio distribue', toast_depart: 'toast du Départ', prison: 'entrée en prison',
+  taxe: 'taxe', carte: 'carte', distribuer: 'distribution', distribution: 'distribution générale',
+  retour: 'retour de bâton', duel: 'duel', cadeau: 'cadeau empoisonné', sommelier: 'sommelier',
+  toast_echange: 'toast de l’échange', faillite: 'faillite',
+};
+const TOASTS = { toast_depart: 1, toast_echange: 1 };
+
+function nomJoueur(i) {
+  const e = etatCourant;
+  if (e && e.joueurs[i] !== undefined) return e.joueurs[i];
+  return joueursPartie[i] !== undefined ? joueursPartie[i] : '?';
+}
+let joueursPartie = [];
+
+function rappel(texte, erreur) {
+  elRappel.textContent = texte;
+  elRappel.className = erreur ? 'erreur' : '';
+}
+
+function clientRecevoir(msg) {
+  switch (msg.type) {
+    // --- salon (en ligne uniquement) ---
+    case 'ton_index':
+      // Le serveur nous dit qui nous sommes : deux homonymes ne se
+      // mélangent plus, et le jeton permet de reprendre sa place.
+      MOI = msg.index;
+      if (msg.jeton) {
+        monJeton = msg.jeton;
+        ecrireSession({ code: codeSalon, nom: monNom, jeton: monJeton, serveur: serveurChoisi });
+      }
+      if (!enPartie) panneauAttente();
+      break;
+    case 'joueur_rejoint':
+      joueursSalon = msg.joueurs;
+      if (enPartie) rappel(msg.nom + (msg.retour ? ' est revenu.' : ' rejoint la table.'));
+      else panneauAttente();
+      break;
+    case 'joueur_parti':
+      joueursSalon = msg.joueurs;
+      if (enPartie) rappel(msg.nom + ' a quitté la table.');
+      else panneauAttente();
+      break;
+
+    case 'pp_demarree':
+      quandLibre(() => demarrerScene(msg.joueurs));
+      break;
+    case 'pp_etat':
+      quandLibre(() => appliquerEtat(msg));
+      break;
+    case 'erreur':
+      // Un refus ne produit pas d'état : on rouvre le panneau, sinon ses
+      // boutons resteraient gelés.
+      rappel(msg.message, true);
+      if (etatCourant) majPanneau();
+      break;
+    default:
+      if (msg.type && msg.type.indexOf('pp_') === 0) quandLibre(() => jouerEvenement(msg));
+  }
+}
+
+// Les événements du moteur, un par un, avec leur animation.
+function jouerEvenement(msg) {
+  switch (msg.type) {
+    case 'pp_des': {
+      lancerDes(msg);
+      const r = msg.rapide === null ? '' : ' + ' + ({ bus: '🚌', monopoly: '🎩' }[msg.rapide] || msg.rapide);
+      rappel('🎲 ' + nomJoueur(msg.joueur) + ' : ' + msg.d1 + ' + ' + msg.d2 + r);
+      break;
+    }
+    case 'pp_deplacement':
+      animerDeplacement(msg);
+      break;
+    case 'pp_gorgees': {
+      if (TOASTS[msg.raison]) messageCentral('🥂 Santé !', RAISONS[msg.raison], '#e8921a', 1.6);
+      if (msg.raison === 'faillite') messageCentral('CUL SEC !', nomJoueur(msg.boivent[0].joueur) + ' fait faillite', '#d8453b', 2.4);
+      for (const b of msg.boivent) {
+        const t = b.cul_sec ? 'CUL SEC' : b.immunise ? '🛡️' : '🍺 ' + b.nombre;
+        texteFlottant(positionTete(b.joueur), t, TOASTS[msg.raison] ? '' : RAISONS[msg.raison] || '', b.immunise ? '#2f7fd8' : '#e8921a');
+      }
+      const moi = msg.boivent.find(b => b.joueur === MOI);
+      if (moi) {
+        toast(moi.cul_sec ? '🍺 CUL SEC !' : moi.immunise ? '🛡️ Immunité : tu ne bois pas'
+          : '🍺 Tu bois ' + moi.nombre + ' gorgée' + (moi.nombre > 1 ? 's' : ''), RAISONS[msg.raison] || msg.raison);
+      }
+      patienterFile(TOASTS[msg.raison] ? 1.1 : 0.7);
+      break;
+    }
+    case 'pp_paiement': {
+      if (msg.de !== null) texteFlottant(positionTete(msg.de).add(new THREE.Vector3(0, -0.25, 0)), '−' + msg.montant + ' €', '', '#d8453b');
+      if (msg.vers !== null) texteFlottant(positionTete(msg.vers).add(new THREE.Vector3(0, -0.25, 0)), '+' + msg.montant + ' €', '', '#2e9a55');
+      break;
+    }
+    case 'pp_carte':
+      montrerCarte(msg);
+      break;
+    case 'pp_achat':
+      texteFlottant(pointCase(msg.case, 0, 0, 0.2), '🏷️', PP_CASES[msg.case].nom, '#2e9a55');
+      rappel(nomJoueur(msg.joueur) + ' achète ' + PP_CASES[msg.case].nom);
+      break;
+    case 'pp_construction':
+      majConstructions(msg.case, msg.maisons);
+      texteFlottant(pointCase(msg.case, 0, 0, 0.2), msg.maisons === 5 ? '🏨' : '🏠', '', '#2e9a55');
+      break;
+    case 'pp_hypotheque':
+      rappel(PP_CASES[msg.case].nom + (msg.hypotheque ? ' est hypothéquée' : ' est libérée'));
+      break;
+    case 'pp_duel': {
+      const [a, b] = msg.lancers[msg.lancers.length - 1];
+      messageCentral('⚔️ ' + a + ' – ' + b, nomJoueur(msg.joueur) + ' contre ' + nomJoueur(msg.cible), '#9b4dca', 2.0);
+      patienterFile(1.4);
+      break;
+    }
+    case 'pp_echange':
+      if (msg.accepte) messageCentral('🤝 Marché conclu', nomJoueur(msg.proposition.proposant) + ' et ' + nomJoueur(msg.proposition.cible), '#2e9a55', 1.8);
+      else rappel(nomJoueur(msg.proposition.cible) + ' refuse l’échange');
+      break;
+    case 'pp_faillite':
+      rappel('💀 ' + nomJoueur(msg.joueur) + ' fait faillite');
+      break;
+    case 'pp_de_rapide':
+      rappel('⚡ ' + nomJoueur(msg.joueur) + ' joue désormais avec le dé rapide');
+      break;
+    case 'pp_tour':
+      rappel('Au tour de ' + nomJoueur(msg.joueur));
+      break;
+    case 'pp_fin':
+      messageCentral('🏆 ' + nomJoueur(msg.gagnant), msg.raison === 'chrono' ? 'fin du chrono' : 'dernier debout', '#e8921a', 3.5);
+      break;
+  }
+}
+
+let carteMinuteur = null;
+function montrerCarte(msg) {
+  // La carte se soulève du paquet, se retourne ; le texte s'affiche en
+  // HTML (bien plus lisible qu'une texture sur un téléphone).
+  const c = creerCarte3D(msg.paquet);
+  const depart = PAQUET_POS[msg.paquet].clone();
+  depart.y = 0.14;
+  c.position.copy(depart);
+  c.rotation.y = -Math.PI / 4;
+  scene.add(c);
+  const haut = new THREE.Vector3(depart.x * 0.5, 1.6, depart.z * 0.5 + 1);
+  animer(0.55, a => {
+    const k = Math.min(1, a.t / a.duree);
+    c.position.lerpVectors(depart, haut, k);
+    c.rotation.z = Math.PI * k;
+  }, () => {
+    elCarte.className = 'visible' + (msg.paquet === 'caisse' ? ' caisse' : '');
+    elCarte.querySelector('.paquet').textContent = msg.paquet === 'chance' ? 'Chance' : 'Caisse de communauté';
+    elCarte.querySelector('.qui').textContent = nomJoueur(msg.joueur);
+    elCarte.querySelector('.texte').textContent = msg.carte.texte;
+    clearTimeout(carteMinuteur);
+    carteMinuteur = setTimeout(() => { elCarte.className = msg.paquet === 'caisse' ? 'caisse' : ''; }, 2600);
+  });
+  animer(0.55 + 1.9, null, () => scene.remove(c));
+}
+
+let toastMinuteur = null;
+function toast(gros, petit) {
+  elToast.innerHTML = '';
+  elToast.appendChild(document.createTextNode(gros));
+  if (petit) {
+    const s = document.createElement('small');
+    s.textContent = petit;
+    elToast.appendChild(s);
+  }
+  elToast.className = 'visible';
+  clearTimeout(toastMinuteur);
+  toastMinuteur = setTimeout(() => { elToast.className = ''; }, 2400);
+}
+
+// =====================================================================
+// APPLICATION DE L'ÉTAT
+// L'état fait foi : les événements ont déjà animé le gros ; ici on remet
+// chaque chose à sa place (pion, liseré, maisons), ce qui rattrape aussi un
+// client qui revient en pleine partie.
+// =====================================================================
+function demarrerScene(noms) {
+  enPartie = true;
+  joueursPartie = noms.slice();
+  etatCourant = null;
+  vuePanneau = 'principal';
+  pions.forEach(p => scene.remove(p.groupe));
+  pions.length = 0;
+  fermerFiche();
+  cacherPanneau();
+  elChrono.classList.remove('cache');
+  elBtnVue.classList.remove('cache');
+  des.forEach(d => { d.position.y = -2; });
+}
+
+function appliquerEtat(e) {
+  if (!enPartie) demarrerScene(e.joueurs);
+  const avant = etatCourant;
+  etatCourant = e;
+  joueursPartie = e.joueurs.slice();
+  chronoBase = { restant: e.temps_restant, recuA: performance.now() };
+  delaiBase = e.delai_restant === null ? null : { restant: e.delai_restant, recuA: performance.now() };
+
+  // Un arrivant en cours de partie : un pion de plus.
+  while (pions.length < e.joueurs.length) {
+    const p = creerPion(pions.length);
+    placerPion(p, e.positions[pions.length], e.en_prison[pions.length]);
+    pions.push(p);
+  }
+  pions.forEach((p, i) => {
+    p.groupe.visible = !e.faillite[i];
+    if (p.case !== e.positions[i] || p.prison !== e.en_prison[i]) placerPion(p, e.positions[i], e.en_prison[i]);
+  });
+
+  for (let k = 0; k < 40; k++) {
+    const pr = e.proprietes[k];
+    if (!pr) continue;
+    const barre = barresProprio[k];
+    barre.visible = pr.proprietaire !== null;
+    if (pr.proprietaire !== null) barre.material.color.set(COULEURS_JOUEURS[pr.proprietaire % 6]);
+    voilesHypo[k].visible = pr.hypotheque;
+    majConstructions(k, pr.maisons);
+  }
+
+  elMessage.textContent = e.message;
+  majJoueurs(e);
+  majSurbrillances(e);
+  // Le panneau garde sa vue (gestion, échange) tant que la situation n'a pas changé.
+  if (!avant || avant.courant !== e.courant || avant.phase !== e.phase
+      || JSON.stringify(avant.attente) !== JSON.stringify(e.attente) || !!avant.dette !== !!e.dette) {
+    vuePanneau = 'principal';
+  }
+  majPanneau();
+  if (ficheOuverte !== null) afficherFiche(ficheOuverte);
+}
+
+function majConstructions(k, n) {
+  const b = constructions[k];
+  if (!b) return;
+  b.maisons.forEach((m, j) => { m.visible = n < 5 && j < n; });
+  b.hotel.visible = n === 5;
+}
+
+// Cases à choisir (bus, triple) ou à acheter : un voile doré qui pulse.
+function majSurbrillances(e) {
+  surbrillances.forEach(s => { s.visible = false; });
+  const a = e.attente;
+  if (!a || a.joueur !== MOI) return;
+  if (a.type === 'deplacement') a.options.forEach(k => { surbrillances[k].visible = true; });
+  if (a.type === 'achat') surbrillances[a.case].visible = true;
+}
+
+function majJoueurs(e) {
+  elJoueurs.innerHTML = '';
+  e.joueurs.forEach((nom, i) => {
+    const d = document.createElement('div');
+    d.className = 'joueur' + (i === e.courant && e.phase !== 'fin' ? ' actif' : '')
+      + (e.faillite[i] ? ' faillite' : '') + (e.partis[i] ? ' absent' : '');
+    const pa = document.createElement('span');
+    pa.className = 'pastille';
+    pa.style.background = COULEURS_JOUEURS[i % 6];
+    const n = document.createElement('span');
+    n.className = 'nom';
+    n.textContent = nom + (i === MOI ? ' (toi)' : '');
+    const ar = document.createElement('span');
+    ar.className = 'argent';
+    ar.textContent = e.argent[i] + ' €';
+    const l2 = document.createElement('div');
+    l2.className = 'ligne2';
+    const infos = ['🍺 ' + e.gorgees[i]];
+    if (e.en_prison[i]) infos.push('🔒');
+    if (e.de_rapide[i]) infos.push('⚡');
+    if (e.immunites[i]) infos.push('🛡️' + (e.immunites[i] > 1 ? '×' + e.immunites[i] : ''));
+    if (e.cartes_sortie[i]) infos.push('🗝️' + (e.cartes_sortie[i] > 1 ? '×' + e.cartes_sortie[i] : ''));
+    const t = document.createElement('span');
+    t.textContent = infos.join(' ');
+    l2.appendChild(t);
+    const titres = document.createElement('span');
+    titres.className = 'titres';
+    e.proprietes.forEach((p, k) => {
+      if (!p || p.proprietaire !== i) return;
+      const s = document.createElement('span');
+      s.className = 'titre' + (p.hypotheque ? ' hyp' : '');
+      s.style.background = COULEURS_GROUPES[PP_CASES[k].groupe];
+      s.title = PP_CASES[k].nom;
+      titres.appendChild(s);
+    });
+    l2.appendChild(titres);
+    d.append(pa, n, ar, l2);
+    elJoueurs.appendChild(d);
+  });
+}
+
+function formatDuree(s) {
+  s = Math.max(0, Math.floor(s));
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+
+function majChrono() {
+  if (!chronoBase || !enPartie) return;
+  const ecoule = (performance.now() - chronoBase.recuA) / 1000;
+  const reste = chronoBase.restant - (etatCourant && etatCourant.phase === 'fin' ? 0 : ecoule);
+  elChrono.textContent = '⏱ ' + formatDuree(reste);
+  elChrono.className = reste < 300 ? 'presse' : '';
+  const d = document.getElementById('delai');
+  if (d && delaiBase) {
+    const r = delaiBase.restant - (performance.now() - delaiBase.recuA) / 1000;
+    d.textContent = r < 60 ? 'Réponse automatique dans ' + Math.max(0, Math.ceil(r)) + ' s' : '';
+  }
+}
+
+// =====================================================================
+// PANNEAUX D'INTERFACE
+// Tout ce qui se fait au clic sur le plateau a son bouton ici : on peut
+// jouer entièrement au pouce.
+// =====================================================================
+let vuePanneau = 'principal';     // 'principal' | 'gestion' | 'echange'
+let repartition = {};             // brouillon du Sommelier
+let brouillon = null;             // brouillon d'échange
+const boutonsActifs = [];         // les boutons du panneau (le test de fumée les « clique »)
+
+function cacherPanneau() { elPanneau.className = 'cache'; elPanneau.innerHTML = ''; boutonsActifs.length = 0; }
+
+function bouton(texte, classe, onClick) {
+  const b = document.createElement('button');
+  b.textContent = texte;
+  if (classe) b.className = classe;
+  b.addEventListener('click', onClick);
+  boutonsActifs.push({ element: b, onClick });
+  return b;
+}
+
+function ouvrirPanneau(titre) {
+  elPanneau.className = '';
+  elPanneau.innerHTML = '';
+  boutonsActifs.length = 0;
+  if (titre) {
+    const h = document.createElement('h2');
+    h.textContent = titre;
+    elPanneau.appendChild(h);
+  }
+  return elPanneau;
+}
+
+function aide(texte) {
+  const d = document.createElement('p');
+  d.style.cssText = 'color:#756a60; font-size:14px; margin:6px 0 4px;';
+  d.textContent = texte;
+  return d;
+}
+
+function rangee() {
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  return r;
+}
+
+function pastilleBouton(i, texte, classe, onClick) {
+  const b = bouton('', classe, onClick);
+  const s = document.createElement('span');
+  s.className = 'pastille-bouton';
+  s.style.background = COULEURS_JOUEURS[i % 6];
+  b.append(s, document.createTextNode(texte));
+  return b;
+}
+
+// Envoie une intention et gèle le panneau : c'est l'état suivant qui le
+// reconstruira. Évite le double envoi.
+function envoyer(msg) {
+  boutonsActifs.forEach(b => { b.element.disabled = true; });
+  envoyerIntention(MOI, msg);
+}
+
+function ajouterDelai(p) {
+  const d = document.createElement('div');
+  d.className = 'delai';
+  d.id = 'delai';
+  p.appendChild(d);
+}
+
+function majPanneau() {
+  const e = etatCourant;
+  if (!e) return;
+  if (e.phase === 'fin') { panneauFin(e); return; }
+  if (MOI >= e.joueurs.length) {
+    const p = ouvrirPanneau('Tu regardes la partie');
+    p.appendChild(aide('La table est pleine : tu entreras à la prochaine partie.'));
+    return;
+  }
+  if (e.faillite[MOI]) {
+    const p = ouvrirPanneau('Tu as fait faillite');
+    p.appendChild(aide('Tu regardes la fin de la partie.'));
+    return;
+  }
+  const a = e.attente;
+  if (a && a.joueur === MOI) { panneauChoix(e, a); return; }
+  if (e.dette && e.dette.joueur === MOI) { panneauDette(e); return; }
+  if (e.courant === MOI && (e.phase === 'tour' || e.phase === 'fin_tour')) {
+    if (vuePanneau === 'gestion') { panneauGestion(e); return; }
+    if (vuePanneau === 'echange' && e.phase === 'tour' && !e.a_lance) { panneauEchange(e); return; }
+    panneauTour(e);
+    return;
+  }
+  // Pas à nous : on laisse le plateau à la vue.
+  cacherPanneau();
+  if (a && a.type === 'echange' && a.proposition.proposant === MOI) rappel('Ta proposition est entre les mains de ' + nomJoueur(a.joueur) + '…');
+}
+
+function panneauTour(e) {
+  const p = ouvrirPanneau(e.phase === 'fin_tour' ? 'Fin de ton tour' : e.a_lance ? 'Double : relance !' : 'À toi de jouer');
+  const r = rangee();
+  if (e.phase === 'tour') {
+    if (e.en_prison[MOI] && !e.a_lance) {
+      p.appendChild(aide('Tu es en prison (essai ' + (e.tours_prison[MOI] + 1) + ' sur ' + PP_ESSAIS_PRISON + '). À l’abri des cartes… mais tu n’avances pas.'));
+      const payer = bouton('Payer ' + PP_AMENDE_PRISON + ' €', 'clair', () => envoyer({ type: 'pp_prison_payer' }));
+      payer.disabled = e.argent[MOI] < PP_AMENDE_PRISON;
+      r.appendChild(payer);
+      if (e.cartes_sortie[MOI]) r.appendChild(bouton('🗝️ Utiliser ma carte', 'clair', () => envoyer({ type: 'pp_prison_carte' })));
+      r.appendChild(bouton('🎲 Tenter le double', '', () => envoyer({ type: 'pp_lancer' })));
+    } else {
+      r.appendChild(bouton('🎲 Lancer les dés', '', () => envoyer({ type: 'pp_lancer' })));
+    }
+  } else {
+    r.appendChild(bouton('Terminer le tour', '', () => envoyer({ type: 'pp_terminer' })));
+  }
+  p.appendChild(r);
+  const r2 = rangee();
+  if (mesCases(e, MOI).length) r2.appendChild(bouton('🏠 Mes propriétés', 'clair petit', () => { vuePanneau = 'gestion'; majPanneau(); }));
+  if (e.phase === 'tour' && !e.a_lance && autresPresents(e).length) {
+    r2.appendChild(bouton('🤝 Proposer un échange', 'clair petit', () => { vuePanneau = 'echange'; brouillon = null; majPanneau(); }));
+  }
+  if (r2.childNodes.length) p.appendChild(r2);
+  ajouterDelai(p);
+}
+
+function panneauChoix(e, a) {
+  if (a.type === 'achat') {
+    const c = PP_CASES[a.case];
+    const p = ouvrirPanneau('Acheter ' + c.nom + ' ?');
+    p.appendChild(aide(a.prix + ' € — tu as ' + e.argent[MOI] + ' €. Laissée, elle reste à vendre pour le suivant.'));
+    const r = rangee();
+    r.appendChild(bouton('Acheter ' + a.prix + ' €', '', () => envoyer({ type: 'pp_choix', valeur: true })));
+    r.appendChild(bouton('Laisser passer', 'clair', () => envoyer({ type: 'pp_choix', valeur: false })));
+    r.appendChild(bouton('Fiche', 'clair petit', () => afficherFiche(a.case)));
+    p.appendChild(r);
+  } else if (a.type === 'cible') {
+    const titre = a.raison === 'duel' ? 'Qui défies-tu en duel ?'
+      : 'Qui boit ' + a.nombre + ' gorgée' + (a.nombre > 1 ? 's' : '') + ' ?';
+    const p = ouvrirPanneau(titre);
+    p.appendChild(aide(RAISONS[a.raison] || a.raison));
+    const r = rangee();
+    a.cibles.forEach(c => r.appendChild(pastilleBouton(c, nomJoueur(c), 'clair', () => envoyer({ type: 'pp_choix', valeur: c }))));
+    p.appendChild(r);
+  } else if (a.type === 'sommelier') {
+    const total = Object.values(repartition).reduce((s, x) => s + x, 0);
+    const p = ouvrirPanneau('Sommelier : ' + (a.total - total) + ' gorgée' + (a.total - total > 1 ? 's' : '') + ' à servir');
+    a.cibles.forEach(c => {
+      const n = repartition[c] || 0;
+      const r = rangee();
+      const s = document.createElement('span');
+      s.className = 'stepper';
+      const nom = document.createElement('span');
+      nom.textContent = nomJoueur(c);
+      nom.style.minWidth = '90px';
+      const val = document.createElement('b');
+      val.textContent = n;
+      s.append(nom,
+        bouton('−', 'clair', () => { if (n > 0) { repartition[c] = n - 1; majPanneau(); } }),
+        val,
+        bouton('+', 'clair', () => { if (total < a.total) { repartition[c] = n + 1; majPanneau(); } }));
+      r.appendChild(s);
+      p.appendChild(r);
+    });
+    const r = rangee();
+    const servir = bouton('Servir', '', () => { const v = Object.assign({}, repartition); repartition = {}; envoyer({ type: 'pp_choix', valeur: v }); });
+    servir.disabled = total !== a.total;
+    r.appendChild(servir);
+    p.appendChild(r);
+  } else if (a.type === 'deplacement') {
+    const p = ouvrirPanneau(a.raison === 'triple' ? 'Triple ! Va où tu veux' : '🚌 Bus : choisis ta case');
+    p.appendChild(aide('Touche une case dorée sur le plateau, ou choisis ici.'));
+    const r = rangee();
+    if (a.options.length <= 4) {
+      a.options.forEach(k => r.appendChild(bouton(PP_CASES[k].nom, 'clair', () => envoyer({ type: 'pp_choix', valeur: k }))));
+    } else {
+      const sel = document.createElement('select');
+      a.options.forEach(k => {
+        const o = document.createElement('option');
+        o.value = String(k);
+        const pr = e.proprietes[k];
+        o.textContent = PP_CASES[k].nom + (pr ? (pr.proprietaire === null ? ' — libre' : ' — ' + nomJoueur(pr.proprietaire)) : '');
+        sel.appendChild(o);
+      });
+      r.appendChild(sel);
+      r.appendChild(bouton('Y aller', '', () => envoyer({ type: 'pp_choix', valeur: Number(sel.value) })));
+    }
+    p.appendChild(r);
+  } else if (a.type === 'prison_carte') {
+    const p = ouvrirPanneau('Direction la prison…');
+    p.appendChild(aide('Tu as une carte « Sortie de prison ». En prison, aucune carte ne peut te viser — mais tu n’avances plus.'));
+    const r = rangee();
+    r.appendChild(bouton('🗝️ Utiliser la carte', '', () => envoyer({ type: 'pp_choix', valeur: true })));
+    r.appendChild(bouton('Aller en prison (1 gorgée)', 'clair', () => envoyer({ type: 'pp_choix', valeur: false })));
+    p.appendChild(r);
+  } else if (a.type === 'echange') {
+    const pr = a.proposition;
+    const p = ouvrirPanneau(nomJoueur(pr.proposant) + ' te propose un échange');
+    const liste = cs => (cs.length ? cs.map(k => PP_CASES[k].nom).join(', ') : 'rien');
+    p.appendChild(aide('Tu reçois : ' + liste(pr.donne) + (pr.argent_donne ? ' + ' + pr.argent_donne + ' €' : '')));
+    p.appendChild(aide('Tu donnes : ' + liste(pr.recoit) + (pr.argent_recu ? ' + ' + pr.argent_recu + ' €' : '')));
+    const r = rangee();
+    r.appendChild(bouton('Accepter (toast !)', '', () => envoyer({ type: 'pp_choix', valeur: true })));
+    r.appendChild(bouton('Refuser', 'clair', () => envoyer({ type: 'pp_choix', valeur: false })));
+    p.appendChild(r);
+  }
+  ajouterDelai(elPanneau);
+}
+
+function panneauDette(e) {
+  const p = ouvrirPanneau('Tu dois ' + e.dette.montant + ' € à ' + (e.dette.creancier === null ? 'la banque' : nomJoueur(e.dette.creancier)));
+  p.appendChild(aide('Tu as ' + e.argent[MOI] + ' €. Vends des constructions ou hypothèque : la dette se règle dès que tu as de quoi.'));
+  listeGestion(e, p, true);
+  const r = rangee();
+  r.appendChild(bouton('Déclarer faillite (cul sec)', 'danger', () => envoyer({ type: 'pp_faillite' })));
+  p.appendChild(r);
+  ajouterDelai(p);
+}
+
+function panneauGestion(e) {
+  const p = ouvrirPanneau('Mes propriétés');
+  listeGestion(e, p, false);
+  const r = rangee();
+  r.appendChild(bouton('Retour', 'clair', () => { vuePanneau = 'principal'; majPanneau(); }));
+  p.appendChild(r);
+  ajouterDelai(p);
+}
+
+function mesCases(e, i) {
+  const r = [];
+  e.proprietes.forEach((pr, k) => { if (pr && pr.proprietaire === i) r.push(k); });
+  return r;
+}
+
+function autresPresents(e) {
+  return e.joueurs.map((_, i) => i).filter(i => i !== MOI && !e.faillite[i] && !e.partis[i]);
+}
+
+// Les actions possibles sur une case à moi, selon les règles (le serveur
+// revalide tout ; ici on n'affiche que ce qui a une chance de passer).
+function actionsCase(e, k, enDette) {
+  const c = PP_CASES[k], pr = e.proprietes[k];
+  const acts = [];
+  if (!pr || pr.proprietaire !== MOI) return acts;
+  const groupe = c.groupe ? PP_GROUPES[c.groupe] : [];
+  const maisons = groupe.map(x => e.proprietes[x].maisons);
+  if (c.type === 'propriete' && !enDette && pr.maisons < 5
+      && groupe.every(x => e.proprietes[x].proprietaire === MOI && !e.proprietes[x].hypotheque)
+      && pr.maisons === Math.min(...maisons)) {
+    acts.push({ texte: (pr.maisons === 4 ? '+🏨 ' : '+🏠 ') + c.maison + ' €', msg: { type: 'pp_construire', case: k }, ok: e.argent[MOI] >= c.maison });
+  }
+  if (c.type === 'propriete' && pr.maisons > 0 && pr.maisons === Math.max(...maisons)) {
+    acts.push({ texte: '−🏠 +' + Math.floor(c.maison / 2) + ' €', msg: { type: 'pp_vendre', case: k }, ok: true });
+  }
+  if (!pr.hypotheque && !(c.type === 'propriete' && maisons.some(m => m))) {
+    acts.push({ texte: 'Hypothéquer +' + Math.floor(c.prix / 2) + ' €', msg: { type: 'pp_hypothequer', case: k }, ok: true });
+  }
+  if (pr.hypotheque && !enDette) {
+    acts.push({ texte: 'Lever −' + ppCoutLevee(k) + ' €', msg: { type: 'pp_lever', case: k }, ok: e.argent[MOI] >= ppCoutLevee(k) });
+  }
+  return acts;
+}
+
+function listeGestion(e, p, enDette) {
+  const cases = mesCases(e, MOI);
+  if (!cases.length) { p.appendChild(aide('Aucune propriété.')); return; }
+  const g = document.createElement('div');
+  g.className = 'liste-gestion';
+  cases.forEach(k => {
+    const c = PP_CASES[k], pr = e.proprietes[k];
+    const nom = document.createElement('span');
+    const coul = document.createElement('span');
+    coul.className = 'couleur';
+    coul.style.background = COULEURS_GROUPES[c.groupe];
+    nom.append(coul, document.createTextNode(c.nom));
+    if (pr.hypotheque) { const s = document.createElement('small'); s.textContent = ' (hyp.)'; nom.appendChild(s); }
+    else if (pr.maisons) { const s = document.createElement('small'); s.textContent = ' ' + (pr.maisons === 5 ? '🏨' : '🏠×' + pr.maisons); nom.appendChild(s); }
+    const act = document.createElement('span');
+    act.className = 'actions';
+    actionsCase(e, k, enDette).forEach(x => {
+      const b = bouton(x.texte, 'clair petit', () => envoyer(x.msg));
+      b.disabled = !x.ok;
+      act.appendChild(b);
+    });
+    g.append(nom, act);
+  });
+  p.appendChild(g);
+}
+
+function panneauEchange(e) {
+  const autres = autresPresents(e);
+  if (!brouillon || !autres.includes(brouillon.cible)) {
+    brouillon = { cible: autres[0], donne: [], recoit: [], argent_donne: 0, argent_recu: 0 };
+  }
+  const b = brouillon;
+  const p = ouvrirPanneau('Proposer un échange');
+  const r0 = rangee();
+  autres.forEach(i => r0.appendChild(pastilleBouton(i, nomJoueur(i), 'clair petit' + (i === b.cible ? ' choisi' : ''),
+    () => { b.cible = i; b.recoit = []; b.argent_recu = 0; majPanneau(); })));
+  p.appendChild(r0);
+
+  // Une propriété d'un groupe construit ne s'échange pas (le serveur le refuserait).
+  const echangeable = k => PP_CASES[k].type !== 'propriete' || !PP_GROUPES[PP_CASES[k].groupe].some(x => e.proprietes[x].maisons);
+  const colonnes = document.createElement('div');
+  colonnes.className = 'colonnes';
+  [['Tu donnes', MOI, 'donne', 'argent_donne'], ['Tu reçois', b.cible, 'recoit', 'argent_recu']].forEach(([titre, qui, liste, argent]) => {
+    const col = document.createElement('div');
+    const h = document.createElement('h3');
+    h.textContent = titre;
+    col.appendChild(h);
+    const r = rangee();
+    r.style.justifyContent = 'flex-start';
+    mesCases(e, qui).filter(echangeable).forEach(k => {
+      const pris = b[liste].includes(k);
+      r.appendChild(bouton(PP_CASES[k].nom, 'clair petit' + (pris ? ' choisi' : ''), () => {
+        if (pris) b[liste].splice(b[liste].indexOf(k), 1); else b[liste].push(k);
+        majPanneau();
+      }));
+    });
+    if (!r.childNodes.length) r.appendChild(aide('aucune propriété échangeable'));
+    col.appendChild(r);
+    const s = document.createElement('span');
+    s.className = 'stepper';
+    const v = document.createElement('b');
+    v.textContent = b[argent] + ' €';
+    s.append(bouton('−50', 'clair petit', () => { b[argent] = Math.max(0, b[argent] - 50); majPanneau(); }), v,
+      bouton('+50', 'clair petit', () => { b[argent] = Math.min(e.argent[qui], b[argent] + 50); majPanneau(); }));
+    col.appendChild(s);
+    colonnes.appendChild(col);
+  });
+  p.appendChild(colonnes);
+  const r = rangee();
+  const vide = !(b.donne.length || b.recoit.length || b.argent_donne || b.argent_recu);
+  const prop = bouton('Proposer à ' + nomJoueur(b.cible), '', () => envoyer({
+    type: 'pp_proposer_echange', cible: b.cible, donne: b.donne.slice(), recoit: b.recoit.slice(),
+    argent_donne: b.argent_donne, argent_recu: b.argent_recu,
+  }));
+  prop.disabled = vide;
+  r.appendChild(prop);
+  r.appendChild(bouton('Retour', 'clair', () => { vuePanneau = 'principal'; majPanneau(); }));
+  p.appendChild(r);
+  ajouterDelai(p);
+}
+
+function panneauFin(e) {
+  const p = ouvrirPanneau('🏆 ' + nomJoueur(e.classement[0].joueur) + ' remporte la partie');
+  const t = document.createElement('table');
+  t.className = 'classement';
+  e.classement.forEach((c, n) => {
+    const tr = document.createElement('tr');
+    const a = document.createElement('td');
+    a.textContent = (n + 1) + '. ' + nomJoueur(c.joueur) + (c.faillite ? ' 💀' : '');
+    const b = document.createElement('td');
+    b.className = 'n';
+    b.textContent = c.patrimoine + ' €';
+    const g = document.createElement('td');
+    g.className = 'n';
+    g.textContent = '🍺 ' + e.gorgees[c.joueur];
+    tr.append(a, b, g);
+    t.appendChild(tr);
+  });
+  p.appendChild(t);
+  const r = rangee();
+  if (mode === 'local') r.appendChild(bouton('Rejouer', '', () => demarrerSolo(dernierNbSolo)));
+  else if (estCreateur) r.appendChild(bouton('Relancer une partie', '', () => envoyer({ type: 'pp_demarrer' })));
+  else p.appendChild(aide('Le créateur du salon peut relancer une partie.'));
+  r.appendChild(bouton('Quitter', 'clair', () => { oublierSession(); if (ws) { try { ws.close(); } catch (x) { /* déjà fermée */ } } location.href = location.pathname; }));
+  p.appendChild(r);
+}
+
+// =====================================================================
+// FICHE D'UNE CASE — au toucher sur le plateau (ou bouton « Fiche »)
+// =====================================================================
+function fermerFiche() { ficheOuverte = null; elFiche.className = 'cache'; elFiche.innerHTML = ''; }
+
+function ligneFiche(t, a, b, courant) {
+  const tr = document.createElement('tr');
+  if (courant) tr.className = 'courant';
+  const x = document.createElement('td'); x.textContent = a;
+  const y = document.createElement('td'); y.className = 'n'; y.textContent = b;
+  tr.append(x, y);
+  t.appendChild(tr);
+}
+
+function afficherFiche(k) {
+  const e = etatCourant;
+  const c = PP_CASES[k];
+  ficheOuverte = k;
+  elFiche.className = '';
+  elFiche.innerHTML = '';
+  const tete = document.createElement('div');
+  tete.className = 'tete';
+  tete.style.background = COULEURS_GROUPES[c.groupe] || '#7a9aa8';
+  tete.textContent = c.nom;
+  const f = document.createElement('button');
+  f.className = 'fermer';
+  f.textContent = '×';
+  f.addEventListener('click', fermerFiche);
+  tete.appendChild(f);
+  const corps = document.createElement('div');
+  corps.className = 'corps';
+  elFiche.append(tete, corps);
+
+  const pr = e ? e.proprietes[k] : null;
+  const t = document.createElement('table');
+  if (c.type === 'propriete') {
+    const complet = pr && pr.proprietaire !== null && PP_GROUPES[c.groupe].every(x => e.proprietes[x].proprietaire === pr.proprietaire);
+    ligneFiche(t, 'Terrain nu', c.loyers[0] + ' €', pr && pr.maisons === 0 && !complet);
+    ligneFiche(t, 'Groupe complet', c.loyers[0] * 2 + ' €', pr && pr.maisons === 0 && complet);
+    for (let m = 1; m <= 4; m++) ligneFiche(t, m + ' maison' + (m > 1 ? 's' : ''), c.loyers[m] + ' €', pr && pr.maisons === m);
+    ligneFiche(t, 'Hôtel', c.loyers[5] + ' €', pr && pr.maisons === 5);
+    ligneFiche(t, 'Maison', c.maison + ' €');
+  } else if (c.type === 'gare') {
+    [1, 2, 3, 4].forEach(n => ligneFiche(t, n + ' arrêt' + (n > 1 ? 's' : ''), PP_LOYER_GARE * 2 ** (n - 1) + ' €'));
+  } else if (c.type === 'compagnie') {
+    ligneFiche(t, 'Une cave', PP_MULT_COMPAGNIE[0] + ' × les dés');
+    ligneFiche(t, 'Les deux', PP_MULT_COMPAGNIE[1] + ' × les dés');
+  } else if (c.type === 'taxe') {
+    ligneFiche(t, 'À payer', c.montant + ' €');
+    ligneFiche(t, 'Gorgées', String(ppGorgeesPour(c.montant)));
+  } else {
+    const DESC = {
+      depart: 'Passer ici rapporte ' + PP_SALAIRE + ' € — et tout le monde trinque.',
+      prison: 'Simple visite, ou l’abri : en prison, aucune carte ne peut te viser.',
+      parc: 'Rien. On souffle.', allez_prison: 'Direct en prison, 1 gorgée à l’entrée.',
+      chance: 'Pioche une carte Chance.', caisse: 'Pioche une carte Caisse de communauté.',
+    };
+    corps.appendChild(aide(DESC[c.type] || ''));
+  }
+  if (c.prix) {
+    ligneFiche(t, 'Prix', c.prix + ' €');
+    ligneFiche(t, 'Hypothèque', Math.floor(c.prix / 2) + ' €');
+  }
+  if (t.childNodes.length) corps.appendChild(t);
+
+  if (pr) {
+    const st = document.createElement('div');
+    st.className = 'etat';
+    st.textContent = pr.proprietaire === null ? 'À vendre'
+      : 'À ' + nomJoueur(pr.proprietaire) + (pr.hypotheque ? ' — hypothéquée' : '')
+        + (pr.maisons === 5 ? ' — hôtel' : pr.maisons ? ' — ' + pr.maisons + ' maison(s)' : '');
+    corps.appendChild(st);
+  }
+  const ici = e ? e.positions.map((pos, i) => (pos === k && !e.faillite[i] ? nomJoueur(i) : null)).filter(Boolean) : [];
+  if (ici.length) corps.appendChild(aide('Ici : ' + ici.join(', ')));
+
+  // Actions possibles depuis la fiche (toutes ont aussi leur bouton dans le panneau).
+  if (e && e.phase !== 'fin') {
+    const r = rangee();
+    const a = e.attente;
+    if (a && a.joueur === MOI && a.type === 'deplacement' && a.options.includes(k)) {
+      r.appendChild(bouton('Y aller', '', () => { fermerFiche(); envoyer({ type: 'pp_choix', valeur: k }); }));
+    }
+    const gerer = !a && ((e.dette && e.dette.joueur === MOI) || (!e.dette && e.courant === MOI && (e.phase === 'tour' || e.phase === 'fin_tour')));
+    if (gerer) {
+      actionsCase(e, k, !!e.dette).forEach(x => {
+        const b = bouton(x.texte, 'clair petit', () => envoyer(x.msg));
+        b.disabled = !x.ok;
+        r.appendChild(b);
+      });
+    }
+    if (r.childNodes.length) corps.appendChild(r);
+  }
+}
+
+// Toucher une case du plateau ouvre sa fiche.
+const raycaster = new THREE.Raycaster();
+const pointeur = new THREE.Vector2();
+let appui = null;
+renderer.domElement.addEventListener('pointerdown', ev => { appui = { x: ev.clientX, y: ev.clientY }; });
+renderer.domElement.addEventListener('pointerup', ev => {
+  if (!appui || Math.hypot(ev.clientX - appui.x, ev.clientY - appui.y) > 8) return;
+  appui = null;
+  if (!enPartie) return;
+  pointeur.x = (ev.clientX / window.innerWidth) * 2 - 1;
+  pointeur.y = -(ev.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(pointeur, camera);
+  const hit = raycaster.intersectObjects(tuiles, false)[0];
+  if (hit) afficherFiche(hit.object.userData.case);
+  else fermerFiche();
+});
+
+elBtnVue.addEventListener('click', () => {
+  vueSuivi = !vueSuivi;
+  elBtnVue.classList.toggle('actif', vueSuivi);
+});
+
+// =====================================================================
+// BOTS — remplaçants locaux des autres joueurs.
+// Ils envoient les mêmes intentions qu'un humain et ne voient que ce qu'il
+// verrait (pp_etat est entièrement public). Ils ne proposent pas
+// d'échanges, mais répondent à ceux qu'on leur fait. En ligne ce bloc ne
+// sert pas.
+// =====================================================================
+const seqBot = {};
+const dernierEtatBot = {};
+const BOT_RESERVE = 250;    // argent qu'un bot garde de côté avant d'acheter / construire
+
+// Qui la table attend-elle ? (même règle que ppAttendu, sur l'état public)
+function attenduPublic(e) {
+  if (e.phase === 'fin') return null;
+  if (e.attente) return e.attente.joueur;
+  if (e.dette) return e.dette.joueur;
+  return e.courant;
+}
+
+function botRecevoir(index, msg) {
+  if (msg.type === 'pp_etat') {
+    dernierEtatBot[index] = msg;
+    // Chaque état annule ce qu'un état précédent avait programmé.
+    const seq = seqBot[index] = (seqBot[index] || 0) + 1;
+    if (attenduPublic(msg) !== index) return;
+    quandLibre(() => { if (seqBot[index] === seq) botJouer(index, msg); }, 700);
+  } else if (msg.type === 'erreur') {
+    // Une intention refusée ne produit aucun état : sans ce repli, le bot
+    // attendrait pour toujours (et la table avec lui jusqu'au délai).
+    const e = dernierEtatBot[index];
+    const seq = seqBot[index];
+    if (e) quandLibre(() => { if (seqBot[index] === seq) botSecours(index, e); }, 300);
+  }
+}
+
+// Toujours légal : ce qu'on envoie quand une intention plus fine a été refusée.
+function botSecours(index, e) {
+  if (e.attente && e.attente.joueur === index) {
+    const a = e.attente;
+    const v = a.type === 'cible' ? a.cibles[0] : a.type === 'deplacement' ? a.options[0]
+      : a.type === 'sommelier' ? { [a.cibles[0]]: a.total } : a.type === 'prison_carte';
+    envoyerIntention(index, { type: 'pp_choix', valeur: v });
+  } else if (e.dette && e.dette.joueur === index) {
+    envoyerIntention(index, { type: 'pp_faillite' });
+  } else if (e.courant === index) {
+    envoyerIntention(index, { type: e.phase === 'fin_tour' ? 'pp_terminer' : 'pp_lancer' });
+  }
+}
+
+function botJouer(index, e) {
+  const a = e.attente;
+  if (a && a.joueur === index) {
+    envoyerIntention(index, { type: 'pp_choix', valeur: botChoix(index, e, a) });
+    return;
+  }
+  if (e.dette && e.dette.joueur === index) { botDette(index, e); return; }
+  if (e.courant !== index) return;
+  if (e.phase === 'tour') {
+    if (e.en_prison[index] && !e.a_lance) {
+      if (e.cartes_sortie[index]) { envoyerIntention(index, { type: 'pp_prison_carte' }); return; }
+      if (e.argent[index] >= 600) { envoyerIntention(index, { type: 'pp_prison_payer' }); return; }
+    }
+    const c = botCaseAConstruire(index, e);
+    if (c !== null) { envoyerIntention(index, { type: 'pp_construire', case: c }); return; }
+    envoyerIntention(index, { type: 'pp_lancer' });
+  } else if (e.phase === 'fin_tour') {
+    const c = botCaseAConstruire(index, e);
+    if (c !== null) { envoyerIntention(index, { type: 'pp_construire', case: c }); return; }
+    const h = botHypothequeALever(index, e);
+    if (h !== null) { envoyerIntention(index, { type: 'pp_lever', case: h }); return; }
+    envoyerIntention(index, { type: 'pp_terminer' });
+  }
+}
+
+function botCaseAConstruire(index, e) {
+  for (const [g, cases] of Object.entries(PP_GROUPES)) {
+    if (PP_CASES[cases[0]].type !== 'propriete') continue;
+    if (!cases.every(c => e.proprietes[c].proprietaire === index && !e.proprietes[c].hypotheque)) continue;
+    const maisons = cases.map(c => e.proprietes[c].maisons);
+    const mini = Math.min(...maisons);
+    if (mini >= 5) continue;
+    const c = cases[maisons.indexOf(mini)];
+    if (e.argent[index] - PP_CASES[c].maison >= BOT_RESERVE) return c;
+  }
+  return null;
+}
+
+function botHypothequeALever(index, e) {
+  for (let c = 0; c < 40; c++) {
+    const p = e.proprietes[c];
+    if (p && p.proprietaire === index && p.hypotheque && e.argent[index] - ppCoutLevee(c) >= BOT_RESERVE * 2) return c;
+  }
+  return null;
+}
+
+function botDette(index, e) {
+  // Vendre d'abord (sur la case la plus construite de son groupe), puis
+  // hypothéquer le moins cher, et seulement ensuite la faillite.
+  for (let c = 0; c < 40; c++) {
+    const p = e.proprietes[c];
+    if (p && p.proprietaire === index && p.maisons > 0
+        && p.maisons === Math.max(...ppMaisonsGroupe(e, PP_CASES[c].groupe))) {
+      envoyerIntention(index, { type: 'pp_vendre', case: c }); return;
+    }
+  }
+  const hypos = [];
+  for (let c = 0; c < 40; c++) {
+    const p = e.proprietes[c];
+    if (p && p.proprietaire === index && !p.hypotheque) hypos.push(c);
+  }
+  if (hypos.length) {
+    hypos.sort((x, y) => PP_CASES[x].prix - PP_CASES[y].prix);
+    envoyerIntention(index, { type: 'pp_hypothequer', case: hypos[0] }); return;
+  }
+  envoyerIntention(index, { type: 'pp_faillite' });
+}
+
+// La cible préférée d'un bot : le plus riche (celui qu'il faut ralentir).
+function botPlusRiche(e, cibles) {
+  return cibles.slice().sort((x, y) => e.argent[y] - e.argent[x] || x - y)[0];
+}
+
+function botValeurCase(index, e, c) {
+  const cs = PP_CASES[c], p = e.proprietes[c];
+  if (p) {
+    if (p.proprietaire === null) return e.argent[index] >= cs.prix ? 3 : 1;
+    if (p.proprietaire === index || p.hypotheque) return 2;
+    return -ppLoyer(e, c) / 50;
+  }
+  if (cs.type === 'allez_prison') return -3;
+  if (cs.type === 'taxe') return -cs.montant / 50;
+  if (cs.type === 'chance' || cs.type === 'caisse') return 1;
+  return 2;
+}
+
+function botChoix(index, e, a) {
+  switch (a.type) {
+    case 'achat': {
+      const g = PP_CASES[a.case].groupe;
+      const complete = PP_GROUPES[g].every(c => c === a.case || e.proprietes[c].proprietaire === index);
+      return e.argent[index] - a.prix >= BOT_RESERVE || (complete && e.argent[index] >= a.prix);
+    }
+    case 'prison_carte':
+      return true;
+    case 'echange': {
+      // Ce que la proposition apporte au bot contre ce qu'elle lui coûte ;
+      // un titre cédé est compté une fois et demie son prix.
+      const p = a.proposition;
+      const prix = cs => cs.reduce((s, c) => s + PP_CASES[c].prix, 0);
+      return p.argent_donne + prix(p.donne) >= p.argent_recu + 1.5 * prix(p.recoit);
+    }
+    case 'cible':
+      return botPlusRiche(e, a.cibles);
+    case 'deplacement': {
+      let mieux = a.options[0], score = -Infinity;
+      for (const c of a.options) {
+        const s = botValeurCase(index, e, c);
+        if (s > score) { score = s; mieux = c; }
+      }
+      return mieux;
+    }
+    case 'sommelier': {
+      const ordre = a.cibles.slice().sort((x, y) => e.argent[y] - e.argent[x] || x - y);
+      const rep = {};
+      for (let k = 0; k < a.total; k++) {
+        const j = ordre[k % ordre.length];
+        rep[j] = (rep[j] || 0) + 1;
+      }
+      return rep;
+    }
+  }
+  return null;
+}
+
+// =====================================================================
+// ACCUEIL ET SALON
+// =====================================================================
+const NOMS_BOTS = ['Fury', 'Romanoff', 'Barton', 'Coulson', 'Hill'];
+
+const SERVEURS = {
+  render: { http: 'https://kinito-serveur.onrender.com', ws: 'wss://kinito-serveur.onrender.com' },
+  local:  { http: 'http://127.0.0.1:8000',               ws: 'ws://127.0.0.1:8000' },
+};
+let serveurChoisi = 'render';
+
+let monNom = '';
+let codeSalon = '';
+let estCreateur = false;
+let joueursSalon = [];
+let monJeton = null;
+let dernierNbSolo = 4;
+
+// Le jeton permet de retrouver sa place après une coupure ou un rechargement.
+// localStorage peut lever (navigation privée, données bloquées) : tout est gardé.
+const CLE_SESSION = 'picolopoly3d.session';
+
+function lireSession() {
+  try { return JSON.parse(localStorage.getItem(CLE_SESSION) || 'null'); }
+  catch (e) { return null; }
+}
+function ecrireSession(s) {
+  try { localStorage.setItem(CLE_SESSION, JSON.stringify(s)); } catch (e) { /* tant pis */ }
+}
+function oublierSession() {
+  try { localStorage.removeItem(CLE_SESSION); } catch (e) { /* tant pis */ }
+}
+
+function champTexte(id, placeholder, longueurMax) {
+  const i = document.createElement('input');
+  i.type = 'text';
+  i.id = id;
+  i.placeholder = placeholder;
+  if (longueurMax) i.maxLength = longueurMax;
+  return i;
+}
+
+function afficherErreur(texte) { rappel(texte, true); }
+
+function panneauAccueil() {
+  elMessage.textContent = '🍻 Picolopoly';
+  rappel('Le Monopoly à boire, dans les bars de Poitiers');
+  const p = ouvrirPanneau('Comment tu joues ?');
+  const r = rangee();
+  r.appendChild(bouton('En ligne', '', panneauEnLigne));
+  r.appendChild(bouton('Solo contre des bots', 'clair', panneauSolo));
+  p.appendChild(r);
+
+  const s = lireSession();
+  if (s && s.code && s.jeton) {
+    const r2 = rangee();
+    r2.style.marginTop = '12px';
+    r2.appendChild(bouton('Reprendre la partie ' + s.code, 'clair', () => {
+      monNom = s.nom; codeSalon = s.code; monJeton = s.jeton;
+      serveurChoisi = s.serveur || 'render';
+      estCreateur = false;
+      afficherErreur('Reconnexion...');
+      seConnecter();
+    }));
+    p.appendChild(r2);
+  }
+}
+
+// --- Solo : le moteur local et les bots, sans serveur ---
+function panneauSolo() {
+  const p = ouvrirPanneau('Combien de joueurs ?');
+  p.appendChild(aide('Toi + des bots qui tiennent la place des autres. De 2 à 6. Une partie dure une heure.'));
+  const r = rangee();
+  [2, 3, 4, 5, 6].forEach(n => r.appendChild(bouton(String(n), n === 4 ? '' : 'clair', () => demarrerSolo(n))));
+  p.appendChild(r);
+  const r2 = rangee();
+  r2.style.marginTop = '12px';
+  r2.appendChild(bouton('Retour', 'clair', panneauAccueil));
+  p.appendChild(r2);
+}
+
+function demarrerSolo(nb) {
+  dernierNbSolo = nb;
+  mode = 'local';
+  monJeton = null;
+  oublierSession();
+  MOI = 0;
+  cacherPanneau();
+  enPartie = false;
+  fileActions.length = 0;
+  serveur.demarrer(['Toi'].concat(NOMS_BOTS.slice(0, nb - 1)));
+}
+
+// --- En ligne ---
+function boutonServeur() {
+  const b = bouton('', 'clair petit', () => {
+    serveurChoisi = serveurChoisi === 'render' ? 'local' : 'render';
+    majLibelleServeur(b);
+  });
+  majLibelleServeur(b);
+  return b;
+}
+
+function majLibelleServeur(b) {
+  b.textContent = serveurChoisi === 'render' ? 'Serveur : Render' : 'Serveur : local';
+}
+
+function panneauRejoindreDirect(code) {
+  codeSalon = code;
+  elMessage.textContent = '🍻 Picolopoly';
+  rappel('Salon ' + code);
+  const p = ouvrirPanneau('Rejoindre le salon');
+  const c = document.createElement('div');
+  c.className = 'code-salon';
+  c.textContent = code;
+  p.appendChild(c);
+  const l1 = rangee();
+  const pseudo = champTexte('pseudo', 'Ton prénom', 16);
+  pseudo.value = monNom;
+  l1.appendChild(pseudo);
+  p.appendChild(l1);
+  const l2 = rangee();
+  l2.appendChild(bouton('Rejoindre', '', async () => {
+    if (!lireNom()) return;
+    afficherErreur('Connexion au serveur...');
+    try {
+      const rep = await fetch(SERVEURS[serveurChoisi].http + '/salon/' + codeSalon);
+      if (!(await rep.json()).existe) { afficherErreur('Ce salon n’existe plus'); return; }
+      estCreateur = false;
+      seConnecter();
+    } catch (e) {
+      afficherErreur('Serveur injoignable.');
+    }
+  }));
+  p.appendChild(l2);
+  const l3 = rangee();
+  l3.style.marginTop = '12px';
+  l3.appendChild(boutonServeur());
+  l3.appendChild(bouton('Autre salon', 'clair petit', panneauAccueil));
+  p.appendChild(l3);
+}
+
+function panneauEnLigne() {
+  const p = ouvrirPanneau('Jouer en ligne');
+  const l1 = rangee();
+  const pseudo = champTexte('pseudo', 'Ton prénom', 16);
+  pseudo.value = monNom;
+  l1.appendChild(pseudo);
+  p.appendChild(l1);
+  const l2 = rangee();
+  l2.appendChild(bouton('Créer un salon', '', creerSalon));
+  p.appendChild(l2);
+  const l3 = rangee();
+  l3.appendChild(champTexte('code-salon', 'CODE', 4));
+  l3.appendChild(bouton('Rejoindre', 'clair', rejoindreSalon));
+  p.appendChild(l3);
+  const l4 = rangee();
+  l4.style.marginTop = '12px';
+  l4.appendChild(boutonServeur());
+  l4.appendChild(bouton('Retour', 'clair petit', panneauAccueil));
+  p.appendChild(l4);
+  const note = document.createElement('div');
+  note.className = 'note';
+  note.textContent = "Le serveur Render s'endort : la première connexion peut prendre 30 s.";
+  p.appendChild(note);
+}
+
+function lireNom() {
+  const champ = document.getElementById('pseudo');
+  monNom = champ ? champ.value.trim() : '';
+  if (!monNom) { afficherErreur('Entre ton prénom'); return false; }
+  return true;
+}
+
+async function creerSalon() {
+  if (!lireNom()) return;
+  afficherErreur('Connexion au serveur...');
+  try {
+    const rep = await fetch(SERVEURS[serveurChoisi].http + '/creer-salon');
+    codeSalon = (await rep.json()).code;
+    estCreateur = true;
+    seConnecter();
+  } catch (e) {
+    afficherErreur("Serveur injoignable. S'il dort, réessaie dans 30 s.");
+  }
+}
+
+async function rejoindreSalon() {
+  if (!lireNom()) return;
+  const champ = document.getElementById('code-salon');
+  codeSalon = (champ ? champ.value : '').trim().toUpperCase();
+  if (codeSalon.length !== 4) { afficherErreur('Le code fait 4 lettres'); return; }
+  afficherErreur('Connexion au serveur...');
+  try {
+    const rep = await fetch(SERVEURS[serveurChoisi].http + '/salon/' + codeSalon);
+    if (!(await rep.json()).existe) { afficherErreur('Salon introuvable'); return; }
+    estCreateur = false;
+    seConnecter();
+  } catch (e) {
+    afficherErreur('Serveur injoignable.');
+  }
+}
+
+function seConnecter() {
+  // Si on a déjà un jeton pour CE salon, on le renvoie, quel que soit le
+  // chemin emprunté pour revenir (bouton « Reprendre », code retapé, lien
+  // ?salon=). Sans lui le serveur ne nous reconnaît pas et nous AJOUTE
+  // comme nouveau joueur : on se retrouverait en double.
+  if (!monJeton) {
+    const s = lireSession();
+    if (s && s.code === codeSalon && s.jeton) monJeton = s.jeton;
+  }
+  let url = SERVEURS[serveurChoisi].ws + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom);
+  if (monJeton) url += '?jeton=' + encodeURIComponent(monJeton);
+  const socket = new WebSocket(url);
+  ws = socket;
+  socket.onopen = () => { mode = 'ligne'; if (!enPartie) panneauAttente(); };
+  socket.onmessage = e => clientRecevoir(JSON.parse(e.data));
+  socket.onerror = () => afficherErreur('Erreur de connexion au serveur');
+  // Seule la socket en cours compte : une ancienne qui se ferme après coup
+  // ne doit pas recouvrir la partie d'un panneau « Déconnecté ».
+  socket.onclose = () => { if (enPartie && ws === socket) panneauReconnexion(); };
+}
+
+function panneauReconnexion() {
+  elMessage.textContent = 'Connexion perdue';
+  const p = ouvrirPanneau('Déconnecté');
+  p.appendChild(aide('Ta place est gardée : tes tours sont sautés et on choisit pour toi en attendant. Reconnecte-toi pour la reprendre.'));
+  const r = rangee();
+  r.appendChild(bouton('Reconnecter', '', () => { cacherPanneau(); seConnecter(); }));
+  r.appendChild(bouton('Quitter', 'clair', () => {
+    enPartie = false; oublierSession(); monJeton = null; location.href = location.pathname;
+  }));
+  p.appendChild(r);
+}
+
+// Adresse du site publié, utilisée seulement comme repli : quand la page est
+// ouverte en fichier local (double-clic), un QR vers file:// ne mènerait
+// nulle part sur le téléphone de celui qui scanne.
+const SITE_PUBLIE = 'https://ozaxe.github.io/table-de-jeu/picolopoly-3d-jeu.html';
+
+function lienSalon(code) {
+  const fichierLocal = location.protocol === 'file:';
+  const base = fichierLocal ? SITE_PUBLIE : location.origin + location.pathname;
+  return { url: base + '?salon=' + encodeURIComponent(code), repli: fichierLocal };
+}
+
+function dessinerQR(cv, url) {
+  new QRious({ element: cv, value: url, size: 340, level: 'M', background: '#ffffff', foreground: '#2b2622' });
+}
+
+// Le QR du salon reste joignable en cours de partie, sous les règles : le
+// panneau du bas est pris par le jeu, et c'est justement en cours de partie
+// qu'on a besoin de renvoyer le lien à quelqu'un.
+function majQRModale() {
+  const bloc = document.getElementById('bloc-qr-regles');
+  if (!bloc) return;
+  if (mode !== 'ligne' || !codeSalon) { bloc.className = 'cache'; return; }
+  bloc.className = '';
+  document.getElementById('qr-code-salon').textContent = codeSalon;
+  const lien = lienSalon(codeSalon);
+  const cv = document.getElementById('qr-regles');
+  const note = document.getElementById('qr-note-regles');
+  cv.style.display = 'none';
+  if (typeof QRious !== 'undefined') {
+    try { dessinerQR(cv, lien.url); cv.style.display = ''; } catch (e) { /* le code à 4 lettres suffit */ }
+  }
+  const avert = [];
+  if (lien.repli) {
+    avert.push('Ce QR mène au site en ligne : la page est ouverte en fichier local, il n’y a pas d’adresse à partager.');
+    if (serveurChoisi === 'local') avert.push('Tu joues sur le serveur local : ceux qui scannent arriveront sur le serveur en ligne.');
+  }
+  if (enPartie) {
+    avert.push('Partie en cours : jusqu’à six, celui qui rejoint s’assoit tout de suite (1500 €, case Départ). Pour quelqu’un qui s’est fait couper, ce lien lui rend sa place.');
+  }
+  note.textContent = avert.join(' ');
+  // onclick plutôt qu'addEventListener : la modale peut être rouverte dix
+  // fois, on ne veut pas empiler dix gestionnaires sur le même bouton.
+  document.getElementById('copier-lien-regles').onclick = async () => {
+    try { await navigator.clipboard.writeText(lien.url); note.textContent = 'Lien copié : ' + lien.url; }
+    catch (e) { note.textContent = lien.url; }
+  };
+}
+
+function panneauAttente() {
+  const p = ouvrirPanneau('Salon');
+  const code = document.createElement('div');
+  code.className = 'code-salon';
+  code.textContent = codeSalon;
+  p.appendChild(code);
+  p.appendChild(aide('Donne ce code aux autres pour qu’ils rejoignent. De 2 à 6 joueurs.'));
+  const lien = lienSalon(codeSalon);
+  if (typeof QRious !== 'undefined') {
+    const cv = document.createElement('canvas');
+    cv.className = 'qr';
+    try {
+      dessinerQR(cv, lien.url);
+      p.appendChild(cv);
+      p.appendChild(aide(lien.repli
+        ? 'Ce QR mène au site en ligne : la page est ouverte en fichier local, il n’y a pas d’adresse à partager.'
+        : 'Ou fais scanner ce code : ils n’auront que leur prénom à entrer.'));
+      if (lien.repli && serveurChoisi === 'local') {
+        const garde = document.createElement('div');
+        garde.className = 'alerte';
+        garde.textContent = 'Attention : tu joues sur le serveur local, mais ceux qui scannent arriveront sur le serveur en ligne.';
+        p.appendChild(garde);
+      }
+      const rl = rangee();
+      rl.appendChild(bouton('Copier le lien', 'clair petit', async () => {
+        try { await navigator.clipboard.writeText(lien.url); rappel('Lien copié'); }
+        catch (e) { rappel(lien.url); }
+      }));
+      p.appendChild(rl);
+    } catch (e) { /* le code à 4 lettres suffit */ }
+  }
+  const liste = document.createElement('div');
+  liste.className = 'liste-attente';
+  liste.textContent = joueursSalon.length
+    ? joueursSalon.map((n, i) => (i === MOI ? n + ' (toi)' : n)).join(' · ')
+    : 'En attente de joueurs...';
+  p.appendChild(liste);
+  const r = rangee();
+  if (estCreateur) {
+    const trop = joueursSalon.length > PP_JOUEURS_MAX;
+    const b = bouton('Démarrer la partie', '', () => envoyerIntention(MOI, { type: 'pp_demarrer' }));
+    b.disabled = joueursSalon.length < PP_JOUEURS_MIN || trop;
+    r.appendChild(b);
+    if (joueursSalon.length < PP_JOUEURS_MIN) {
+      p.appendChild(aide('Encore ' + (PP_JOUEURS_MIN - joueursSalon.length) + ' joueur avant de pouvoir lancer.'));
+    } else if (trop) {
+      const al = document.createElement('div');
+      al.className = 'alerte';
+      al.textContent = 'Vous êtes ' + joueursSalon.length + ' : Picolopoly se joue à ' + PP_JOUEURS_MAX + ' au plus.';
+      p.appendChild(al);
+    }
+  } else {
+    p.appendChild(aide('En attente du créateur du salon...'));
+  }
+  p.appendChild(r);
+}
+
+// Règles
+const elModaleRegles = document.getElementById('modale-regles');
+document.getElementById('btn-regles').addEventListener('click', () => {
+  majQRModale();
+  document.getElementById('quitter-table').classList.toggle('cache', !enPartie);
+  elModaleRegles.classList.remove('cache');
+});
+document.getElementById('fermer-regles').addEventListener('click', () => elModaleRegles.classList.add('cache'));
+elModaleRegles.addEventListener('click', e => { if (e.target === elModaleRegles) elModaleRegles.classList.add('cache'); });
+document.getElementById('quitter-table').addEventListener('click', () => {
+  oublierSession();
+  if (ws) { try { ws.close(); } catch (e) { /* déjà fermée */ } }
+  location.href = location.pathname;
+});
+
+// =====================================================================
+// BOUCLE DE RENDU
+// =====================================================================
+const clock = new THREE.Clock();
+let dernierChrono = 0;
+
+function boucle() {
+  requestAnimationFrame(boucle);
+  const dt = Math.min(clock.getDelta(), 0.033);
+  const temps = clock.elapsedTime;
+
+  for (let i = animations.length - 1; i >= 0; i--) {
+    const a = animations[i];
+    a.t += dt;
+    if (a.maj) a.maj(a);
+    if (a.t >= a.duree) {
+      animations.splice(i, 1);
+      if (a.fin) a.fin();
+    }
+  }
+
+  for (let i = textesFlottants.length - 1; i >= 0; i--) {
+    const f = textesFlottants[i];
+    f.t += dt;
+    const k = f.t / f.duree;
+    f.sprite.position.y = f.depart.y + k * 0.6;
+    f.sprite.material.opacity = k < 0.1 ? k / 0.1 : Math.max(0, Math.min(1, (1 - k) / 0.4));
+    if (f.t >= f.duree) { scene.remove(f.sprite); textesFlottants.splice(i, 1); }
+  }
+
+  if (messageSprite.courant) {
+    const m = messageSprite.courant;
+    m.t += dt;
+    const k = m.t, D = m.duree;
+    m.sprite.material.opacity = k < 0.12 ? k / 0.12 : k > D - 0.35 ? Math.max(0, (D - k) / 0.35) : 1;
+    // Taille indexée sur le recul : en portrait la caméra est loin.
+    const dist = camera.position.distanceTo(camCibleActuelle);
+    m.sprite.scale.set(dist * 0.3, dist * 0.15, 1);
+    m.sprite.position.set(camCibleActuelle.x, 2.2 + Math.min(k, 0.5) * 0.3, camCibleActuelle.z);
+    if (k >= D) { scene.remove(m.sprite); messageSprite.courant = null; }
+  }
+
+  // Pion actif : anneau doré qui pulse.
+  const e = etatCourant;
+  if (e && e.phase !== 'fin' && pions[e.courant] && pions[e.courant].groupe.visible) {
+    anneauActif.visible = true;
+    anneauActif.position.set(pions[e.courant].groupe.position.x, Y_PLATEAU + 0.015, pions[e.courant].groupe.position.z);
+    const s = 1 + Math.sin(temps * 5) * 0.12;
+    anneauActif.scale.set(s, s, 1);
+  } else {
+    anneauActif.visible = false;
+  }
+  const pouls = 0.28 + (Math.sin(temps * 4) + 1) * 0.14;
+  surbrillances.forEach(s => { if (s.visible) s.material.opacity = pouls; });
+
+  voitures.forEach(v => { v.t += v.vitesse * dt; placerVoiture(v); });
+
+  // Caméra : tout le plateau, ou gros plan sur le pion actif.
+  if (vueSuivi && e && pions[e.courant]) {
+    const cible = pions[e.courant].groupe.position.clone();
+    camObjectifCible.lerp(cible, 0.2);
+    camObjectifPos.copy(camObjectifCible).addScaledVector(CAM_DIR, Math.min(7, distanceVue * 0.55));
+  } else {
+    camObjectifCible.copy(CAM_CIBLE);
+    camObjectifPos.copy(CAM_POS);
+  }
+  camera.position.lerp(camObjectifPos, CAM_VITESSE);
+  camCibleActuelle.lerp(camObjectifCible, CAM_VITESSE);
+  camera.lookAt(camCibleActuelle);
+
+  if (temps - dernierChrono > 0.25) { dernierChrono = temps; majChrono(); }
+
+  renderer.render(scene, camera);
+}
+
+// =====================================================================
+// DÉMARRAGE
+// =====================================================================
+// Page servie en local : on vise le serveur local par défaut.
+if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) serveurChoisi = 'local';
+
+const salonDansUrl = new URLSearchParams(location.search).get('salon');
+if (salonDansUrl && /^[A-Za-z]{4}$/.test(salonDansUrl)) {
+  panneauRejoindreDirect(salonDansUrl.toUpperCase());
+} else {
+  panneauAccueil();
+}
+boucle();
+</script>
+</body>
+</html>
