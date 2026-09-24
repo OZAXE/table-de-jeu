@@ -256,7 +256,8 @@
       <tr><td>Prison</td><td>1 gorgée en entrant.</td></tr>
       <tr><td>Échange conclu</td><td>Toast : tout le monde boit 1 gorgée.</td></tr>
       <tr><td>Faillite</td><td>Cul sec.</td></tr>
-      <tr><td>Construire, Parc gratuit</td><td>Rien.</td></tr>
+      <tr><td>Parc gratuit</td><td>Les taxes, les amendes des cartes et les 50 € de sortie de prison s'y accumulent. En t'y arrêtant, tu peux rafler la cagnotte contre 1 gorgée par tranche de 50 € (sans plafond). Pas d'immunité qui tienne : c'est un marché, pas une pénalité.</td></tr>
+      <tr><td>Construire</td><td>Rien.</td></tr>
     </table>
 
     <h3>La prison, un abri</h3>
@@ -338,6 +339,11 @@ const PP_GORGEES_DUEL = 3;
 const PP_GORGEES_CADEAU = 3;
 const PP_GORGEES_SOMMELIER = 6;
 const PP_RETOUR_DEFAUT = 2;
+// Cagnotte du Parc gratuit : taxes, amendes des cartes et sorties de prison
+// payées s'y accumulent ; s'arrêter au Parc permet de la rafler contre
+// 1 gorgée par tranche de 50 €.
+const PP_CAGNOTTE_PAR_GORGEE = 50;
+const PP_MOTIFS_CAGNOTTE = ['taxe', 'carte', 'prison'];
 
 // Rythme
 const PP_DUREE_PARTIE = 3600;
@@ -622,6 +628,7 @@ function ppInitialiser(noms, maintenant) {
     version: 0,
     message: 'La partie commence : à ' + noms[0] + ' de lancer les dés.',
     classement: null,
+    cagnotte: 0,
   };
   ppArmer(etat, maintenant);
   return etat;
@@ -672,17 +679,21 @@ function ppEtatPublic(etat, maintenant) {
     temps_restant: Math.max(0, Math.trunc(etat.fin_prevue - maintenant)),
     delai_restant: echeance === null ? null : Math.max(0, Math.trunc(echeance - maintenant)),
     classement: etat.classement,
+    cagnotte: etat.cagnotte,
   };
 }
 
 // --- Boire, payer, se déplacer ---
 
-function ppBoire(etat, ev, liste, raison, culSec) {
+// volontaire : des gorgées qu'on a choisi de boire (le prix de la cagnotte).
+// Pas une pénalité : ni l'immunité ni le « Retour de bâton » ne s'en mêlent.
+function ppBoire(etat, ev, liste, raison, culSec, volontaire) {
   culSec = !!culSec;
+  volontaire = !!volontaire;
   const boivent = [];
   for (const [i, n] of liste) {
     if (etat.faillite[i] || (n <= 0 && !culSec)) continue;
-    if (etat.immunites[i] > 0) {
+    if (etat.immunites[i] > 0 && !volontaire) {
       etat.immunites[i] -= 1;
       boivent.push({ joueur: i, nombre: 0, immunise: true, cul_sec: false });
       continue;
@@ -690,7 +701,7 @@ function ppBoire(etat, ev, liste, raison, culSec) {
     boivent.push({ joueur: i, nombre: n, immunise: false, cul_sec: culSec });
     if (!culSec) {
       etat.gorgees[i] += n;
-      etat.derniere_penalite[i] = n;
+      if (!volontaire) etat.derniere_penalite[i] = n;
     }
   }
   if (boivent.length) ev.push(ppTous({ type: 'pp_gorgees', raison, boivent }));
@@ -701,6 +712,7 @@ function ppPayer(etat, ev, i, montant, creancier, motif) {
   if (etat.argent[i] >= montant) {
     etat.argent[i] -= montant;
     if (creancier !== null) etat.argent[creancier] += montant;
+    else if (PP_MOTIFS_CAGNOTTE.includes(motif)) etat.cagnotte += montant;
     ev.push(ppTous({ type: 'pp_paiement', de: i, vers: creancier, montant, motif }));
   } else {
     etat.dette = { joueur: i, montant, creancier, motif };
@@ -825,7 +837,17 @@ function ppArrivee(etat, ev) {
     ppPiocher(etat, ev, i, t);
   } else if (t === 'allez_prison') {
     ppEnvoyerPrison(etat, ev, i);
+  } else if (t === 'parc' && etat.cagnotte > 0) {
+    const montant = etat.cagnotte;
+    etat.attente = { type: 'parc', joueur: i, montant, gorgees: ppGorgeesCagnotte(montant) };
+    etat.message = ppNom(etat, i) + ' peut rafler la cagnotte : ' + montant
+      + ' € contre ' + ppGorgeesCagnotte(montant) + ' gorgée(s).';
   }
+}
+
+// 1 gorgée par tranche de 50 €, sans plafond (au moins 1).
+function ppGorgeesCagnotte(montant) {
+  return Math.max(1, Math.floor(montant / PP_CAGNOTTE_PAR_GORGEE));
 }
 
 // Dé rapide, symbole Monopoly : prochaine propriété libre, sinon la
@@ -1332,7 +1354,7 @@ function ppChoix(etat, ev, i, message) {
   let v = message.valeur;
   const t = a.type;
 
-  if (t === 'achat' || t === 'prison_carte' || t === 'echange') {
+  if (t === 'achat' || t === 'prison_carte' || t === 'echange' || t === 'parc') {
     if (typeof v !== 'boolean') return 'Réponse attendue : oui ou non.';
   } else if (t === 'cible') {
     v = ppEntier(v);
@@ -1396,6 +1418,18 @@ function ppChoix(etat, ev, i, message) {
       ev.push(ppTous({ type: 'pp_echange', accepte: false, proposition: a.proposition }));
       etat.message = ppNom(etat, i) + " refuse l'échange.";
     }
+  } else if (t === 'parc') {
+    if (v) {
+      const montant = etat.cagnotte;
+      const gorgees = ppGorgeesCagnotte(montant);
+      etat.argent[i] += montant;
+      etat.cagnotte = 0;
+      ev.push(ppTous({ type: 'pp_cagnotte', joueur: i, montant, gorgees }));
+      etat.message = ppNom(etat, i) + ' rafle la cagnotte : ' + montant + ' €.';
+      ppBoire(etat, ev, [[i, gorgees]], 'cagnotte', false, true);
+    } else {
+      etat.message = ppNom(etat, i) + ' laisse la cagnotte.';
+    }
   }
 
   ppDerouler(etat, ev);
@@ -1419,7 +1453,7 @@ function ppDuel(etat, ev, i, cible, nombre) {
 
 function ppValeurDefaut(etat, a) {
   const t = a.type;
-  if (t === 'achat' || t === 'echange') return false;
+  if (t === 'achat' || t === 'echange' || t === 'parc') return false;
   if (t === 'prison_carte') return true;
   if (t === 'cible') return hasard.choice(a.cibles);
   if (t === 'deplacement') return hasard.choice(a.options);
@@ -2420,7 +2454,7 @@ const RAISONS = {
   loyer: 'loyer', miroir: 'le proprio distribue', toast_depart: 'toast du Départ', prison: 'entrée en prison',
   taxe: 'taxe', carte: 'carte', distribuer: 'distribution', distribution: 'distribution générale',
   retour: 'retour de bâton', duel: 'duel', cadeau: 'cadeau empoisonné', sommelier: 'sommelier',
-  toast_echange: 'toast de l’échange', faillite: 'faillite',
+  toast_echange: 'toast de l’échange', faillite: 'faillite', cagnotte: 'prix de la cagnotte',
 };
 const TOASTS = { toast_depart: 1, toast_echange: 1 };
 
@@ -2536,6 +2570,10 @@ function jouerEvenement(msg) {
     case 'pp_faillite':
       rappel('💀 ' + nomJoueur(msg.joueur) + ' fait faillite');
       break;
+    case 'pp_cagnotte':
+      messageCentral('💰 +' + msg.montant + ' €', nomJoueur(msg.joueur) + ' rafle la cagnotte', '#2e9a55', 2.0);
+      patienterFile(0.8);
+      break;
     case 'pp_de_rapide':
       rappel('⚡ ' + nomJoueur(msg.joueur) + ' joue désormais avec le dé rapide');
       break;
@@ -2606,6 +2644,7 @@ function demarrerScene(noms) {
   elChrono.classList.remove('cache');
   elBtnVue.classList.remove('cache');
   des.forEach(d => { d.position.y = -2; });
+  majCagnotte(0);
 }
 
 function appliquerEtat(e) {
@@ -2637,6 +2676,7 @@ function appliquerEtat(e) {
     majConstructions(k, pr.maisons);
   }
 
+  majCagnotte(e.cagnotte);
   elMessage.textContent = e.message;
   majJoueurs(e);
   majSurbrillances(e);
@@ -2647,6 +2687,20 @@ function appliquerEtat(e) {
   }
   majPanneau();
   if (ficheOuverte !== null) afficherFiche(ficheOuverte);
+}
+
+// La cagnotte flotte au-dessus du Parc gratuit, pour qu'on la voie grossir.
+let spriteCagnotte = null;
+let cagnotteAffichee = 0;
+function majCagnotte(montant) {
+  if (montant === cagnotteAffichee) return;
+  cagnotteAffichee = montant;
+  if (spriteCagnotte) { scene.remove(spriteCagnotte); spriteCagnotte = null; }
+  if (!montant) return;
+  spriteCagnotte = creerSpriteTexte('💰 ' + montant + ' €', 'cagnotte', '#2e9a55');
+  spriteCagnotte.scale.set(2.2, 1.1, 1);
+  spriteCagnotte.position.copy(pointCase(20, 0, 0, 0.9));
+  scene.add(spriteCagnotte);
 }
 
 function majConstructions(k, n) {
@@ -2910,6 +2964,14 @@ function panneauChoix(e, a) {
       r.appendChild(bouton('Y aller', '', () => envoyer({ type: 'pp_choix', valeur: Number(sel.value) })));
     }
     p.appendChild(r);
+  } else if (a.type === 'parc') {
+    const p = ouvrirPanneau('💰 Cagnotte : ' + a.montant + ' €');
+    p.appendChild(aide('Taxes, amendes et sorties de prison dorment ici. Rafle-la contre ' + a.gorgees + ' gorgée'
+      + (a.gorgees > 1 ? 's' : '') + ' (1 par tranche de ' + PP_CAGNOTTE_PAR_GORGEE + ' €), ou laisse-la grossir.'));
+    const r = rangee();
+    r.appendChild(bouton('Rafler (' + a.gorgees + ' 🍺)', '', () => envoyer({ type: 'pp_choix', valeur: true })));
+    r.appendChild(bouton('Laisser', 'clair', () => envoyer({ type: 'pp_choix', valeur: false })));
+    p.appendChild(r);
   } else if (a.type === 'prison_carte') {
     const p = ouvrirPanneau('Direction la prison…');
     p.appendChild(aide('Tu as une carte « Sortie de prison ». En prison, aucune carte ne peut te viser — mais tu n’avances plus.'));
@@ -3146,7 +3208,9 @@ function afficherFiche(k) {
     const DESC = {
       depart: 'Passer ici rapporte ' + PP_SALAIRE + ' € — et tout le monde trinque.',
       prison: 'Simple visite, ou l’abri : en prison, aucune carte ne peut te viser.',
-      parc: 'Rien. On souffle.', allez_prison: 'Direct en prison, 1 gorgée à l’entrée.',
+      parc: 'Cagnotte (taxes, amendes, sorties de prison) : ' + (e ? e.cagnotte : 0) + ' €. En t’arrêtant ici, tu peux la rafler contre 1 gorgée par tranche de '
+        + PP_CAGNOTTE_PAR_GORGEE + ' €.',
+      allez_prison: 'Direct en prison, 1 gorgée à l’entrée.',
       chance: 'Pioche une carte Chance.', caisse: 'Pioche une carte Caisse de communauté.',
     };
     corps.appendChild(aide(DESC[c.type] || ''));
@@ -3353,6 +3417,10 @@ function botChoix(index, e, a) {
     }
     case 'prison_carte':
       return true;
+    case 'parc':
+      // La cagnotte vaut le coup tant qu'elle ne coûte pas trop cher en
+      // gorgées, ou dès qu'on est à court d'argent.
+      return a.gorgees <= 6 || e.argent[index] < 400;
     case 'echange': {
       // Ce que la proposition apporte au bot contre ce qu'elle lui coûte ;
       // un titre cédé est compté une fois et demie son prix.
