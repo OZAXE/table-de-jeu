@@ -45,6 +45,7 @@
   .joueur .titres { display: inline-flex; gap: 2px; flex-wrap: wrap; }
   .joueur .titre { width: 7px; height: 10px; border-radius: 2px; }
   .joueur .titre.hyp { opacity: 0.35; }
+  .joueur .biere { font-weight: 600; color: #c47a0e; margin-left: 7px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
   /* --- Bandeau --- */
   #bandeau { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); text-align: center; max-width: 46vw; }
@@ -53,6 +54,11 @@
     font-weight: 700; font-variant-numeric: tabular-nums; font-size: 16px; box-shadow: 0 3px 10px rgba(40,60,80,0.12);
   }
   #chrono.presse { color: var(--rouge); }
+  #cagnotte-hud {
+    display: inline-block; background: var(--papier); border-radius: 20px; padding: 3px 14px; margin-left: 6px;
+    font-weight: 700; font-variant-numeric: tabular-nums; font-size: 16px; color: #2e9a55; box-shadow: 0 3px 10px rgba(40,60,80,0.12);
+  }
+  .numero-roulette { min-width: 52px; display: inline-block; font-size: 22px; }
   #message { margin-top: 6px; font-size: 18px; font-weight: 600; text-shadow: 0 1px 0 #fff, 0 0 12px rgba(255,255,255,0.9); }
   #rappel { margin-top: 2px; font-size: 14.5px; color: #3d4d57; text-shadow: 0 0 8px rgba(255,255,255,0.95); min-height: 18px; }
   #rappel.erreur { color: var(--rouge); font-weight: 600; }
@@ -189,6 +195,7 @@
     .joueur .ligne2 { display: none; }
     #bandeau { top: 8px; left: 8px; transform: none; text-align: left; max-width: calc(100vw - 150px); }
     #chrono { font-size: 14px; padding: 2px 10px; }
+    #cagnotte-hud { font-size: 14px; padding: 2px 10px; margin-left: 4px; }
     #message { font-size: 14px; margin-top: 3px; }
     #rappel { font-size: 12px; }
     #boutons-haut { top: 8px; right: 8px; gap: 5px; }
@@ -219,7 +226,7 @@
 <div id="overlay">
   <div id="joueurs"></div>
   <div id="bandeau">
-    <div id="chrono" class="cache">⏱ 60:00</div>
+    <div id="chrono" class="cache">⏱ 60:00</div><div id="cagnotte-hud" class="cache" title="Cagnotte du Parc Blossac"></div>
     <div id="message">Picolopoly</div>
     <div id="rappel"></div>
   </div>
@@ -256,7 +263,8 @@
       <tr><td>Prison</td><td>1 gorgée en entrant.</td></tr>
       <tr><td>Échange conclu</td><td>Toast : tout le monde boit 1 gorgée.</td></tr>
       <tr><td>Faillite</td><td>Cul sec.</td></tr>
-      <tr><td>Parc gratuit</td><td>Les taxes, les amendes des cartes et les 50 € de sortie de prison s'y accumulent. En t'y arrêtant, tu peux rafler la cagnotte contre 1 gorgée par tranche de 50 € (sans plafond). Pas d'immunité qui tienne : c'est un marché, pas une pénalité.</td></tr>
+      <tr><td>Parc Blossac</td><td>La cagnotte : les taxes, les amendes des cartes, les 50 € de sortie de prison et les mises perdues à la roulette s'y accumulent (son total est affiché en haut). En t'y arrêtant, tu peux la rafler contre 1 gorgée par tranche de 50 € (sans plafond). Pas d'immunité qui tienne : c'est un marché, pas une pénalité.</td></tr>
+      <tr><td>Roulette</td><td>1 gorgée par tranche de 50 € misés, bue quoi qu'il sorte.</td></tr>
       <tr><td>Construire</td><td>Rien.</td></tr>
     </table>
 
@@ -273,6 +281,9 @@
       <tr><td>Immunité</td><td>Ta prochaine pénalité ne se boit pas, quelle qu'elle soit.</td></tr>
       <tr><td>Sommelier</td><td>Tu répartis 6 gorgées entre tes adversaires.</td></tr>
     </table>
+
+    <h3>🎰 La roulette</h3>
+    <p>Une fois par tour, avant ou après avoir lancé les dés, tu peux miser à la roulette, par tranches de 50 €. Chaque tranche se paie aussi d'<span class="accent">une gorgée</span>, gagnant ou perdant. Rouge, noir, pair ou impair : la mise doublée. Une douzaine : triplée. Un numéro plein : 36 fois la mise. Le 0 fait perdre tous les paris sauf le plein sur le 0. Une mise perdue file dans la cagnotte du Parc Blossac.</p>
 
     <h3>Échanges</h3>
     <p>Au début de ton tour, avant de lancer, tu peux proposer un échange de propriétés (avec ou sans argent). S'il est accepté : toast collectif.</p>
@@ -339,11 +350,17 @@ const PP_GORGEES_DUEL = 3;
 const PP_GORGEES_CADEAU = 3;
 const PP_GORGEES_SOMMELIER = 6;
 const PP_RETOUR_DEFAUT = 2;
-// Cagnotte du Parc gratuit : taxes, amendes des cartes et sorties de prison
+// Cagnotte du Parc Blossac : taxes, amendes des cartes et sorties de prison
 // payées s'y accumulent ; s'arrêter au Parc permet de la rafler contre
 // 1 gorgée par tranche de 50 €.
 const PP_CAGNOTTE_PAR_GORGEE = 50;
 const PP_MOTIFS_CAGNOTTE = ['taxe', 'carte', 'prison'];
+// Roulette : une mise par tour, par tranches de 50 €, 1 gorgée par tranche
+// misée (bue quoi qu'il sorte). Une mise perdue part dans la cagnotte.
+// Gains : la mise est rendue multipliée par PP_ROULETTE_GAINS[pari].
+const PP_ROULETTE_MISE = 50;
+const PP_ROULETTE_GAINS = { rouge: 2, noir: 2, pair: 2, impair: 2, douzaine: 3, plein: 36 };
+const PP_ROULETTE_ROUGES = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
 
 // Rythme
 const PP_DUREE_PARTIE = 3600;
@@ -398,7 +415,7 @@ const PP_CASES = [
   ppCase('caisse', 'Caisse de communauté'),
   ppProp("Rémi's Pub", 'orange', 180, [14, 70, 200, 550, 750, 950], 100),
   ppProp('La Mie Câline', 'orange', 200, [16, 80, 220, 600, 800, 1000], 100),
-  ppCase('parc', 'Parc gratuit'),
+  ppCase('parc', 'Parc Blossac'),
   ppProp("L'Istanbul", 'rouge', 220, [18, 90, 250, 700, 875, 1050], 150),
   ppCase('chance', 'Chance'),
   ppProp('Le CAP Ristobar', 'rouge', 220, [18, 90, 250, 700, 875, 1050], 150),
@@ -617,6 +634,7 @@ function ppInitialiser(noms, maintenant) {
     rejouer: false,
     doubles: 0,
     echanges_tour: 0,
+    roulette_jouee: false,
     des: null,
     attente: null,
     dette: null,
@@ -671,6 +689,7 @@ function ppEtatPublic(etat, maintenant) {
     courant: etat.courant,
     phase: etat.phase,
     a_lance: etat.a_lance,
+    roulette_jouee: etat.roulette_jouee,
     doubles: etat.doubles,
     des: etat.des,
     attente: etat.attente,
@@ -1055,6 +1074,7 @@ function ppTourSuivant(etat, ev) {
   etat.rejouer = false;
   etat.doubles = 0;
   etat.echanges_tour = 0;
+  etat.roulette_jouee = false;
   etat.suite = [];
   etat.message = 'À ' + ppNom(etat, suivant) + ' de jouer.';
   ev.push(ppTous({ type: 'pp_tour', joueur: suivant }));
@@ -1172,6 +1192,59 @@ function ppLever(etat, ev, i, message) {
   p.hypotheque = false;
   ev.push(ppTous({ type: 'pp_hypotheque', joueur: i, case: c, hypotheque: false }));
   etat.message = ppNom(etat, i) + " lève l'hypothèque de " + PP_CASES[c].nom + '.';
+  return null;
+}
+
+// --- Roulette ---
+
+function ppLibellePari(pari, numero) {
+  if (pari === 'douzaine') return 'la ' + (numero === 1 ? '1re' : numero + 'e') + ' douzaine';
+  if (pari === 'plein') return 'le ' + numero;
+  return pari;
+}
+
+function ppPariGagne(pari, numero, tirage) {
+  if (pari === 'plein') return tirage === numero;
+  if (tirage === 0) return false;      // le zéro fait perdre tous les paris simples
+  if (pari === 'rouge') return PP_ROULETTE_ROUGES.includes(tirage);
+  if (pari === 'noir') return !PP_ROULETTE_ROUGES.includes(tirage);
+  if (pari === 'pair') return tirage % 2 === 0;
+  if (pari === 'impair') return tirage % 2 === 1;
+  return Math.floor((tirage - 1) / 12) + 1 === numero;
+}
+
+// Une mise par tour, avant ou après le lancer. Les gorgées sont le prix
+// d'entrée, choisi : volontaires, comme celles de la cagnotte.
+function ppRoulette(etat, ev, i, message) {
+  if (!ppPeutGerer(etat, i, false)) return 'La roulette ne tourne que pendant votre tour.';
+  if (etat.roulette_jouee) return 'Une seule mise par tour.';
+  const pari = message.pari;
+  if (typeof pari !== 'string' || !Object.prototype.hasOwnProperty.call(PP_ROULETTE_GAINS, pari)) return 'Pari invalide.';
+  let numero = null;
+  if (pari === 'douzaine' || pari === 'plein') {
+    numero = ppEntier(message.numero);
+    const haut = pari === 'douzaine' ? 3 : 36;
+    const bas = pari === 'douzaine' ? 1 : 0;
+    if (numero === null || !(bas <= numero && numero <= haut)) return 'Numéro invalide.';
+  }
+  const mise = ppEntier(message.mise);
+  if (mise === null || mise < PP_ROULETTE_MISE || mise % PP_ROULETTE_MISE !== 0) {
+    return 'Misez par tranches de ' + PP_ROULETTE_MISE + ' €.';
+  }
+  if (mise > etat.argent[i]) return "Pas assez d'argent pour cette mise.";
+
+  etat.roulette_jouee = true;
+  etat.argent[i] -= mise;
+  ppBoire(etat, ev, [[i, Math.floor(mise / PP_ROULETTE_MISE)]], 'roulette', false, true);
+  const tirage = hasard.randint(0, 36);
+  const gagne = ppPariGagne(pari, numero, tirage);
+  const gain = gagne ? mise * PP_ROULETTE_GAINS[pari] : 0;
+  if (gagne) etat.argent[i] += gain;
+  else etat.cagnotte += mise;
+  ev.push(ppTous({ type: 'pp_roulette', joueur: i, mise, pari, numero, tirage, gagne, gain }));
+  etat.message = ppNom(etat, i) + ' mise ' + mise + ' € sur ' + ppLibellePari(pari, numero)
+    + ' : le ' + tirage + ' sort. '
+    + (gagne ? 'Gagné, ' + gain + ' € !' : 'Perdu, la mise file dans la cagnotte.');
   return null;
 }
 
@@ -1482,6 +1555,7 @@ const PP_ACTIONS = {
   pp_prison_carte: ppPrisonCarte,
   pp_proposer_echange: ppProposerEchange,
   pp_faillite: ppDeclarerFaillite,
+  pp_roulette: ppRoulette,
 };
 
 function ppAction(etat, i, message, maintenant) {
@@ -2455,6 +2529,7 @@ const RAISONS = {
   taxe: 'taxe', carte: 'carte', distribuer: 'distribution', distribution: 'distribution générale',
   retour: 'retour de bâton', duel: 'duel', cadeau: 'cadeau empoisonné', sommelier: 'sommelier',
   toast_echange: 'toast de l’échange', faillite: 'faillite', cagnotte: 'prix de la cagnotte',
+  roulette: 'mise à la roulette',
 };
 const TOASTS = { toast_depart: 1, toast_echange: 1 };
 
@@ -2574,6 +2649,9 @@ function jouerEvenement(msg) {
       messageCentral('💰 +' + msg.montant + ' €', nomJoueur(msg.joueur) + ' rafle la cagnotte', '#2e9a55', 2.0);
       patienterFile(0.8);
       break;
+    case 'pp_roulette':
+      animerRoulette(msg);
+      break;
     case 'pp_de_rapide':
       rappel('⚡ ' + nomJoueur(msg.joueur) + ' joue désormais avec le dé rapide');
       break;
@@ -2679,7 +2757,6 @@ function appliquerEtat(e) {
   majCagnotte(e.cagnotte);
   elMessage.textContent = e.message;
   majJoueurs(e);
-  majSurbrillances(e);
   // Le panneau garde sa vue (gestion, échange) tant que la situation n'a pas changé.
   if (!avant || avant.courant !== e.courant || avant.phase !== e.phase
       || JSON.stringify(avant.attente) !== JSON.stringify(e.attente) || !!avant.dette !== !!e.dette) {
@@ -2689,15 +2766,18 @@ function appliquerEtat(e) {
   if (ficheOuverte !== null) afficherFiche(ficheOuverte);
 }
 
-// La cagnotte flotte au-dessus du Parc gratuit, pour qu'on la voie grossir.
+// La cagnotte flotte au-dessus du Parc Blossac, pour qu'on la voie grossir,
+// et son total reste affiché en haut (sur un téléphone, le sprite est petit).
 let spriteCagnotte = null;
-let cagnotteAffichee = 0;
+let cagnotteAffichee = null;
 function majCagnotte(montant) {
+  const hud = document.getElementById('cagnotte-hud');
+  hud.classList.remove('cache');
+  hud.textContent = '🌳 Parc : ' + montant + ' €';
   if (montant === cagnotteAffichee) return;
   cagnotteAffichee = montant;
   if (spriteCagnotte) { scene.remove(spriteCagnotte); spriteCagnotte = null; }
-  if (!montant) return;
-  spriteCagnotte = creerSpriteTexte('💰 ' + montant + ' €', 'cagnotte', '#2e9a55');
+  spriteCagnotte = creerSpriteTexte('💰 ' + montant + ' €', 'cagnotte du parc', '#2e9a55');
   spriteCagnotte.scale.set(2.2, 1.1, 1);
   spriteCagnotte.position.copy(pointCase(20, 0, 0, 0.9));
   scene.add(spriteCagnotte);
@@ -2711,12 +2791,29 @@ function majConstructions(k, n) {
 }
 
 // Cases à choisir (bus, triple) ou à acheter : un voile doré qui pulse.
+// Pendant un échange, les propriétés en jeu : orange ce qui part de chez
+// toi, vert ce qui y arrive (doré pour ceux qui regardent l'échange des autres).
+const SB_OR = 0xffc233, SB_DONNE = 0xff7a45, SB_RECOIT = 0x3ccf6e;
 function majSurbrillances(e) {
   surbrillances.forEach(s => { s.visible = false; });
+  const allumer = (k, couleur) => { surbrillances[k].visible = true; surbrillances[k].material.color.setHex(couleur); };
   const a = e.attente;
-  if (!a || a.joueur !== MOI) return;
-  if (a.type === 'deplacement') a.options.forEach(k => { surbrillances[k].visible = true; });
-  if (a.type === 'achat') surbrillances[a.case].visible = true;
+  if (vuePanneau === 'echange' && brouillon && !a && e.courant === MOI && e.phase === 'tour' && !e.a_lance) {
+    brouillon.donne.forEach(k => allumer(k, SB_DONNE));
+    brouillon.recoit.forEach(k => allumer(k, SB_RECOIT));
+    return;
+  }
+  if (!a) return;
+  if (a.type === 'echange') {
+    const pr = a.proposition;
+    const vu = MOI === pr.proposant ? [SB_DONNE, SB_RECOIT] : MOI === pr.cible ? [SB_RECOIT, SB_DONNE] : [SB_OR, SB_OR];
+    pr.donne.forEach(k => allumer(k, vu[0]));
+    pr.recoit.forEach(k => allumer(k, vu[1]));
+    return;
+  }
+  if (a.joueur !== MOI) return;
+  if (a.type === 'deplacement') a.options.forEach(k => allumer(k, SB_OR));
+  if (a.type === 'achat') allumer(a.case, SB_OR);
 }
 
 function majJoueurs(e) {
@@ -2734,9 +2831,15 @@ function majJoueurs(e) {
     const ar = document.createElement('span');
     ar.className = 'argent';
     ar.textContent = e.argent[i] + ' €';
+    // Le compteur de gorgées reste sur la ligne principale : sur téléphone, la seconde est masquée.
+    const bi = document.createElement('span');
+    bi.className = 'biere';
+    bi.textContent = '🍺 ' + e.gorgees[i];
+    bi.title = 'Gorgées bues';
+    ar.appendChild(bi);
     const l2 = document.createElement('div');
     l2.className = 'ligne2';
-    const infos = ['🍺 ' + e.gorgees[i]];
+    const infos = [];
     if (e.en_prison[i]) infos.push('🔒');
     if (e.de_rapide[i]) infos.push('⚡');
     if (e.immunites[i]) infos.push('🛡️' + (e.immunites[i] > 1 ? '×' + e.immunites[i] : ''));
@@ -2783,7 +2886,7 @@ function majChrono() {
 // Tout ce qui se fait au clic sur le plateau a son bouton ici : on peut
 // jouer entièrement au pouce.
 // =====================================================================
-let vuePanneau = 'principal';     // 'principal' | 'gestion' | 'echange'
+let vuePanneau = 'principal';     // 'principal' | 'gestion' | 'echange' | 'roulette'
 let repartition = {};             // brouillon du Sommelier
 let brouillon = null;             // brouillon d'échange
 const boutonsActifs = [];         // les boutons du panneau (le test de fumée les « clique »)
@@ -2848,6 +2951,11 @@ function ajouterDelai(p) {
 }
 
 function majPanneau() {
+  construirePanneau();
+  if (etatCourant) majSurbrillances(etatCourant);
+}
+
+function construirePanneau() {
   const e = etatCourant;
   if (!e) return;
   if (e.phase === 'fin') { panneauFin(e); return; }
@@ -2867,6 +2975,7 @@ function majPanneau() {
   if (e.courant === MOI && (e.phase === 'tour' || e.phase === 'fin_tour')) {
     if (vuePanneau === 'gestion') { panneauGestion(e); return; }
     if (vuePanneau === 'echange' && e.phase === 'tour' && !e.a_lance) { panneauEchange(e); return; }
+    if (vuePanneau === 'roulette' && !e.roulette_jouee) { panneauRoulette(e); return; }
     panneauTour(e);
     return;
   }
@@ -2898,8 +3007,90 @@ function panneauTour(e) {
   if (e.phase === 'tour' && !e.a_lance && autresPresents(e).length) {
     r2.appendChild(bouton('🤝 Proposer un échange', 'clair petit', () => { vuePanneau = 'echange'; brouillon = null; majPanneau(); }));
   }
+  if (!e.roulette_jouee && e.argent[MOI] >= PP_ROULETTE_MISE) {
+    r2.appendChild(bouton('🎰 Roulette', 'clair petit', () => { vuePanneau = 'roulette'; majPanneau(); }));
+  }
   if (r2.childNodes.length) p.appendChild(r2);
   ajouterDelai(p);
+}
+
+// Le pari se souvient d'un tour sur l'autre.
+const pariRoulette = { pari: 'rouge', numero: 17, mise: PP_ROULETTE_MISE };
+
+function couleurNumero(n) {
+  return n === 0 ? '#2e9a55' : PP_ROULETTE_ROUGES.includes(n) ? '#d8453b' : '#2b2622';
+}
+
+function panneauRoulette(e) {
+  const r = pariRoulette;
+  const maxi = Math.floor(e.argent[MOI] / PP_ROULETTE_MISE) * PP_ROULETTE_MISE;
+  r.mise = Math.max(PP_ROULETTE_MISE, Math.min(r.mise, maxi));
+  if (r.pari === 'douzaine') r.numero = Math.min(3, Math.max(1, r.numero));
+  const p = ouvrirPanneau('🎰 Roulette');
+  p.appendChild(aide('Une mise par tour. 1 gorgée par tranche de ' + PP_ROULETTE_MISE + ' € misés, bue quoi qu’il sorte. Mise perdue : elle file dans la cagnotte du Parc Blossac.'));
+  const r1 = rangee();
+  [['rouge', '🔴 Rouge'], ['noir', '⚫ Noir'], ['pair', 'Pair'], ['impair', 'Impair'], ['douzaine', 'Douzaine'], ['plein', 'Numéro plein']].forEach(([k, t]) => {
+    r1.appendChild(bouton(t + ' ×' + PP_ROULETTE_GAINS[k], 'clair petit' + (r.pari === k ? ' choisi' : ''), () => { r.pari = k; majPanneau(); }));
+  });
+  p.appendChild(r1);
+  if (r.pari === 'douzaine') {
+    const r2 = rangee();
+    [1, 2, 3].forEach(d => r2.appendChild(bouton((d * 12 - 11) + ' à ' + d * 12, 'clair petit' + (r.numero === d ? ' choisi' : ''),
+      () => { r.numero = d; majPanneau(); })));
+    p.appendChild(r2);
+  } else if (r.pari === 'plein') {
+    const s = document.createElement('span');
+    s.className = 'stepper';
+    const v = document.createElement('b');
+    v.className = 'numero-roulette';
+    v.textContent = r.numero;
+    v.style.color = couleurNumero(r.numero);
+    const pas = d => () => { r.numero = (r.numero + d + 37) % 37; majPanneau(); };
+    s.append(bouton('−5', 'clair petit', pas(-5)), bouton('−1', 'clair petit', pas(-1)), v,
+      bouton('+1', 'clair petit', pas(1)), bouton('+5', 'clair petit', pas(5)));
+    const r2 = rangee();
+    r2.appendChild(s);
+    p.appendChild(r2);
+  }
+  const s = document.createElement('span');
+  s.className = 'stepper';
+  const v = document.createElement('b');
+  v.textContent = r.mise + ' €';
+  s.append(bouton('−50', 'clair petit', () => { r.mise = Math.max(PP_ROULETTE_MISE, r.mise - PP_ROULETTE_MISE); majPanneau(); }), v,
+    bouton('+50', 'clair petit', () => { r.mise = Math.min(maxi, r.mise + PP_ROULETTE_MISE); majPanneau(); }));
+  const r3 = rangee();
+  r3.appendChild(s);
+  p.appendChild(r3);
+  const g = r.mise / PP_ROULETTE_MISE;
+  p.appendChild(aide('Mise ' + r.mise + ' € : ' + g + ' gorgée' + (g > 1 ? 's' : '') + ' à boire. Si ça sort, '
+    + r.mise * PP_ROULETTE_GAINS[r.pari] + ' € te reviennent.'));
+  const r4 = rangee();
+  const msg = { type: 'pp_roulette', pari: r.pari, mise: r.mise };
+  if (r.pari === 'douzaine' || r.pari === 'plein') msg.numero = r.numero;
+  r4.appendChild(bouton('Miser ' + r.mise + ' € (' + g + ' 🍺)', '', () => envoyer(msg)));
+  r4.appendChild(bouton('Retour', 'clair', () => { vuePanneau = 'principal'; majPanneau(); }));
+  p.appendChild(r4);
+  ajouterDelai(p);
+}
+
+// La bille ralentit : les numéros défilent de moins en moins vite, puis le
+// tirage du moteur s'affiche (jamais un numéro inventé par l'animation).
+function animerRoulette(msg) {
+  const qui = nomJoueur(msg.joueur) + ' : ' + msg.mise + ' € sur ' + ppLibellePari(msg.pari, msg.numero);
+  let dernier = -1;
+  animer(1.8, a => {
+    const k = Math.floor(Math.sqrt(Math.min(1, a.t / a.duree)) * 14);
+    if (k === dernier) return;
+    dernier = k;
+    const n = Math.floor(Math.random() * 37);
+    messageCentral('🎰 ' + n, qui, couleurNumero(n), 0.6);
+  }, () => {
+    messageCentral('🎰 ' + msg.tirage, msg.gagne ? 'gagné : +' + msg.gain + ' €' : 'perdu : la mise file au parc',
+      couleurNumero(msg.tirage), 2.4);
+    if (msg.gagne) texteFlottant(positionTete(msg.joueur).add(new THREE.Vector3(0, -0.25, 0)), '+' + msg.gain + ' €', '', '#2e9a55');
+    if (msg.joueur === MOI) toast(msg.gagne ? '🎰 Gagné : +' + msg.gain + ' €' : '🎰 Perdu', 'le ' + msg.tirage + ' sort');
+    patienterFile(1.2);
+  });
 }
 
 function panneauChoix(e, a) {
@@ -2966,7 +3157,7 @@ function panneauChoix(e, a) {
     p.appendChild(r);
   } else if (a.type === 'parc') {
     const p = ouvrirPanneau('💰 Cagnotte : ' + a.montant + ' €');
-    p.appendChild(aide('Taxes, amendes et sorties de prison dorment ici. Rafle-la contre ' + a.gorgees + ' gorgée'
+    p.appendChild(aide('Taxes, amendes, sorties de prison et mises perdues à la roulette dorment sous un banc du Parc Blossac. Rafle-la contre ' + a.gorgees + ' gorgée'
       + (a.gorgees > 1 ? 's' : '') + ' (1 par tranche de ' + PP_CAGNOTTE_PAR_GORGEE + ' €), ou laisse-la grossir.'));
     const r = rangee();
     r.appendChild(bouton('Rafler (' + a.gorgees + ' 🍺)', '', () => envoyer({ type: 'pp_choix', valeur: true })));
@@ -3208,12 +3399,16 @@ function afficherFiche(k) {
     const DESC = {
       depart: 'Passer ici rapporte ' + PP_SALAIRE + ' € — et tout le monde trinque.',
       prison: 'Simple visite, ou l’abri : en prison, aucune carte ne peut te viser.',
-      parc: 'Cagnotte (taxes, amendes, sorties de prison) : ' + (e ? e.cagnotte : 0) + ' €. En t’arrêtant ici, tu peux la rafler contre 1 gorgée par tranche de '
-        + PP_CAGNOTTE_PAR_GORGEE + ' €.',
+      parc: 'Les pelouses de Blossac, ses paons… et une cagnotte qui dort sous un banc. Taxes, amendes des cartes, sorties de prison et mises perdues '
+        + 'à la roulette s’y accumulent. Arrête-toi ici pour tout rafler, contre 1 gorgée par tranche de ' + PP_CAGNOTTE_PAR_GORGEE + ' € (sans plafond).',
       allez_prison: 'Direct en prison, 1 gorgée à l’entrée.',
       chance: 'Pioche une carte Chance.', caisse: 'Pioche une carte Caisse de communauté.',
     };
     corps.appendChild(aide(DESC[c.type] || ''));
+    if (c.type === 'parc' && e) {
+      ligneFiche(t, 'Dans la cagnotte', e.cagnotte + ' €', true);
+      if (e.cagnotte) ligneFiche(t, 'Prix pour la rafler', ppGorgeesCagnotte(e.cagnotte) + ' 🍺');
+    }
   }
   if (c.prix) {
     ligneFiche(t, 'Prix', c.prix + ' €');
@@ -3343,6 +3538,11 @@ function botJouer(index, e) {
     if (c !== null) { envoyerIntention(index, { type: 'pp_construire', case: c }); return; }
     const h = botHypothequeALever(index, e);
     if (h !== null) { envoyerIntention(index, { type: 'pp_lever', case: h }); return; }
+    if (!e.roulette_jouee && e.argent[index] >= BOT_RESERVE + 2 * PP_ROULETTE_MISE && Math.random() < 0.15) {
+      const pari = ['rouge', 'noir', 'pair', 'impair'][Math.floor(Math.random() * 4)];
+      envoyerIntention(index, { type: 'pp_roulette', pari, mise: PP_ROULETTE_MISE * (Math.random() < 0.7 ? 1 : 2) });
+      return;
+    }
     envoyerIntention(index, { type: 'pp_terminer' });
   }
 }
