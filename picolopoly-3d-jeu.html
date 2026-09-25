@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<title>Picolopoly</title>
+<title>Picopoly</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -54,6 +54,10 @@
     font-weight: 700; font-variant-numeric: tabular-nums; font-size: 16px; box-shadow: 0 3px 10px rgba(40,60,80,0.12);
   }
   #chrono.presse { color: var(--rouge); }
+  #difficulte-hud {
+    display: inline-block; background: var(--papier); border-radius: 20px; padding: 3px 14px; margin-left: 6px;
+    font-weight: 700; font-size: 16px; box-shadow: 0 3px 10px rgba(40,60,80,0.12);
+  }
   #cagnotte-hud {
     display: inline-block; background: var(--papier); border-radius: 20px; padding: 3px 14px; margin-left: 6px;
     font-weight: 700; font-variant-numeric: tabular-nums; font-size: 16px; color: #2e9a55; box-shadow: 0 3px 10px rgba(40,60,80,0.12);
@@ -98,6 +102,8 @@
   button.clair.choisi { background: #fff4d9; border-color: var(--accent); }
   button.danger { background: linear-gradient(180deg, #e56a60, #cc3d33); box-shadow: 0 4px 0 #9c2c24, 0 6px 14px rgba(0,0,0,0.12); }
   button.petit { font-size: 14px; padding: 6px 12px; }
+  button.propriete { border-left-width: 10px; text-align: left; }
+  .puce-groupe { display: inline-block; width: 9px; height: 13px; border-radius: 3px; margin: 0 4px 0 2px; vertical-align: -2px; }
   .pastille-bouton { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; border: 1px solid rgba(0,0,0,0.2); }
 
   .liste-gestion { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; text-align: left; margin: 6px 0; font-size: 15px; }
@@ -196,6 +202,8 @@
     #bandeau { top: 8px; left: 8px; transform: none; text-align: left; max-width: calc(100vw - 150px); }
     #chrono { font-size: 14px; padding: 2px 10px; }
     #cagnotte-hud { font-size: 14px; padding: 2px 10px; margin-left: 4px; }
+    #difficulte-hud { font-size: 14px; padding: 2px 8px; margin-left: 4px; }
+    #difficulte-hud .long { display: none; }
     #message { font-size: 14px; margin-top: 3px; }
     #rappel { font-size: 12px; }
     #boutons-haut { top: 8px; right: 8px; gap: 5px; }
@@ -226,8 +234,8 @@
 <div id="overlay">
   <div id="joueurs"></div>
   <div id="bandeau">
-    <div id="chrono" class="cache">⏱ 60:00</div><div id="cagnotte-hud" class="cache" title="Cagnotte du Parc Blossac"></div>
-    <div id="message">Picolopoly</div>
+    <div id="chrono" class="cache">⏱ 60:00</div><div id="cagnotte-hud" class="cache" title="Cagnotte du Parc Blossac"></div><div id="difficulte-hud" class="cache" title="Difficulté de la partie"></div>
+    <div id="message">Picopoly</div>
     <div id="rappel"></div>
   </div>
   <div id="boutons-haut">
@@ -242,7 +250,7 @@
 
 <div id="modale-regles" class="cache">
   <div class="modale">
-    <h2>🍻 Règles de Picolopoly</h2>
+    <h2>🍻 Règles de Picopoly</h2>
     <p>Le Monopoly classique, dans les bars de Poitiers : on achète, on construit, on fait payer les loyers. Chaque interaction se paie aussi <span class="accent">en gorgées</span>. La partie dure <span class="accent">une heure</span> : au bout du chrono, le plus gros patrimoine gagne (argent + propriétés + constructions). Une faillite élimine, et se boit cul sec.</p>
 
     <h3>Un tour</h3>
@@ -255,13 +263,13 @@
     </ul>
     <p>Une propriété libre s'achète ou se laisse ; laissée, elle reste à vendre pour le suivant. Pas d'enchères. Construire demande tout le groupe de couleur, en restant égal d'une case à l'autre.</p>
 
-    <h3>Les gorgées</h3>
+    <h3>Les gorgées <span class="accent" id="regle-difficulte"></span></h3>
     <table>
-      <tr><td>Loyer</td><td>1 gorgée par tranche de 50 € (au moins 1, au plus 5). Le propriétaire fait boire 1 gorgée à qui il veut.</td></tr>
-      <tr><td>Départ</td><td>Toast : tout le monde boit 1 gorgée avec celui qui passe.</td></tr>
-      <tr><td>Taxes</td><td>1 gorgée par tranche de 50 €.</td></tr>
-      <tr><td>Prison</td><td>1 gorgée en entrant.</td></tr>
-      <tr><td>Échange conclu</td><td>Toast : tout le monde boit 1 gorgée.</td></tr>
+      <tr><td>Loyer</td><td id="regle-loyer"></td></tr>
+      <tr><td>Départ</td><td id="regle-depart"></td></tr>
+      <tr><td>Taxes</td><td id="regle-taxe"></td></tr>
+      <tr><td>Prison</td><td id="regle-prison"></td></tr>
+      <tr><td>Échange conclu</td><td id="regle-echange"></td></tr>
       <tr><td>Faillite</td><td>Cul sec.</td></tr>
       <tr><td>Parc Blossac</td><td>La cagnotte : les taxes, les amendes des cartes, les 50 € de sortie de prison et les mises perdues à la roulette s'y accumulent (son total est affiché en haut). En t'y arrêtant, tu peux la rafler contre 1 gorgée par tranche de 50 € (sans plafond). Pas d'immunité qui tienne : c'est un marché, pas une pénalité.</td></tr>
       <tr><td>Roulette</td><td>1 gorgée par tranche de 50 € misés, bue quoi qu'il sorte.</td></tr>
@@ -276,11 +284,15 @@
     <table>
       <tr><td>Distribution générale</td><td>Tous tes adversaires boivent 1 gorgée.</td></tr>
       <tr><td>Retour de bâton</td><td>Un adversaire boit le double de ta dernière pénalité (2 si tu n'as encore rien bu).</td></tr>
-      <tr><td>Duel</td><td>Chacun lance un dé : le plus petit boit 3 gorgées.</td></tr>
-      <tr><td>Cadeau empoisonné</td><td>100 € de la banque, mais tu bois 3 gorgées.</td></tr>
+      <tr><td>Duel</td><td>Chacun lance un dé : le plus petit boit <span id="regle-duel"></span> gorgées.</td></tr>
+      <tr><td>Cadeau empoisonné</td><td>100 € de la banque, mais tu bois <span id="regle-cadeau"></span> gorgées.</td></tr>
       <tr><td>Immunité</td><td>Ta prochaine pénalité ne se boit pas, quelle qu'elle soit.</td></tr>
-      <tr><td>Sommelier</td><td>Tu répartis 6 gorgées entre tes adversaires.</td></tr>
+      <tr><td>Sommelier</td><td>Tu répartis <span id="regle-sommelier"></span> gorgées entre tes adversaires.</td></tr>
     </table>
+
+    <h3>Les difficultés</h3>
+    <p>Le créateur du salon la choisit avant de lancer. Elle change combien on boit, mais surtout <span class="accent">quand</span>. La cagnotte et la roulette ne bougent pas : ce sont des choix, pas des pénalités.</p>
+    <table id="tableau-difficultes"></table>
 
     <h3>🎰 La roulette</h3>
     <p>Une fois par tour, avant ou après avoir lancé les dés, tu peux miser à la roulette, par tranches de 50 €. Chaque tranche se paie aussi d'<span class="accent">une gorgée</span>, gagnant ou perdant. Rouge, noir, pair ou impair : la mise doublée. Une douzaine : triplée. Un numéro plein : 36 fois la mise. Le 0 fait perdre tous les paris sauf le plein sur le 0. Une mise perdue file dans la cagnotte du Parc Blossac.</p>
@@ -303,6 +315,7 @@
     <div class="rangee" style="margin-top:14px;">
       <button id="fermer-regles">Fermer</button>
       <button id="quitter-table" class="clair cache">Quitter la table</button>
+      <button id="menu-jeux" class="clair">🎲 Tous les jeux</button>
     </div>
   </div>
 </div>
@@ -339,17 +352,30 @@ const PP_MULT_COMPAGNIE = [4, 10];
 const PP_INTERET_LEVEE = 10;
 
 // Gorgées
-const PP_GORGEE_PAR_TRANCHE = 50;
-const PP_GORGEES_MAX = 5;
-const PP_GORGEES_MIROIR = 1;
-const PP_GORGEES_DEPART = 1;
-const PP_GORGEES_PRISON = 1;
-const PP_GORGEES_ECHANGE = 1;
 const PP_GORGEES_DISTRIBUTION = 1;
-const PP_GORGEES_DUEL = 3;
-const PP_GORGEES_CADEAU = 3;
-const PP_GORGEES_SOMMELIER = 6;
 const PP_RETOUR_DEFAUT = 2;
+// Difficulté, choisie par le créateur du salon. Elle ne fait pas que
+// multiplier : elle décide aussi QUAND on boit.
+//   tranche / plafond  loyers, taxes, cartes : 1 gorgée par tranche de
+//                      « tranche » €, au moins 1, au plus « plafond »
+//   depart             passage au Départ : toute la table trinque ('tous'),
+//                      celui qui passe seulement ('joueur'), ou personne
+//   miroir             le propriétaire qui encaisse un loyer fait boire N
+//                      gorgées à qui il veut (0 = il ne distribue rien)
+//   prison / echange   entrée en prison ; toast collectif d'un échange conclu
+//   duel / cadeau / sommelier   les cartes spéciales ({n} dans leur texte)
+// La cagnotte et la roulette ne bougent pas : ce sont des choix, pas des
+// pénalités. 'difficile' est la partie d'origine, et le défaut quand un
+// client n'envoie rien.
+const PP_DIFFICULTES = {
+  facile: { tranche: 100, plafond: 3, depart: 'personne', miroir: 0,
+            prison: 1, echange: 0, duel: 2, cadeau: 2, sommelier: 4 },
+  normal: { tranche: 50, plafond: 4, depart: 'joueur', miroir: 0,
+            prison: 1, echange: 1, duel: 3, cadeau: 3, sommelier: 5 },
+  difficile: { tranche: 50, plafond: 5, depart: 'tous', miroir: 1,
+               prison: 1, echange: 1, duel: 3, cadeau: 3, sommelier: 6 },
+};
+const PP_DIFFICULTE_DEFAUT = 'difficile';
 // Cagnotte du Parc Blossac : taxes, amendes des cartes et sorties de prison
 // payées s'y accumulent ; s'arrêter au Parc permet de la rafler contre
 // 1 gorgée par tranche de 50 €.
@@ -476,8 +502,7 @@ const PP_CHANCE = [
   { id: 'ch_retour', effet: 'retour_baton',
     texte: 'Retour de bâton : un adversaire boit le double de votre dernière pénalité.' },
   { id: 'ch_duel', effet: 'duel',
-    texte: 'Duel : défiez un adversaire au dé. Le plus petit score boit '
-           + PP_GORGEES_DUEL + ' gorgées.' },
+    texte: 'Duel : défiez un adversaire au dé. Le plus petit score boit {n} gorgées.' },
   { id: 'ch_immunite', effet: 'immunite',
     texte: "Immunité : vous ne boirez pas votre prochaine pénalité, quelle qu'elle soit." },
 ];
@@ -510,10 +535,9 @@ const PP_CAISSE = [
   { id: 'ca_distribution', effet: 'distribution_generale',
     texte: 'Distribution générale : tous vos adversaires boivent une gorgée.' },
   { id: 'ca_cadeau', effet: 'cadeau', montant: 100,
-    texte: 'Cadeau empoisonné : la banque vous offre 100 €, mais vous buvez '
-           + PP_GORGEES_CADEAU + ' gorgées.' },
+    texte: 'Cadeau empoisonné : la banque vous offre 100 €, mais vous buvez {n} gorgées.' },
   { id: 'ca_sommelier', effet: 'sommelier',
-    texte: 'Sommelier : répartissez ' + PP_GORGEES_SOMMELIER
+    texte: 'Sommelier : répartissez {n}'
            + ' gorgées entre vos adversaires comme il vous plaît.' },
 ];
 
@@ -522,9 +546,20 @@ PP_CHANCE.concat(PP_CAISSE).forEach(c => { PP_CARTES[c.id] = c; });
 
 // --- Outils ---
 
-function ppGorgeesPour(montant) {
+function ppRegle(etat) {
+  return PP_DIFFICULTES[etat.difficulte];
+}
+
+function ppGorgeesPour(etat, montant) {
   if (montant <= 0) return 0;
-  return Math.min(PP_GORGEES_MAX, Math.max(1, Math.floor(montant / PP_GORGEE_PAR_TRANCHE)));
+  const r = ppRegle(etat);
+  return Math.min(r.plafond, Math.max(1, Math.floor(montant / r.tranche)));
+}
+
+// {n} : les gorgées de la carte (duel, cadeau, sommelier) à cette difficulté.
+function ppTexteCarte(etat, carte) {
+  if (!carte.texte.includes('{n}')) return carte.texte;
+  return carte.texte.split('{n}').join(String(ppRegle(etat)[carte.effet]));
 }
 
 function ppTous(msg) { return { a: null, msg }; }
@@ -606,7 +641,10 @@ function ppPatrimoine(etat, i) {
 
 // --- Initialisation ---
 
-function ppInitialiser(noms, maintenant) {
+function ppInitialiser(noms, maintenant, difficulte) {
+  if (typeof difficulte !== 'string' || !Object.prototype.hasOwnProperty.call(PP_DIFFICULTES, difficulte)) {
+    difficulte = PP_DIFFICULTE_DEFAUT;
+  }
   const nb = noms.length;
   const chance = PP_CHANCE.map(c => c.id);
   const caisse = PP_CAISSE.map(c => c.id);
@@ -647,6 +685,7 @@ function ppInitialiser(noms, maintenant) {
     message: 'La partie commence : à ' + noms[0] + ' de lancer les dés.',
     classement: null,
     cagnotte: 0,
+    difficulte,
   };
   ppArmer(etat, maintenant);
   return etat;
@@ -699,6 +738,7 @@ function ppEtatPublic(etat, maintenant) {
     delai_restant: echeance === null ? null : Math.max(0, Math.trunc(echeance - maintenant)),
     classement: etat.classement,
     cagnotte: etat.cagnotte,
+    difficulte: etat.difficulte,
   };
 }
 
@@ -754,7 +794,9 @@ function ppPasserDepart(etat, ev, i) {
     etat.de_rapide[i] = true;
     ev.push(ppTous({ type: 'pp_de_rapide', joueur: i }));
   }
-  ppBoire(etat, ev, ppVivants(etat).map(j => [j, PP_GORGEES_DEPART]), 'toast_depart');
+  const qui = ppRegle(etat).depart;
+  const trinquent = qui === 'tous' ? ppVivants(etat) : qui === 'joueur' ? [i] : [];
+  ppBoire(etat, ev, trinquent.map(j => [j, 1]), 'toast_depart');
 }
 
 function ppEnvoyerPrison(etat, ev, i) {
@@ -776,7 +818,7 @@ function ppEmprisonner(etat, ev, i) {
   etat.tours_prison[i] = 0;
   ev.push(ppTous({ type: 'pp_deplacement', joueur: i, de: pos, vers: PP_CASE_PRISON, sens: 0, motif: 'prison' }));
   etat.message = ppNom(etat, i) + ' va en prison.';
-  ppBoire(etat, ev, [[i, PP_GORGEES_PRISON]], 'prison');
+  ppBoire(etat, ev, [[i, ppRegle(etat).prison]], 'prison');
 }
 
 function ppRendreCarteSortie(etat, i) {
@@ -818,7 +860,7 @@ function ppExecuter(etat, ev, etape) {
     ppPayer(etat, ev, i, etape.montant, etape.creancier, etape.motif);
   } else if (t === 'miroir') {
     const o = etape.proprio;
-    if (!etat.faillite[o]) ppDemanderCible(etat, o, 'miroir', PP_GORGEES_MIROIR, false);
+    if (!etat.faillite[o]) ppDemanderCible(etat, o, 'miroir', ppRegle(etat).miroir, false);
   } else if (t === 'monopoly') {
     ppMonsieurMonopoly(etat, ev, i);
   }
@@ -842,15 +884,14 @@ function ppArrivee(etat, ev) {
     } else if (o !== i && !p.hypotheque) {
       const loyer = ppLoyer(etat, c);
       etat.message = ppNom(etat, i) + ' paie ' + loyer + ' € de loyer à ' + ppNom(etat, o) + '.';
-      ppBoire(etat, ev, [[i, ppGorgeesPour(loyer)]], 'loyer');
-      etat.suite.unshift(
-        { t: 'payer', montant: loyer, creancier: o, motif: 'loyer' },
-        { t: 'miroir', proprio: o },
-      );
+      ppBoire(etat, ev, [[i, ppGorgeesPour(etat, loyer)]], 'loyer');
+      const etapes = [{ t: 'payer', montant: loyer, creancier: o, motif: 'loyer' }];
+      if (ppRegle(etat).miroir > 0) etapes.push({ t: 'miroir', proprio: o });
+      etat.suite.unshift(...etapes);
     }
   } else if (t === 'taxe') {
     etat.message = ppNom(etat, i) + ' paie ' + cs.nom + ' : ' + cs.montant + ' €.';
-    ppBoire(etat, ev, [[i, ppGorgeesPour(cs.montant)]], 'taxe');
+    ppBoire(etat, ev, [[i, ppGorgeesPour(etat, cs.montant)]], 'taxe');
     etat.suite.unshift({ t: 'payer', montant: cs.montant, creancier: null, motif: 'taxe' });
   } else if (t === 'chance' || t === 'caisse') {
     ppPiocher(etat, ev, i, t);
@@ -905,9 +946,10 @@ function ppPiocher(etat, ev, i, paquet) {
   const carte = PP_CARTES[cid];
   const effet = carte.effet;
   if (effet !== 'sortie_prison') ids.push(cid);
+  const texte = ppTexteCarte(etat, carte);
   ev.push(ppTous({ type: 'pp_carte', joueur: i, paquet,
-                   carte: { id: cid, effet, texte: carte.texte } }));
-  etat.message = ppNom(etat, i) + ' : ' + carte.texte;
+                   carte: { id: cid, effet, texte } }));
+  etat.message = ppNom(etat, i) + ' : ' + texte;
 
   if (effet === 'aller') {
     ppAvancerVers(etat, ev, i, carte.case, 'carte');
@@ -924,7 +966,7 @@ function ppPiocher(etat, ev, i, paquet) {
     etat.cartes_sortie[i].push(paquet);
   } else if (effet === 'gain') {
     etat.argent[i] += carte.montant;
-    const g = ppGorgeesPour(carte.montant);
+    const g = ppGorgeesPour(etat, carte.montant);
     if (carte.mode === 'boire') ppBoire(etat, ev, [[i, g]], 'carte');
     else ppDemanderCible(etat, i, 'distribuer', g);
   } else if (effet === 'perte' || effet === 'reparations') {
@@ -939,7 +981,7 @@ function ppPiocher(etat, ev, i, paquet) {
         }
       }
     }
-    const g = ppGorgeesPour(montant);
+    const g = ppGorgeesPour(etat, montant);
     etat.suite.unshift({ t: 'payer', montant, creancier: null, motif: 'carte' });
     if (carte.mode === 'boire') ppBoire(etat, ev, [[i, g]], 'carte');
     else if (g > 0) ppDemanderCible(etat, i, 'distribuer', g);
@@ -950,16 +992,16 @@ function ppPiocher(etat, ev, i, paquet) {
     const dernier = etat.derniere_penalite[i];
     ppDemanderCible(etat, i, 'retour', dernier > 0 ? 2 * dernier : PP_RETOUR_DEFAUT);
   } else if (effet === 'duel') {
-    ppDemanderCible(etat, i, 'duel', PP_GORGEES_DUEL);
+    ppDemanderCible(etat, i, 'duel', ppRegle(etat).duel);
   } else if (effet === 'cadeau') {
     etat.argent[i] += carte.montant;
-    ppBoire(etat, ev, [[i, PP_GORGEES_CADEAU]], 'cadeau');
+    ppBoire(etat, ev, [[i, ppRegle(etat).cadeau]], 'cadeau');
   } else if (effet === 'immunite') {
     etat.immunites[i] += 1;
   } else if (effet === 'sommelier') {
     const cibles = ppAdversaires(etat, i, true);
     if (cibles.length) {
-      etat.attente = { type: 'sommelier', joueur: i, total: PP_GORGEES_SOMMELIER, cibles };
+      etat.attente = { type: 'sommelier', joueur: i, total: ppRegle(etat).sommelier, cibles };
     } else {
       etat.message = "Personne à servir : tout le monde est à l'abri.";
     }
@@ -1416,7 +1458,7 @@ function ppConclureEchange(etat, ev, prop) {
   etat.argent[cible] += prop.argent_donne - prop.argent_recu;
   ev.push(ppTous({ type: 'pp_echange', accepte: true, proposition: prop }));
   etat.message = 'Marché conclu entre ' + ppNom(etat, i) + ' et ' + ppNom(etat, cible) + ' : tournée générale !';
-  ppBoire(etat, ev, ppVivants(etat).map(j => [j, PP_GORGEES_ECHANGE]), 'toast_echange');
+  ppBoire(etat, ev, ppVivants(etat).map(j => [j, ppRegle(etat).echange]), 'toast_echange');
 }
 
 // --- Réponse à un choix ---
@@ -1627,12 +1669,12 @@ const serveur = {
   minuteur: null,
   horloge() { return Date.now() / 1000; },
 
-  demarrer(noms) {
+  demarrer(noms, difficulte) {
     if (noms.length < PP_JOUEURS_MIN || noms.length > PP_JOUEURS_MAX) {
-      this.envoyer(0, { type: 'erreur', message: 'Picolopoly se joue de 2 à 6.' });
+      this.envoyer(0, { type: 'erreur', message: 'Picopoly se joue de 2 à 6.' });
       return;
     }
-    this.etat = ppInitialiser(noms, this.horloge());
+    this.etat = ppInitialiser(noms, this.horloge(), difficulte);
     this.diffuser({ type: 'pp_demarree', joueurs: noms.slice(), plateau: PP_CASES });
     this.publier([]);
   },
@@ -2093,8 +2135,8 @@ function textureCentre() {
   ctx.strokeStyle = '#ffffff';
   ctx.lineWidth = 18;
   ctx.font = '700 150px Fredoka, sans-serif';
-  ctx.strokeText('PICOLOPOLY', 0, -10);
-  ctx.fillText('PICOLOPOLY', 0, -10);
+  ctx.strokeText('PICOPOLY', 0, -10);
+  ctx.fillText('PICOPOLY', 0, -10);
   ctx.fillStyle = '#5a7a62';
   ctx.font = '500 44px Fredoka, sans-serif';
   ctx.fillText('les bars de Poitiers', 0, 90);
@@ -2333,27 +2375,254 @@ function orientationDe(faces, valeur) {
   return lacet.multiply(ROTATION_FACE[i].clone());
 }
 
+// Un dé jeté depuis le bord du joueur, qui rebondit et finit sur la face
+// décidée par le moteur (jamais lue dans l'animation).
+function jeterDe(de, faces, valeur, repos, duree) {
+  const fin = orientationDe(faces, valeur);
+  const depart = new THREE.Vector3(repos.x * 0.4 + (Math.random() - 0.5), 2.6, repos.z + 1.6);
+  const spin = new THREE.Vector3(Math.random() * 14 - 7, Math.random() * 14 - 7, Math.random() * 14 - 7);
+  const qDepart = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.random() * 6, Math.random() * 6, Math.random() * 6));
+  animer(duree, a => {
+    const k = Math.min(1, a.t / a.duree);
+    const pos = depart.clone().lerp(repos, k);
+    // Deux rebonds qui s'amortissent.
+    pos.y = repos.y + Math.abs(Math.cos(k * Math.PI * 1.5)) * 2.4 * (1 - k) * (1 - k);
+    de.position.copy(pos);
+    if (k < 0.72) {
+      const e = new THREE.Euler(spin.x * k, spin.y * k, spin.z * k);
+      de.quaternion.copy(qDepart).multiply(new THREE.Quaternion().setFromEuler(e));
+    } else {
+      de.quaternion.slerp(fin, (k - 0.72) / 0.28);
+    }
+  }, () => { de.position.copy(repos); de.quaternion.copy(fin); });
+}
+
 function lancerDes(msg) {
   const valeurs = [msg.d1, msg.d2, msg.rapide];
   des.forEach((de, n) => {
     if (n === 2 && valeurs[2] === null) { de.position.y = -2; return; }
-    const fin = orientationDe(n === 2 ? FACES_RAPIDE : FACES_BLANC, valeurs[n]);
-    const depart = new THREE.Vector3(REPOS_DES[n].x * 0.4 + (Math.random() - 0.5), 2.6, REPOS_DES[n].z + 1.6);
-    const spin = new THREE.Vector3(Math.random() * 14 - 7, Math.random() * 14 - 7, Math.random() * 14 - 7);
-    const qDepart = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.random() * 6, Math.random() * 6, Math.random() * 6));
-    animer(0.95 + n * 0.08, a => {
-      const k = Math.min(1, a.t / a.duree);
-      const pos = depart.clone().lerp(REPOS_DES[n], k);
-      // Deux rebonds qui s'amortissent.
-      pos.y = REPOS_DES[n].y + Math.abs(Math.cos(k * Math.PI * 1.5)) * 2.4 * (1 - k) * (1 - k);
-      de.position.copy(pos);
-      if (k < 0.72) {
-        const e = new THREE.Euler(spin.x * k, spin.y * k, spin.z * k);
-        de.quaternion.copy(qDepart).multiply(new THREE.Quaternion().setFromEuler(e));
-      } else {
-        de.quaternion.slerp(fin, (k - 0.72) / 0.28);
+    jeterDe(de, n === 2 ? FACES_RAPIDE : FACES_BLANC, valeurs[n], REPOS_DES[n], 0.95 + n * 0.08);
+  });
+}
+
+// =====================================================================
+// SPECTACLE : le temps d'un duel ou d'un tour de roulette, la caméra vient
+// au centre du plateau, même en gros plan sur un pion. Tout le monde reçoit
+// le même événement (pp_duel, pp_roulette) : tout le monde voit la scène.
+// =====================================================================
+let spectacle = null;       // { cible: Vector3, demi: demi-largeur à cadrer }
+
+function reculSpectacle(demi) {
+  const vHalf = THREE.MathUtils.degToRad(camera.fov) / 2;
+  const hHalf = Math.atan(Math.tan(vHalf) * camera.aspect);
+  return Math.min(distanceVue, Math.max(demi / Math.tan(hHalf), demi / Math.tan(vHalf), 4.5));
+}
+
+// --- Duel : un dé chacun, à la couleur du joueur, relancé tant qu'il y a égalité.
+const desDuel = {};
+function deDuel(i) {
+  const c = i % 6;
+  if (!desDuel[c]) {
+    desDuel[c] = creerDe(FACES_BLANC, COULEURS_JOUEURS[c], '#ffffff');
+    desDuel[c].scale.setScalar(1.35);
+  }
+  return desDuel[c];
+}
+const CENTRE_DUEL = new THREE.Vector3(0, 0, -0.5);
+const REPOS_DUEL = [new THREE.Vector3(-0.75, 0.31, -0.5), new THREE.Vector3(0.75, 0.31, -0.5)];
+
+function animerDuel(msg) {
+  const joueurs = [msg.joueur, msg.cible];
+  const cubes = joueurs.map(deDuel);
+  const noms = joueurs.map((j, n) => {
+    const sp = creerSpriteTexte(nomJoueur(j), '', COULEURS_JOUEURS[j % 6]);
+    sp.scale.set(1.5, 0.75, 1);
+    sp.position.copy(REPOS_DUEL[n]).add(new THREE.Vector3(0, 0.95, 0));
+    scene.add(sp);
+    return sp;
+  });
+  spectacle = { cible: CENTRE_DUEL, demi: 1.9 };
+  rappel('⚔️ Duel : ' + nomJoueur(msg.joueur) + ' défie ' + nomJoueur(msg.cible) + ', le plus petit dé boit');
+  const ranger = () => {
+    cubes.forEach(c => { c.position.y = -2; });
+    noms.forEach(sp => scene.remove(sp));
+    spectacle = null;
+  };
+  const manche = n => {
+    const [a, b] = msg.lancers[n];
+    cubes.forEach((c, k) => jeterDe(c, FACES_BLANC, k ? b : a, REPOS_DUEL[k], 1.0 + k * 0.1));
+    animer(1.45, null, () => {
+      if (a === b) {
+        messageCentral('Égalité !', a + ' partout : on relance', '#9b4dca', 1.2);
+        animer(1.1, null, () => manche(n + 1));
+        return;
       }
-    }, () => { de.position.copy(REPOS_DES[n]); de.quaternion.copy(fin); });
+      messageCentral('⚔️ ' + a + ' – ' + b, nomJoueur(msg.perdant) + ' perd le duel', '#9b4dca', 2.2);
+      animer(2.0, null, ranger);
+    });
+  };
+  manche(0);
+}
+
+// --- Roulette : une vraie roue sort du plateau le temps d'un tirage. Le
+// numéro vient du moteur (pp_roulette.tirage) : la bille est guidée pour
+// finir dans sa case, comme les dés sur la face décidée.
+const ORDRE_ROUE = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5,
+                    24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
+const RAYON_ROUE = 1.35;
+const RAYON_TOURNANT = RAYON_ROUE * 0.86;
+const Y_PISTE = 0.34;          // la piste où la bille roule au lancer
+const Y_TOURNANT = 0.26;       // le plateau tournant, un cran plus bas
+const RAYON_BILLE = 0.055;
+const CENTRE_ROUE = new THREE.Vector3(0, 0, -0.8);
+let roue = null;
+
+function textureRoue() {
+  const S = 1024, c = S / 2;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const ctx = cv.getContext('2d');
+  const pas = Math.PI * 2 / 37;
+  const rExt = c * 0.99, rChiffres = c * 0.83, rInt = c * 0.6;
+  ctx.fillStyle = '#5a3418';
+  ctx.beginPath(); ctx.arc(c, c, c, 0, Math.PI * 2); ctx.fill();
+  ORDRE_ROUE.forEach((n, i) => {
+    const a0 = i * pas - pas / 2, a1 = a0 + pas;
+    ctx.beginPath();
+    ctx.arc(c, c, rExt, a0, a1);
+    ctx.arc(c, c, rInt, a1, a0, true);
+    ctx.closePath();
+    ctx.fillStyle = couleurNumero(n) === '#2b2622' ? '#1f1b18' : couleurNumero(n);
+    ctx.fill();
+    ctx.strokeStyle = '#e0bb5c';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.save();
+    ctx.translate(c, c);
+    ctx.rotate(i * pas);
+    ctx.translate((rExt + rChiffres) / 2, 0);
+    ctx.rotate(Math.PI / 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '700 40px Fredoka, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(n), 0, 0);
+    ctx.restore();
+  });
+  // Le cercle doré qui sépare les chiffres des cases où tombe la bille.
+  ctx.strokeStyle = '#e0bb5c';
+  ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.arc(c, c, rChiffres, 0, Math.PI * 2); ctx.stroke();
+  const g = ctx.createRadialGradient(c, c, 10, c, c, rInt);
+  g.addColorStop(0, '#f3d27a');
+  g.addColorStop(0.35, '#b8862e');
+  g.addColorStop(0.4, '#6b3f1f');
+  g.addColorStop(1, '#4a2a12');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(c, c, rInt - 2, 0, Math.PI * 2); ctx.fill();
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  return tex;
+}
+
+function creerRoue() {
+  const g = new THREE.Group();
+  const bois = new THREE.MeshStandardMaterial({ color: 0x7a4a24, roughness: 0.6 });
+  const dore = new THREE.MeshStandardMaterial({ color: 0xd9ad4a, roughness: 0.3, metalness: 0.6 });
+  // Un socle plein jusqu'au plateau tournant, puis une paroi et la piste
+  // au-dessus : le plateau tournant est au fond d'une cuvette.
+  const fond = new THREE.Mesh(new THREE.CylinderGeometry(RAYON_ROUE * 1.06, RAYON_ROUE * 1.12, Y_TOURNANT, 56), bois);
+  fond.position.y = Y_TOURNANT / 2;
+  const paroi = new THREE.Mesh(new THREE.CylinderGeometry(RAYON_ROUE * 1.06, RAYON_ROUE * 1.06, Y_PISTE - Y_TOURNANT, 56, 1, true), bois);
+  paroi.position.y = (Y_PISTE + Y_TOURNANT) / 2;
+  const piste = new THREE.Mesh(new THREE.RingGeometry(RAYON_TOURNANT, RAYON_ROUE * 1.06, 64),
+    new THREE.MeshStandardMaterial({ color: 0x3b2413, roughness: 0.5, side: THREE.DoubleSide }));
+  piste.rotation.x = -Math.PI / 2;
+  piste.position.y = Y_PISTE;
+  const bord = new THREE.Mesh(new THREE.TorusGeometry(RAYON_ROUE * 1.06, 0.045, 10, 64), dore);
+  bord.rotation.x = Math.PI / 2;
+  bord.position.y = Y_PISTE;
+  const tournant = new THREE.Group();
+  tournant.position.y = Y_TOURNANT;
+  const disque = new THREE.Mesh(new THREE.CircleGeometry(RAYON_TOURNANT, 74),
+    new THREE.MeshStandardMaterial({ map: textureRoue(), roughness: 0.45 }));
+  disque.rotation.x = -Math.PI / 2;
+  disque.position.y = 0.003;
+  const moyeu = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.26, 20), dore);
+  moyeu.position.y = 0.13;
+  const croix = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.03, 0.04), dore);
+  croix.position.y = 0.24;
+  const croix2 = croix.clone();
+  croix2.rotation.y = Math.PI / 2;
+  tournant.add(disque, moyeu, croix, croix2);
+  const bille = new THREE.Mesh(new THREE.SphereGeometry(RAYON_BILLE, 18, 12),
+    new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.15, metalness: 0.3 }));
+  g.add(fond, paroi, piste, bord, tournant, bille);
+  g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  g.position.copy(CENTRE_ROUE);
+  g.visible = false;
+  scene.add(g);
+  return { groupe: g, tournant, bille };
+}
+
+// Angle d'une case dans le repère du plateau tournant : le disque est couché
+// (rotation -π/2 en x), donc l'angle du canevas devient l'angle en (x, z).
+// Un plateau tourné de φ autour de y met cet angle à (α − φ) dans la roue.
+function placerBille(angle, rayon, y) {
+  roue.bille.position.set(Math.cos(angle) * rayon, y, Math.sin(angle) * rayon);
+}
+
+function animerRoulette(msg) {
+  if (!roue) roue = creerRoue();
+  const qui = nomJoueur(msg.joueur) + ' : ' + msg.mise + ' € sur ' + ppLibellePari(msg.pari, msg.numero);
+  rappel('🎰 ' + qui);
+  spectacle = { cible: CENTRE_ROUE, demi: RAYON_ROUE * 1.45 };
+  const g = roue.groupe;
+  g.visible = true;
+  const pas = Math.PI * 2 / 37;
+  const alpha = ORDRE_ROUE.indexOf(msg.tirage) * pas;
+  const phi0 = Math.random() * Math.PI * 2;
+  const tours = Math.PI * 2 * 2.5;                               // le plateau ralentit
+  const ecart = -(Math.PI * 2 * 6 + Math.random() * Math.PI * 2); // la bille tourne à l'envers
+  const rPiste = RAYON_ROUE * 0.97, rCase = RAYON_TOURNANT * 0.71;
+  const DUREE = 4.6;
+  roue.tournant.rotation.y = phi0;
+  placerBille(alpha + ecart - phi0, rPiste, Y_PISTE + RAYON_BILLE);
+  // La roue sort du plateau...
+  animer(0.4, a => { g.scale.setScalar(Math.max(0.01, Math.min(1, a.t / a.duree))); }, () => {
+    g.scale.setScalar(1);
+    // ... on lance.
+    animer(DUREE, a => {
+      const k = Math.min(1, a.t / a.duree);
+      const phi = phi0 + tours * (1 - (1 - k) * (1 - k));
+      roue.tournant.rotation.y = phi;
+      const angle = alpha + ecart * Math.pow(1 - k, 3) - phi;
+      let rayon = rPiste, y = Y_PISTE + RAYON_BILLE;
+      if (k > 0.5) {
+        // La bille quitte la piste, saute de case en case et se pose.
+        const d = Math.min(1, (k - 0.5) / 0.3);
+        rayon = rPiste + (rCase - rPiste) * d;
+        y = Y_TOURNANT + RAYON_BILLE + (Y_PISTE - Y_TOURNANT) * (1 - d)
+          + Math.abs(Math.sin(d * Math.PI * 3)) * 0.12 * (1 - d);
+      }
+      placerBille(angle, rayon, y);
+    }, () => {
+      roue.tournant.rotation.y = phi0 + tours;
+      placerBille(alpha - phi0 - tours, rCase, Y_TOURNANT + RAYON_BILLE);
+      messageCentral('🎰 ' + msg.tirage, msg.gagne ? nomJoueur(msg.joueur) + ' gagne : +' + msg.gain + ' €' : 'perdu : la mise file au parc',
+        couleurNumero(msg.tirage), 2.6);
+      if (msg.gagne) texteFlottant(positionTete(msg.joueur).add(new THREE.Vector3(0, -0.25, 0)), '+' + msg.gain + ' €', '', '#2e9a55');
+      if (msg.joueur === MOI) toast(msg.gagne ? '🎰 Gagné : +' + msg.gain + ' €' : '🎰 Perdu', 'le ' + msg.tirage + ' sort');
+      // On laisse lire, puis la roue rentre dans le plateau.
+      animer(2.4, null, () => {
+        animer(0.35, a => { g.scale.setScalar(Math.max(0.01, 1 - a.t / a.duree)); }, () => {
+          g.visible = false;
+          g.scale.setScalar(1);
+          spectacle = null;
+        });
+      });
+    });
   });
 }
 
@@ -2632,12 +2901,9 @@ function jouerEvenement(msg) {
     case 'pp_hypotheque':
       rappel(PP_CASES[msg.case].nom + (msg.hypotheque ? ' est hypothéquée' : ' est libérée'));
       break;
-    case 'pp_duel': {
-      const [a, b] = msg.lancers[msg.lancers.length - 1];
-      messageCentral('⚔️ ' + a + ' – ' + b, nomJoueur(msg.joueur) + ' contre ' + nomJoueur(msg.cible), '#9b4dca', 2.0);
-      patienterFile(1.4);
+    case 'pp_duel':
+      animerDuel(msg);
       break;
-    }
     case 'pp_echange':
       if (msg.accepte) messageCentral('🤝 Marché conclu', nomJoueur(msg.proposition.proposant) + ' et ' + nomJoueur(msg.proposition.cible), '#2e9a55', 1.8);
       else rappel(nomJoueur(msg.proposition.cible) + ' refuse l’échange');
@@ -2722,6 +2988,9 @@ function demarrerScene(noms) {
   elChrono.classList.remove('cache');
   elBtnVue.classList.remove('cache');
   des.forEach(d => { d.position.y = -2; });
+  Object.values(desDuel).forEach(d => { d.position.y = -2; });
+  if (roue) roue.groupe.visible = false;
+  spectacle = null;
   majCagnotte(0);
 }
 
@@ -2755,6 +3024,7 @@ function appliquerEtat(e) {
   }
 
   majCagnotte(e.cagnotte);
+  majDifficulteHud();
   elMessage.textContent = e.message;
   majJoueurs(e);
   // Le panneau garde sa vue (gestion, échange) tant que la situation n'a pas changé.
@@ -2781,6 +3051,18 @@ function majCagnotte(montant) {
   spriteCagnotte.scale.set(2.2, 1.1, 1);
   spriteCagnotte.position.copy(pointCase(20, 0, 0, 0.9));
   scene.add(spriteCagnotte);
+}
+
+function majDifficulteHud() {
+  const hud = document.getElementById('difficulte-hud');
+  const d = difficulteCourante();
+  hud.classList.remove('cache');
+  hud.innerHTML = '';
+  const long = document.createElement('span');
+  long.className = 'long';
+  long.textContent = ' ' + LIBELLES_DIFFICULTE[d].nom;
+  hud.append(LIBELLES_DIFFICULTE[d].icone, long);
+  hud.title = 'Difficulté : ' + LIBELLES_DIFFICULTE[d].nom;
 }
 
 function majConstructions(k, n) {
@@ -3073,25 +3355,6 @@ function panneauRoulette(e) {
   ajouterDelai(p);
 }
 
-// La bille ralentit : les numéros défilent de moins en moins vite, puis le
-// tirage du moteur s'affiche (jamais un numéro inventé par l'animation).
-function animerRoulette(msg) {
-  const qui = nomJoueur(msg.joueur) + ' : ' + msg.mise + ' € sur ' + ppLibellePari(msg.pari, msg.numero);
-  let dernier = -1;
-  animer(1.8, a => {
-    const k = Math.floor(Math.sqrt(Math.min(1, a.t / a.duree)) * 14);
-    if (k === dernier) return;
-    dernier = k;
-    const n = Math.floor(Math.random() * 37);
-    messageCentral('🎰 ' + n, qui, couleurNumero(n), 0.6);
-  }, () => {
-    messageCentral('🎰 ' + msg.tirage, msg.gagne ? 'gagné : +' + msg.gain + ' €' : 'perdu : la mise file au parc',
-      couleurNumero(msg.tirage), 2.4);
-    if (msg.gagne) texteFlottant(positionTete(msg.joueur).add(new THREE.Vector3(0, -0.25, 0)), '+' + msg.gain + ' €', '', '#2e9a55');
-    if (msg.joueur === MOI) toast(msg.gagne ? '🎰 Gagné : +' + msg.gain + ' €' : '🎰 Perdu', 'le ' + msg.tirage + ' sort');
-    patienterFile(1.2);
-  });
-}
 
 function panneauChoix(e, a) {
   if (a.type === 'achat') {
@@ -3173,9 +3436,21 @@ function panneauChoix(e, a) {
   } else if (a.type === 'echange') {
     const pr = a.proposition;
     const p = ouvrirPanneau(nomJoueur(pr.proposant) + ' te propose un échange');
-    const liste = cs => (cs.length ? cs.map(k => PP_CASES[k].nom).join(', ') : 'rien');
-    p.appendChild(aide('Tu reçois : ' + liste(pr.donne) + (pr.argent_donne ? ' + ' + pr.argent_donne + ' €' : '')));
-    p.appendChild(aide('Tu donnes : ' + liste(pr.recoit) + (pr.argent_recu ? ' + ' + pr.argent_recu + ' €' : '')));
+    // Chaque propriété avec la puce de sa couleur, comme sur le plateau.
+    const ligne = (titre, cs, argent) => {
+      const d = aide(titre + ' : ');
+      cs.forEach((k, n) => {
+        const puce = document.createElement('span');
+        puce.className = 'puce-groupe';
+        puce.style.background = COULEURS_GROUPES[PP_CASES[k].groupe];
+        d.append(puce, document.createTextNode(PP_CASES[k].nom + (n < cs.length - 1 ? ', ' : '')));
+      });
+      if (!cs.length && !argent) d.appendChild(document.createTextNode('rien'));
+      if (argent) d.appendChild(document.createTextNode((cs.length ? ' + ' : '') + argent + ' €'));
+      p.appendChild(d);
+    };
+    ligne('Tu reçois', pr.donne, pr.argent_donne);
+    ligne('Tu donnes', pr.recoit, pr.argent_recu);
     const r = rangee();
     r.appendChild(bouton('Accepter (toast !)', '', () => envoyer({ type: 'pp_choix', valeur: true })));
     r.appendChild(bouton('Refuser', 'clair', () => envoyer({ type: 'pp_choix', valeur: false })));
@@ -3287,12 +3562,15 @@ function panneauEchange(e) {
     col.appendChild(h);
     const r = rangee();
     r.style.justifyContent = 'flex-start';
+    // Rangées par groupe de couleur (l'ordre du plateau), la couleur en bordure.
     mesCases(e, qui).filter(echangeable).forEach(k => {
       const pris = b[liste].includes(k);
-      r.appendChild(bouton(PP_CASES[k].nom, 'clair petit' + (pris ? ' choisi' : ''), () => {
+      const bt = bouton(PP_CASES[k].nom, 'clair petit propriete' + (pris ? ' choisi' : ''), () => {
         if (pris) b[liste].splice(b[liste].indexOf(k), 1); else b[liste].push(k);
         majPanneau();
-      }));
+      });
+      bt.style.borderLeftColor = COULEURS_GROUPES[PP_CASES[k].groupe];
+      r.appendChild(bt);
     });
     if (!r.childNodes.length) r.appendChild(aide('aucune propriété échangeable'));
     col.appendChild(r);
@@ -3338,10 +3616,11 @@ function panneauFin(e) {
   });
   p.appendChild(t);
   const r = rangee();
-  if (mode === 'local') r.appendChild(bouton('Rejouer', '', () => demarrerSolo(dernierNbSolo)));
-  else if (estCreateur) r.appendChild(bouton('Relancer une partie', '', () => envoyer({ type: 'pp_demarrer' })));
+  if (mode === 'local') r.appendChild(bouton('Rejouer', '', () => { difficulteChoisie = difficulteCourante(); demarrerSolo(dernierNbSolo); }));
+  else if (estCreateur) r.appendChild(bouton('Relancer une partie', '', () => envoyer({ type: 'pp_demarrer', difficulte: difficulteCourante() })));
   else p.appendChild(aide('Le créateur du salon peut relancer une partie.'));
   r.appendChild(bouton('Quitter', 'clair', () => { oublierSession(); if (ws) { try { ws.close(); } catch (x) { /* déjà fermée */ } } location.href = location.pathname; }));
+  r.appendChild(bouton('🎲 Tous les jeux', 'clair', () => { oublierSession(); location.href = 'index.html'; }));
   p.appendChild(r);
 }
 
@@ -3358,6 +3637,14 @@ function ligneFiche(t, a, b, courant) {
   tr.append(x, y);
   t.appendChild(tr);
 }
+
+// La difficulté de la partie affichée. Un pp_etat sans difficulté vient d'un
+// serveur d'avant les difficultés : c'était le mode difficile.
+function difficulteCourante() {
+  const d = etatCourant && etatCourant.difficulte;
+  return typeof d === 'string' && Object.prototype.hasOwnProperty.call(PP_DIFFICULTES, d) ? d : PP_DIFFICULTE_DEFAUT;
+}
+function regleCourante() { return PP_DIFFICULTES[difficulteCourante()]; }
 
 function afficherFiche(k) {
   const e = etatCourant;
@@ -3394,14 +3681,15 @@ function afficherFiche(k) {
     ligneFiche(t, 'Les deux', PP_MULT_COMPAGNIE[1] + ' × les dés');
   } else if (c.type === 'taxe') {
     ligneFiche(t, 'À payer', c.montant + ' €');
-    ligneFiche(t, 'Gorgées', String(ppGorgeesPour(c.montant)));
+    ligneFiche(t, 'Gorgées', String(ppGorgeesPour({ difficulte: difficulteCourante() }, c.montant)));
   } else {
     const DESC = {
-      depart: 'Passer ici rapporte ' + PP_SALAIRE + ' € — et tout le monde trinque.',
+      depart: 'Passer ici rapporte ' + PP_SALAIRE + ' €' + { tous: ' — et tout le monde trinque.',
+        joueur: ' — et une gorgée pour fêter ça.', personne: '.' }[regleCourante().depart],
       prison: 'Simple visite, ou l’abri : en prison, aucune carte ne peut te viser.',
       parc: 'Les pelouses de Blossac, ses paons… et une cagnotte qui dort sous un banc. Taxes, amendes des cartes, sorties de prison et mises perdues '
         + 'à la roulette s’y accumulent. Arrête-toi ici pour tout rafler, contre 1 gorgée par tranche de ' + PP_CAGNOTTE_PAR_GORGEE + ' € (sans plafond).',
-      allez_prison: 'Direct en prison, 1 gorgée à l’entrée.',
+      allez_prison: 'Direct en prison, ' + regleCourante().prison + ' gorgée à l’entrée.',
       chance: 'Pioche une carte Chance.', caisse: 'Pioche une carte Caisse de communauté.',
     };
     corps.appendChild(aide(DESC[c.type] || ''));
@@ -3668,6 +3956,30 @@ let estCreateur = false;
 let joueursSalon = [];
 let monJeton = null;
 let dernierNbSolo = 4;
+let difficulteChoisie = 'normal';
+
+const LIBELLES_DIFFICULTE = {
+  facile: { nom: 'Facile', icone: '🙂', resume: 'on boit sur les loyers, les taxes et les cartes, moins et moins souvent' },
+  normal: { nom: 'Normal', icone: '🍺', resume: 'le proprio ne fait plus boire, seul celui qui passe au Départ trinque' },
+  difficile: { nom: 'Difficile', icone: '🔥', resume: 'tout le monde trinque au Départ, le proprio distribue à chaque loyer' },
+};
+
+// La rangée de boutons ; le panneau qui l'affiche se redessine au clic.
+function rangeeDifficulte(redessiner) {
+  const bloc = document.createElement('div');
+  bloc.appendChild(aide('Difficulté : ' + LIBELLES_DIFFICULTE[difficulteChoisie].nom
+    + ' — ' + LIBELLES_DIFFICULTE[difficulteChoisie].resume + '. Le détail est dans les règles.'));
+  const r = rangee();
+  Object.keys(LIBELLES_DIFFICULTE).forEach(cle => {
+    r.appendChild(bouton(LIBELLES_DIFFICULTE[cle].icone + ' ' + LIBELLES_DIFFICULTE[cle].nom,
+      cle === difficulteChoisie ? 'petit' : 'clair petit', () => {
+        difficulteChoisie = cle;
+        redessiner();
+      }));
+  });
+  bloc.appendChild(r);
+  return bloc;
+}
 
 // Le jeton permet de retrouver sa place après une coupure ou un rechargement.
 // localStorage peut lever (navigation privée, données bloquées) : tout est gardé.
@@ -3696,7 +4008,7 @@ function champTexte(id, placeholder, longueurMax) {
 function afficherErreur(texte) { rappel(texte, true); }
 
 function panneauAccueil() {
-  elMessage.textContent = '🍻 Picolopoly';
+  elMessage.textContent = '🍻 Picopoly';
   rappel('Le Monopoly à boire, dans les bars de Poitiers');
   const p = ouvrirPanneau('Comment tu joues ?');
   const r = rangee();
@@ -3726,6 +4038,7 @@ function panneauSolo() {
   const r = rangee();
   [2, 3, 4, 5, 6].forEach(n => r.appendChild(bouton(String(n), n === 4 ? '' : 'clair', () => demarrerSolo(n))));
   p.appendChild(r);
+  p.appendChild(rangeeDifficulte(panneauSolo));
   const r2 = rangee();
   r2.style.marginTop = '12px';
   r2.appendChild(bouton('Retour', 'clair', panneauAccueil));
@@ -3741,7 +4054,7 @@ function demarrerSolo(nb) {
   cacherPanneau();
   enPartie = false;
   fileActions.length = 0;
-  serveur.demarrer(['Toi'].concat(NOMS_BOTS.slice(0, nb - 1)));
+  serveur.demarrer(['Toi'].concat(NOMS_BOTS.slice(0, nb - 1)), difficulteChoisie);
 }
 
 // --- En ligne ---
@@ -3760,7 +4073,7 @@ function majLibelleServeur(b) {
 
 function panneauRejoindreDirect(code) {
   codeSalon = code;
-  elMessage.textContent = '🍻 Picolopoly';
+  elMessage.textContent = '🍻 Picopoly';
   rappel('Salon ' + code);
   const p = ouvrirPanneau('Rejoindre le salon');
   const c = document.createElement('div');
@@ -3974,8 +4287,9 @@ function panneauAttente() {
   p.appendChild(liste);
   const r = rangee();
   if (estCreateur) {
+    p.appendChild(rangeeDifficulte(panneauAttente));
     const trop = joueursSalon.length > PP_JOUEURS_MAX;
-    const b = bouton('Démarrer la partie', '', () => envoyerIntention(MOI, { type: 'pp_demarrer' }));
+    const b = bouton('Démarrer la partie', '', () => envoyerIntention(MOI, { type: 'pp_demarrer', difficulte: difficulteChoisie }));
     b.disabled = joueursSalon.length < PP_JOUEURS_MIN || trop;
     r.appendChild(b);
     if (joueursSalon.length < PP_JOUEURS_MIN) {
@@ -3983,7 +4297,7 @@ function panneauAttente() {
     } else if (trop) {
       const al = document.createElement('div');
       al.className = 'alerte';
-      al.textContent = 'Vous êtes ' + joueursSalon.length + ' : Picolopoly se joue à ' + PP_JOUEURS_MAX + ' au plus.';
+      al.textContent = 'Vous êtes ' + joueursSalon.length + ' : Picopoly se joue à ' + PP_JOUEURS_MAX + ' au plus.';
       p.appendChild(al);
     }
   } else {
@@ -3993,12 +4307,60 @@ function panneauAttente() {
 }
 
 // Règles
+// Les chiffres des gorgées viennent de PP_DIFFICULTES : ceux de la partie en
+// cours, ou, avant de jouer, ceux de la difficulté sélectionnée.
+function majReglesDifficulte() {
+  const d = enPartie ? difficulteCourante() : difficulteChoisie;
+  const r = PP_DIFFICULTES[d];
+  const ecrire = (id, texte) => { document.getElementById(id).textContent = texte; };
+  const tranche = '1 gorgée par tranche de ' + r.tranche + ' € (au moins 1, au plus ' + r.plafond + ')';
+  ecrire('regle-difficulte', '— ' + LIBELLES_DIFFICULTE[d].icone + ' ' + LIBELLES_DIFFICULTE[d].nom);
+  ecrire('regle-loyer', tranche + '. ' + (r.miroir > 0
+    ? 'Le propriétaire fait boire ' + r.miroir + ' gorgée à qui il veut.'
+    : 'Le propriétaire encaisse sans faire boire personne.'));
+  ecrire('regle-depart', { tous: 'Toast : tout le monde boit 1 gorgée avec celui qui passe.',
+    joueur: 'Celui qui passe boit 1 gorgée.', personne: 'Rien à boire, juste les ' + PP_SALAIRE + ' €.' }[r.depart]);
+  ecrire('regle-taxe', tranche + '.');
+  ecrire('regle-prison', r.prison > 0 ? r.prison + ' gorgée en entrant.' : 'Rien à boire.');
+  ecrire('regle-echange', r.echange > 0 ? 'Toast : tout le monde boit ' + r.echange + ' gorgée.' : 'Rien à boire.');
+  ecrire('regle-duel', r.duel);
+  ecrire('regle-cadeau', r.cadeau);
+  ecrire('regle-sommelier', r.sommelier);
+
+  const t = document.getElementById('tableau-difficultes');
+  t.innerHTML = '';
+  const cles = Object.keys(PP_DIFFICULTES);
+  const ligne = (titre, f) => {
+    const tr = document.createElement('tr');
+    const a = document.createElement('td');
+    a.textContent = titre;
+    tr.appendChild(a);
+    cles.forEach(k => {
+      const td = document.createElement('td');
+      td.textContent = f(PP_DIFFICULTES[k], k);
+      if (k === d) td.style.fontWeight = '700';
+      tr.appendChild(td);
+    });
+    t.appendChild(tr);
+  };
+  ligne('', (x, k) => LIBELLES_DIFFICULTE[k].icone + ' ' + LIBELLES_DIFFICULTE[k].nom);
+  ligne('Loyers, taxes, cartes', x => '1 / ' + x.tranche + ' €, max ' + x.plafond);
+  ligne('Le proprio distribue', x => (x.miroir > 0 ? String(x.miroir) : 'non'));
+  ligne('Départ', x => ({ tous: 'toute la table', joueur: 'celui qui passe', personne: 'personne' }[x.depart]));
+  ligne('Toast d’échange', x => (x.echange > 0 ? 'oui' : 'non'));
+  ligne('Duel / cadeau / sommelier', x => x.duel + ' / ' + x.cadeau + ' / ' + x.sommelier);
+}
+
 const elModaleRegles = document.getElementById('modale-regles');
 document.getElementById('btn-regles').addEventListener('click', () => {
+  majReglesDifficulte();
   majQRModale();
   document.getElementById('quitter-table').classList.toggle('cache', !enPartie);
   elModaleRegles.classList.remove('cache');
 });
+// Retour au menu de tous les jeux. En pleine partie en ligne, la session
+// est gardée : « Reprendre la partie » ramène à sa place.
+document.getElementById('menu-jeux').addEventListener('click', () => { location.href = 'index.html'; });
 document.getElementById('fermer-regles').addEventListener('click', () => elModaleRegles.classList.add('cache'));
 elModaleRegles.addEventListener('click', e => { if (e.target === elModaleRegles) elModaleRegles.classList.add('cache'); });
 document.getElementById('quitter-table').addEventListener('click', () => {
@@ -4064,8 +4426,11 @@ function boucle() {
 
   voitures.forEach(v => { v.t += v.vitesse * dt; placerVoiture(v); });
 
-  // Caméra : tout le plateau, ou gros plan sur le pion actif.
-  if (vueSuivi && e && pions[e.courant]) {
+  // Caméra : un duel ou la roulette, sinon tout le plateau, ou gros plan sur le pion actif.
+  if (spectacle) {
+    camObjectifCible.copy(spectacle.cible);
+    camObjectifPos.copy(spectacle.cible).addScaledVector(CAM_DIR, reculSpectacle(spectacle.demi));
+  } else if (vueSuivi && e && pions[e.courant]) {
     const cible = pions[e.courant].groupe.position.clone();
     camObjectifCible.lerp(cible, 0.2);
     camObjectifPos.copy(camObjectifCible).addScaledVector(CAM_DIR, Math.min(7, distanceVue * 0.55));

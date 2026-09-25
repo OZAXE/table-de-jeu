@@ -301,7 +301,10 @@
       </div>
     </div>
 
-    <button id="fermer-regles" style="margin-top:14px;">Fermer</button>
+    <div class="rangee" style="margin-top:14px;">
+      <button id="fermer-regles">Fermer</button>
+      <button id="menu-jeux" class="sombre">🎲 Tous les jeux</button>
+    </div>
   </div>
 </div>
 
@@ -318,6 +321,9 @@ document.getElementById('btn-regles').addEventListener('click', () => {
 });
 document.getElementById('fermer-regles').addEventListener('click',
   () => elModaleRegles.classList.add('cache'));
+// Retour au menu de tous les jeux. En pleine partie en ligne, la session est
+// gardée : « Reprendre la partie » ramène à sa place.
+document.getElementById('menu-jeux').addEventListener('click', () => { location.href = 'index.html'; });
 elModaleRegles.addEventListener('click', e => {
   if (e.target === elModaleRegles) elModaleRegles.classList.add('cache');
 });
@@ -1997,6 +2003,11 @@ function majListeJoueurs(etat) {
 // =====================================================================
 function cacherPanneau() { elPanneau.className = 'cache'; elPanneau.innerHTML = ''; }
 
+// Le bouton « Tous les jeux » des fins de manche (même effet que dans les règles).
+function boutonMenuJeux() {
+  return bouton('🎲 Tous les jeux', 'sombre', () => { location.href = 'index.html'; });
+}
+
 function bouton(texte, classe, onClick) {
   const b = document.createElement('button');
   b.textContent = texte;
@@ -2344,6 +2355,7 @@ function panneauVictoire(gagnant) {
     else serveur.demarrer(serveur.noms.slice());
   }));
   r.appendChild(bouton("Retour à l'accueil", 'sombre', () => location.reload()));
+  r.appendChild(boutonMenuJeux());
   p.appendChild(r);
 }
 

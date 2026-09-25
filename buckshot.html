@@ -234,6 +234,8 @@
   .fin-tableau { width: 100%; margin: 10px 0; border-collapse: collapse; }
   .fin-tableau td { padding: 8px; border-bottom: 1px solid var(--table-bord); }
   .fin-tableau td:last-child { text-align: right; color: var(--accent-clair); font-weight: bold; }
+  /* Retour au menu de tous les jeux (fin de manche, règles) */
+  .btn-menu-jeux { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
 </style>
 </head>
 <body>
@@ -336,6 +338,7 @@
       <table class="fin-tableau" id="fin-tableau"></table>
       <button class="btn-principal" onclick="nouvelleManche()">Nouvelle manche</button>
       <button class="btn-neutre" onclick="finPartie()">Arrêter la partie</button>
+      <button class="btn-menu-jeux" onclick="location.href='index.html'">🎲 Tous les jeux</button>
     </div>
   </section>
 
@@ -372,6 +375,7 @@
       <p>Chaque joueur a un objet par manche, jouable sur soi ou sur le tour en cours, même quand ce n'est pas son tour. En fin de manche, les objets sont remélangés et redistribués.</p>
 
       <button class="btn-principal" onclick="fermerRegles()">Fermer</button>
+      <button class="btn-menu-jeux" onclick="location.href='index.html'">🎲 Tous les jeux</button>
     </div>
   </div>
 

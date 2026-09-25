@@ -150,6 +150,8 @@
   .modale th { color: var(--accent); }
   .modale .accent { color: var(--accent-clair); font-weight: bold; }
   .modale .btn-fermer { background: var(--accent); color: #14181f; margin-top: 16px; }
+  /* Retour au menu de tous les jeux (fin de manche, règles) */
+  .btn-menu-jeux { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
 </style>
 </head>
 
@@ -209,6 +211,7 @@
       </ul>
 
       <button class="btn-fermer" onclick="fermerRegles()">Fermer</button>
+      <button class="btn-menu-jeux" onclick="location.href='index.html'">🎲 Tous les jeux</button>
     </div>
   </div>
 
@@ -245,6 +248,7 @@
   <div class="carte-ui hidden" id="ecran-fin">
     <div class="gros-message" id="message-fin"></div>
     <button class="btn-principal" onclick="rejouer()">Nouvelle partie</button>
+    <button class="btn-menu-jeux" onclick="location.href='index.html'">🎲 Tous les jeux</button>
   </div>
 </div>
 

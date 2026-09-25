@@ -97,6 +97,8 @@
   .modale th { color: var(--accent); }
   .modale .accent { color: var(--accent-clair); font-weight: bold; }
   .modale .btn-fermer { background: var(--accent); color: #2a1f17; margin-top: 16px; }
+  /* Retour au menu de tous les jeux (fin de manche, règles) */
+  .btn-menu-jeux { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
 </style>
 </head>
 <body>
@@ -147,6 +149,7 @@
       <h3>Assumer avoir perdu</h3>
       <p>Si tu as fait moins que le score à battre, avoue avec « j'ai perdu » : tu bois la colonne simple du score à battre, sans double peine.</p>
       <button class="btn-fermer" onclick="fermerRegles()">Fermer</button>
+      <button class="btn-menu-jeux" onclick="location.href='index.html'">🎲 Tous les jeux</button>
     </div>
   </div>
 
@@ -210,6 +213,7 @@
     <div id="phase-resultat" class="hidden">
       <div id="texte-resultat" style="text-align:center; padding:10px;"></div>
       <button class="btn-principal" onclick="envoyer('nouvelle_manche')">Manche suivante</button>
+      <button class="btn-menu-jeux" onclick="location.href='index.html'">🎲 Tous les jeux</button>
     </div>
   </div>
 </div>
