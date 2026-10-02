@@ -340,7 +340,7 @@ import * as THREE from 'three';
 // appelle ce moteur, en ligne il fait un ws.send().
 // =====================================================================
 const PP_JOUEURS_MIN = 2;
-const PP_JOUEURS_MAX = 6;
+const PP_JOUEURS_MAX = 8;
 
 // Monopoly classique français
 const PP_ARGENT_DEPART = 1500;
@@ -1671,7 +1671,7 @@ const serveur = {
 
   demarrer(noms, difficulte) {
     if (noms.length < PP_JOUEURS_MIN || noms.length > PP_JOUEURS_MAX) {
-      this.envoyer(0, { type: 'erreur', message: 'Picopoly se joue de 2 à 6.' });
+      this.envoyer(0, { type: 'erreur', message: 'Picopoly se joue de 2 à 8.' });
       return;
     }
     this.etat = ppInitialiser(noms, this.horloge(), difficulte);
@@ -1785,7 +1785,7 @@ function pomper() {
 // SCÈNE / CAMÉRA / RENDU
 // =====================================================================
 const COULEUR_CIEL = 0xbfe3f5;
-const COULEURS_JOUEURS = ['#e8543f', '#2f7fd8', '#23a35a', '#e0b000', '#9b4dca', '#f07f2c'];
+const COULEURS_JOUEURS = ['#e8543f', '#2f7fd8', '#23a35a', '#e0b000', '#9b4dca', '#f07f2c', '#e0569b', '#17a5a5'];
 const COULEURS_GROUPES = {
   marron: '#8b5a2b', bleu_clair: '#7ec8e3', rose: '#d6479b', orange: '#f28c28',
   rouge: '#e03c31', jaune: '#f2c200', vert: '#1fa055', bleu_fonce: '#1d4e9e',
@@ -2421,7 +2421,7 @@ function reculSpectacle(demi) {
 // --- Duel : un dé chacun, à la couleur du joueur, relancé tant qu'il y a égalité.
 const desDuel = {};
 function deDuel(i) {
-  const c = i % 6;
+  const c = i % COULEURS_JOUEURS.length;
   if (!desDuel[c]) {
     desDuel[c] = creerDe(FACES_BLANC, COULEURS_JOUEURS[c], '#ffffff');
     desDuel[c].scale.setScalar(1.35);
@@ -2435,7 +2435,7 @@ function animerDuel(msg) {
   const joueurs = [msg.joueur, msg.cible];
   const cubes = joueurs.map(deDuel);
   const noms = joueurs.map((j, n) => {
-    const sp = creerSpriteTexte(nomJoueur(j), '', COULEURS_JOUEURS[j % 6]);
+    const sp = creerSpriteTexte(nomJoueur(j), '', COULEURS_JOUEURS[j % COULEURS_JOUEURS.length]);
     sp.scale.set(1.5, 0.75, 1);
     sp.position.copy(REPOS_DUEL[n]).add(new THREE.Vector3(0, 0.95, 0));
     scene.add(sp);
@@ -2631,14 +2631,15 @@ function animerRoulette(msg) {
 // une case (son numéro), donc deux pions ne se chevauchent jamais.
 // =====================================================================
 const pions = [];
-const PLACES = [[-0.2, 0.05], [0.2, 0.05], [-0.2, 0.38], [0.2, 0.38], [-0.2, -0.28], [0.2, -0.28]];
+// Deux colonnes, quatre rangées : de quoi poser huit pions sans mordre sur la bande de couleur.
+const PLACES = [[-0.21, 0.23], [0.21, 0.23], [-0.21, 0.5], [0.21, 0.5], [-0.21, -0.04], [0.21, -0.04], [-0.21, -0.31], [0.21, -0.31]];
 
 function positionPion(k, i, enPrison) {
   const [du, dv] = PLACES[i % PLACES.length];
   if (k === PP_CASE_PRISON) {
     // Derrière les barreaux : le quart intérieur de la case ; en visite : le long des bords.
-    if (enPrison) return pointCase(k, 0.28 + (i % 2) * 0.22 - 0.11, -0.3 + Math.floor(i / 2) * 0.18 - 0.1, Y_PLATEAU);
-    const bord = [[-0.52, 0.52], [-0.52, 0.22], [-0.52, -0.08], [-0.22, 0.52], [0.08, 0.52], [0.38, 0.52]][i % 6];
+    if (enPrison) return pointCase(k, 0.28 + (i % 2) * 0.22 - 0.11, -0.46 + Math.floor(i / 2) * 0.18, Y_PLATEAU);
+    const bord = [[-0.55, 0.55], [-0.55, 0.28], [-0.55, 0.01], [-0.28, 0.55], [0.01, 0.55], [0.28, 0.55], [-0.55, -0.26], [0.55, 0.55]][i % 8];
     return pointCase(k, bord[0], bord[1], Y_PLATEAU);
   }
   if (geoCase(k).coin) return pointCase(k, du * 1.4, dv * 0.9 + 0.12, Y_PLATEAU);
@@ -2647,7 +2648,7 @@ function positionPion(k, i, enPrison) {
 
 function creerPion(i) {
   const g = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({ color: COULEURS_JOUEURS[i % 6], roughness: 0.35, metalness: 0.05 });
+  const mat = new THREE.MeshStandardMaterial({ color: COULEURS_JOUEURS[i % COULEURS_JOUEURS.length], roughness: 0.35, metalness: 0.05 });
   const socle = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.15, 0.06, 18), mat);
   socle.position.y = 0.03;
   const corps = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.11, 0.26, 16), mat);
@@ -3018,7 +3019,7 @@ function appliquerEtat(e) {
     if (!pr) continue;
     const barre = barresProprio[k];
     barre.visible = pr.proprietaire !== null;
-    if (pr.proprietaire !== null) barre.material.color.set(COULEURS_JOUEURS[pr.proprietaire % 6]);
+    if (pr.proprietaire !== null) barre.material.color.set(COULEURS_JOUEURS[pr.proprietaire % COULEURS_JOUEURS.length]);
     voilesHypo[k].visible = pr.hypotheque;
     majConstructions(k, pr.maisons);
   }
@@ -3106,7 +3107,7 @@ function majJoueurs(e) {
       + (e.faillite[i] ? ' faillite' : '') + (e.partis[i] ? ' absent' : '');
     const pa = document.createElement('span');
     pa.className = 'pastille';
-    pa.style.background = COULEURS_JOUEURS[i % 6];
+    pa.style.background = COULEURS_JOUEURS[i % COULEURS_JOUEURS.length];
     const n = document.createElement('span');
     n.className = 'nom';
     n.textContent = nom + (i === MOI ? ' (toi)' : '');
@@ -3213,7 +3214,7 @@ function pastilleBouton(i, texte, classe, onClick) {
   const b = bouton('', classe, onClick);
   const s = document.createElement('span');
   s.className = 'pastille-bouton';
-  s.style.background = COULEURS_JOUEURS[i % 6];
+  s.style.background = COULEURS_JOUEURS[i % COULEURS_JOUEURS.length];
   b.append(s, document.createTextNode(texte));
   return b;
 }
@@ -3942,7 +3943,7 @@ function botChoix(index, e, a) {
 // =====================================================================
 // ACCUEIL ET SALON
 // =====================================================================
-const NOMS_BOTS = ['Fury', 'Romanoff', 'Barton', 'Coulson', 'Hill'];
+const NOMS_BOTS = ['Fury', 'Romanoff', 'Barton', 'Coulson', 'Hill', 'Banner', 'Wilson'];
 
 const SERVEURS = {
   render: { http: 'https://kinito-serveur.onrender.com', ws: 'wss://kinito-serveur.onrender.com' },
@@ -4034,9 +4035,9 @@ function panneauAccueil() {
 // --- Solo : le moteur local et les bots, sans serveur ---
 function panneauSolo() {
   const p = ouvrirPanneau('Combien de joueurs ?');
-  p.appendChild(aide('Toi + des bots qui tiennent la place des autres. De 2 à 6. Une partie dure une heure.'));
+  p.appendChild(aide('Toi + des bots qui tiennent la place des autres. De 2 à 8. Une partie dure une heure.'));
   const r = rangee();
-  [2, 3, 4, 5, 6].forEach(n => r.appendChild(bouton(String(n), n === 4 ? '' : 'clair', () => demarrerSolo(n))));
+  [2, 3, 4, 5, 6, 7, 8].forEach(n => r.appendChild(bouton(String(n), n === 4 ? '' : 'clair', () => demarrerSolo(n))));
   p.appendChild(r);
   p.appendChild(rangeeDifficulte(panneauSolo));
   const r2 = rangee();
@@ -4254,7 +4255,7 @@ function panneauAttente() {
   code.className = 'code-salon';
   code.textContent = codeSalon;
   p.appendChild(code);
-  p.appendChild(aide('Donne ce code aux autres pour qu’ils rejoignent. De 2 à 6 joueurs.'));
+  p.appendChild(aide('Donne ce code aux autres pour qu’ils rejoignent. De 2 à 8 joueurs.'));
   const lien = lienSalon(codeSalon);
   if (typeof QRious !== 'undefined') {
     const cv = document.createElement('canvas');
