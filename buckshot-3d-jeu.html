@@ -894,7 +894,8 @@ scene.add(spriteScie);
 // Les positions relatives diffèrent donc d'un écran à l'autre — dire les
 // prénoms, jamais « celui de gauche ».
 // =====================================================================
-const COULEURS = [0x4a7ec2, 0xc25a4a, 0x5aa86a, 0xb58ac2, 0xc2a44a, 0x4ab0b5];
+// Huit couleurs : une par joueur jusqu'à 8.
+const COULEURS = [0x4a7ec2, 0xc25a4a, 0x5aa86a, 0xb58ac2, 0xc2a44a, 0x4ab0b5, 0xd9823a, 0xd46a9e];
 const sieges = [];
 
 function creerAvatar(couleur) {
@@ -1320,7 +1321,7 @@ const serveur = {
     this.noms = noms;
     const nb = noms.length;
     if (nb < 2) { this.diffuser({ type: 'erreur', message: 'Buckshot demande au moins 2 joueurs.' }); return; }
-    if (nb > 6) { this.diffuser({ type: 'erreur', message: 'Buckshot se joue a 6 joueurs maximum.' }); return; }
+    if (nb > 8) { this.diffuser({ type: 'erreur', message: 'Buckshot se joue a 8 joueurs maximum.' }); return; }
     this.etat = btInitialiser(nb);
     this.etat.chargeur = btLePlusVide(this.etat, this.absents);
     this.diffuser({ type: 'bt_demarree', joueurs: noms.slice() });
@@ -2340,7 +2341,7 @@ let enPartie = false;
 let monJeton = null;
 
 const JOUEURS_MIN = 2;
-const JOUEURS_MAX = 6;
+const JOUEURS_MAX = 8;
 
 // Le jeton permet de retrouver sa place après une coupure ou un rechargement.
 // localStorage peut lever (navigation privée, site data bloqué) : tout est gardé.
@@ -2708,7 +2709,7 @@ function panneauAttente() {
   code.textContent = codeSalon;
   p.appendChild(code);
 
-  p.appendChild(aide('Donne ce code aux autres pour qu’ils rejoignent. De 2 à 6 joueurs.'));
+  p.appendChild(aide('Donne ce code aux autres pour qu’ils rejoignent. De 2 à 8 joueurs.'));
 
   const lien = lienSalon(codeSalon);
   if (typeof QRious !== 'undefined') {
