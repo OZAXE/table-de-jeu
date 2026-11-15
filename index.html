@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>La Table de Jeu</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="theme-color" content="#0a2017">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Table de Jeu">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <style>
   :root {
     --fond: #0a2017;
@@ -76,6 +84,20 @@
   .btn-en-ligne:hover { filter: brightness(1.1); }
   .btn-3d { background: #7a4fd6; color: #f4efff; }
   .btn-3d:hover { filter: brightness(1.12); }
+  /* Bandeau "Installer l'appli" : caché par défaut, affiché par le script selon le téléphone */
+  .installer {
+    display: none; width: 100%; max-width: 440px; margin: -16px 0 24px;
+    background: var(--fond-clair); border: 1px dashed var(--accent);
+    border-radius: 14px; padding: 14px 16px; text-align: center;
+  }
+  .installer.visible { display: block; }
+  .installer p { color: var(--texte-doux); font-size: 0.88rem; line-height: 1.5; }
+  .installer b { color: var(--accent-clair); }
+  .installer button {
+    margin-top: 10px; width: 100%; padding: 12px; border: 0; border-radius: 10px;
+    background: var(--accent); color: #14181f; font: bold 0.95rem 'Trebuchet MS', sans-serif; cursor: pointer;
+  }
+  .installer button:active { transform: scale(0.97); }
   .pied { margin-top: 40px; color: var(--texte-doux); font-size: 0.8rem; text-align: center; }
 
   /* Petits telephones : le titre en 2.8rem deborde sous 360 px de large. */
@@ -92,6 +114,11 @@
     <div class="sur-titre">Jeux de soirée</div>
     <h1>La <span class="accent">Table</span> de Jeu</h1>
     <p class="slogan">Choisis ton poison, et que le meilleur gagne</p>
+  </div>
+
+  <div class="installer" id="installer">
+    <p id="installer-texte">Installe <b>La Table de Jeu</b> sur ton téléphone : elle s'ouvre en plein écran depuis son icône, comme une vraie appli.</p>
+    <button type="button" id="installer-bouton">Installer l'appli</button>
   </div>
 
   <div class="jeux">
@@ -147,5 +174,43 @@
   </div>
 
   <div class="pied">À consommer avec modération · Fait maison entre potes</div>
+<script>
+  // --- Appli installable (PWA) : voir manifest.json et service-worker.js ---
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(() => {});
+
+  (function () {
+    const bandeau = document.getElementById('installer');
+    const texte = document.getElementById('installer-texte');
+    const bouton = document.getElementById('installer-bouton');
+    const dejaInstallee = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    if (dejaInstallee) return;
+
+    // Android / Chrome / Edge : le navigateur fournit sa fenêtre d'installation, on la garde pour le bouton.
+    let invite = null;
+    addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      invite = e;
+      bandeau.classList.add('visible');
+    });
+    bouton.addEventListener('click', async () => {
+      if (!invite) return;
+      invite.prompt();
+      await invite.userChoice;
+      invite = null;
+      bandeau.classList.remove('visible');
+    });
+    addEventListener('appinstalled', () => bandeau.classList.remove('visible'));
+
+    // iPhone / iPad : pas de fenêtre d'installation, Safari passe par le bouton Partager.
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (ios) {
+      texte.innerHTML = 'Pour installer <b>La Table de Jeu</b> : dans Safari, touche le bouton ' +
+        '<b>Partager</b> (le carré avec une flèche), puis <b>Sur l\'écran d\'accueil</b>.';
+      bouton.style.display = 'none';
+      bandeau.classList.add('visible');
+    }
+  })();
+</script>
 </body>
 </html>
