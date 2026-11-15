@@ -3625,8 +3625,7 @@ function panneauFin(e) {
   });
   p.appendChild(t);
   const r = rangee();
-  if (mode === 'local') r.appendChild(bouton('Rejouer', '', () => { difficulteChoisie = difficulteCourante(); demarrerSolo(dernierNbSolo); }));
-  else if (estCreateur) r.appendChild(bouton('Relancer une partie', '', () => envoyer({ type: 'pp_demarrer', difficulte: difficulteCourante() })));
+  if (estCreateur) r.appendChild(bouton('Relancer une partie', '', () => envoyer({ type: 'pp_demarrer', difficulte: difficulteCourante() })));
   else p.appendChild(aide('Le créateur du salon peut relancer une partie.'));
   r.appendChild(bouton('Quitter', 'clair', () => { oublierSession(); if (ws) { try { ws.close(); } catch (x) { /* déjà fermée */ } } location.href = location.pathname; }));
   r.appendChild(bouton('🎲 Tous les jeux', 'clair', () => { oublierSession(); location.href = 'index.html'; }));
@@ -3964,7 +3963,6 @@ let codeSalon = '';
 let estCreateur = false;
 let joueursSalon = [];
 let monJeton = null;
-let dernierNbSolo = 4;
 let difficulteChoisie = 'normal';
 
 const LIBELLES_DIFFICULTE = {
@@ -4019,11 +4017,8 @@ function afficherErreur(texte) { rappel(texte, true); }
 function panneauAccueil() {
   elMessage.textContent = '🍻 Picopoly';
   rappel('Le Monopoly à boire, dans les bars de Poitiers');
-  const p = ouvrirPanneau('Comment tu joues ?');
-  const r = rangee();
-  r.appendChild(bouton('En ligne', '', panneauEnLigne));
-  r.appendChild(bouton('Solo contre des bots', 'clair', panneauSolo));
-  p.appendChild(r);
+  // Plus de mode solo : on arrive directement sur le jeu en ligne.
+  const p = panneauEnLigne();
 
   const s = lireSession();
   if (s && s.code && s.jeton) {
@@ -4038,32 +4033,6 @@ function panneauAccueil() {
     }));
     p.appendChild(r2);
   }
-}
-
-// --- Solo : le moteur local et les bots, sans serveur ---
-function panneauSolo() {
-  const p = ouvrirPanneau('Combien de joueurs ?');
-  p.appendChild(aide('Toi + des bots qui tiennent la place des autres. De 2 à 8. Une partie dure une heure.'));
-  const r = rangee();
-  [2, 3, 4, 5, 6, 7, 8].forEach(n => r.appendChild(bouton(String(n), n === 4 ? '' : 'clair', () => demarrerSolo(n))));
-  p.appendChild(r);
-  p.appendChild(rangeeDifficulte(panneauSolo));
-  const r2 = rangee();
-  r2.style.marginTop = '12px';
-  r2.appendChild(bouton('Retour', 'clair', panneauAccueil));
-  p.appendChild(r2);
-}
-
-function demarrerSolo(nb) {
-  dernierNbSolo = nb;
-  mode = 'local';
-  monJeton = null;
-  oublierSession();
-  MOI = 0;
-  cacherPanneau();
-  enPartie = false;
-  fileActions.length = 0;
-  serveur.demarrer(['Toi'].concat(NOMS_BOTS.slice(0, nb - 1)), difficulteChoisie);
 }
 
 // --- En ligne ---
@@ -4132,12 +4101,12 @@ function panneauEnLigne() {
   const l4 = rangee();
   l4.style.marginTop = '12px';
   l4.appendChild(boutonServeur());
-  l4.appendChild(bouton('Retour', 'clair petit', panneauAccueil));
   p.appendChild(l4);
   const note = document.createElement('div');
   note.className = 'note';
   note.textContent = "Le serveur Render s'endort : la première connexion peut prendre 30 s.";
   p.appendChild(note);
+  return p;
 }
 
 function lireNom() {
