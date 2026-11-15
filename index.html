@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>La Table de Jeu</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -12,168 +12,298 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Table de Jeu">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --fond: #0a2017;
-    --fond-clair: #0d2a1f;
-    --carte: #134032;
-    --carte-bord: #1d6b50;
-    --accent: #d4af68;
-    --accent-clair: #ecd29a;
-    --texte: #f0ece0;
-    --texte-doux: #9bb0a4;
-    --en-ligne: #4fb37a;
+    --fond: #06120d;
+    --surface: rgba(255, 255, 255, 0.045);
+    --surface-forte: rgba(255, 255, 255, 0.08);
+    --bord: rgba(255, 255, 255, 0.09);
+    --texte: #f4f1ea;
+    --texte-doux: #a3b3aa;
+    --texte-pale: #6f8379;
+    --or: #e2c081;
+    --rayon: 26px;
   }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { background: var(--fond); }
   body {
-    font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+    font-family: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
     background: var(--fond);
-    background-image:
-      radial-gradient(circle at 50% 0%, #16523e 0%, #0a2017 70%),
-      repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(0,0,0,0.04) 6px, rgba(0,0,0,0.04) 12px);
     color: var(--texte);
     min-height: 100vh;
-    display: flex; flex-direction: column; align-items: center;
-    padding: 28px 16px 40px;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    padding: max(20px, env(safe-area-inset-top)) 16px max(28px, env(safe-area-inset-bottom));
   }
-  .entete { text-align: center; margin-bottom: 36px; margin-top: 12px; }
-  .sur-titre {
-    color: var(--accent); letter-spacing: 4px; font-size: 0.8rem;
-    text-transform: uppercase; margin-bottom: 10px;
-  }
-  h1 {
-    font-family: Georgia, 'Times New Roman', serif;
-    font-size: 2.8rem; color: var(--texte); line-height: 1.1;
-    text-shadow: 0 3px 12px rgba(0,0,0,0.5);
-  }
-  h1 .accent { color: var(--accent); }
-  .slogan { color: var(--texte-doux); font-style: italic; margin-top: 12px; font-size: 1rem; }
-  .jeux { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 20px; }
-  .jeu {
-    background: var(--carte); border: 1px solid var(--carte-bord);
-    border-radius: 18px; padding: 24px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.45);
-    position: relative; overflow: hidden;
-    transition: transform 0.15s ease, box-shadow 0.2s ease;
-  }
-  .jeu:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.55); }
-  .jeu::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
-    background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  }
-  .jeu-icone { font-size: 2.4rem; margin-bottom: 10px; }
-  .jeu-nom { font-family: Georgia, serif; font-size: 1.6rem; color: var(--accent-clair); margin-bottom: 6px; }
-  .jeu-desc { color: var(--texte-doux); font-size: 0.92rem; line-height: 1.5; margin-bottom: 18px; }
-  .badge {
-    display: inline-block; background: var(--en-ligne); color: #0a2017;
-    font-size: 0.7rem; padding: 2px 8px; border-radius: 4px;
-    font-weight: bold; vertical-align: middle; margin-left: 6px;
-    letter-spacing: 1px;
-  }
-  .boutons { display: flex; gap: 10px; flex-direction: column; }
-  a.btn {
-    flex: 1; text-align: center; text-decoration: none;
-    padding: 13px 14px; border-radius: 10px;
-    font-weight: bold; font-size: 0.95rem;
-    transition: filter 0.15s ease, transform 0.1s ease; display: block;
-  }
-  a.btn:active { transform: scale(0.97); }
-  .btn-jouer { background: var(--accent); color: #14181f; }
-  .btn-jouer:hover { filter: brightness(1.1); }
-  .btn-en-ligne { background: var(--en-ligne); color: #0a2017; }
-  .btn-en-ligne:hover { filter: brightness(1.1); }
-  .btn-3d { background: #7a4fd6; color: #f4efff; }
-  .btn-3d:hover { filter: brightness(1.12); }
-  /* Bandeau "Installer l'appli" : caché par défaut, affiché par le script selon le téléphone */
-  .installer {
-    display: none; width: 100%; max-width: 440px; margin: -16px 0 24px;
-    background: var(--fond-clair); border: 1px dashed var(--accent);
-    border-radius: 14px; padding: 14px 16px; text-align: center;
-  }
-  .installer.visible { display: block; }
-  .installer p { color: var(--texte-doux); font-size: 0.88rem; line-height: 1.5; }
-  .installer b { color: var(--accent-clair); }
-  .installer button {
-    margin-top: 10px; width: 100%; padding: 12px; border: 0; border-radius: 10px;
-    background: var(--accent); color: #14181f; font: bold 0.95rem 'Trebuchet MS', sans-serif; cursor: pointer;
-  }
-  .installer button:active { transform: scale(0.97); }
-  .pied { margin-top: 40px; color: var(--texte-doux); font-size: 0.8rem; text-align: center; }
 
-  /* Petits telephones : le titre en 2.8rem deborde sous 360 px de large. */
+  /* Halos de couleur en fond, qui dérivent lentement */
+  .halos { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+  .halos span {
+    position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.45;
+    animation: derive 22s ease-in-out infinite alternate;
+  }
+  .halos span:nth-child(1) { width: 420px; height: 420px; background: #1c7a55; top: -160px; left: -120px; }
+  .halos span:nth-child(2) { width: 360px; height: 360px; background: #b8862f; top: 30%; right: -200px; opacity: 0.22; animation-delay: -7s; }
+  .halos span:nth-child(3) { width: 380px; height: 380px; background: #6b2fb8; bottom: -180px; left: 10%; opacity: 0.22; animation-delay: -14s; }
+  @keyframes derive {
+    from { transform: translate(0, 0) scale(1); }
+    to { transform: translate(40px, 30px) scale(1.12); }
+  }
+
+  .page { max-width: 980px; margin: 0 auto; }
+
+  /* --- En-tête --- */
+  .entete { display: flex; align-items: center; gap: 14px; margin: 8px 0 30px; }
+  .logo {
+    width: 52px; height: 52px; border-radius: 16px; flex-shrink: 0;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+  .entete h1 { font-size: 1.45rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+  .entete h1 span { color: var(--or); }
+  .entete p { color: var(--texte-doux); font-size: 0.92rem; margin-top: 2px; }
+
+  .accroche { margin-bottom: 22px; }
+  .accroche h2 {
+    font-size: clamp(2rem, 8vw, 3.2rem); font-weight: 800; letter-spacing: -0.035em; line-height: 1.02;
+  }
+  .accroche h2 em {
+    font-style: normal;
+    background: linear-gradient(100deg, #f7d58b, #f39a4a 45%, #e8507a);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .accroche p { color: var(--texte-doux); margin-top: 10px; font-size: 1rem; max-width: 34ch; }
+
+  /* --- Bandeau d'installation (caché par défaut, affiché par le script) --- */
+  .installer {
+    display: none; align-items: center; gap: 14px;
+    background: var(--surface); border: 1px solid var(--bord);
+    border-radius: 20px; padding: 14px 14px 14px 16px; margin-bottom: 22px;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  }
+  .installer.visible { display: flex; animation: apparait 0.5s ease both; }
+  .installer .ico {
+    width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+    display: grid; place-items: center; font-size: 1.25rem;
+    background: linear-gradient(135deg, rgba(226, 192, 129, 0.25), rgba(226, 192, 129, 0.08));
+  }
+  .installer p { flex: 1; color: var(--texte-doux); font-size: 0.88rem; line-height: 1.4; }
+  .installer b { color: var(--texte); font-weight: 600; }
+  .installer button {
+    border: 0; border-radius: 12px; padding: 10px 16px; cursor: pointer;
+    background: var(--or); color: #1a1408; font: 600 0.9rem 'Outfit', sans-serif; white-space: nowrap;
+    transition: transform 0.15s ease, filter 0.15s ease;
+  }
+  .installer button:hover { filter: brightness(1.08); }
+  .installer button:active { transform: scale(0.95); }
+
+  /* --- Les jeux --- */
+  .titre-section {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin: 6px 2px 14px;
+  }
+  .titre-section h3 { font-size: 1.05rem; font-weight: 600; }
+  .titre-section span { color: var(--texte-pale); font-size: 0.85rem; }
+
+  .jeux { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  @media (min-width: 720px) { .jeux { grid-template-columns: 1fr 1fr; gap: 20px; } }
+
+  .jeu {
+    --c1: #888; --c2: #444;
+    position: relative; display: flex; flex-direction: column; overflow: hidden;
+    min-height: 228px; padding: 22px; border-radius: var(--rayon);
+    text-decoration: none; color: var(--texte);
+    background:
+      radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--c1) 38%, transparent), transparent 60%),
+      linear-gradient(160deg, color-mix(in srgb, var(--c2) 30%, #0d1712), #0b1410 70%);
+    border: 1px solid color-mix(in srgb, var(--c1) 28%, transparent);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+    transition: transform 0.25s cubic-bezier(.2, .8, .2, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+    animation: apparait 0.6s cubic-bezier(.2, .8, .2, 1) both;
+  }
+  .jeu:nth-child(2) { animation-delay: 0.07s; }
+  .jeu:nth-child(3) { animation-delay: 0.14s; }
+  .jeu:nth-child(4) { animation-delay: 0.21s; }
+  .jeu:hover {
+    transform: translateY(-4px);
+    border-color: color-mix(in srgb, var(--c1) 55%, transparent);
+    box-shadow: 0 24px 50px rgba(0, 0, 0, 0.45), 0 0 40px color-mix(in srgb, var(--c1) 22%, transparent);
+  }
+  .jeu:active { transform: scale(0.98); }
+  .jeu:focus-visible { outline: 3px solid var(--c1); outline-offset: 3px; }
+
+  /* Grande illustration en filigrane, qui flotte */
+  .jeu .deco {
+    position: absolute; right: 2px; top: 8px; font-size: 6.8rem; line-height: 1;
+    filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.5));
+    transform: rotate(12deg);
+    animation: flotte 6s ease-in-out infinite;
+    user-select: none;
+  }
+  .jeu:nth-child(2) .deco { animation-delay: -1.5s; }
+  .jeu:nth-child(3) .deco { animation-delay: -3s; }
+  .jeu:nth-child(4) .deco { animation-delay: -4.5s; }
+  @keyframes flotte {
+    0%, 100% { transform: rotate(12deg) translateY(0); }
+    50% { transform: rotate(6deg) translateY(-8px); }
+  }
+
+  .jeu .haut { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: auto; position: relative; z-index: 1; max-width: 70%; }
+  .etiquette {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 0.75rem; font-weight: 500; color: #e9efe9;
+    background: rgba(0, 0, 0, 0.32); border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 5px 10px; border-radius: 999px;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  }
+  .etiquette.vive { background: color-mix(in srgb, var(--c1) 85%, #000); border-color: transparent; color: #fff; font-weight: 600; }
+  .nouveau {
+    display: inline-block; vertical-align: middle; margin-left: 6px;
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 4px 9px; border-radius: 999px; color: #fff;
+    background: linear-gradient(135deg, var(--c1), var(--c2));
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--c1) 45%, transparent);
+  }
+  .point { width: 7px; height: 7px; border-radius: 50%; background: #5df2a0; box-shadow: 0 0 8px #5df2a0; }
+
+  .jeu .bas { position: relative; z-index: 1; margin-top: 28px; }
+  .jeu h4 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.03em; }
+  .jeu p { color: var(--texte-doux); font-size: 0.93rem; line-height: 1.45; margin-top: 4px; max-width: 40ch; }
+  .jeu .action { display: flex; align-items: center; justify-content: space-between; margin-top: 18px; gap: 12px; }
+  .jeu .infos { color: var(--texte-pale); font-size: 0.82rem; }
+  .jeu .jouer {
+    display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0;
+    padding: 11px 18px 11px 20px; border-radius: 999px;
+    background: linear-gradient(135deg, var(--c1), var(--c2));
+    color: #fff; font-weight: 600; font-size: 0.95rem;
+    box-shadow: 0 8px 22px color-mix(in srgb, var(--c1) 40%, transparent);
+    transition: gap 0.2s ease;
+  }
+  .jeu:hover .jouer { gap: 12px; }
+  .jouer svg { width: 16px; height: 16px; }
+
+  .kinito     { --c1: #f59e2e; --c2: #c2410c; }
+  .beerbattle { --c1: #22c3a6; --c2: #0f766e; }
+  .buckshot   { --c1: #f04462; --c2: #9f1239; }
+  .picopoly   { --c1: #a855f7; --c2: #6d28d9; }
+
+  .pied {
+    margin-top: 34px; text-align: center; color: var(--texte-pale); font-size: 0.8rem; line-height: 1.6;
+  }
+
+  @keyframes apparait {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
   @media (max-width: 380px) {
-    body { padding: 20px 12px 32px; }
-    h1 { font-size: 2.1rem; }
-    .jeu { padding: 18px; }
-    .jeu-nom { font-size: 1.35rem; }
+    .jeu { padding: 18px; min-height: 210px; }
+    .jeu .deco { font-size: 5.6rem; }
+    .jeu h4 { font-size: 1.5rem; }
   }
 </style>
 </head>
 <body>
-  <div class="entete">
-    <div class="sur-titre">Jeux de soirée</div>
-    <h1>La <span class="accent">Table</span> de Jeu</h1>
-    <p class="slogan">Choisis ton poison, et que le meilleur gagne</p>
-  </div>
+  <div class="halos" aria-hidden="true"><span></span><span></span><span></span></div>
 
-  <div class="installer" id="installer">
-    <p id="installer-texte">Installe <b>La Table de Jeu</b> sur ton téléphone : elle s'ouvre en plein écran depuis son icône, comme une vraie appli.</p>
-    <button type="button" id="installer-bouton">Installer l'appli</button>
-  </div>
+  <main class="page">
+    <header class="entete">
+      <img class="logo" src="icons/icon-192.png" alt="">
+      <div>
+        <h1>La <span>Table</span> de Jeu</h1>
+        <p>Jeux de soirée entre potes</p>
+      </div>
+    </header>
 
-  <div class="jeux">
-    <!-- Kinito -->
-    <div class="jeu">
-      <div class="jeu-icone">&#127922;</div>
-      <div class="jeu-nom">Kinito <span class="badge">EN LIGNE</span></div>
-      <div class="jeu-desc">
-        Le jeu de dés où le bluff est roi. Annonce ton score, mens si tu l'oses,
-        et démasque les menteurs. Jouable à distance, chacun sur son téléphone.
-      </div>
-      <div class="boutons">
-        <a class="btn btn-3d" href="kinito-3d-jeu.html">Jouer en ligne (3D)</a>
-      </div>
+    <section class="accroche">
+      <h2>Choisis ton poison, <em>que le meilleur gagne.</em></h2>
+      <p>Chacun sur son téléphone, tout le monde à la même table.</p>
+    </section>
+
+    <div class="installer" id="installer">
+      <div class="ico" aria-hidden="true">📲</div>
+      <p id="installer-texte">Installe <b>La Table de Jeu</b>&nbsp;: plein écran, direct depuis ton écran d'accueil.</p>
+      <button type="button" id="installer-bouton">Installer</button>
     </div>
 
-    <!-- BeerBattle -->
-    <div class="jeu">
-      <div class="jeu-icone">&#127183;</div>
-      <div class="jeu-nom">BeerBattle <span class="badge">EN LIGNE</span></div>
-      <div class="jeu-desc">
-        Le jeu de plateau tactique. Déplace-toi, ramasse des cartes, pose tes armes
-        et fais boire tes adversaires jusqu'à les éliminer. Le dernier debout gagne.
-      </div>
-      <div class="boutons">
-        <a class="btn btn-3d" href="beerbattle-3d-jeu.html">Jouer en ligne (3D)</a>
-      </div>
+    <div class="titre-section">
+      <h3>Les jeux</h3>
+      <span>4 jeux · en ligne</span>
     </div>
-    <!-- Buckshot -->
-    <div class="jeu">
-      <div class="jeu-icone">&#128165;</div>
-      <div class="jeu-nom">Buckshot <span class="badge">EN LIGNE</span></div>
-      <div class="jeu-desc">
-        Roulette russe version soirée. Réelle ou à blanc ? Sers-toi ou sers un
-        adversaire, joue tes objets au bon moment et garde ton verre le plus vide.
-      </div>
-      <div class="boutons">
-        <a class="btn btn-3d" href="buckshot-3d-jeu.html">Jouer en ligne (3D)</a>
-      </div>
-    </div>
-    <!-- Picopoly -->
-    <div class="jeu">
-      <div class="jeu-icone">&#127867;</div>
-      <div class="jeu-nom">Picopoly <span class="badge">EN LIGNE</span></div>
-      <div class="jeu-desc">
-        Le Monopoly à boire, dans les bars de Poitiers. Achète, construis, fais
-        payer les loyers… en gorgées. Une heure de chrono, le plus riche gagne. Trois difficultés.
-      </div>
-      <div class="boutons">
-        <a class="btn btn-3d" href="picolopoly-3d-jeu.html">Jouer en ligne (3D) <span class="badge">NOUVEAU</span></a>
-      </div>
-    </div>
-  </div>
 
-  <div class="pied">À consommer avec modération · Fait maison entre potes</div>
+    <div class="jeux">
+      <a class="jeu kinito" href="kinito-3d-jeu.html">
+        <div class="deco" aria-hidden="true">🎲</div>
+        <div class="haut">
+          <span class="etiquette"><span class="point"></span>En ligne</span>
+          <span class="etiquette">👥 2 à 6</span>
+        </div>
+        <div class="bas">
+          <h4>Kinito</h4>
+          <p>Le jeu de dés où le bluff est roi. Annonce ton score, mens si tu l'oses, démasque les menteurs.</p>
+          <div class="action">
+            <span class="infos">Dés · Bluff</span>
+            <span class="jouer">Jouer <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+          </div>
+        </div>
+      </a>
+
+      <a class="jeu beerbattle" href="beerbattle-3d-jeu.html">
+        <div class="deco" aria-hidden="true">🃏</div>
+        <div class="haut">
+          <span class="etiquette"><span class="point"></span>En ligne</span>
+          <span class="etiquette">👥 3 à 5</span>
+        </div>
+        <div class="bas">
+          <h4>BeerBattle</h4>
+          <p>Plateau tactique&nbsp;: déplace-toi, ramasse des cartes, pose tes armes. Le dernier debout gagne.</p>
+          <div class="action">
+            <span class="infos">Cartes · Stratégie</span>
+            <span class="jouer">Jouer <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+          </div>
+        </div>
+      </a>
+
+      <a class="jeu buckshot" href="buckshot-3d-jeu.html">
+        <div class="deco" aria-hidden="true">💥</div>
+        <div class="haut">
+          <span class="etiquette"><span class="point"></span>En ligne</span>
+          <span class="etiquette">👥 2 à 6</span>
+        </div>
+        <div class="bas">
+          <h4>Buckshot</h4>
+          <p>Roulette russe version soirée. Réelle ou à blanc&nbsp;? Sers-toi ou sers un adversaire.</p>
+          <div class="action">
+            <span class="infos">Hasard · Objets</span>
+            <span class="jouer">Jouer <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+          </div>
+        </div>
+      </a>
+
+      <a class="jeu picopoly" href="picolopoly-3d-jeu.html">
+        <div class="deco" aria-hidden="true">🍻</div>
+        <div class="haut">
+          <span class="etiquette"><span class="point"></span>En ligne</span>
+          <span class="etiquette">👥 2 à 8</span>
+        </div>
+        <div class="bas">
+          <h4>Picopoly <span class="nouveau">Nouveau</span></h4>
+          <p>Le Monopoly à boire dans les bars de Poitiers. Achète, construis, fais payer… en gorgées.</p>
+          <div class="action">
+            <span class="infos">1 h chrono · 3 difficultés</span>
+            <span class="jouer">Jouer <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <footer class="pied">À consommer avec modération · Fait maison entre potes</footer>
+  </main>
+
 <script>
   // --- Appli installable (PWA) : voir manifest.json et service-worker.js ---
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(() => {});
@@ -205,8 +335,7 @@
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
       (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     if (ios) {
-      texte.innerHTML = 'Pour installer <b>La Table de Jeu</b> : dans Safari, touche le bouton ' +
-        '<b>Partager</b> (le carré avec une flèche), puis <b>Sur l\'écran d\'accueil</b>.';
+      texte.innerHTML = 'Pour installer l\'appli&nbsp;: touche <b>Partager</b> dans Safari, puis <b>Sur l\'écran d\'accueil</b>.';
       bouton.style.display = 'none';
       bandeau.classList.add('visible');
     }
