@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=2">
 <link rel="apple-touch-icon" href="icons/icon-180.png?v=2">
-<meta name="theme-color" content="#0a2017">
+<meta name="theme-color" content="#070f1f">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="SHIELD">
@@ -17,14 +17,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --fond: #06120d;
+    --fond: #050a14;
     --surface: rgba(255, 255, 255, 0.045);
     --surface-forte: rgba(255, 255, 255, 0.08);
     --bord: rgba(255, 255, 255, 0.09);
     --texte: #f4f1ea;
-    --texte-doux: #a3b3aa;
-    --texte-pale: #6f8379;
-    --or: #e2c081;
+    --texte-doux: #a9b4c4;
+    --texte-pale: #6c7a8f;
+    --or: #dfe6ef;            /* argent, comme le cercle du logo */
+    --acier: #7aa2d6;
     --rayon: 26px;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -45,9 +46,9 @@
     position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.45;
     animation: derive 22s ease-in-out infinite alternate;
   }
-  .halos span:nth-child(1) { width: 420px; height: 420px; background: #1c7a55; top: -160px; left: -120px; }
-  .halos span:nth-child(2) { width: 360px; height: 360px; background: #b8862f; top: 30%; right: -200px; opacity: 0.22; animation-delay: -7s; }
-  .halos span:nth-child(3) { width: 380px; height: 380px; background: #6b2fb8; bottom: -180px; left: 10%; opacity: 0.22; animation-delay: -14s; }
+  .halos span:nth-child(1) { width: 420px; height: 420px; background: #1e3a66; top: -160px; left: -120px; opacity: 0.6; }
+  .halos span:nth-child(2) { width: 360px; height: 360px; background: #9fb0c6; top: 30%; right: -200px; opacity: 0.12; animation-delay: -7s; }
+  .halos span:nth-child(3) { width: 380px; height: 380px; background: #2c4f8c; bottom: -180px; left: 10%; opacity: 0.3; animation-delay: -14s; }
   @keyframes derive {
     from { transform: translate(0, 0) scale(1); }
     to { transform: translate(40px, 30px) scale(1.12); }
@@ -71,7 +72,7 @@
   }
   .accroche h2 em {
     font-style: normal;
-    background: linear-gradient(100deg, #f7d58b, #f39a4a 45%, #e8507a);
+    background: linear-gradient(100deg, #ffffff, #c3cfdd 45%, var(--acier));
     -webkit-background-clip: text; background-clip: text; color: transparent;
   }
   .accroche p { color: var(--texte-doux); margin-top: 10px; font-size: 1rem; max-width: 34ch; }
@@ -87,13 +88,13 @@
   .installer .ico {
     width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
     display: grid; place-items: center; font-size: 1.25rem;
-    background: linear-gradient(135deg, rgba(226, 192, 129, 0.25), rgba(226, 192, 129, 0.08));
+    background: linear-gradient(135deg, rgba(223, 230, 239, 0.22), rgba(223, 230, 239, 0.06));
   }
   .installer p { flex: 1; color: var(--texte-doux); font-size: 0.88rem; line-height: 1.4; }
   .installer b { color: var(--texte); font-weight: 600; }
   .installer button {
     border: 0; border-radius: 12px; padding: 10px 16px; cursor: pointer;
-    background: var(--or); color: #1a1408; font: 600 0.9rem 'Outfit', sans-serif; white-space: nowrap;
+    background: var(--or); color: #0a1424; font: 600 0.9rem 'Outfit', sans-serif; white-space: nowrap;
     transition: transform 0.15s ease, filter 0.15s ease;
   }
   .installer button:hover { filter: brightness(1.08); }
@@ -117,7 +118,7 @@
     text-decoration: none; color: var(--texte);
     background:
       radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--c1) 38%, transparent), transparent 60%),
-      linear-gradient(160deg, color-mix(in srgb, var(--c2) 30%, #0d1712), #0b1410 70%);
+      linear-gradient(160deg, color-mix(in srgb, var(--c2) 30%, #0b1322), #080e1a 70%);
     border: 1px solid color-mix(in srgb, var(--c1) 28%, transparent);
     box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
     transition: transform 0.25s cubic-bezier(.2, .8, .2, 1), box-shadow 0.25s ease, border-color 0.25s ease;
@@ -155,7 +156,7 @@
   .jeu .haut { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: auto; position: relative; z-index: 1; max-width: 70%; }
   .etiquette {
     display: inline-flex; align-items: center; gap: 5px;
-    font-size: 0.75rem; font-weight: 500; color: #e9efe9;
+    font-size: 0.75rem; font-weight: 500; color: #e8edf4;
     background: rgba(0, 0, 0, 0.32); border: 1px solid rgba(255, 255, 255, 0.1);
     padding: 5px 10px; border-radius: 999px;
     backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
@@ -296,7 +297,7 @@
         </div>
       </a>
       <a class="jeu menteur" href="menteur-3d-jeu.html">
-        <div class="deco" aria-hidden="true">🤥</div>
+        <div class="deco" aria-hidden="true">🎭</div>
         <div class="haut">
           <span class="etiquette"><span class="point"></span>En ligne</span>
           <span class="etiquette">👥 2 à 8</span>
