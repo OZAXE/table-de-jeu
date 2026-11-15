@@ -415,3 +415,30 @@ export function creerTableRonde(rayon, { rayonFeutre = rayon - 0.2, feutreCouleu
   groupe.add(table, feutre, cerclage, filet);
   return { groupe, table, feutre };
 }
+
+// ---------------------------------------------------------------------
+// Sous-verre à la couleur du joueur, posé sous sa chope. Il remplace les
+// personnages : il s'allume quand c'est son tour, s'estompe s'il est parti
+// (userData.materiaux, comme l'ancien buste), et porte une zone de clic
+// invisible un peu plus large que le verre (pour viser un joueur).
+// ---------------------------------------------------------------------
+const GEO_SOUS_VERRE = new THREE.CylinderGeometry(0.19, 0.19, 0.014, 64);
+const GEO_LISERE_SV = new THREE.TorusGeometry(0.19, 0.009, 10, 64);
+const GEO_CLIC = new THREE.CylinderGeometry(0.28, 0.28, 0.6, 16);
+const MAT_CLIC = new THREE.MeshBasicMaterial({ visible: false });
+
+export function creerSousVerre(couleur) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: couleur, roughness: 0.45, metalness: 0.1, envMapIntensity: 0.4 });
+  const disque = new THREE.Mesh(GEO_SOUS_VERRE, mat);
+  disque.position.y = 0.007;
+  disque.receiveShadow = true;
+  const lisere = new THREE.Mesh(GEO_LISERE_SV, LAITON());
+  lisere.rotation.x = Math.PI / 2;
+  lisere.position.y = 0.012;
+  const clic = new THREE.Mesh(GEO_CLIC, MAT_CLIC);
+  clic.position.y = 0.3;
+  g.add(disque, lisere, clic);
+  g.userData.materiaux = [mat];
+  return g;
+}
