@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 <style>
   html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; background: #140d08; }
@@ -22,7 +22,7 @@
 
   #overlay {
     position: fixed; inset: 0; pointer-events: none;
-    font-family: 'Kalam', system-ui, sans-serif;
+    font-family: 'Outfit', system-ui, sans-serif;
   }
   #vignette {
     position: fixed; inset: 0; pointer-events: none;
@@ -79,7 +79,7 @@
 
   button {
     pointer-events: auto;
-    font-family: 'Kalam', system-ui, sans-serif;
+    font-family: 'Outfit', system-ui, sans-serif;
     font-weight: 700; font-size: 18px;
     color: #2a1608;
     background: linear-gradient(180deg, #ffcf7a, #e8a648);
@@ -124,7 +124,7 @@
 
   input[type="text"] {
     pointer-events: auto;
-    font-family: 'Kalam', system-ui, sans-serif;
+    font-family: 'Outfit', system-ui, sans-serif;
     font-size: 18px; text-align: center;
     padding: 10px 14px; width: 210px; margin: 0 4px;
     color: #f2e6cf; background: rgba(10,6,3,0.6);
@@ -245,6 +245,9 @@
     #grille-scores { max-height: 38vh; }
   }
 </style>
+<!-- Direction artistique commune « bar moderne » ; accent orange pour le Kinito. -->
+<link rel="stylesheet" href="da/bar-moderne.css">
+<style>:root { --accent: #f59e2e; --accent-2: #c2410c; }</style>
 </head>
 <body>
 
@@ -318,10 +321,19 @@
 </div>
 
 <script type="importmap">
-{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
 </script>
 <script type="module">
 import * as THREE from 'three';
+import {
+  preparerAmbiance, lisser, creerDecorBar, dessinerEtiquette as dessinerPastille,
+  quandPoliceChargee, creerPersonnage, orienterVersTable, creerTableRonde, POLICE,
+} from './da/bar-moderne.js';
+
+const ACCENT = 0xf59e2e;   // orange du Kinito, comme sur l'accueil
 
 const elModaleRegles = document.getElementById('modale-regles');
 document.getElementById('btn-regles').addEventListener('click', () => {
@@ -418,7 +430,7 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.35;
+renderer.toneMappingExposure = 1.2;
 document.body.appendChild(renderer.domElement);
 
 function redimensionner() {
@@ -438,7 +450,7 @@ window.addEventListener('orientationchange', redimensionner);
 // Une DirectionalLight (irradiance) évite les surprises d'échelle des lumières
 // ponctuelles en candela des versions récentes de three.js.
 scene.add(new THREE.AmbientLight(0x3a2818, 1.0));
-const keyLight = new THREE.DirectionalLight(0xffb066, 3.4);
+const keyLight = new THREE.DirectionalLight(0xffd6a8, 3.0);
 keyLight.position.set(0.8, 3.4, 1.2);
 keyLight.target.position.set(0, 0.3, 0);
 keyLight.castShadow = true;
@@ -450,47 +462,14 @@ keyLight.shadow.camera.bottom = -3.4;
 keyLight.shadow.camera.near = 0.5;
 keyLight.shadow.camera.far = 9;
 scene.add(keyLight, keyLight.target);
+preparerAmbiance(renderer, scene, { accent: ACCENT });
 
 // =====================================================================
 // TABLE
 // =====================================================================
-function creerTextureBois() {
-  const c = document.createElement('canvas');
-  c.width = c.height = 256;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#5b3a22';
-  ctx.fillRect(0, 0, 256, 256);
-  for (let i = 0; i < 34; i++) {
-    ctx.strokeStyle = `rgba(0,0,0,${0.05 + Math.random() * 0.08})`;
-    ctx.lineWidth = 1 + Math.random() * 2;
-    ctx.beginPath();
-    const y = Math.random() * 256;
-    ctx.moveTo(0, y);
-    ctx.bezierCurveTo(80, y + (Math.random() - 0.5) * 20, 180, y + (Math.random() - 0.5) * 20, 256, y + (Math.random() - 0.5) * 10);
-    ctx.stroke();
-  }
-  const tex = new THREE.CanvasTexture(c);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(3, 3);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
-}
-
-const table = new THREE.Mesh(
-  new THREE.CylinderGeometry(R_TABLE, R_TABLE * 0.97, 0.26, 28),
-  new THREE.MeshStandardMaterial({ map: creerTextureBois(), roughness: 0.85, metalness: 0.05, flatShading: true })
-);
-table.position.y = -0.13;
-table.receiveShadow = true;
+// Noyer foncé, feutre vert profond au centre, cerclage laiton.
+const { groupe: table } = creerTableRonde(R_TABLE);
 scene.add(table);
-
-const rebord = new THREE.Mesh(
-  new THREE.TorusGeometry(R_TABLE, 0.05, 6, 32),
-  new THREE.MeshStandardMaterial({ color: 0x42281a, roughness: 0.8, flatShading: true })
-);
-rebord.rotation.x = Math.PI / 2;
-rebord.position.y = 0.005;
-scene.add(rebord);
 
 // =====================================================================
 // DÉCOR DU BAR (arrière-plan, derrière les joueurs)
@@ -499,123 +478,8 @@ scene.add(rebord);
 // =====================================================================
 const SOL_Y = -1.2;
 
-function boite(l, h, p, couleur, x, y, z, rugosite) {
-  const m = new THREE.Mesh(
-    new THREE.BoxGeometry(l, h, p),
-    new THREE.MeshStandardMaterial({ color: couleur, roughness: rugosite === undefined ? 0.85 : rugosite, flatShading: true })
-  );
-  m.position.set(x, y, z);
-  return m;
-}
-
-function creerBouteilleDeco(x, y, z, teinte, echelle) {
-  const g = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({ color: teinte, roughness: 0.3, metalness: 0.15, flatShading: true });
-  const corps = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.085, 0.34, 6), mat);
-  corps.position.y = 0.17;
-  const col = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.05, 0.16, 6), mat);
-  col.position.y = 0.41;
-  g.add(corps, col);
-  g.position.set(x, y, z);
-  g.scale.setScalar(echelle || 1);
-  return g;
-}
-
 function creerDecor() {
-  const decor = new THREE.Group();
-
-  // Sol et mur du fond
-  const sol = new THREE.Mesh(
-    new THREE.PlaneGeometry(40, 40),
-    new THREE.MeshStandardMaterial({ color: 0x2b1a11, roughness: 0.95, flatShading: true })
-  );
-  sol.rotation.x = -Math.PI / 2;
-  sol.position.y = SOL_Y;
-  decor.add(sol);
-
-  decor.add(boite(26, 6.5, 0.4, 0x3a2418, 0, SOL_Y + 3.25, -8.2));
-
-  // Comptoir du bar
-  decor.add(boite(9.5, 1.7, 0.9, 0x4a2f1c, 0, SOL_Y + 0.85, -6.3));
-  decor.add(boite(9.9, 0.14, 1.1, 0x6f4728, 0, SOL_Y + 1.77, -6.3, 0.55));
-  // Repose-pieds en laiton
-  const barre = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.05, 0.05, 9.5, 8),
-    new THREE.MeshStandardMaterial({ color: 0x8a6a2a, roughness: 0.35, metalness: 0.6, flatShading: true })
-  );
-  barre.rotation.z = Math.PI / 2;
-  barre.position.set(0, SOL_Y + 0.28, -5.8);
-  decor.add(barre);
-
-  // Étagères à bouteilles contre le mur
-  const TEINTES = [0x2e5c3a, 0x5c3a1e, 0x7a2a2a, 0x2a4a6a, 0x6a5a2a, 0x4a2a5a];
-  [1.15, 1.95, 2.75].forEach((hauteur, rangee) => {
-    const y = SOL_Y + hauteur;
-    decor.add(boite(9.5, 0.09, 0.45, 0x5a3a22, 0, y, -7.85));
-    for (let i = 0; i < 13; i++) {
-      const x = -4.3 + i * 0.72 + (rangee % 2) * 0.22;
-      decor.add(creerBouteilleDeco(x, y + 0.045, -7.85, TEINTES[(i + rangee) % TEINTES.length], 0.85 + Math.random() * 0.3));
-    }
-  });
-
-  // Bandeau lumineux derrière les étagères : un simple matériau émissif,
-  // pas une vraie lumière, pour ne pas complexifier l'éclairage.
-  const bandeau = boite(9.5, 0.06, 0.05, 0x000000, 0, SOL_Y + 3.35, -7.7);
-  bandeau.material.emissive = new THREE.Color(0xff9a3c);
-  bandeau.material.emissiveIntensity = 1.4;
-  decor.add(bandeau);
-
-  // Tabourets de bar
-  [-3.1, -1.6, 1.6, 3.1].forEach(x => {
-    const pied = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.06, 0.09, 1.05, 7),
-      new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.6, metalness: 0.3, flatShading: true })
-    );
-    pied.position.set(x, SOL_Y + 0.52, -5.2);
-    const assise = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.26, 0.26, 0.11, 10),
-      new THREE.MeshStandardMaterial({ color: 0x6b3a26, roughness: 0.8, flatShading: true })
-    );
-    assise.position.set(x, SOL_Y + 1.09, -5.2);
-    decor.add(pied, assise);
-  });
-
-  // Quelques tonneaux dans les coins
-  [[-6.2, -4.5], [6.4, -4.0]].forEach(([x, z]) => {
-    const t = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.62, 0.55, 1.15, 12),
-      new THREE.MeshStandardMaterial({ color: 0x5a3a20, roughness: 0.85, flatShading: true })
-    );
-    t.position.set(x, SOL_Y + 0.58, z);
-    const cercle = new THREE.Mesh(
-      new THREE.TorusGeometry(0.615, 0.035, 5, 14),
-      new THREE.MeshStandardMaterial({ color: 0x7a6a3a, roughness: 0.5, metalness: 0.5, flatShading: true })
-    );
-    cercle.rotation.x = Math.PI / 2;
-    cercle.position.set(x, SOL_Y + 0.85, z);
-    decor.add(t, cercle);
-  });
-
-  // Suspension au-dessus de la table : abat-jour + ampoule émissive.
-  const cordon = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.012, 0.012, 1.4, 5),
-    new THREE.MeshStandardMaterial({ color: 0x1a1008, roughness: 0.9 })
-  );
-  cordon.position.set(0, 3.25, 0);
-  const abat = new THREE.Mesh(
-    new THREE.ConeGeometry(0.52, 0.42, 12, 1, true),
-    new THREE.MeshStandardMaterial({ color: 0x6b3f22, roughness: 0.6, side: THREE.DoubleSide, flatShading: true })
-  );
-  abat.position.set(0, 2.42, 0);
-  const ampoule = new THREE.Mesh(
-    new THREE.SphereGeometry(0.13, 10, 8),
-    new THREE.MeshStandardMaterial({ color: 0xffd9a0, emissive: 0xffb066, emissiveIntensity: 2.4, roughness: 0.4 })
-  );
-  ampoule.position.set(0, 2.24, 0);
-  decor.add(cordon, abat, ampoule);
-
-  decor.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
-  scene.add(decor);
+  creerDecorBar(scene, { accent: ACCENT, nom: 'KINITO', solY: SOL_Y });
 }
 creerDecor();
 
@@ -647,11 +511,11 @@ function dessinerAnnonce(gros, petit, couleur) {
   ctx.shadowBlur = 24;
   ctx.shadowOffsetY = 6;
   ctx.fillStyle = couleur;
-  ctx.font = 'bold 290px Kalam, Georgia, sans-serif';
+  ctx.font = `800 290px ${POLICE}`;
   ctx.fillText(gros, 512, petit ? 205 : 256);
   if (petit) {
     ctx.fillStyle = '#f2e6cf';
-    ctx.font = 'bold 74px Kalam, Georgia, sans-serif';
+    ctx.font = `600 74px ${POLICE}`;
     ctx.fillText(petit, 512, 405);
   }
   annonceTexture.needsUpdate = true;
@@ -667,37 +531,30 @@ function afficherAnnonce3D(gros, petit, couleur, duree) {
 // =====================================================================
 // ÉTIQUETTES (sprites) — toujours face caméra
 // =====================================================================
+const etiquettes = new Set();   // pour les redessiner quand la police arrive
+
 function creerEtiquette(texte) {
   const c = document.createElement('canvas');
   c.width = 512; c.height = 128;
-  const ctx = c.getContext('2d');
-  ctx.font = 'bold 60px Kalam, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = 'rgba(20,12,7,0.72)';
-  ctx.fillRect(0, 22, 512, 84);
-  ctx.fillStyle = '#e8cda2';
-  ctx.fillText(texte, 256, 64);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
   sprite.scale.set(1.0, 0.25, 1);
+  majEtiquette(sprite, texte, false);
+  etiquettes.add(sprite);
   return sprite;
 }
 
 function majEtiquette(sprite, texte, actif) {
-  const c = sprite.material.map.image;
-  const ctx = c.getContext('2d');
-  ctx.clearRect(0, 0, 512, 128);
-  ctx.font = 'bold 60px Kalam, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = actif ? 'rgba(90,55,15,0.85)' : 'rgba(20,12,7,0.72)';
-  ctx.fillRect(0, 22, 512, 84);
-  ctx.fillStyle = actif ? '#ffdca0' : '#e8cda2';
-  ctx.fillText(texte, 256, 64);
+  sprite.userData.texte = texte;
+  sprite.userData.actif = actif;
+  dessinerPastille(sprite.material.map.image.getContext('2d'), texte,
+    { actif, absent: / \(parti\)$/.test(texte), accent: ACCENT });
   sprite.material.map.needsUpdate = true;
 }
+quandPoliceChargee(() => etiquettes.forEach(sp => {
+  if (sp.parent) majEtiquette(sp, sp.userData.texte, sp.userData.actif); else etiquettes.delete(sp);
+}));
 
 // =====================================================================
 // SIÈGES : avatar low-poly + chope + emplacement du gobelet
@@ -707,43 +564,36 @@ const COULEURS = [0x4a7ec2, 0xc25a4a, 0x5aa86a, 0xb58ac2, 0xc2a44a, 0x4ab0b5, 0x
 const sieges = [];
 
 function creerAvatar(couleur) {
-  const g = new THREE.Group();
-  const matCorps = new THREE.MeshStandardMaterial({ color: couleur, roughness: 0.75, flatShading: true });
-  // Le buste descend sous le plateau : le bas se perd dans l'ombre, ce qui
-  // évite l'effet "personnage qui flotte" sans avoir à modéliser de chaise.
-  const corps = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.34, 1.5, 7), matCorps);
-  corps.position.y = -0.2;
-  corps.castShadow = true;
-  const tete = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(0.17, 0),
-    new THREE.MeshStandardMaterial({ color: 0xe0b48c, roughness: 0.7, flatShading: true })
-  );
-  tete.position.y = 0.72;
-  tete.castShadow = true;
-  g.add(corps, tete);
-  g.userData.materiaux = [matCorps];
-  return g;
+  return creerPersonnage(couleur);
 }
 
 function creerChope() {
   const g = new THREE.Group();
-  const verre = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.11, 0.1, 0.26, 8, 1, true),
-    new THREE.MeshPhysicalMaterial({ color: 0xdfeef7, roughness: 0.3, metalness: 0, side: THREE.DoubleSide, transparent: true, opacity: 0.45 })
-  );
+  const matVerreChope = new THREE.MeshPhysicalMaterial({
+    color: 0xe6f3f8, roughness: 0.08, metalness: 0, side: THREE.DoubleSide,
+    transparent: true, opacity: 0.32, clearcoat: 1, clearcoatRoughness: 0.05,
+  });
+  const verre = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.1, 0.26, 40, 1, true), matVerreChope);
   verre.position.y = 0.13;
+  const anse = new THREE.Mesh(new THREE.TorusGeometry(0.065, 0.016, 14, 32, Math.PI), matVerreChope);
+  anse.rotation.z = -Math.PI / 2;
+  anse.position.set(0.112, 0.13, 0);
   const biere = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.098, 0.09, 0.2, 8),
-    new THREE.MeshStandardMaterial({ color: 0xd08b1e, roughness: 0.4, flatShading: true })
+    new THREE.CylinderGeometry(0.098, 0.09, 0.2, 40),
+    new THREE.MeshPhysicalMaterial({ color: 0xe0961c, roughness: 0.18, emissive: 0x6a3a05, emissiveIntensity: 0.25 })
   );
   biere.position.y = 0.11;
   biere.castShadow = true;
   const mousse = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.1, 0.1, 0.035, 8),
-    new THREE.MeshStandardMaterial({ color: 0xf6ecd8, roughness: 0.9, flatShading: true })
+    new THREE.CylinderGeometry(0.1, 0.1, 0.035, 40),
+    new THREE.MeshStandardMaterial({ color: 0xfaf3e4, roughness: 0.75 })
   );
   mousse.position.y = 0.222;
-  g.add(verre, biere, mousse);
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.1, 40, 12, 0, Math.PI * 2, 0, Math.PI / 2),
+    mousse.material);
+  dome.scale.y = 0.25;
+  dome.position.y = 0.239;
+  g.add(verre, anse, biere, mousse, dome);
   g.userData.biere = biere;
   return g;
 }
@@ -761,6 +611,7 @@ function creerSieges(noms) {
 
     const avatar = creerAvatar(COULEURS[i % COULEURS.length]);
     avatar.position.copy(dir).multiplyScalar(R_AVATAR);
+    orienterVersTable(avatar);
     const etiquette = creerEtiquette(noms[i]);
     etiquette.position.copy(dir).multiplyScalar(R_AVATAR);
     etiquette.position.y = 1.12;
@@ -772,6 +623,7 @@ function creerSieges(noms) {
     groupe.add(avatar, etiquette, chope);
     scene.add(groupe);
 
+    lisser(groupe);
     sieges.push({
       index: i, nom: noms[i], groupe, avatar, etiquette, chope,
       posGobelet: dir.clone().multiplyScalar(R_GOBELET),
@@ -2412,6 +2264,8 @@ if (salonDansUrl && /^[A-Za-z]{4}$/.test(salonDansUrl)) {
 } else {
   panneauAccueil();
 }
+// Plus aucune facette dans la scène (gobelet, dés, table...).
+lisser(scene);
 animer();
 </script>
 <script>

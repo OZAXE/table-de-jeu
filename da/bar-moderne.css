@@ -1,0 +1,155 @@
+/* =====================================================================
+   Interface des jeux 3D, dans le style de la page d'accueil.
+   Chargée APRÈS le style propre à chaque jeu : elle le remplace pour tout
+   ce qui est commun (panneaux, boutons, liste des joueurs, règles...).
+   Chaque jeu fixe sa couleur : --accent et --accent-2 (voir son <head>).
+   ===================================================================== */
+:root {
+  --accent: #f59e2e;
+  --accent-2: #c2410c;
+  --fond: #07110d;
+  --verre: rgba(9, 18, 14, 0.72);
+  --verre-fort: rgba(9, 18, 14, 0.86);
+  --bord: rgba(255, 255, 255, 0.1);
+  --texte: #f4f1ea;
+  --texte-doux: #a3b3aa;
+  --texte-pale: #6f8379;
+  --police: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+html, body { background: var(--fond) !important; }
+
+#overlay, button, input, .modale, #panneau { font-family: var(--police) !important; }
+
+#vignette {
+  background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 50%, rgba(3, 8, 6, 0.72) 100%) !important;
+}
+
+/* --- Liste des joueurs : pastilles en verre --- */
+.joueur {
+  background: var(--verre) !important;
+  border: 1px solid var(--bord) !important;
+  border-radius: 999px !important;
+  color: var(--texte) !important;
+  font-weight: 500;
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+.joueur.actif {
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent) !important;
+  color: #fff !important;
+  background: color-mix(in srgb, var(--accent) 22%, var(--verre)) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent), 0 8px 24px color-mix(in srgb, var(--accent) 25%, transparent) !important;
+}
+.joueur .pastille { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15); }
+.joueur .gorgees { color: var(--texte-doux); opacity: 1 !important; }
+
+/* --- Bandeau du haut --- */
+#message {
+  color: var(--texte) !important; font-weight: 700; letter-spacing: -0.01em;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.7) !important;
+}
+#rappel { color: var(--texte-doux) !important; opacity: 1 !important; }
+
+/* --- Panneau du bas : feuille de verre --- */
+#panneau {
+  /* Sans ça, largeur 100 % + marges intérieures : le panneau débordait de
+     l'écran du téléphone et coupait les phrases longues sur les côtés. */
+  box-sizing: border-box !important;
+  background: var(--verre-fort) !important;
+  border: 1px solid var(--bord) !important;
+  border-radius: 26px !important;
+  backdrop-filter: blur(18px) saturate(1.2); -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5) !important;
+  color: var(--texte);
+}
+#panneau h2 { color: var(--texte) !important; font-weight: 700 !important; letter-spacing: -0.02em; }
+#panneau p, .aide { color: var(--texte-doux) !important; }
+
+/* --- Boutons : pastilles dégradées dans la couleur du jeu --- */
+button {
+  font-weight: 600 !important;
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2)) !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 35%, transparent) !important;
+  transition: transform 0.12s ease, filter 0.15s ease, box-shadow 0.15s ease !important;
+  letter-spacing: 0.005em;
+}
+button:hover { filter: brightness(1.08); }
+button:active { transform: scale(0.96) !important; box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 30%, transparent) !important; }
+button:disabled { filter: grayscale(0.7) brightness(0.65) !important; box-shadow: none !important; }
+button.sombre, button.clair {
+  color: var(--texte) !important;
+  background: rgba(255, 255, 255, 0.07) !important;
+  border: 1px solid var(--bord) !important;
+  box-shadow: none !important;
+}
+button.sombre:hover, button.clair:hover { background: rgba(255, 255, 255, 0.12) !important; filter: none; }
+button.danger {
+  color: #fff !important;
+  background: linear-gradient(135deg, #f04462, #9f1239) !important;
+  box-shadow: 0 8px 22px rgba(240, 68, 98, 0.3) !important;
+}
+
+/* --- Champs de saisie --- */
+input[type="text"] {
+  color: var(--texte) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid var(--bord) !important;
+  border-radius: 14px !important;
+  font-weight: 500;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+input[type="text"]:focus {
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+input[type="text"]::placeholder { color: var(--texte-pale) !important; }
+
+/* --- Salon : code, liste, QR --- */
+.code-salon {
+  font-weight: 800; letter-spacing: 0.22em !important;
+  background: linear-gradient(100deg, #fff3dc, var(--accent)) ;
+  -webkit-background-clip: text; background-clip: text; color: transparent !important;
+  text-shadow: none !important;
+}
+.liste-attente { color: var(--texte-doux) !important; }
+.qr { border: 0 !important; border-radius: 16px !important; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); }
+.note { color: var(--texte-pale) !important; font-style: normal !important; }
+
+/* --- Bouton Règles --- */
+#btn-regles {
+  color: var(--texte) !important;
+  background: var(--verre) !important;
+  border: 1px solid var(--bord) !important;
+  border-radius: 999px !important;
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  box-shadow: none !important;
+}
+
+/* --- Fenêtre des règles --- */
+#modale-regles { background: rgba(3, 8, 6, 0.72) !important; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.modale {
+  background: rgba(12, 22, 18, 0.95) !important;
+  border: 1px solid var(--bord) !important;
+  border-radius: 26px !important;
+  color: var(--texte-doux) !important;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+}
+.modale h2 { color: var(--texte) !important; font-weight: 700; letter-spacing: -0.02em; }
+.modale h3 { color: var(--accent) !important; font-weight: 600; }
+.modale th { color: var(--texte) !important; }
+.modale th, .modale td { border-bottom-color: var(--bord) !important; }
+.modale .accent { color: var(--texte) !important; font-weight: 600 !important; }
+
+/* Barres de défilement discrètes */
+#panneau::-webkit-scrollbar, #modale-regles::-webkit-scrollbar { width: 6px; }
+#panneau::-webkit-scrollbar-thumb, #modale-regles::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 3px; }
+
+/* Téléphones : le panneau colle au bas de l'écran, arrondi en haut seulement */
+@media (max-width: 760px), (pointer: coarse) {
+  #panneau { border-radius: 26px 26px 0 0 !important; border-width: 1px 0 0 0 !important; }
+}
