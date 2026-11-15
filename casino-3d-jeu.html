@@ -259,7 +259,13 @@
 </style>
 <!-- Direction artistique commune « bar moderne » ; accent or pour le Casino. -->
 <link rel="stylesheet" href="da/bar-moderne.css">
-<style>:root { --accent: #facc15; --accent-2: #a16207; }</style>
+<style>
+  :root { --accent: #facc15; --accent-2: #a16207; }
+  /* Le blanc ne se lit pas sur l'or : texte foncé sur les boutons dorés
+     (les boutons sombres, rouges et verts gardent leur texte clair). */
+  button:not(.sombre):not(.clair):not(.danger):not(.vert) { color: #2a1c02 !important; text-shadow: none; }
+  .joueur.actif { color: #fff !important; background: color-mix(in srgb, #a16207 55%, var(--verre)) !important; }
+</style>
 </head>
 <body>
 
@@ -312,7 +318,7 @@
     <ul>
       <li>Texas Hold'em sans limite, blinds 10 / 20, à 2 joueurs au moins.</li>
       <li>Deux cartes cachées chacun, puis cinq cartes communes : le flop (3), le tournant, la rivière, avec un tour d'enchères à chaque fois.</li>
-      <li>À ton tour : se coucher, parler / suivre, relancer, ou tapis. La meilleure main de 5 cartes remporte le pot.</li>
+      <li>À ton tour : se coucher, <span class="accent">check</span> (passer sans miser) / suivre, relancer, ou tapis. La meilleure main de 5 cartes remporte le pot.</li>
     </ul>
     <table>
       <tr><td>Quinte flush</td><td>5 cartes qui se suivent, même couleur</td></tr>
@@ -358,6 +364,9 @@ import {
 } from './da/bar-moderne.js';
 
 const ACCENT = 0xfacc15;   // or du Casino, comme sur l'accueil
+// Étiquette de celui qui joue : un or plus sombre, sinon son prénom (en
+// blanc) ne se lit pas.
+const ACCENT_ETIQUETTE = 0xa16207;
 
 const elModaleRegles = document.getElementById('modale-regles');
 document.getElementById('btn-regles').addEventListener('click', () => {
@@ -429,13 +438,16 @@ function distanceCadrage(cam) {
   const vHalf = THREE.MathUtils.degToRad(cam.fov) / 2;
   const hHalf = Math.atan(Math.tan(vHalf) * cam.aspect);
   const vUtile = Math.atan(Math.tan(vHalf) * zoneVue.hauteur / window.innerHeight);
-  return Math.max(LARGEUR_VUE / Math.tan(hHalf), HAUTEUR_VUE / Math.tan(vUtile), 4.2);
+  // Au blackjack on serre le cadre sur la zone des cartes (le bord de la
+  // table peut sortir de l'écran).
+  const k = vueDessus ? 0.72 : 1;
+  return Math.max(k * LARGEUR_VUE / Math.tan(hHalf), k * HAUTEUR_VUE / Math.tan(vUtile), vueDessus ? 2.6 : 4.2);
 }
 const FOG_DENSITE_MAX = 0.075;
 function majCadrageTable(cam) {
   mesurerZoneVue();
   const d = distanceCadrage(cam);
-  const dir = (vueDessus ? new THREE.Vector3(0, 0.9, 0.44) : new THREE.Vector3(0, 0.66, 0.75)).normalize();
+  const dir = (vueDessus ? new THREE.Vector3(0, 0.82, 0.57) : new THREE.Vector3(0, 0.66, 0.75)).normalize();
   CAM_POS.copy(CAM_CIBLE).addScaledVector(dir, d);
   if (scene.fog) scene.fog.density = Math.min(FOG_DENSITE_MAX, 0.536 / d);
 }
@@ -878,7 +890,7 @@ function majEtiquette(sprite, texte, actif, absent) {
   if (sprite.userData.cle === cle) return;
   sprite.userData.cle = cle;
   sprite.userData.dernier = [texte, actif, absent];
-  dessinerPastille(sprite.material.map.image.getContext('2d'), texte, { actif, absent, accent: ACCENT });
+  dessinerPastille(sprite.material.map.image.getContext('2d'), texte, { actif, absent, accent: ACCENT_ETIQUETTE });
   sprite.material.map.needsUpdate = true;
 }
 
@@ -1871,10 +1883,10 @@ function panneauPoker(etat) {
     const maxTotal = t.mise_tour[MOI] + pile;
     const minTotal = Math.min(maxTotal, t.mise_max + t.relance_min);
     if (montantRelance === null || montantRelance < minTotal || montantRelance > maxTotal) montantRelance = minTotal;
-    p.appendChild(aide(du > 0 ? 'Il faut ' + du + ' pour suivre (mise à ' + t.mise_max + ').' : 'Personne n’a misé : tu peux parler.'));
+    p.appendChild(aide(du > 0 ? 'Il faut ' + du + ' pour suivre (mise à ' + t.mise_max + ').' : 'Personne n’a misé : tu peux checker.'));
     const r = rangee();
     r.appendChild(bouton('Se coucher', 'danger', () => agir({ type: 'cs_pk_coucher' })));
-    r.appendChild(bouton(du <= 0 ? 'Parler' : du >= pile ? 'Tapis ' + pile : 'Suivre ' + du, 'vert', () => agir({ type: 'cs_pk_suivre' })));
+    r.appendChild(bouton(du <= 0 ? 'Check' : du >= pile ? 'Tapis ' + pile : 'Suivre ' + du, 'vert', () => agir({ type: 'cs_pk_suivre' })));
     p.appendChild(r);
     if (maxTotal > t.mise_max && du < pile) {
       const rel = el('div', 'relance');
