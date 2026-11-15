@@ -157,6 +157,24 @@
   .ligne-cartes .etiq { font-size: 13px; color: var(--texte-doux); min-width: 70px; }
   .ligne-cartes .etiq b { color: var(--texte); font-size: 18px; display: block; }
 
+  .jtout { background: linear-gradient(135deg, #facc15, #b45309); font-size: 10px; letter-spacing: 0.02em; }
+
+  /* --- Blackjack : toutes les mains de la table --- */
+  .table-bj { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 10px; }
+  .ligne-bj { display: flex; align-items: center; gap: 10px; padding: 4px 8px; border-radius: 12px; border: 1px solid transparent; }
+  .ligne-bj.moi { background: rgba(255,255,255,0.05); }
+  .ligne-bj.actif { border-color: color-mix(in srgb, var(--accent) 70%, transparent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  .ligne-bj .qui { width: 92px; flex: 0 0 auto; text-align: left; font-size: 14px; font-weight: 600; color: var(--texte); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ligne-bj .qui small { display: block; font-weight: 400; font-size: 11px; color: var(--texte-doux); }
+  .mains-bj { display: flex; gap: 10px; flex-wrap: wrap; flex: 1 1 auto; }
+  .main-bj { display: flex; align-items: center; gap: 6px; padding: 2px 4px; border-radius: 10px; }
+  .main-bj.active { box-shadow: 0 0 0 2px var(--accent); }
+  .main-bj .val { font-size: 12px; color: var(--texte-doux); text-align: left; white-space: nowrap; }
+  .main-bj .val b { font-size: 18px; color: var(--texte); }
+  .cartes.mini { margin: 0; gap: 3px; flex-wrap: nowrap; }
+  .cartes.mini .carte { width: 34px; height: 48px; border-radius: 6px; }
+  .cartes.mini .carte .r { font-size: 15px; } .cartes.mini .carte .s { font-size: 15px; }
+
   /* --- Relance au poker --- */
   .relance { display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 8px 0; }
   .relance .montant { min-width: 70px; font-size: 20px; font-weight: 800; color: var(--accent); }
@@ -221,6 +239,10 @@
     .jeton { width: 40px; height: 40px; font-size: 12px; border-width: 3px; }
     .carte { width: 42px; height: 60px; }
     .carte .r { font-size: 18px; } .carte .s { font-size: 20px; }
+    .ligne-bj { gap: 6px; padding: 3px 4px; }
+    .ligne-bj .qui { width: 70px; font-size: 12px; }
+    .cartes.mini .carte { width: 30px; height: 42px; }
+    .cartes.mini .carte .r, .cartes.mini .carte .s { font-size: 13px; }
     .bilan { font-size: 13px; min-width: 0; width: 100%; }
     .bilan td, .bilan th { padding: 3px 4px; }
     input[type="text"] { width: 160px; font-size: 16px; }
@@ -237,7 +259,13 @@
 </style>
 <!-- Direction artistique commune « bar moderne » ; accent or pour le Casino. -->
 <link rel="stylesheet" href="da/bar-moderne.css">
-<style>:root { --accent: #facc15; --accent-2: #a16207; }</style>
+<style>
+  :root { --accent: #facc15; --accent-2: #a16207; }
+  /* Le blanc ne se lit pas sur l'or : texte foncé sur les boutons dorés
+     (les boutons sombres, rouges et verts gardent leur texte clair). */
+  button:not(.sombre):not(.clair):not(.danger):not(.vert) { color: #2a1c02 !important; text-shadow: none; }
+  .joueur.actif { color: #fff !important; background: color-mix(in srgb, #a16207 55%, var(--verre)) !important; }
+</style>
 </head>
 <body>
 
@@ -266,6 +294,8 @@
       <li>Plus assez pour miser (moins de 10 jetons) : <span class="accent">cul sec</span>, et la banque te recharge 1000 jetons. Le classement compte les recharges.</li>
     </ul>
 
+    <p>Le jeton <span class="accent">TAPIS</span> (all in) mise tous tes jetons d'un coup, à la roulette comme au blackjack.</p>
+
     <h3>🎡 Roulette</h3>
     <p>Roulette européenne, de 0 à 36. Choisis la valeur de ton jeton, touche les cases du tapis pour miser (plusieurs paris possibles), puis <span class="accent">Prêt</span>. La bille est lancée quand tout le monde est prêt, ou au bout de 30 s.</p>
     <table>
@@ -280,6 +310,7 @@
       <li>Mise, puis deux cartes chacun. Le croupier en a une visible et une cachée.</li>
       <li>But : faire plus que le croupier sans dépasser <span class="accent">21</span>. Figures = 10, As = 1 ou 11.</li>
       <li>À ton tour : <span class="accent">Tirer</span> une carte, <span class="accent">Rester</span>, ou <span class="accent">Doubler</span> (sur tes deux premières cartes : mise doublée, une seule carte de plus).</li>
+      <li><span class="accent">Séparer</span> (split) : deux cartes de même valeur (deux 8, un Roi et une Dame…) deviennent deux mains, avec une deuxième mise égale à la première. Chaque main se joue à son tour, jusqu'à 4 mains. Des As séparés ne reçoivent qu'une carte chacun, et 21 après un split n'est pas un blackjack.</li>
       <li>Le croupier tire jusqu'à 17. Gagné : tu doubles ta mise. <span class="accent">Blackjack</span> (As + 10 d'entrée) : payé 3 pour 2.</li>
     </ul>
 
@@ -287,7 +318,7 @@
     <ul>
       <li>Texas Hold'em sans limite, blinds 10 / 20, à 2 joueurs au moins.</li>
       <li>Deux cartes cachées chacun, puis cinq cartes communes : le flop (3), le tournant, la rivière, avec un tour d'enchères à chaque fois.</li>
-      <li>À ton tour : se coucher, parler / suivre, relancer, ou tapis. La meilleure main de 5 cartes remporte le pot.</li>
+      <li>À ton tour : se coucher, <span class="accent">check</span> (passer sans miser) / suivre, relancer, ou tapis. La meilleure main de 5 cartes remporte le pot.</li>
     </ul>
     <table>
       <tr><td>Quinte flush</td><td>5 cartes qui se suivent, même couleur</td></tr>
@@ -333,6 +364,9 @@ import {
 } from './da/bar-moderne.js';
 
 const ACCENT = 0xfacc15;   // or du Casino, comme sur l'accueil
+// Étiquette de celui qui joue : un or plus sombre, sinon son prénom (en
+// blanc) ne se lit pas.
+const ACCENT_ETIQUETTE = 0xa16207;
 
 const elModaleRegles = document.getElementById('modale-regles');
 document.getElementById('btn-regles').addEventListener('click', () => {
@@ -366,6 +400,9 @@ const SABOT = new THREE.Vector3(0.95, 0.05, -0.75);   // d'où partent les carte
 const CENTRE_Z = -0.12;                               // croupier et tableau du poker
 
 const CAM_VITESSE = 0.12;
+// Au blackjack, la caméra se redresse : les cartes de toute la table se
+// lisent mieux vues de dessus.
+let vueDessus = false;
 
 // =====================================================================
 // SCÈNE / CAMÉRA / RENDU (même cadrage que Menteur)
@@ -401,13 +438,16 @@ function distanceCadrage(cam) {
   const vHalf = THREE.MathUtils.degToRad(cam.fov) / 2;
   const hHalf = Math.atan(Math.tan(vHalf) * cam.aspect);
   const vUtile = Math.atan(Math.tan(vHalf) * zoneVue.hauteur / window.innerHeight);
-  return Math.max(LARGEUR_VUE / Math.tan(hHalf), HAUTEUR_VUE / Math.tan(vUtile), 4.2);
+  // Au blackjack on serre le cadre sur la zone des cartes (le bord de la
+  // table peut sortir de l'écran).
+  const k = vueDessus ? 0.72 : 1;
+  return Math.max(k * LARGEUR_VUE / Math.tan(hHalf), k * HAUTEUR_VUE / Math.tan(vUtile), vueDessus ? 2.6 : 4.2);
 }
 const FOG_DENSITE_MAX = 0.075;
 function majCadrageTable(cam) {
   mesurerZoneVue();
   const d = distanceCadrage(cam);
-  const dir = new THREE.Vector3(0, 0.66, 0.75).normalize();
+  const dir = (vueDessus ? new THREE.Vector3(0, 0.82, 0.57) : new THREE.Vector3(0, 0.66, 0.75)).normalize();
   CAM_POS.copy(CAM_CIBLE).addScaledVector(dir, d);
   if (scene.fog) scene.fog.density = Math.min(FOG_DENSITE_MAX, 0.536 / d);
 }
@@ -750,11 +790,12 @@ function creerCarte3D() {
 const cartes3D = new Map();
 let ordreDonne = 0;   // décale les cartes distribuées d'un même coup
 
-function placerCarte(cle, code, pos, rotY, visible, delaiMin) {
+function placerCarte(cle, code, pos, rotY, visible, delaiMin, echelle) {
   let c = cartes3D.get(cle);
   const rotZ = visible ? Math.PI : 0;
   if (!c) {
     const mesh = creerCarte3D();
+    mesh.scale.setScalar(echelle || 1);
     c = { mesh, code: null, touche: true };
     cartes3D.set(cle, c);
     mesh.position.copy(SABOT);
@@ -849,7 +890,7 @@ function majEtiquette(sprite, texte, actif, absent) {
   if (sprite.userData.cle === cle) return;
   sprite.userData.cle = cle;
   sprite.userData.dernier = [texte, actif, absent];
-  dessinerPastille(sprite.material.map.image.getContext('2d'), texte, { actif, absent, accent: ACCENT });
+  dessinerPastille(sprite.material.map.image.getContext('2d'), texte, { actif, absent, accent: ACCENT_ETIQUETTE });
   sprite.material.map.needsUpdate = true;
 }
 
@@ -999,6 +1040,17 @@ function posCarteSiege(s, k, n) {
   const ecart = Math.min(0.13, 0.62 / Math.max(1, n));
   const p = s.dir.clone().multiplyScalar(R_CARTES).addScaledVector(s.cote, (k - (n - 1) / 2) * ecart);
   p.y = 0.012 + CARTE_E / 2 + k * 0.0025;
+  return p;
+}
+const E_BJ = 1.45;         // cartes du blackjack, en grand
+const E_CROUPIER = 1.6;
+// Carte k de la main h (sur nbMains) d'un joueur : les cartes d'une main se
+// chevauchent en avançant vers le centre, comme sur un vrai tapis.
+function posCarteBJ(s, h, nbMains, k) {
+  const ecartMains = Math.min(0.42, 1.1 / Math.max(1, nbMains));
+  const p = s.dir.clone().multiplyScalar(R_CARTES - k * 0.07)
+    .addScaledVector(s.cote, (h - (nbMains - 1) / 2) * ecartMains + k * 0.07);
+  p.y = 0.012 + CARTE_E * E_BJ / 2 + k * 0.003;
   return p;
 }
 function angleSiege(s) { return Math.atan2(s.dir.x, s.dir.z); }
@@ -1189,6 +1241,8 @@ function appliquerEtat(etat) {
   }
   etatCourant = etat;
   echeanceLocale = etat.delai === null || etat.delai === undefined ? null : Date.now() + etat.delai * 1000;
+  const dessus = etat.jeu === 'blackjack';
+  if (dessus !== vueDessus) { vueDessus = dessus; recadrer(); }
   // Nouveau coup : la relance préparée repart du minimum.
   if (!avant || avant.manche !== etat.manche) montantRelance = null;
 
@@ -1222,7 +1276,10 @@ function miseVisible(etat, i) {
   const t = etat.table;
   if (!t) return 0;
   if (etat.jeu === 'roulette') return (t.mises[i] || []).reduce((a, m) => a + m.montant, 0);
-  if (etat.jeu === 'blackjack') return t.mises[i] || 0;
+  if (etat.jeu === 'blackjack') {
+    if (etat.phase === 'mises') return t.mises[i] || 0;
+    return (t.mains[i] || []).reduce((a, m) => a + m.mise, 0);
+  }
   if (etat.jeu === 'poker') return etat.phase === 'jeu' ? t.mise_tour[i] || 0 : 0;
   return 0;
 }
@@ -1233,15 +1290,20 @@ function reconcilierCartes(etat) {
   const t = etat.table;
   const m = etat.manche + '-';   // un coup neuf redistribue depuis le sabot
   if (t && etat.jeu === 'blackjack') {
+    // Cartes en grand ; après un split, les mains côte à côte devant le joueur.
     sieges.forEach((s, i) => {
-      const main = t.mains[i] || [];
-      main.forEach((c, k) => placerCarte('bj-' + m + i + '-' + k, c, posCarteSiege(s, k, main.length), angleSiege(s), true));
+      const mains = t.mains[i] || [];
+      mains.forEach((main, h) => {
+        main.cartes.forEach((c, k) => placerCarte('bj-' + m + i + '-' + h + '-' + k, c,
+          posCarteBJ(s, h, mains.length, k), angleSiege(s), true, 0, E_BJ));
+      });
     });
     // Le croupier : la carte cachée se retourne, puis il tire, carte par carte.
     const nb = t.croupier.length;
     t.croupier.forEach((c, k) => {
       const delai = etat.phase === 'resultat' && k >= 2 ? 0.7 + (k - 2) * 0.8 : 0;
-      placerCarte('cr-' + m + k, c, posCentre(k, Math.max(nb, 2)), 0, c !== '??', delai);
+      const pos = new THREE.Vector3((k - (Math.max(nb, 2) - 1) / 2) * 0.235 * E_CROUPIER, 0.012 + CARTE_E + k * 0.001, CENTRE_Z);
+      placerCarte('cr-' + m + k, c, pos, 0, c !== '??', delai, E_CROUPIER);
     });
   } else if (t && etat.jeu === 'poker') {
     sieges.forEach((s, i) => {
@@ -1372,7 +1434,7 @@ function majListeJoueurs(etat) {
   etat.joueurs.forEach((nom, i) => {
     if (!sieges[i]) return;
     let txt = nom + ' · ' + etat.jetons[i];
-    if (etat.jeu === 'blackjack' && t && t.mains[i] && t.mains[i].length) txt = nom + ' · ' + t.valeurs[i];
+    if (etat.jeu === 'blackjack' && t && t.mains[i] && t.mains[i].length) txt = nom + ' · ' + t.mains[i].map(m => m.valeur).join(' / ');
     majEtiquette(sieges[i].etiquette, txt, joueurActif(etat, i), etat.partis[i]);
   });
 }
@@ -1535,17 +1597,20 @@ function panneauHall(etat) {
 // --- Choix de la valeur du jeton ---
 function choixJetons(etat) {
   const d = el('div', 'jetons-choix');
-  [10, 50, 100, 500].forEach(v => {
-    const j = el('div', 'jeton j' + v + (v === valeurJeton ? ' choisi' : ''), String(v));
+  [10, 50, 100, 500, 'tout'].forEach(v => {
+    const j = el('div', 'jeton j' + v + (v === valeurJeton ? ' choisi' : ''), v === 'tout' ? 'TAPIS' : String(v));
     j.setAttribute('role', 'button');
-    if (v > etat.jetons[MOI]) j.style.opacity = 0.35;
+    j.title = v === 'tout' ? 'All in : tous tes jetons' : v + ' jetons';
+    if (v !== 'tout' && v > etat.jetons[MOI]) j.style.opacity = 0.35;
     j.addEventListener('click', () => { valeurJeton = v; rafraichirPanneau(); });
     d.appendChild(j);
   });
   return d;
 }
 function miseAjustee(etat) {
-  // Pas assez pour le jeton choisi : on mise ce qui reste (au moins 10).
+  // Tapis : tout ce qui reste. Sinon le jeton choisi, ou ce qui reste s'il
+  // n'y a plus assez.
+  if (valeurJeton === 'tout') return etat.jetons[MOI];
   return Math.min(valeurJeton, etat.jetons[MOI]);
 }
 
@@ -1600,7 +1665,9 @@ function panneauRoulette(etat) {
       c.addEventListener('click', () => {
         const m = miseAjustee(etat);
         if (m < (etat.regles ? etat.regles.mise_min : 10)) { elRappel.textContent = 'Plus assez de jetons.'; return; }
-        envoyerIntention({ type: 'cs_rl_miser', pari, montant: m });
+        envoyerIntention(valeurJeton === 'tout'
+          ? { type: 'cs_rl_miser', pari, tapis: true }
+          : { type: 'cs_rl_miser', pari, montant: m });
       });
     }
     return c;
@@ -1669,15 +1736,50 @@ function pariGagne(pari, n) {
 }
 
 // --- Blackjack ---
-const STATUTS_BJ = { joue: 'joue', reste: 'reste', saute: 'saute !', blackjack: 'BLACKJACK' };
-function ligneMain(titre, cartes, valeur, vides) {
-  const l = el('div', 'ligne-cartes');
-  const e = el('div', 'etiq');
-  e.textContent = titre;
-  const b = el('b', '', String(valeur));
-  e.appendChild(b);
-  l.append(e, blocCartes(cartes, null, vides));
+const STATUTS_BJ = { reste: 'reste', saute: '💥 sauté', blackjack: '⭐ BLACKJACK' };
+const RESULTATS_BJ = { 'gagné': '✅ gagné', 'blackjack': '⭐ blackjack', 'égalité': '🤝 égalité', 'perdu': '❌ perdu', 'sauté': '💥 sauté' };
+
+// Une ligne par joueur (et le croupier) : tout le monde voit les cartes de
+// tout le monde, en grand, même celles du bout de la table.
+function ligneBJ(titre, sousTitre, mains, actif, moi) {
+  const l = el('div', 'ligne-bj' + (actif ? ' actif' : '') + (moi ? ' moi' : ''));
+  const e = el('div', 'qui', titre);
+  if (sousTitre) e.appendChild(el('small', '', sousTitre));
+  l.appendChild(e);
+  const zone = el('div', 'mains-bj');
+  mains.forEach(m => {
+    const bloc = el('div', 'main-bj' + (m.active ? ' active' : ''));
+    const c = el('div', 'cartes mini');
+    m.cartes.forEach(code => c.appendChild(carteHTML(code)));
+    bloc.appendChild(c);
+    const info = el('div', 'val');
+    info.appendChild(el('b', '', String(m.valeur)));
+    if (m.texte) info.appendChild(el('span', '', ' ' + m.texte));
+    bloc.appendChild(info);
+    zone.appendChild(bloc);
+  });
+  l.appendChild(zone);
   return l;
+}
+
+function tableBJ(etat) {
+  const t = etat.table;
+  const d = el('div', 'table-bj');
+  d.appendChild(ligneBJ('Croupier', '', [{
+    cartes: t.croupier, valeur: t.valeur_croupier + (t.croupier.includes('??') ? ' + ?' : ''),
+  }], etat.phase === 'resultat', false));
+  etat.joueurs.forEach((nom, j) => {
+    const mains = t.mains[j] || [];
+    if (!mains.length) return;
+    const total = mains.reduce((a, m) => a + m.mise, 0);
+    d.appendChild(ligneBJ(nom + (j === MOI ? ' (toi)' : ''), total + ' 🪙', mains.map((m, h) => ({
+      cartes: m.cartes,
+      valeur: m.valeur,
+      active: etat.phase === 'jeu' && t.courant === j && t.main_courante === h,
+      texte: (m.resultat ? RESULTATS_BJ[m.resultat] || m.resultat : STATUTS_BJ[m.statut] || '') + (m.double ? ' ×2' : ''),
+    })), etat.phase === 'jeu' && t.courant === j, j === MOI));
+  });
+  return d;
 }
 
 function panneauBlackjack(etat) {
@@ -1687,7 +1789,12 @@ function panneauBlackjack(etat) {
     p.appendChild(soldeMoi(etat, t.mises[MOI]));
     p.appendChild(choixJetons(etat));
     const r1 = rangee();
-    r1.appendChild(bouton('Miser ' + miseAjustee(etat), '', () => agir({ type: 'cs_bj_miser', montant: miseAjustee(etat) })));
+    const m = miseAjustee(etat);
+    r1.appendChild(bouton(valeurJeton === 'tout' ? 'Tapis : miser ' + m : 'Miser ' + m, '',
+      () => agir(valeurJeton === 'tout' ? { type: 'cs_bj_miser', tapis: true } : { type: 'cs_bj_miser', montant: m })));
+    if (valeurJeton !== 'tout' && etat.jetons[MOI] > 0) {
+      r1.appendChild(bouton('All in (' + etat.jetons[MOI] + ')', 'danger', () => agir({ type: 'cs_bj_miser', tapis: true })));
+    }
     if (t.mises[MOI]) r1.appendChild(bouton('Reprendre', 'sombre petit', () => agir({ type: 'cs_bj_annuler' })));
     p.appendChild(r1);
     const r = rangee();
@@ -1700,26 +1807,31 @@ function panneauBlackjack(etat) {
     p.appendChild(aide(attendus.length ? 'On attend : ' + attendus.join(', ') + '.' : 'Tout le monde est prêt dès que tu l’es.'));
     return;
   }
-  const maMain = t.mains[MOI] || [];
-  const joue = maMain.length > 0;
+  const mesMains = t.mains[MOI] || [];
   const aMoi = etat.phase === 'jeu' && t.courant === MOI;
-  const titre = etat.phase === 'resultat'
-    ? (t.resultats && t.resultats[MOI] ? resultatBJ(t.resultats[MOI]) : '🃏 Fin du coup')
-    : aMoi ? '🃏 À toi : ' + t.valeurs[MOI] : '🃏 Au tour de ' + (t.courant !== null ? etat.joueurs[t.courant] : 'du croupier');
-  const p = ouvrirPanneau(titre);
-  p.appendChild(ligneMain('Croupier', t.croupier, t.valeur_croupier + (t.croupier.includes('??') ? '+' : '')));
-  if (joue) {
-    p.appendChild(ligneMain('Toi · ' + t.mises[MOI] + ' 🪙', maMain, t.valeurs[MOI]));
-    if (t.statuts[MOI] && t.statuts[MOI] !== 'joue') p.appendChild(aide(STATUTS_BJ[t.statuts[MOI]] || ''));
+  const main = aMoi ? mesMains[t.main_courante] : null;
+  let titre;
+  if (etat.phase === 'resultat') {
+    const bilanMoi = etat.bilan && etat.bilan.lignes.find(l => l.joueur === MOI);
+    titre = !mesMains.length ? '🃏 Fin du coup' : !bilanMoi ? '🃏 Fin du coup'
+      : bilanMoi.delta > 0 ? '🎉 Gagné : +' + bilanMoi.delta : bilanMoi.delta < 0 ? '😬 Perdu : ' + bilanMoi.delta : '🤝 Égalité';
+  } else if (aMoi) {
+    titre = '🃏 À toi : ' + main.valeur + (mesMains.length > 1 ? ' (main ' + (t.main_courante + 1) + '/' + mesMains.length + ')' : '');
   } else {
-    p.appendChild(aide('Tu ne joues pas ce coup : tu regardes.'));
+    titre = '🃏 Au tour de ' + (t.courant !== null ? etat.joueurs[t.courant] : 'du croupier');
   }
-  if (aMoi) {
+  const p = ouvrirPanneau(titre);
+  p.appendChild(tableBJ(etat));
+  if (!mesMains.length) p.appendChild(aide('Tu ne joues pas ce coup : tu regardes.'));
+  if (aMoi && main) {
     const r = rangee();
     r.appendChild(bouton('Tirer', '', () => agir({ type: 'cs_bj_tirer' })));
     r.appendChild(bouton('Rester', 'vert', () => agir({ type: 'cs_bj_rester' })));
-    if (maMain.length === 2 && etat.jetons[MOI] >= t.mises[MOI]) {
-      r.appendChild(bouton('Doubler (' + (t.mises[MOI] * 2) + ')', 'sombre', () => agir({ type: 'cs_bj_doubler' })));
+    if (main.cartes.length === 2 && etat.jetons[MOI] >= main.mise) {
+      r.appendChild(bouton('Doubler (+' + main.mise + ')', 'sombre', () => agir({ type: 'cs_bj_doubler' })));
+    }
+    if (main.peut_splitter) {
+      r.appendChild(bouton('✂️ Séparer (+' + main.mise + ')', 'sombre', () => agir({ type: 'cs_bj_splitter' })));
     }
     p.appendChild(r);
   } else if (etat.phase === 'resultat') {
@@ -1729,9 +1841,6 @@ function panneauBlackjack(etat) {
     p.appendChild(r);
     p.appendChild(aide('Nouveau coup dans quelques secondes…'));
   }
-}
-function resultatBJ(r) {
-  return { 'gagné': '🎉 Gagné !', 'blackjack': '🎉 BLACKJACK !', 'égalité': '🤝 Égalité', 'perdu': '😬 Perdu', 'sauté': '💥 Sauté' }[r] || r;
 }
 
 // --- Poker ---
@@ -1774,10 +1883,10 @@ function panneauPoker(etat) {
     const maxTotal = t.mise_tour[MOI] + pile;
     const minTotal = Math.min(maxTotal, t.mise_max + t.relance_min);
     if (montantRelance === null || montantRelance < minTotal || montantRelance > maxTotal) montantRelance = minTotal;
-    p.appendChild(aide(du > 0 ? 'Il faut ' + du + ' pour suivre (mise à ' + t.mise_max + ').' : 'Personne n’a misé : tu peux parler.'));
+    p.appendChild(aide(du > 0 ? 'Il faut ' + du + ' pour suivre (mise à ' + t.mise_max + ').' : 'Personne n’a misé : tu peux checker.'));
     const r = rangee();
     r.appendChild(bouton('Se coucher', 'danger', () => agir({ type: 'cs_pk_coucher' })));
-    r.appendChild(bouton(du <= 0 ? 'Parler' : du >= pile ? 'Tapis ' + pile : 'Suivre ' + du, 'vert', () => agir({ type: 'cs_pk_suivre' })));
+    r.appendChild(bouton(du <= 0 ? 'Check' : du >= pile ? 'Tapis ' + pile : 'Suivre ' + du, 'vert', () => agir({ type: 'cs_pk_suivre' })));
     p.appendChild(r);
     if (maxTotal > t.mise_max && du < pile) {
       const rel = el('div', 'relance');
