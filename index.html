@@ -126,6 +126,7 @@
   .jeu:nth-child(2) { animation-delay: 0.07s; }
   .jeu:nth-child(3) { animation-delay: 0.14s; }
   .jeu:nth-child(4) { animation-delay: 0.21s; }
+  .jeu:nth-child(5) { animation-delay: 0.28s; }
   .jeu:hover {
     transform: translateY(-4px);
     border-color: color-mix(in srgb, var(--c1) 55%, transparent);
@@ -145,6 +146,7 @@
   .jeu:nth-child(2) .deco { animation-delay: -1.5s; }
   .jeu:nth-child(3) .deco { animation-delay: -3s; }
   .jeu:nth-child(4) .deco { animation-delay: -4.5s; }
+  .jeu:nth-child(5) .deco { animation-delay: -6s; }
   @keyframes flotte {
     0%, 100% { transform: rotate(12deg) translateY(0); }
     50% { transform: rotate(6deg) translateY(-8px); }
@@ -181,6 +183,7 @@
   .beerbattle { --c1: #22c3a6; --c2: #0f766e; }
   .buckshot   { --c1: #f04462; --c2: #9f1239; }
   .picopoly   { --c1: #a855f7; --c2: #6d28d9; }
+  .menteur    { --c1: #38bdf8; --c2: #1d4ed8; }
 
   .pied {
     margin-top: 34px; text-align: center; color: var(--texte-pale); font-size: 0.8rem; line-height: 1.6;
@@ -225,7 +228,7 @@
 
     <div class="titre-section">
       <h3>Les jeux</h3>
-      <span>4 jeux · en ligne</span>
+      <span>5 jeux · en ligne</span>
     </div>
 
     <div class="jeux">
@@ -288,6 +291,21 @@
           <p>Le Monopoly à boire dans les bars de Poitiers. Achète, construis, fais payer… en gorgées.</p>
           <div class="action">
             <span class="infos">1 h chrono · 3 difficultés</span>
+            <span class="jouer">Jouer <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+          </div>
+        </div>
+      </a>
+      <a class="jeu menteur" href="menteur-3d-jeu.html">
+        <div class="deco" aria-hidden="true">🤥</div>
+        <div class="haut">
+          <span class="etiquette"><span class="point"></span>En ligne</span>
+          <span class="etiquette">👥 2 à 8</span>
+        </div>
+        <div class="bas">
+          <h4>Menteur</h4>
+          <p>Pose tes cartes face cachée, bluffe, crie «&nbsp;Menteur&nbsp;!&nbsp;». Le perdant tente sa chance au barillet&nbsp;: clic ou cul sec.</p>
+          <div class="action">
+            <span class="infos">Cartes · Bluff · 3 modes</span>
             <span class="jouer">Jouer <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
           </div>
         </div>
