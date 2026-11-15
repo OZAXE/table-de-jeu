@@ -2372,11 +2372,8 @@ function panneauAccueil() {
   elMessage.textContent = 'Buckshot 3D';
   elRappel.textContent = 'Une pile de cartouches, des objets, et qui on sert';
   elCompteur.innerHTML = '';
-  const p = ouvrirPanneau('Comment tu joues ?');
-  const r = rangee();
-  r.appendChild(bouton('En ligne', '', panneauEnLigne));
-  r.appendChild(bouton('Solo contre des bots', 'sombre', panneauSolo));
-  p.appendChild(r);
+  // Plus de mode solo : on arrive directement sur le jeu en ligne.
+  const p = panneauEnLigne();
 
   const s = lireSession();
   if (s && s.code && s.jeton) {
@@ -2391,30 +2388,6 @@ function panneauAccueil() {
     }));
     p.appendChild(r2);
   }
-}
-
-// --- Solo : le moteur local et les bots, sans serveur ---
-function panneauSolo() {
-  const p = ouvrirPanneau('Combien de joueurs ?');
-  p.appendChild(aide('Toi + des bots qui tiennent la place des autres. De 2 à 6.'));
-  const r = rangee();
-  [2, 3, 4, 5, 6].forEach(n => {
-    r.appendChild(bouton(String(n), n === 4 ? '' : 'sombre', () => demarrerSolo(n)));
-  });
-  p.appendChild(r);
-  const r2 = rangee();
-  r2.style.marginTop = '12px';
-  r2.appendChild(bouton('Retour', 'sombre', panneauAccueil));
-  p.appendChild(r2);
-}
-
-function demarrerSolo(nb) {
-  mode = 'local';
-  monJeton = null;
-  oublierSession();
-  MOI = 0;
-  cacherPanneau();
-  serveur.demarrer(['Toi'].concat(NOMS_BOTS.slice(0, nb - 1)));
 }
 
 // --- En ligne : même protocole que le client 2D ---
@@ -2490,13 +2463,13 @@ function panneauEnLigne() {
   const l4 = rangee();
   l4.style.marginTop = '14px';
   l4.appendChild(boutonServeur());
-  l4.appendChild(bouton('Retour', 'sombre petit', panneauAccueil));
   p.appendChild(l4);
 
   const note = document.createElement('div');
   note.className = 'note';
   note.textContent = "Le serveur Render s'endort : la première connexion peut prendre 30 s.";
   p.appendChild(note);
+  return p;
 }
 
 function majLibelleServeur(b) {
