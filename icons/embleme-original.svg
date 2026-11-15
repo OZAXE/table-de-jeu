@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Emblème original « SHIELD » : écusson argenté, étoile et chevrons. -->
+  <defs>
+    <radialGradient id="fond" cx="50%" cy="15%" r="95%">
+      <stop offset="0" stop-color="#1e3a66"/><stop offset="1" stop-color="#070f1f"/>
+    </radialGradient>
+    <linearGradient id="argent" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4f7fb"/><stop offset=".5" stop-color="#b8c3d1"/><stop offset="1" stop-color="#7d8a9c"/>
+    </linearGradient>
+    <linearGradient id="nuit" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#16305a"/><stop offset="1" stop-color="#0a1830"/>
+    </linearGradient>
+    <linearGradient id="bleu" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7dd3fc"/><stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#fond)"/>
+  <!-- ombre -->
+  <path d="M256 92 L392 140 V262 C392 352 332 410 256 440 C180 410 120 352 120 262 V140 Z" fill="#000" fill-opacity=".35" transform="translate(0 10)"/>
+  <!-- écusson : bord argent puis fond nuit -->
+  <path d="M256 82 L398 132 V258 C398 352 334 414 256 444 C178 414 114 352 114 258 V132 Z" fill="url(#argent)"/>
+  <path d="M256 108 L374 150 V258 C374 336 322 390 256 416 C190 390 138 336 138 258 V150 Z" fill="url(#nuit)"/>
+  <!-- chevrons -->
+  <g fill="none" stroke="url(#bleu)" stroke-width="16" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M176 300 L256 344 L336 300"/>
+    <path d="M196 340 L256 374 L316 340" stroke-opacity=".7"/>
+  </g>
+  <!-- étoile -->
+  <path d="M256 150 L276 208 L338 209 L288 246 L306 305 L256 270 L206 305 L224 246 L174 209 L236 208 Z" fill="url(#argent)" stroke="#e8eef6" stroke-width="4" stroke-linejoin="round"/>
+</svg>
