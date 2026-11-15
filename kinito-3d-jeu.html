@@ -330,7 +330,7 @@
 import * as THREE from 'three';
 import {
   preparerAmbiance, lisser, creerDecorBar, dessinerEtiquette as dessinerPastille,
-  quandPoliceChargee, creerPersonnage, orienterVersTable, creerTableRonde, POLICE,
+  quandPoliceChargee, creerSousVerre, creerTableRonde, POLICE,
 } from './da/bar-moderne.js';
 
 const ACCENT = 0xf59e2e;   // orange du Kinito, comme sur l'accueil
@@ -373,7 +373,6 @@ const RESULT_DELAY = 0.15;
 const R_TABLE = 2.0;    // rayon du plateau
 const R_GOBELET = 1.32; // où se pose le gobelet à dés devant chaque joueur
 const R_CHOPE = 1.66;   // chope de bière de chaque joueur
-const R_AVATAR = 2.42;  // avatars, juste derrière le bord de table
 
 const CAM_VITESSE = 0.12;
 
@@ -389,7 +388,7 @@ scene.fog = new THREE.FogExp2(0x140d08, 0.075);
 // Distance calculee pour que la table tienne dans le champ quel que soit le
 // format : en portrait le champ horizontal est etroit, il faut reculer.
 const CAM_TABLE_CIBLE = new THREE.Vector3(0, 0.5, 0);
-const LARGEUR_VUE = 3.1;   // demi-largeur a cadrer (table + avatars + marge)
+const LARGEUR_VUE = 2.3;   // demi-largeur à cadrer : table + chopes + marge
 const HAUTEUR_VUE = 2.1;
 const CAM_TABLE_POS = new THREE.Vector3(0, 2.9, 5.0);
 
@@ -563,9 +562,6 @@ quandPoliceChargee(() => etiquettes.forEach(sp => {
 const COULEURS = [0x4a7ec2, 0xc25a4a, 0x5aa86a, 0xb58ac2, 0xc2a44a, 0x4ab0b5, 0xd9823a, 0xd46a9e];
 const sieges = [];
 
-function creerAvatar(couleur) {
-  return creerPersonnage(couleur);
-}
 
 function creerChope() {
   const g = new THREE.Group();
@@ -609,16 +605,17 @@ function creerSieges(noms) {
     const dir = new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
     const groupe = new THREE.Group();
 
-    const avatar = creerAvatar(COULEURS[i % COULEURS.length]);
-    avatar.position.copy(dir).multiplyScalar(R_AVATAR);
-    orienterVersTable(avatar);
-    const etiquette = creerEtiquette(noms[i]);
-    etiquette.position.copy(dir).multiplyScalar(R_AVATAR);
-    etiquette.position.y = 1.12;
+    // Pas de personnage : le joueur, c'est sa chope, posée sur un sous-verre
+    // à sa couleur (qui s'allume à son tour), avec son prénom au-dessus.
     const chope = creerChope();
     chope.position.copy(dir).multiplyScalar(R_CHOPE);
     chope.position.x += dir.z * 0.3;
     chope.position.z -= dir.x * 0.3;
+    const avatar = creerSousVerre(COULEURS[i % COULEURS.length]);
+    avatar.position.set(chope.position.x, 0, chope.position.z);
+    chope.position.y = 0.014;
+    const etiquette = creerEtiquette(noms[i]);
+    etiquette.position.set(chope.position.x, 0.58, chope.position.z);
 
     groupe.add(avatar, etiquette, chope);
     scene.add(groupe);
@@ -1313,7 +1310,8 @@ function appliquerEtat(etat) {
     s.groupe.visible = true;
     s.avatar.traverse(o => { if (o.isMesh) { o.material.transparent = parti; o.material.opacity = parti ? 0.22 : 1; } });
     s.avatar.userData.materiaux.forEach(m => {
-      m.emissive = new THREE.Color(i === etat.joueur_courant && !parti ? 0x3a2408 : 0x000000);
+      m.emissive = new THREE.Color(i === etat.joueur_courant && !parti ? ACCENT : 0x000000);
+      m.emissiveIntensity = 0.55;
     });
   });
   placerGobelet(etat.joueur_courant);

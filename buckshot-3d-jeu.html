@@ -342,7 +342,7 @@
 import * as THREE from 'three';
 import {
   preparerAmbiance, lisser as lisserScene, creerDecorBar, dessinerEtiquette as dessinerPastille,
-  quandPoliceChargee, creerPersonnage, orienterVersTable, creerTableRonde, POLICE,
+  quandPoliceChargee, creerSousVerre, creerTableRonde, POLICE,
 } from './da/bar-moderne.js';
 
 const ACCENT = 0xf04462;   // rouge de Buckshot, comme sur l'accueil
@@ -375,7 +375,6 @@ document.getElementById('quitter-table').addEventListener('click', () => {
 // =====================================================================
 const R_TABLE = 2.0;     // rayon du plateau
 const R_FEUTRE = 1.72;   // tapis bordeaux
-const R_AVATAR = 2.42;   // avatars, juste derrière le bord de table
 const R_CHOPE = 1.62;    // la chope de chaque joueur
 const R_OBJET = 1.32;    // son objet, posé devant lui
 const R_SERVI = 0.98;    // où atterrit la carte de celui qu'on sert
@@ -400,7 +399,7 @@ scene.fog = new THREE.FogExp2(0x170d0c, 0.075);
 // En portrait le champ horizontal est étroit, il faut beaucoup reculer, et
 // alléger le brouillard d'autant (à densité fixe la table était noyée).
 const CAM_CIBLE = new THREE.Vector3(0, 0.35, 0);
-const LARGEUR_VUE = 3.0;   // demi-largeur à cadrer : table + avatars + marge
+const LARGEUR_VUE = 2.3;   // demi-largeur à cadrer : table + chopes + marge
 const HAUTEUR_VUE = 2.1;
 const CAM_POS = new THREE.Vector3(0, 3.0, 5.0);
 
@@ -769,13 +768,6 @@ scene.add(spriteScie);
 const COULEURS = [0x4a7ec2, 0xc25a4a, 0x5aa86a, 0xb58ac2, 0xc2a44a, 0x4ab0b5, 0xd9823a, 0xd46a9e];
 const sieges = [];
 
-function creerAvatar(couleur) {
-  const g = creerPersonnage(couleur);
-  // La tête s'allume et s'estompe avec le buste (tour, cible, absent).
-  g.userData.materiaux = [g.userData.materiaux[0], g.userData.matTete];
-  return g;
-}
-
 function creerChope() {
   const g = new THREE.Group();
   const verre = new THREE.Mesh(
@@ -825,16 +817,17 @@ function creerSieges(noms) {
     const cote = new THREE.Vector3(dir.z, 0, -dir.x);   // vers la droite du joueur
     const groupe = new THREE.Group();
 
-    const avatar = creerAvatar(COULEURS[i % COULEURS.length]);
-    avatar.position.copy(dir).multiplyScalar(R_AVATAR);
-    orienterVersTable(avatar);
-
-    const etiquette = creerEtiquette(noms[i]);
-    etiquette.position.copy(dir).multiplyScalar(R_AVATAR);
-    etiquette.position.y = 1.12;
-
+    // Pas de personnage : le joueur, c'est sa chope, posée sur un sous-verre
+    // à sa couleur (allumé à son tour, rouge quand on peut le viser), avec
+    // son prénom au-dessus. Le sous-verre porte la zone de clic pour viser.
     const chope = creerChope();
     chope.position.copy(dir).multiplyScalar(R_CHOPE).addScaledVector(cote, -0.34);
+    const avatar = creerSousVerre(COULEURS[i % COULEURS.length]);
+    avatar.position.set(chope.position.x, 0, chope.position.z);
+    chope.position.y = 0.014;
+
+    const etiquette = creerEtiquette(noms[i]);
+    etiquette.position.set(chope.position.x, 0.62, chope.position.z);
 
     const objet = creerIcone(() => {}, 0.34);
     objet.position.copy(dir).multiplyScalar(R_OBJET).addScaledVector(cote, 0.3);
@@ -846,8 +839,7 @@ function creerSieges(noms) {
       ctx.font = '170px serif';
       ctx.fillText('🔒', 128, 136);
     }, 0.34);
-    menottes.position.copy(dir).multiplyScalar(R_AVATAR);
-    menottes.position.y = 1.42;
+    menottes.position.set(chope.position.x, 0.9, chope.position.z);
     menottes.visible = false;
 
     groupe.add(avatar, etiquette, chope, objet, menottes);
@@ -923,17 +915,17 @@ function deplacerCarte(carte, vers, rotZ, duree, arc, apres) {
 
 function attendre(duree, apres) { animer(duree, null, apres); }
 
-// Secousse de l'avatar qui boit.
+// Secousse de la chope de celui qui boit.
 function encaisser(i) {
   const s = sieges[i];
   if (!s) return;
-  const corps = s.avatar;
-  const base = s.dir.clone().multiplyScalar(R_AVATAR);
+  const corps = s.chope;
+  const base = corps.position.clone();
   animer(0.5, an => {
     const k = an.t / an.duree;
-    const amp = (1 - k) * 0.06;
-    corps.position.set(base.x + Math.sin(an.t * 46) * amp, 0, base.z + Math.cos(an.t * 39) * amp);
-    corps.rotation.z = Math.sin(an.t * 34) * (1 - k) * 0.12;
+    const amp = (1 - k) * 0.035;
+    corps.position.set(base.x + Math.sin(an.t * 46) * amp, base.y, base.z + Math.cos(an.t * 39) * amp);
+    corps.rotation.z = Math.sin(an.t * 34) * (1 - k) * 0.18;
   }, () => { corps.position.copy(base); corps.rotation.z = 0; });
 }
 
@@ -1087,7 +1079,7 @@ function majSurbrillance() {
     const cible = ciblesCliquables && ciblesCliquables.has(i);
     s.avatar.userData.materiaux.forEach(m => {
       m.emissive = new THREE.Color(cible ? 0xd0563b : (actif || chargeur) ? 0xd4af68 : 0x000000);
-      m.emissiveIntensity = cible ? 0.6 : 0.35;
+      m.emissiveIntensity = cible ? 0.9 : 0.6;
       m.transparent = !!absent;
       m.opacity = absent ? 0.35 : 1;
     });
