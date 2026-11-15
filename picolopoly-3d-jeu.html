@@ -4000,6 +4000,8 @@ function ecrireSession(s) {
   try { localStorage.setItem(CLE_SESSION, JSON.stringify(s)); } catch (e) { /* tant pis */ }
 }
 function oublierSession() {
+  // Oublier la session, c'est quitter le salon : plus de reconnexion auto.
+  lienActif = false;
   try { localStorage.removeItem(CLE_SESSION); } catch (e) { /* tant pis */ }
 }
 
@@ -4145,25 +4147,116 @@ async function rejoindreSalon() {
   }
 }
 
+// --- Connexion au serveur : reconnexion automatique et battement de cœur ---
+// Un téléphone qui se verrouille, change de réseau ou passe en arrière-plan
+// perd souvent sa connexion sans que la page le sache. Avant, il fallait
+// remarquer le panneau « Déconnecté » et appuyer sur « Reconnecter », et la
+// table attendait ce joueur pendant ce temps. Maintenant la page :
+//  - envoie un battement de cœur toutes les 5 s : le serveur sait ainsi qu'un
+//    téléphone muet est parti, et la partie continue sans lui ;
+//  - se reconnecte toute seule dès que la connexion tombe ;
+//  - au retour sur la page, vérifie sa connexion et redemande l'état de la
+//    partie, pour ne rien rater de ce qui s'est passé pendant la veille.
+let lienActif = false;      // on est dans un salon : il faut y rester connecté
+let tentativesLien = 0;
+let minuteurLien = null;
+let dernierSignal = 0;
+let cacheeDepuis = 0;
+
 function seConnecter() {
-  // Si on a déjà un jeton pour CE salon, on le renvoie, quel que soit le
-  // chemin emprunté pour revenir (bouton « Reprendre », code retapé, lien
-  // ?salon=). Sans lui le serveur ne nous reconnaît pas et nous AJOUTE
-  // comme nouveau joueur : on se retrouverait en double.
   if (!monJeton) {
     const s = lireSession();
     if (s && s.code === codeSalon && s.jeton) monJeton = s.jeton;
   }
-  let url = SERVEURS[serveurChoisi].ws + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom);
-  if (monJeton) url += '?jeton=' + encodeURIComponent(monJeton);
+
+  clearTimeout(minuteurLien);
+  minuteurLien = null;
+  lienActif = true;
+  // bat=1 : cette page envoie des battements de cœur (voir plus bas).
+  let url = SERVEURS[serveurChoisi].ws + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom) + '?bat=1';
+  if (monJeton) url += '&jeton=' + encodeURIComponent(monJeton);
   const socket = new WebSocket(url);
+  // L'ancienne connexion (morte ou muette) n'est pas fermée ici : le serveur
+  // s'en charge en voyant arriver celle-ci. Ses messages sont ignorés.
   ws = socket;
-  socket.onopen = () => { mode = 'ligne'; if (!enPartie) panneauAttente(); };
-  socket.onmessage = e => clientRecevoir(JSON.parse(e.data));
-  socket.onerror = () => afficherErreur('Erreur de connexion au serveur');
-  // Seule la socket en cours compte : une ancienne qui se ferme après coup
-  // ne doit pas recouvrir la partie d'un panneau « Déconnecté ».
-  socket.onclose = () => { if (enPartie && ws === socket) panneauReconnexion(); };
+  dernierSignal = Date.now();
+  socket.onopen = () => {
+    if (ws !== socket) return;
+    if (tentativesLien > 0) afficherErreur('Reconnecté.');
+    tentativesLien = 0;
+    dernierSignal = Date.now();
+    mode = 'ligne';
+    if (!enPartie) panneauAttente();
+  };
+  socket.onmessage = e => {
+    if (ws !== socket) return;
+    dernierSignal = Date.now();
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'pong') return;
+    if (msg.type === 'remplace') { lienActif = false; panneauRemplace(); return; }
+    clientRecevoir(msg);
+  };
+  socket.onerror = () => { if (ws === socket && !lienActif) afficherErreur('Erreur de connexion au serveur'); };
+  // Seule la connexion en cours compte : une ancienne qui se ferme après coup
+  // ne doit rien déclencher.
+  socket.onclose = () => { if (ws === socket && lienActif) programmerReconnexion(); };
+}
+
+function programmerReconnexion() {
+  if (!lienActif || minuteurLien) return;
+  tentativesLien++;
+  // Une minute d'essais (le serveur gratuit peut mettre 30 à 60 s à se
+  // réveiller) ; au-delà, on rend la main au joueur.
+  if (tentativesLien > 14) { lienActif = false; panneauReconnexion(); return; }
+  afficherErreur('Connexion perdue, reconnexion…');
+  const delai = Math.min(1000 * tentativesLien, 5000);
+  minuteurLien = setTimeout(() => { minuteurLien = null; if (lienActif) seConnecter(); }, delai);
+}
+
+// Retour sur la page (téléphone déverrouillé, appli rouverte, réseau revenu).
+function verifierLien() {
+  if (!lienActif) return;
+  const absence = cacheeDepuis ? Date.now() - cacheeDepuis : 0;
+  cacheeDepuis = 0;
+  if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+    clearTimeout(minuteurLien);
+    minuteurLien = null;
+    tentativesLien = 0;
+    seConnecter();
+  } else if (ws.readyState === WebSocket.OPEN && absence > 2000) {
+    // Connexion encore ouverte, mais des messages ont pu se perdre pendant
+    // la veille : on redemande où en est la partie.
+    try { ws.send('{"type":"ping"}'); ws.send('{"type":"resync"}'); } catch (e) { /* elle se fermera */ }
+  }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) cacheeDepuis = Date.now(); else verifierLien();
+});
+window.addEventListener('pageshow', verifierLien);
+window.addEventListener('online', verifierLien);
+
+setInterval(() => {
+  if (!lienActif || !ws || ws.readyState !== WebSocket.OPEN) return;
+  try { ws.send('{"type":"ping"}'); } catch (e) { /* elle se fermera */ }
+  // Plus rien reçu depuis 15 s malgré nos battements : la connexion est
+  // morte sans le dire (Wi-Fi changé...). On en ouvre une neuve.
+  if (!document.hidden && Date.now() - dernierSignal > 15000) seConnecter();
+}, 5000);
+
+// Notre place a été reprise depuis un autre onglet ou un autre appareil
+// (même prénom) : surtout ne pas se reconnecter tout seul, sinon les deux
+// écrans se la voleraient à tour de rôle.
+function panneauRemplace() {
+  elMessage.textContent = 'Partie reprise ailleurs';
+  const p = ouvrirPanneau('Tu joues sur un autre écran');
+  const t = document.createElement('p');
+  t.textContent = 'Ta place a été reprise depuis un autre onglet ou un autre téléphone, avec le même prénom.';
+  p.appendChild(t);
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  r.appendChild(bouton('Reprendre ici', '', () => { cacherPanneau(); tentativesLien = 0; seConnecter(); }));
+  r.appendChild(bouton('Tous les jeux', 'clair', () => { location.href = 'index.html'; }));
+  p.appendChild(r);
 }
 
 function panneauReconnexion() {
@@ -4171,7 +4264,7 @@ function panneauReconnexion() {
   const p = ouvrirPanneau('Déconnecté');
   p.appendChild(aide('Ta place est gardée : tes tours sont sautés et on choisit pour toi en attendant. Reconnecte-toi pour la reprendre.'));
   const r = rangee();
-  r.appendChild(bouton('Reconnecter', '', () => { cacherPanneau(); seConnecter(); }));
+  r.appendChild(bouton('Reconnecter', '', () => { cacherPanneau(); tentativesLien = 0; seConnecter(); }));
   r.appendChild(bouton('Quitter', 'clair', () => {
     enPartie = false; oublierSession(); monJeton = null; location.href = location.pathname;
   }));
