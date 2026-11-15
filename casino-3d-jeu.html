@@ -1,0 +1,2289 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Casino 3D</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=2">
+<link rel="apple-touch-icon" href="icons/icon-180.png?v=2">
+<meta name="theme-color" content="#0a2017">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SHIELD">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; background: #07110d; }
+  canvas { display: block; }
+
+  #overlay { position: fixed; inset: 0; pointer-events: none; font-family: 'Outfit', system-ui, sans-serif; }
+  #vignette { position: fixed; inset: 0; pointer-events: none; }
+
+  /* --- Liste des joueurs --- */
+  #joueurs { position: absolute; top: 18px; left: 18px; display: flex; flex-direction: column; gap: 6px; }
+  .joueur {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 12px; font-size: 16px; min-width: 190px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .joueur.absent { opacity: 0.45; font-style: italic; }
+  .joueur .pastille { width: 12px; height: 12px; border-radius: 50%; flex: 0 0 auto; }
+  .joueur .nom { flex: 1 1 auto; }
+  .joueur .info { font-size: 13px; color: var(--texte-doux); white-space: nowrap; }
+
+  /* --- Bandeau du haut --- */
+  #bandeau { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); text-align: center; max-width: 52vw; }
+  #message { font-size: 21px; }
+  #rappel { font-size: 15px; margin-top: 4px; }
+  #compteur {
+    display: inline-block; margin-top: 6px; padding: 4px 14px;
+    color: var(--texte); font-size: 14px;
+    background: var(--verre); border: 1px solid var(--bord); border-radius: 999px;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  }
+  #compteur:empty { display: none; }
+  #compteur b { color: var(--accent); }
+  #compteur .chrono.urgent { color: #ff8a8a; font-weight: 700; }
+
+  /* --- Panneau du bas --- */
+  #panneau {
+    position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+    pointer-events: auto; padding: 14px 18px;
+    min-width: 320px; max-width: min(820px, 94vw); text-align: center;
+    max-height: 62vh; overflow-y: auto;
+  }
+  #panneau.cache { display: none; }
+  #panneau h2 { margin: 0 0 8px; font-size: 20px; }
+  #panneau p { margin: 0 0 10px; font-size: 16px; }
+  .rangee { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; align-items: center; }
+
+  button {
+    pointer-events: auto; font-family: 'Outfit', system-ui, sans-serif;
+    font-weight: 700; font-size: 18px; padding: 11px 22px; cursor: pointer;
+  }
+  button.petit { font-size: 14px; padding: 7px 14px; }
+  button.gros { font-size: 22px; padding: 14px 30px; letter-spacing: 0.04em; }
+  button.choisi { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button.vert { background: linear-gradient(135deg, #22c55e, #15803d) !important; box-shadow: 0 8px 22px rgba(34,197,94,0.3) !important; }
+
+  .aide { color: var(--texte-doux); font-size: 14px; margin: 6px 0 4px; }
+  .solde { font-size: 15px; color: var(--texte); margin: 2px 0 8px; }
+  .solde b { color: var(--accent); }
+
+  /* --- Hall : les trois tables --- */
+  .tables { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 6px 0 12px; }
+  .table-jeu {
+    pointer-events: auto; cursor: pointer; text-align: left; position: relative; overflow: hidden;
+    padding: 14px 14px 12px; border-radius: 18px; border: 1px solid var(--bord);
+    background: linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+    color: var(--texte); transition: transform 0.12s ease, border-color 0.15s;
+  }
+  .table-jeu:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+  .table-jeu .ico { font-size: 34px; line-height: 1; display: block; margin-bottom: 6px; }
+  .table-jeu b { display: block; font-size: 17px; margin-bottom: 3px; }
+  .table-jeu span.d { font-size: 12px; color: var(--texte-doux); line-height: 1.35; display: block; }
+  .table-jeu.inactif { opacity: 0.45; cursor: not-allowed; }
+
+  /* --- Classement --- */
+  .bilan { margin: 6px auto 10px; border-collapse: collapse; font-size: 14px; min-width: 260px; }
+  .bilan th { font-weight: 600; font-size: 12px; color: var(--texte-pale); padding: 2px 8px; text-align: right; }
+  .bilan th:first-child { text-align: left; }
+  .bilan td { padding: 4px 8px; color: var(--texte); text-align: right; border-bottom: 1px solid var(--bord); white-space: nowrap; }
+  .bilan td:first-child { text-align: left; }
+  .bilan td.plus { color: #7dffb0; font-weight: 700; }
+  .bilan td.moins { color: #ff8a9a; font-weight: 700; }
+  .bilan tr.moi td { background: rgba(255,255,255,0.05); }
+
+  /* --- Jetons à miser --- */
+  .jetons-choix { display: flex; gap: 8px; justify-content: center; margin: 4px 0 10px; flex-wrap: wrap; }
+  .jeton {
+    pointer-events: auto; cursor: pointer; width: 46px; height: 46px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 13px; color: #fff; user-select: none; -webkit-user-select: none;
+    border: 4px dashed rgba(255,255,255,0.75); box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    transition: transform 0.12s ease;
+  }
+  .jeton.choisi { transform: translateY(-5px) scale(1.08); box-shadow: 0 0 0 3px var(--accent), 0 8px 16px rgba(0,0,0,0.5); }
+  .j10 { background: #d23b3b; } .j50 { background: #2563eb; } .j100 { background: #1f2937; } .j500 { background: #7c3aed; }
+
+  /* --- Tapis de roulette --- */
+  .tapis { display: grid; grid-template-columns: 1.1fr repeat(12, 1fr) 1.2fr; gap: 3px; margin: 4px auto 6px; max-width: 640px; }
+  .case {
+    pointer-events: auto; cursor: pointer; position: relative; user-select: none; -webkit-user-select: none;
+    min-height: 34px; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px; color: #fff; border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.18); background: #155c3a;
+  }
+  .case.rouge { background: #b3202d; }
+  .case.noir { background: #161b22; }
+  .case.vert { background: #0f7a45; }
+  .case.ext { background: rgba(21,92,58,0.85); font-size: 12px; }
+  .case:active { filter: brightness(1.3); }
+  .case.gagnant { box-shadow: 0 0 0 3px #ffd98a, 0 0 18px #ffd98a; z-index: 2; }
+  .case .mise {
+    position: absolute; top: -7px; right: -5px; min-width: 18px; padding: 1px 4px; border-radius: 999px;
+    background: #fbbf24; color: #1a1205; font-size: 10px; font-weight: 800; line-height: 14px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5); z-index: 3;
+  }
+  .case .autres { position: absolute; bottom: 1px; left: 3px; font-size: 9px; color: rgba(255,255,255,0.75); }
+  .tapis-ext { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; margin: 0 auto 8px; max-width: 640px; }
+  .tapis-ext.d3 { grid-template-columns: repeat(3, 1fr); }
+  .historique { display: flex; gap: 4px; justify-content: center; margin: 2px 0 8px; flex-wrap: wrap; }
+  .historique span { width: 24px; height: 24px; border-radius: 50%; font-size: 11px; font-weight: 700; color: #fff;
+    display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.2); }
+  .grand-numero { font-size: 54px; font-weight: 800; width: 92px; height: 92px; border-radius: 50%; margin: 4px auto 8px;
+    display: flex; align-items: center; justify-content: center; color: #fff; border: 3px solid #ffd98a; }
+
+  /* --- Cartes (HTML : ma main, le croupier, le tableau) --- */
+  .cartes { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin: 6px 0 8px; }
+  .carte {
+    width: 50px; height: 70px; border-radius: 8px; flex: 0 0 auto; position: relative;
+    background: #fbf7ee; color: #1d2430; border: 1px solid #c9b991;
+    box-shadow: 0 5px 12px rgba(0,0,0,0.35);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: Georgia, serif; user-select: none; -webkit-user-select: none;
+  }
+  .carte .r { font-size: 22px; font-weight: 700; line-height: 1; }
+  .carte .s { font-size: 24px; line-height: 1; }
+  .carte.rouge { color: #c2182b; }
+  .carte.dos { background: repeating-linear-gradient(45deg, #5a1222 0 6px, #7a1a2e 6px 12px); border: 3px solid #f4ead6; }
+  .carte.vide { background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.2); box-shadow: none; }
+  .carte.forte { box-shadow: 0 0 0 3px #ffd98a, 0 5px 12px rgba(0,0,0,0.35); }
+  .ligne-cartes { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+  .ligne-cartes .etiq { font-size: 13px; color: var(--texte-doux); min-width: 70px; }
+  .ligne-cartes .etiq b { color: var(--texte); font-size: 18px; display: block; }
+
+  /* --- Relance au poker --- */
+  .relance { display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+  .relance .montant { min-width: 70px; font-size: 20px; font-weight: 800; color: var(--accent); }
+  .verdict { font-size: 17px; color: var(--texte); margin: 4px 0 10px; }
+
+  input[type="text"] {
+    pointer-events: auto; font-family: 'Outfit', system-ui, sans-serif;
+    font-size: 18px; text-align: center; padding: 10px 14px; width: 210px; margin: 0 4px;
+  }
+  input#code-salon { width: 120px; letter-spacing: 6px; text-transform: uppercase; }
+  .code-salon { font-size: 38px; letter-spacing: 8px; margin: 2px 0 6px; }
+  .liste-attente { font-size: 17px; margin: 10px 0; line-height: 1.6; }
+  .qr { display: block; margin: 10px auto 4px; width: 168px; height: 168px; }
+  @media (max-width: 760px), (pointer: coarse) { .qr { width: 132px; height: 132px; } }
+
+  /* --- Règles --- */
+  #btn-regles { position: absolute; top: 18px; right: 18px; pointer-events: auto; font-size: 15px; padding: 8px 16px; cursor: pointer; }
+  #modale-regles {
+    position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-start; justify-content: center;
+    padding: 20px; overflow-y: auto; pointer-events: auto;
+  }
+  #modale-regles.cache { display: none; }
+  .modale { padding: 22px; max-width: 520px; width: 100%; margin: auto; line-height: 1.55; }
+  .modale h2 { font-size: 22px; margin: 0 0 12px; text-align: center; }
+  .modale h3 { font-size: 17px; margin: 16px 0 6px; }
+  .modale p { margin: 0 0 10px; font-size: 15px; }
+  .modale ul { margin: 0 0 10px 18px; font-size: 15px; padding: 0; }
+  .modale li { margin-bottom: 5px; }
+  .modale table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 14px; }
+  .modale td { padding: 5px 7px; text-align: left; border-bottom: 1px solid var(--bord); vertical-align: top; }
+  .modale td:first-child { white-space: nowrap; color: var(--texte); }
+
+  .cache { display: none !important; }
+  .note { font-size: 12px; margin-top: 10px; }
+  .alerte { font-size: 13px; color: #e0a05a; margin-top: 8px; }
+
+  /* ================= Téléphones ================= */
+  @media (max-width: 760px), (pointer: coarse) {
+    #joueurs { top: 88px; left: 8px; right: 8px; flex-direction: row; flex-wrap: wrap; gap: 4px; justify-content: center; }
+    .joueur { padding: 3px 9px; font-size: 13px; min-width: 0; gap: 5px; }
+    .joueur .info { font-size: 11px; }
+    #bandeau { top: 12px; max-width: calc(100vw - 130px); left: 8px; transform: none; text-align: left; }
+    #message { font-size: 17px; }
+    #rappel { font-size: 12px; }
+    #compteur { font-size: 11px; padding: 2px 9px; margin-top: 3px; white-space: nowrap; }
+    #btn-regles { top: 10px; right: 10px; font-size: 13px; padding: 6px 12px; }
+    #panneau {
+      bottom: 0; left: 0; right: 0; transform: none; width: 100%; max-width: none; min-width: 0;
+      padding: 10px 8px calc(10px + env(safe-area-inset-bottom, 0px)); max-height: 64vh;
+    }
+    #panneau h2 { font-size: 17px; margin-bottom: 6px; }
+    #panneau p { font-size: 14px; margin-bottom: 8px; }
+    button { font-size: 15px; padding: 9px 14px; }
+    button.gros { font-size: 19px; padding: 12px 24px; }
+    .rangee { gap: 7px; }
+    .tables { grid-template-columns: 1fr; gap: 7px; }
+    .table-jeu { display: flex; align-items: center; gap: 12px; padding: 10px 12px; }
+    .table-jeu .ico { margin: 0; font-size: 30px; }
+    .tapis { gap: 2px; }
+    .case { min-height: 30px; font-size: 11px; border-radius: 4px; }
+    .case.ext { font-size: 10px; }
+    .jeton { width: 40px; height: 40px; font-size: 12px; border-width: 3px; }
+    .carte { width: 42px; height: 60px; }
+    .carte .r { font-size: 18px; } .carte .s { font-size: 20px; }
+    .bilan { font-size: 13px; min-width: 0; width: 100%; }
+    .bilan td, .bilan th { padding: 3px 4px; }
+    input[type="text"] { width: 160px; font-size: 16px; }
+    input#code-salon { width: 104px; }
+    .code-salon { font-size: 30px; letter-spacing: 6px; }
+    .modale { padding: 16px; }
+    .modale h2 { font-size: 19px; }
+    .modale p, .modale ul { font-size: 14px; }
+  }
+  @media (max-height: 460px) {
+    #joueurs { top: 80px; }
+    #panneau { max-height: 80vh; padding: 8px 10px; }
+  }
+</style>
+<!-- Direction artistique commune « bar moderne » ; accent or pour le Casino. -->
+<link rel="stylesheet" href="da/bar-moderne.css">
+<style>:root { --accent: #facc15; --accent-2: #a16207; }</style>
+</head>
+<body>
+
+<div id="overlay">
+  <button id="btn-regles">Règles &#9432;</button>
+  <div id="joueurs"></div>
+  <div id="bandeau">
+    <div id="message">Casino 3D</div>
+    <div id="rappel"></div>
+    <div id="compteur"></div>
+  </div>
+  <div id="panneau"></div>
+</div>
+<div id="vignette"></div>
+
+<div id="modale-regles" class="cache">
+  <div class="modale">
+    <h2>Règles du Casino</h2>
+    <p>Trois tables dans la même salle : <span class="accent">roulette, blackjack et poker</span>. Tout le salon joue à la même table. Depuis le hall, n'importe qui choisit la table ; entre deux coups, n'importe qui peut ramener tout le monde au hall pour changer de jeu.</p>
+
+    <h3>Jetons et gorgées</h3>
+    <ul>
+      <li>Chacun part avec <span class="accent">1000 jetons</span>, gardés d'une table à l'autre.</li>
+      <li>À la fin de chaque coup, tu perds des jetons : <span class="accent">1 gorgée par tranche de 100</span> perdue (une perte de 10 à 100 = 1 gorgée, de 101 à 200 = 2…), 6 au plus.</li>
+      <li>Tu gagnes au moins 200 jetons : tu <span class="accent">distribues 1 gorgée par tranche de 200</span>, 6 au plus.</li>
+      <li>Plus assez pour miser (moins de 10 jetons) : <span class="accent">cul sec</span>, et la banque te recharge 1000 jetons. Le classement compte les recharges.</li>
+    </ul>
+
+    <h3>🎡 Roulette</h3>
+    <p>Roulette européenne, de 0 à 36. Choisis la valeur de ton jeton, touche les cases du tapis pour miser (plusieurs paris possibles), puis <span class="accent">Prêt</span>. La bille est lancée quand tout le monde est prêt, ou au bout de 30 s.</p>
+    <table>
+      <tr><td>Plein (un numéro)</td><td>35 fois la mise</td></tr>
+      <tr><td>Douzaine, colonne</td><td>2 fois la mise</td></tr>
+      <tr><td>Rouge / noir, pair / impair, 1-18 / 19-36</td><td>1 fois la mise</td></tr>
+    </table>
+    <p>Le 0 fait perdre tous les paris simples.</p>
+
+    <h3>🃏 Blackjack</h3>
+    <ul>
+      <li>Mise, puis deux cartes chacun. Le croupier en a une visible et une cachée.</li>
+      <li>But : faire plus que le croupier sans dépasser <span class="accent">21</span>. Figures = 10, As = 1 ou 11.</li>
+      <li>À ton tour : <span class="accent">Tirer</span> une carte, <span class="accent">Rester</span>, ou <span class="accent">Doubler</span> (sur tes deux premières cartes : mise doublée, une seule carte de plus).</li>
+      <li>Le croupier tire jusqu'à 17. Gagné : tu doubles ta mise. <span class="accent">Blackjack</span> (As + 10 d'entrée) : payé 3 pour 2.</li>
+    </ul>
+
+    <h3>♠️ Poker</h3>
+    <ul>
+      <li>Texas Hold'em sans limite, blinds 10 / 20, à 2 joueurs au moins.</li>
+      <li>Deux cartes cachées chacun, puis cinq cartes communes : le flop (3), le tournant, la rivière, avec un tour d'enchères à chaque fois.</li>
+      <li>À ton tour : se coucher, parler / suivre, relancer, ou tapis. La meilleure main de 5 cartes remporte le pot.</li>
+    </ul>
+    <table>
+      <tr><td>Quinte flush</td><td>5 cartes qui se suivent, même couleur</td></tr>
+      <tr><td>Carré</td><td>4 cartes de même valeur</td></tr>
+      <tr><td>Full</td><td>un brelan et une paire</td></tr>
+      <tr><td>Couleur</td><td>5 cartes de même couleur</td></tr>
+      <tr><td>Quinte</td><td>5 cartes qui se suivent</td></tr>
+      <tr><td>Brelan</td><td>3 cartes de même valeur</td></tr>
+      <tr><td>Double paire, paire</td><td>…</td></tr>
+    </table>
+    <p>Un joueur trop lent reste (blackjack), parle ou se couche (poker) d'office.</p>
+
+    <div id="bloc-qr-regles" class="cache">
+      <h3>Inviter quelqu'un</h3>
+      <p>Salon <span class="accent" id="qr-code-salon">----</span> : fais scanner ce code, le prénom suffira. On peut s'asseoir à tout moment.</p>
+      <canvas id="qr-regles" class="qr"></canvas>
+      <div id="qr-note-regles" class="note"></div>
+      <div class="rangee" style="margin-top:8px;">
+        <button id="copier-lien-regles" class="sombre">Copier le lien</button>
+      </div>
+    </div>
+
+    <div class="rangee" style="margin-top:14px;">
+      <button id="fermer-regles">Fermer</button>
+      <button id="quitter-table" class="sombre cache">Quitter la table</button>
+      <button id="menu-jeux" class="sombre">🎲 Tous les jeux</button>
+    </div>
+    <p class="note" style="text-align:center;">Jetons fictifs, aucun argent réel. À consommer avec modération.</p>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import {
+  preparerAmbiance, lisser as lisserScene, creerDecorBar, dessinerEtiquette as dessinerPastille,
+  quandPoliceChargee, creerSousVerre, creerTableRonde, POLICE,
+} from './da/bar-moderne.js';
+
+const ACCENT = 0xfacc15;   // or du Casino, comme sur l'accueil
+
+const elModaleRegles = document.getElementById('modale-regles');
+document.getElementById('btn-regles').addEventListener('click', () => {
+  majQRModale();
+  document.getElementById('quitter-table').classList.toggle('cache', !enPartie);
+  elModaleRegles.classList.remove('cache');
+});
+document.getElementById('fermer-regles').addEventListener('click', () => elModaleRegles.classList.add('cache'));
+document.getElementById('menu-jeux').addEventListener('click', () => { location.href = 'index.html'; });
+elModaleRegles.addEventListener('click', e => { if (e.target === elModaleRegles) elModaleRegles.classList.add('cache'); });
+document.getElementById('quitter-table').addEventListener('click', () => {
+  oublierSession();
+  if (ws) { try { ws.close(); } catch (e) { /* deja ferme */ } }
+  location.href = location.pathname;
+});
+
+// =====================================================================
+// CONSTANTES DE LA SCÈNE
+// =====================================================================
+const R_TABLE = 2.0;
+const R_FEUTRE = 1.72;
+const R_CHOPE = 1.62;     // sous-verre et chope de chaque joueur
+const R_CARTES = 1.12;    // ses cartes, devant lui
+const R_MISE = 1.32;      // sa mise en cours
+const VERRE_PLEIN = 15;   // gorgées pour remplir la chope (repère visuel)
+
+const CARTE_L = 0.2;
+const CARTE_P = 0.28;
+const CARTE_E = 0.008;
+const SABOT = new THREE.Vector3(0.95, 0.05, -0.75);   // d'où partent les cartes
+const CENTRE_Z = -0.12;                               // croupier et tableau du poker
+
+const CAM_VITESSE = 0.12;
+
+// =====================================================================
+// SCÈNE / CAMÉRA / RENDU (même cadrage que Menteur)
+// =====================================================================
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x07110d);
+scene.fog = new THREE.FogExp2(0x07110d, 0.075);
+
+const CAM_CIBLE = new THREE.Vector3(0, 0.3, 0);
+const LARGEUR_VUE = 2.3;
+const HAUTEUR_VUE = 2.1;
+const CAM_POS = new THREE.Vector3(0, 3.0, 5.0);
+
+// La table est cadrée dans la zone LIBRE de l'écran : entre le bandeau du
+// haut et le panneau du bas (qui prend la moitié d'un téléphone pendant
+// les mises). Le centre de la vue est décalé (setViewOffset) au milieu de
+// cette zone, et la distance est calculée pour qu'elle y tienne.
+const zoneVue = { hauteur: window.innerHeight, decalage: 0, decalageCourant: 0 };
+function mesurerZoneVue() {
+  const H = window.innerHeight;
+  const tel = matchMedia('(max-width: 760px), (pointer: coarse)').matches;
+  const haut = tel ? 118 : 64;
+  let bas = 0;
+  const panneau = document.getElementById('panneau');
+  if (panneau && !panneau.classList.contains('cache')) bas = panneau.getBoundingClientRect().height + (tel ? 0 : 24);
+  bas = Math.min(bas, H * 0.64);
+  const hv = Math.max(H * 0.3, H - haut - bas);
+  const centre = Math.min(haut + hv / 2, H / 2);
+  zoneVue.hauteur = hv;
+  zoneVue.decalage = H / 2 - centre;
+}
+function distanceCadrage(cam) {
+  const vHalf = THREE.MathUtils.degToRad(cam.fov) / 2;
+  const hHalf = Math.atan(Math.tan(vHalf) * cam.aspect);
+  const vUtile = Math.atan(Math.tan(vHalf) * zoneVue.hauteur / window.innerHeight);
+  return Math.max(LARGEUR_VUE / Math.tan(hHalf), HAUTEUR_VUE / Math.tan(vUtile), 4.2);
+}
+const FOG_DENSITE_MAX = 0.075;
+function majCadrageTable(cam) {
+  mesurerZoneVue();
+  const d = distanceCadrage(cam);
+  const dir = new THREE.Vector3(0, 0.66, 0.75).normalize();
+  CAM_POS.copy(CAM_CIBLE).addScaledVector(dir, d);
+  if (scene.fog) scene.fog.density = Math.min(FOG_DENSITE_MAX, 0.536 / d);
+}
+function recadrer() {
+  majCadrageTable(camera);
+  camObjectifPos = CAM_POS.clone();
+  camObjectifCible = CAM_CIBLE.clone();
+}
+
+let camObjectifPos = CAM_POS.clone();
+let camObjectifCible = CAM_CIBLE.clone();
+const camCibleActuelle = CAM_CIBLE.clone();
+
+const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.1, 40);
+majCadrageTable(camera);
+camObjectifPos = CAM_POS.clone();
+camera.position.copy(CAM_POS);
+camera.lookAt(camCibleActuelle);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+document.body.appendChild(renderer.domElement);
+
+function redimensionner() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  recadrer();
+}
+window.addEventListener('resize', redimensionner);
+window.addEventListener('orientationchange', redimensionner);
+
+scene.add(new THREE.AmbientLight(0x2a2a30, 1.0));
+const keyLight = new THREE.DirectionalLight(0xffd6a8, 3.0);
+keyLight.position.set(0.8, 3.4, 1.2);
+keyLight.target.position.set(0, 0.3, 0);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.set(2048, 2048);
+Object.assign(keyLight.shadow.camera, { left: -3.4, right: 3.4, top: 3.4, bottom: -3.4, near: 0.5, far: 9 });
+scene.add(keyLight, keyLight.target);
+preparerAmbiance(renderer, scene, { accent: ACCENT });
+
+// Noyer, tapis vert de casino, cerclage laiton.
+const { groupe: table } = creerTableRonde(R_TABLE, { rayonFeutre: R_FEUTRE, feutreCouleur: 0x0e4a2c });
+scene.add(table);
+
+const decor = creerDecorBar(scene, { accent: ACCENT, nom: 'CASINO', solY: -1.2 });
+// La suspension au-dessus de la table masquait la roue vue de haut et de
+// loin (téléphone en portrait) : on la retire, la lumière reste.
+decor.traverse(o => {
+  if (o.isMesh && Math.abs(o.position.x) < 0.01 && Math.abs(o.position.z) < 0.01 && o.position.y > 2) o.visible = false;
+});
+
+// =====================================================================
+// OUTILS DE DESSIN
+// =====================================================================
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+function texture(canvas) {
+  const t = new THREE.CanvasTexture(canvas);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
+const ROUGES = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
+const ORDRE_ROUE = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1,
+  20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
+function couleurNumero(n) { return n === 0 ? 'vert' : ROUGES.includes(n) ? 'rouge' : 'noir'; }
+const TEINTES = { vert: '#0f7a45', rouge: '#b3202d', noir: '#161b22' };
+
+// =====================================================================
+// LA ROUE DE ROULETTE
+// Le disque est dessiné vu de dessus : sur une CircleGeometry couchée, le
+// x du dessin est le x du monde et son y est le z du monde.
+// =====================================================================
+const R_ROUE = 0.6;
+const SECTEUR = Math.PI * 2 / 37;
+const roue = (() => {
+  const groupe = new THREE.Group();
+  // La cuve en noyer et son rebord laiton.
+  const cuve = new THREE.Mesh(
+    new THREE.CylinderGeometry(R_ROUE + 0.1, R_ROUE + 0.04, 0.12, 96, 1, true),
+    new THREE.MeshStandardMaterial({ color: 0x3a2416, roughness: 0.4, side: THREE.DoubleSide })
+  );
+  cuve.position.y = 0.06;
+  const fondCuve = new THREE.Mesh(
+    new THREE.CylinderGeometry(R_ROUE + 0.06, R_ROUE + 0.06, 0.02, 96),
+    new THREE.MeshStandardMaterial({ color: 0x2a190e, roughness: 0.5 })
+  );
+  fondCuve.position.y = 0.012;
+  const rebord = new THREE.Mesh(new THREE.TorusGeometry(R_ROUE + 0.1, 0.018, 12, 120),
+    new THREE.MeshStandardMaterial({ color: 0xc9a25a, roughness: 0.28, metalness: 0.9 }));
+  rebord.rotation.x = Math.PI / 2;
+  rebord.position.y = 0.12;
+  groupe.add(cuve, fondCuve, rebord);
+
+  // Le plateau qui tourne : les 37 cases dans l'ordre réel de la roue.
+  const c = document.createElement('canvas');
+  c.width = c.height = 1024;
+  const ctx = c.getContext('2d');
+  const C = 512;
+  ctx.fillStyle = '#2a190e';
+  ctx.fillRect(0, 0, 1024, 1024);
+  for (let k = 0; k < 37; k++) {
+    const n = ORDRE_ROUE[k];
+    const a0 = k * SECTEUR - SECTEUR / 2, a1 = a0 + SECTEUR;
+    ctx.beginPath();
+    ctx.moveTo(C, C);
+    ctx.arc(C, C, 508, a0, a1);
+    ctx.closePath();
+    ctx.fillStyle = TEINTES[couleurNumero(n)];
+    ctx.fill();
+    ctx.strokeStyle = '#d4af68';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.save();
+    ctx.translate(C, C);
+    ctx.rotate(k * SECTEUR);
+    ctx.translate(448, 0);
+    ctx.rotate(Math.PI / 2);
+    ctx.fillStyle = '#f6efe0';
+    ctx.font = `800 40px ${POLICE}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(n), 0, 0);
+    ctx.restore();
+  }
+  // Anneau des alvéoles, puis cône central en bois.
+  ctx.beginPath(); ctx.arc(C, C, 400, 0, Math.PI * 2); ctx.lineWidth = 6; ctx.strokeStyle = '#d4af68'; ctx.stroke();
+  const grad = ctx.createRadialGradient(C, C, 40, C, C, 330);
+  grad.addColorStop(0, '#6b4426'); grad.addColorStop(1, '#2d1a0c');
+  ctx.beginPath(); ctx.arc(C, C, 330, 0, Math.PI * 2); ctx.fillStyle = grad; ctx.fill();
+  ctx.lineWidth = 8; ctx.strokeStyle = '#c9a25a'; ctx.stroke();
+  const plateau = new THREE.Mesh(
+    new THREE.CircleGeometry(R_ROUE, 96),
+    new THREE.MeshStandardMaterial({ map: texture(c), roughness: 0.45, metalness: 0.05 })
+  );
+  plateau.rotation.x = -Math.PI / 2;
+  plateau.position.y = 0.03;
+  plateau.receiveShadow = true;
+  const disque = new THREE.Group();
+  disque.add(plateau);
+  // Croisillon laiton au centre.
+  const laiton = new THREE.MeshStandardMaterial({ color: 0xd9b46a, roughness: 0.22, metalness: 0.95 });
+  const axe = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.05, 0.14, 24), laiton);
+  axe.position.y = 0.1;
+  disque.add(axe);
+  for (let k = 0; k < 4; k++) {
+    const bras = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.26, 8), laiton);
+    bras.rotation.z = Math.PI / 2;
+    bras.rotation.y = k * Math.PI / 4;
+    bras.position.y = 0.15;
+    disque.add(bras);
+    const boule = new THREE.Mesh(new THREE.SphereGeometry(0.016, 12, 10), laiton);
+    boule.position.set(Math.cos(k * Math.PI / 4) * 0.13, 0.15, -Math.sin(k * Math.PI / 4) * 0.13);
+    const boule2 = boule.clone();
+    boule2.position.set(-boule.position.x, 0.15, -boule.position.z);
+    disque.add(boule, boule2);
+  }
+  groupe.add(disque);
+
+  const bille = new THREE.Mesh(new THREE.SphereGeometry(0.022, 20, 16),
+    new THREE.MeshStandardMaterial({ color: 0xf8f8f8, roughness: 0.15, metalness: 0.1 }));
+  bille.castShadow = true;
+  bille.visible = false;
+  groupe.add(bille);
+  scene.add(groupe);
+  return { groupe, disque, bille, angle: 0, vitesse: 0.15, rel: 0, rayonBille: 0.5, billeVisible: false, enLancer: false };
+})();
+
+// Angle (dans le repère du disque) du secteur d'un numéro.
+function angleNumero(n) { return ORDRE_ROUE.indexOf(n) * SECTEUR; }
+function placerBille() {
+  // Un point du disque à l'angle local a se trouve, dans le monde, à a - angle.
+  const b = roue.rel - roue.angle;
+  roue.bille.position.set(Math.cos(b) * roue.rayonBille, 0.055, Math.sin(b) * roue.rayonBille);
+  roue.bille.visible = roue.billeVisible && roue.groupe.visible;
+}
+// La bille posée sur un numéro (résultat connu, sans animation).
+function poserBille(n) {
+  roue.rel = angleNumero(n);
+  roue.rayonBille = 0.43;
+  roue.billeVisible = true;
+}
+// Le lancer : la roue tourne, la bille court en sens inverse puis tombe.
+function lancerRoulette(n, duree) {
+  roue.enLancer = true;
+  roue.billeVisible = true;
+  const relFin = angleNumero(n);
+  const tours = 5;
+  const vitesseDepart = 2.6;
+  animer(duree, an => {
+    const k = an.t / an.duree;
+    const e = 1 - Math.pow(1 - k, 3);
+    roue.vitesse = vitesseDepart * (1 - k) + 0.15 * k;
+    roue.rel = relFin + (1 - e) * Math.PI * 2 * tours;
+    // Sur le rebord, puis elle descend vers les alvéoles en rebondissant.
+    if (k < 0.55) roue.rayonBille = 0.56;
+    else {
+      const d = (k - 0.55) / 0.45;
+      roue.rayonBille = 0.56 - 0.13 * Math.min(1, d * 1.4) + Math.abs(Math.sin(d * 14)) * 0.025 * (1 - d);
+    }
+  }, () => { roue.enLancer = false; roue.rel = relFin; roue.rayonBille = 0.43; });
+}
+
+// =====================================================================
+// CARTES À JOUER (3D)
+// Une carte = une tranche + deux faces. Le dos est dessus quand elle est
+// posée ; la montrer, c'est un demi-tour autour de z.
+// =====================================================================
+const SYMBOLES = { S: '♠', H: '♥', D: '♦', C: '♣' };
+const RANGS_AFF = { T: '10', J: 'V', Q: 'D', K: 'R', A: 'A' };
+function rangAff(c) { return RANGS_AFF[c[0]] || c[0]; }
+function estRouge(c) { return c[1] === 'H' || c[1] === 'D'; }
+
+function creerTextureDos() {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 360;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#f4ead6';
+  roundRect(ctx, 0, 0, 256, 360, 24); ctx.fill();
+  ctx.fillStyle = '#6b1426';
+  roundRect(ctx, 12, 12, 232, 336, 16); ctx.fill();
+  ctx.strokeStyle = 'rgba(250,204,21,0.35)';
+  ctx.lineWidth = 3;
+  for (let i = -360; i < 360; i += 24) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + 360, 360); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(i + 360, 0); ctx.lineTo(i, 360); ctx.stroke();
+  }
+  ctx.fillStyle = '#facc15';
+  ctx.font = 'bold 110px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('♠', 128, 186);
+  return texture(c);
+}
+
+function creerTextureFace(carte) {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 360;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#c9b991';
+  roundRect(ctx, 0, 0, 256, 360, 24); ctx.fill();
+  ctx.fillStyle = '#fbf7ee';
+  roundRect(ctx, 6, 6, 244, 348, 20); ctx.fill();
+  const encre = estRouge(carte) ? '#c2182b' : '#1d2430';
+  ctx.fillStyle = encre;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const r = rangAff(carte), s = SYMBOLES[carte[1]];
+  ctx.font = 'bold 64px Georgia, serif';
+  ctx.fillText(r, 44, 50);
+  ctx.font = '50px Georgia, serif';
+  ctx.fillText(s, 44, 104);
+  ctx.save();
+  ctx.translate(212, 310);
+  ctx.rotate(Math.PI);
+  ctx.font = 'bold 64px Georgia, serif';
+  ctx.fillText(r, 0, 0);
+  ctx.font = '50px Georgia, serif';
+  ctx.fillText(s, 0, 54);
+  ctx.restore();
+  ctx.font = '150px Georgia, serif';
+  ctx.fillText(s, 128, 190);
+  const t = texture(c);
+  // La face est dessous et la carte se retourne autour de z : sans ce
+  // demi-tour de texture, elle apparaîtrait tête en bas une fois retournée.
+  t.center.set(0.5, 0.5);
+  t.rotation = Math.PI;
+  return t;
+}
+
+const GEO_TRANCHE = new THREE.BoxGeometry(CARTE_L, CARTE_E, CARTE_P);
+const GEO_FACE = new THREE.PlaneGeometry(CARTE_L * 0.98, CARTE_P * 0.98);
+const MAT_TRANCHE = new THREE.MeshStandardMaterial({ color: 0xe8dccb, roughness: 0.8 });
+const MAT_DOS = new THREE.MeshStandardMaterial({ map: creerTextureDos(), roughness: 0.7 });
+const MAT_FACE_VIDE = new THREE.MeshStandardMaterial({ color: 0x6b1426, roughness: 0.8 });
+const MAT_FACE = {};
+function materiauFace(code) {
+  if (!code || code === '??') return MAT_FACE_VIDE;
+  if (!MAT_FACE[code]) MAT_FACE[code] = new THREE.MeshStandardMaterial({ map: creerTextureFace(code), roughness: 0.65 });
+  return MAT_FACE[code];
+}
+
+function creerCarte3D() {
+  const g = new THREE.Group();
+  const tranche = new THREE.Mesh(GEO_TRANCHE, MAT_TRANCHE);
+  tranche.castShadow = true;
+  const dos = new THREE.Mesh(GEO_FACE, MAT_DOS);
+  dos.rotation.x = -Math.PI / 2;
+  dos.position.y = CARTE_E / 2 + 0.0008;
+  const face = new THREE.Mesh(GEO_FACE, MAT_FACE_VIDE);
+  face.rotation.x = Math.PI / 2;
+  face.position.y = -CARTE_E / 2 - 0.0008;
+  g.add(tranche, dos, face);
+  g.userData.face = face;
+  scene.add(g);
+  return g;
+}
+
+// Les cartes de la table sont « réconciliées » avec l'état du serveur :
+// chaque emplacement a une clé (bj-2-0 = 1re carte du joueur 2...). Une
+// nouvelle clé fait partir une carte du sabot ; une clé disparue est
+// ramassée. Ainsi un retour de veille retrouve exactement la table.
+const cartes3D = new Map();
+let ordreDonne = 0;   // décale les cartes distribuées d'un même coup
+
+function placerCarte(cle, code, pos, rotY, visible, delaiMin) {
+  let c = cartes3D.get(cle);
+  const rotZ = visible ? Math.PI : 0;
+  if (!c) {
+    const mesh = creerCarte3D();
+    c = { mesh, code: null, touche: true };
+    cartes3D.set(cle, c);
+    mesh.position.copy(SABOT);
+    mesh.rotation.set(0, 0.6, 0);
+    mesh.visible = false;
+    mesh.userData.face.material = materiauFace(code);
+    c.code = code;
+    const delai = Math.max(delaiMin || 0, 0.16 * ordreDonne++);
+    attendre(delai, () => {
+      mesh.visible = true;
+      deplacerCarte(mesh, pos, rotZ, rotY, 0.42, 0.18);
+    });
+  } else {
+    c.touche = true;
+    const mesh = c.mesh;
+    const changeFace = c.code !== code;
+    if (changeFace) { mesh.userData.face.material = materiauFace(code); c.code = code; }
+    const bouge = mesh.position.distanceTo(pos) > 0.002 || Math.abs(mesh.rotation.z - rotZ) > 0.01
+      || Math.abs(mesh.rotation.y - rotY) > 0.01;
+    if (bouge) {
+      if (delaiMin) attendre(delaiMin, () => deplacerCarte(mesh, pos, rotZ, rotY, 0.45, 0.16));
+      else deplacerCarte(mesh, pos, rotZ, rotY, 0.45, 0.16);
+    }
+  }
+}
+function debutReconciliation() { ordreDonne = 0; cartes3D.forEach(c => { c.touche = false; }); }
+function finReconciliation() {
+  cartes3D.forEach((c, cle) => {
+    if (!c.touche) { scene.remove(c.mesh); cartes3D.delete(cle); }
+  });
+}
+function viderCartes() { cartes3D.forEach(c => scene.remove(c.mesh)); cartes3D.clear(); }
+
+// =====================================================================
+// PILES DE JETONS (3D)
+// =====================================================================
+const VALEURS_JETONS = [500, 100, 50, 10];
+const TEINTES_JETONS = { 500: 0x7c3aed, 100: 0x1f2937, 50: 0x2563eb, 10: 0xd23b3b };
+const GEO_JETON = new THREE.CylinderGeometry(0.042, 0.042, 0.011, 28);
+const GEO_LISERE = new THREE.TorusGeometry(0.036, 0.004, 6, 28);
+const MAT_JETON = {};
+VALEURS_JETONS.forEach(v => { MAT_JETON[v] = new THREE.MeshStandardMaterial({ color: TEINTES_JETONS[v], roughness: 0.4, metalness: 0.1 }); });
+const MAT_LISERE = new THREE.MeshStandardMaterial({ color: 0xf4ead6, roughness: 0.5 });
+
+// Une pile par valeur, côte à côte ; 12 jetons au plus par pile.
+function creerPileJetons() {
+  const g = new THREE.Group();
+  g.userData.montant = -1;
+  scene.add(g);
+  return g;
+}
+function majPileJetons(g, montant, maxParPile) {
+  if (g.userData.montant === montant) return;
+  g.userData.montant = montant;
+  while (g.children.length) g.remove(g.children[0]);
+  let reste = Math.max(0, montant || 0);
+  const piles = [];
+  VALEURS_JETONS.forEach(v => {
+    const n = Math.floor(reste / v);
+    reste -= n * v;
+    if (n > 0) piles.push({ v, n: Math.min(n, maxParPile || 12) });
+  });
+  piles.forEach((p, k) => {
+    const x = (k - (piles.length - 1) / 2) * 0.092;
+    for (let h = 0; h < p.n; h++) {
+      const j = new THREE.Mesh(GEO_JETON, MAT_JETON[p.v]);
+      j.position.set(x + ((h * 7) % 3 - 1) * 0.002, 0.006 + h * 0.0115, ((h * 5) % 3 - 1) * 0.002);
+      j.castShadow = true;
+      const l = new THREE.Mesh(GEO_LISERE, MAT_LISERE);
+      l.rotation.x = Math.PI / 2;
+      l.position.y = 0.0058;
+      j.add(l);
+      g.add(j);
+    }
+  });
+}
+
+// =====================================================================
+// ÉTIQUETTES ET TEXTES (sprites face caméra)
+// =====================================================================
+function creerEtiquette(texte) {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 128;
+  dessinerPastille(c.getContext('2d'), texte, { accent: ACCENT });
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture(c), transparent: true, depthTest: false }));
+  sprite.renderOrder = 10;
+  sprite.scale.set(0.9, 0.225, 1);
+  return sprite;
+}
+function majEtiquette(sprite, texte, actif, absent) {
+  const cle = texte + '|' + actif + '|' + absent;
+  if (sprite.userData.cle === cle) return;
+  sprite.userData.cle = cle;
+  sprite.userData.dernier = [texte, actif, absent];
+  dessinerPastille(sprite.material.map.image.getContext('2d'), texte, { actif, absent, accent: ACCENT });
+  sprite.material.map.needsUpdate = true;
+}
+
+const textesFlottants = [];
+function creerSpriteTexte(gros, petit, couleur) {
+  const c = document.createElement('canvas');
+  c.width = 1024; c.height = 512;
+  const ctx = c.getContext('2d');
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = '#000';
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 6;
+  ctx.fillStyle = couleur;
+  let taille = 230;
+  ctx.font = `800 ${taille}px ${POLICE}`;
+  while (ctx.measureText(gros).width > 980 && taille > 80) { taille -= 10; ctx.font = `800 ${taille}px ${POLICE}`; }
+  ctx.fillText(gros, 512, petit ? 200 : 256);
+  if (petit) {
+    ctx.fillStyle = '#f4ebe0';
+    let t2 = 74;
+    ctx.font = `600 ${t2}px ${POLICE}`;
+    while (ctx.measureText(petit).width > 1000 && t2 > 36) { t2 -= 4; ctx.font = `600 ${t2}px ${POLICE}`; }
+    ctx.fillText(petit, 512, 400);
+  }
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture(c), transparent: true, depthTest: false, depthWrite: false }));
+  sp.renderOrder = 999;
+  return sp;
+}
+function texteFlottant(position, gros, petit, couleur, echelle) {
+  const sp = creerSpriteTexte(String(gros), petit || '', couleur || '#ffdca0');
+  const e = echelle || 0.5;
+  sp.scale.set(e * 2, e, 1);
+  sp.position.copy(position);
+  sp.position.y += 0.5;
+  scene.add(sp);
+  textesFlottants.push({ sprite: sp, t: 0, duree: 1.8, depart: sp.position.clone() });
+}
+const messageSprite = { courant: null };
+function messageCentral(gros, petit, couleur, duree) {
+  if (messageSprite.courant) scene.remove(messageSprite.courant.sprite);
+  const sp = creerSpriteTexte(String(gros), petit || '', couleur || '#f4f1ea');
+  sp.position.set(0, 1.1, 0);
+  scene.add(sp);
+  messageSprite.courant = { sprite: sp, t: 0, duree: duree || 1.8 };
+}
+
+// Étiquettes du centre : le croupier (blackjack) ou le pot (poker).
+const etiquetteCentre = creerEtiquette('');
+etiquetteCentre.position.set(0, 0.42, CENTRE_Z - 0.32);
+etiquetteCentre.visible = false;
+scene.add(etiquetteCentre);
+const pileCentre = creerPileJetons();
+pileCentre.position.set(0, 0, CENTRE_Z + 0.36);
+
+// Bouton du donneur (poker).
+const boutonDonneur = (() => {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#f8f5ee'; ctx.beginPath(); ctx.arc(64, 64, 60, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#1d2430'; ctx.font = 'bold 70px Georgia, serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('D', 64, 70);
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.014, 32),
+    [new THREE.MeshStandardMaterial({ color: 0xe9e4d8 }), new THREE.MeshStandardMaterial({ map: texture(c) }),
+      new THREE.MeshStandardMaterial({ color: 0xe9e4d8 })]);
+  m.castShadow = true;
+  m.visible = false;
+  scene.add(m);
+  return m;
+})();
+
+// =====================================================================
+// SIÈGES : sous-verre, chope (les gorgées), jetons, mise, cartes
+// Chacun se voit au premier plan : dire les prénoms, jamais « à gauche ».
+// =====================================================================
+const COULEURS = [0x4a7ec2, 0xc25a4a, 0x5aa86a, 0xb58ac2, 0xc2a44a, 0x4ab0b5, 0xd9823a, 0xd46a9e];
+const sieges = [];
+
+function creerChope() {
+  const g = new THREE.Group();
+  const verre = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.1, 0.088, 0.25, 40, 1, true),
+    new THREE.MeshPhysicalMaterial({ color: 0xe6f3f8, roughness: 0.08, side: THREE.DoubleSide, transparent: true, opacity: 0.32, clearcoat: 1 })
+  );
+  verre.position.y = 0.125;
+  const biere = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.09, 0.083, 1, 40),
+    new THREE.MeshPhysicalMaterial({ color: 0xe0961c, roughness: 0.18, emissive: 0x6a3a05, emissiveIntensity: 0.25 })
+  );
+  const mousse = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.091, 0.091, 0.024, 40),
+    new THREE.MeshStandardMaterial({ color: 0xfaf3e4, roughness: 0.75 })
+  );
+  g.add(verre, biere, mousse);
+  g.userData = { biere, mousse };
+  return g;
+}
+
+function dirSiege(i, n) {
+  const base = MOI < n ? MOI : 0;
+  const angle = ((((i - base) % n) + n) % n) / n * Math.PI * 2;
+  return new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
+}
+
+function creerSieges(noms) {
+  sieges.forEach(s => { scene.remove(s.groupe); scene.remove(s.pile); scene.remove(s.mise); });
+  sieges.length = 0;
+  const n = noms.length;
+  for (let i = 0; i < n; i++) {
+    const dir = dirSiege(i, n);
+    const cote = new THREE.Vector3(dir.z, 0, -dir.x);   // vers la droite du joueur
+    const groupe = new THREE.Group();
+
+    const base = dir.clone().multiplyScalar(R_CHOPE).addScaledVector(cote, -0.3);
+    const avatar = creerSousVerre(COULEURS[i % COULEURS.length]);
+    avatar.position.set(base.x, 0, base.z);
+    const chope = creerChope();
+    chope.position.set(base.x, 0.014, base.z);
+    const etiquette = creerEtiquette(noms[i]);
+    etiquette.position.set(base.x, 0.58, base.z);
+    groupe.add(avatar, chope, etiquette);
+    scene.add(groupe);
+    lisserScene(groupe);
+
+    const pile = creerPileJetons();
+    pile.position.copy(dir).multiplyScalar(R_CHOPE).addScaledVector(cote, 0.26);
+    pile.rotation.y = Math.atan2(dir.x, dir.z);
+    const mise = creerPileJetons();
+    mise.position.copy(dir).multiplyScalar(R_MISE).addScaledVector(cote, 0.3);
+
+    sieges.push({ index: i, nom: noms[i], groupe, avatar, chope, etiquette, pile, mise, dir, cote, niveau: 0, objectif: 0 });
+  }
+}
+
+function dessinerChope(s) {
+  const h = Math.max(0.001, s.niveau * 0.22);
+  const { biere, mousse } = s.chope.userData;
+  biere.scale.y = h;
+  biere.position.y = 0.012 + h / 2;
+  mousse.position.y = 0.012 + h + 0.01;
+  mousse.visible = s.niveau > 0.02;
+}
+function niveauGorgees(g) { return Math.min(1, g / VERRE_PLEIN); }
+
+function posCarteSiege(s, k, n) {
+  const ecart = Math.min(0.13, 0.62 / Math.max(1, n));
+  const p = s.dir.clone().multiplyScalar(R_CARTES).addScaledVector(s.cote, (k - (n - 1) / 2) * ecart);
+  p.y = 0.012 + CARTE_E / 2 + k * 0.0025;
+  return p;
+}
+function angleSiege(s) { return Math.atan2(s.dir.x, s.dir.z); }
+function posCentre(k, n, z) {
+  return new THREE.Vector3((k - (n - 1) / 2) * 0.235, 0.012 + CARTE_E / 2 + k * 0.001, z === undefined ? CENTRE_Z : z);
+}
+
+// =====================================================================
+// ANIMATIONS ET FILE D'ATTENTE
+// =====================================================================
+const animations = [];
+function animer(duree, maj, fin) { animations.push({ t: 0, duree, maj, fin }); }
+function lisser(k) { return k < 0 ? 0 : k > 1 ? 1 : k * k * (3 - 2 * k); }
+function attendre(duree, apres) { animer(duree, null, apres); }
+
+function deplacerCarte(carte, vers, rotZ, rotY, duree, arc, apres) {
+  const de = carte.position.clone();
+  const rzDe = carte.rotation.z, ryDe = carte.rotation.y;
+  const cible = vers.clone();
+  animer(duree, an => {
+    const k = lisser(an.t / an.duree);
+    carte.position.lerpVectors(de, cible, k);
+    carte.position.y += Math.sin(k * Math.PI) * arc;
+    carte.rotation.z = rzDe + (rotZ - rzDe) * k;
+    carte.rotation.y = ryDe + (rotY - ryDe) * k;
+  }, () => {
+    carte.position.copy(cible);
+    carte.rotation.z = rotZ;
+    carte.rotation.y = rotY;
+    if (apres) apres();
+  });
+}
+
+function encaisser(i) {
+  const s = sieges[i];
+  if (!s) return;
+  const corps = s.chope;
+  const base = corps.position.clone();
+  animer(0.5, an => {
+    const k = an.t / an.duree;
+    const amp = (1 - k) * 0.03;
+    corps.position.set(base.x + Math.sin(an.t * 46) * amp, base.y, base.z + Math.cos(an.t * 39) * amp);
+  }, () => { corps.position.copy(base); });
+}
+
+const fileActions = [];
+let pompeActive = false;
+function quandLibre(fn, delai) { fileActions.push({ fn, delai: delai || 0 }); pomper(); }
+function pomper() {
+  if (pompeActive || fileActions.length === 0) return;
+  pompeActive = true;
+  (function patienter() {
+    if (animations.length > 0) { setTimeout(patienter, 80); return; }
+    const tache = fileActions.shift();
+    setTimeout(() => {
+      try { tache.fn(); } catch (e) { console.error(e); }
+      pompeActive = false;
+      pomper();
+    }, tache.delai);
+  })();
+}
+
+// =====================================================================
+// CLIENT : messages du serveur
+// =====================================================================
+let MOI = 0;
+let mode = 'local';   // devient 'ligne' à la connexion (lu par le QR des règles)
+let ws = null;
+
+function envoyerIntention(msg) {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+}
+
+const elMessage = document.getElementById('message');
+const elRappel = document.getElementById('rappel');
+const elCompteur = document.getElementById('compteur');
+const elPanneau = document.getElementById('panneau');
+const elJoueurs = document.getElementById('joueurs');
+
+let etatCourant = null;
+// Mes deux cartes au poker, avec le numéro du coup : elles arrivent juste
+// après l'état, et ne valent que pour ce coup-là.
+let mainRecue = { manche: -1, cartes: [] };
+function mesCartesDuCoup() {
+  return etatCourant && etatCourant.jeu === 'poker' && mainRecue.manche === etatCourant.manche ? mainRecue.cartes : [];
+}
+let valeurJeton = 50;        // le jeton choisi pour miser
+let montantRelance = null;   // la relance préparée au poker
+let echeanceLocale = null;   // Date.now() de l'échéance annoncée par le serveur
+let dernierBilan = 0;        // numéro du dernier bilan affiché
+let dernierEvenement = '';
+
+const JEUX = {
+  roulette: { nom: 'Roulette', ico: '🎡', desc: 'Européenne, 0 à 36. Plein payé 35 fois, rouge ou noir, douzaines…' },
+  blackjack: { nom: 'Blackjack', ico: '🃏', desc: 'Bats le croupier sans dépasser 21. Blackjack payé 3 pour 2.' },
+  poker: { nom: 'Poker', ico: '♠️', desc: 'Texas Hold’em sans limite, blinds 10/20. À 2 joueurs au moins.' },
+};
+
+function nomDe(i, majuscule) {
+  if (i === MOI) return majuscule ? 'Tu' : 'toi';
+  return etatCourant ? etatCourant.joueurs[i] : '';
+}
+
+function clientRecevoir(msg) {
+  switch (msg.type) {
+    case 'ton_index':
+      MOI = msg.index;
+      if (msg.jeton) {
+        monJeton = msg.jeton;
+        ecrireSession({ code: codeSalon, nom: monNom, jeton: monJeton, serveur: serveurChoisi });
+      }
+      if (!enPartie) panneauAttente();
+      break;
+    case 'joueur_rejoint':
+      joueursSalon = msg.joueurs;
+      if (enPartie) elRappel.textContent = msg.nom + (msg.retour ? ' est revenu.' : ' s’assoit à la table.');
+      else panneauAttente();
+      break;
+    case 'joueur_parti':
+      joueursSalon = msg.joueurs;
+      if (enPartie) elRappel.textContent = msg.nom + ' a quitté la table.';
+      else panneauAttente();
+      break;
+    case 'cs_demarree':
+      quandLibre(() => demarrerScene(msg.joueurs));
+      break;
+    case 'cs_etat':
+      quandLibre(() => appliquerEtat(msg));
+      break;
+    case 'cs_main':
+      // Le panneau tout de suite (sans attendre la fin de la donne en 3D),
+      // les cartes 3D à leur tour dans la file.
+      mainRecue = { manche: msg.manche, cartes: msg.cartes || [] };
+      if (etatCourant && etatCourant.manche === msg.manche) rafraichirPanneau();
+      quandLibre(() => { if (etatCourant) reconcilierCartes(etatCourant); });
+      break;
+    case 'cs_table':
+      quandLibre(() => {
+        const j = JEUX[msg.jeu];
+        if (j) messageCentral(j.ico + ' ' + j.nom, (msg.par === MOI ? 'tu as choisi' : nomDe(msg.par, true) + ' a choisi') + ' la table', '#facc15', 1.8);
+      });
+      break;
+    case 'cs_roulette':
+      quandLibre(() => {
+        roue.groupe.visible = true;
+        lancerRoulette(msg.numero, 5.2);
+        messageCentral('Rien ne va plus', 'la bille est lancée', '#facc15', 1.6);
+      });
+      break;
+    case 'cs_pk_action':
+      quandLibre(() => {
+        const s = sieges[msg.joueur];
+        if (s) texteFlottant(s.dir.clone().multiplyScalar(R_CARTES + 0.1), msg.texte, '', '#ffe28a', 0.32);
+      });
+      break;
+    case 'cs_pk_abattage':
+      quandLibre(() => { if (!msg.sans_combat) messageCentral('Abattage', 'on montre les cartes', '#facc15', 1.4); });
+      break;
+    case 'erreur':
+      elRappel.textContent = msg.message;
+      if (enPartie) rafraichirPanneau();
+      break;
+  }
+}
+
+// =====================================================================
+// APPLICATION DE L'ÉTAT
+// =====================================================================
+function appliquerEtat(etat) {
+  const avant = etatCourant;
+  const n = etat.joueurs.length;
+  if (!sieges.length || n !== sieges.length || moiDeLaTable !== MOI) {
+    if (!enPartie) demarrerScene(etat.joueurs);
+    else construireTable(etat.joueurs);
+  }
+  etatCourant = etat;
+  echeanceLocale = etat.delai === null || etat.delai === undefined ? null : Date.now() + etat.delai * 1000;
+  // Nouveau coup : la relance préparée repart du minimum.
+  if (!avant || avant.manche !== etat.manche) montantRelance = null;
+
+  // La roue : au hall et à la roulette.
+  const voirRoue = etat.jeu === null || etat.jeu === 'roulette';
+  roue.groupe.visible = voirRoue;
+  if (etat.jeu === 'roulette' && etat.table && etat.table.numero !== null && !roue.enLancer) poserBille(etat.table.numero);
+  else if (etat.jeu !== 'roulette' || (etat.table && etat.table.numero === null && !roue.enLancer)) roue.billeVisible = false;
+
+  sieges.forEach((s, i) => {
+    s.objectif = niveauGorgees(etat.gorgees[i] || 0);
+    majPileJetons(s.pile, etat.jetons[i] || 0, 10);
+    majPileJetons(s.mise, miseVisible(etat, i), 8);
+  });
+  reconcilierCartes(etat);
+  majCentre(etat);
+
+  // Bilan d'un coup : chacun voit ce qu'il boit ou distribue.
+  if (etat.bilan && etat.bilan.num !== dernierBilan) {
+    const neuf = dernierBilan !== 0 || (avant && avant.bilan === null);
+    dernierBilan = etat.bilan.num;
+    if (neuf) annoncerBilan(etat);
+  }
+  majListeJoueurs(etat);
+  majBandeau(etat);
+  majCompteur();
+  rafraichirPanneau();
+}
+
+function miseVisible(etat, i) {
+  const t = etat.table;
+  if (!t) return 0;
+  if (etat.jeu === 'roulette') return (t.mises[i] || []).reduce((a, m) => a + m.montant, 0);
+  if (etat.jeu === 'blackjack') return t.mises[i] || 0;
+  if (etat.jeu === 'poker') return etat.phase === 'jeu' ? t.mise_tour[i] || 0 : 0;
+  return 0;
+}
+
+// Les cartes 3D de la table, d'après l'état.
+function reconcilierCartes(etat) {
+  debutReconciliation();
+  const t = etat.table;
+  const m = etat.manche + '-';   // un coup neuf redistribue depuis le sabot
+  if (t && etat.jeu === 'blackjack') {
+    sieges.forEach((s, i) => {
+      const main = t.mains[i] || [];
+      main.forEach((c, k) => placerCarte('bj-' + m + i + '-' + k, c, posCarteSiege(s, k, main.length), angleSiege(s), true));
+    });
+    // Le croupier : la carte cachée se retourne, puis il tire, carte par carte.
+    const nb = t.croupier.length;
+    t.croupier.forEach((c, k) => {
+      const delai = etat.phase === 'resultat' && k >= 2 ? 0.7 + (k - 2) * 0.8 : 0;
+      placerCarte('cr-' + m + k, c, posCentre(k, Math.max(nb, 2)), 0, c !== '??', delai);
+    });
+  } else if (t && etat.jeu === 'poker') {
+    sieges.forEach((s, i) => {
+      if (!t.dans_coup[i] || t.couches[i] && etat.phase === 'jeu') return;
+      const montrees = t.montrees && t.montrees[String(i)];
+      for (let k = 0; k < 2; k++) {
+        let code = null, visible = false;
+        if (montrees) { code = montrees.cartes[k]; visible = true; }
+        else if (i === MOI && mesCartesDuCoup()[k]) { code = mesCartesDuCoup()[k]; visible = true; }
+        placerCarte('pk-' + m + i + '-' + k, code, posCarteSiege(s, k, 2), angleSiege(s), visible);
+      }
+    });
+    t.tableau.forEach((c, k) => placerCarte('tb-' + m + k, c, posCentre(k, 5), 0, true, 0));
+  }
+  finReconciliation();
+}
+
+function majCentre(etat) {
+  const t = etat.table;
+  boutonDonneur.visible = false;
+  if (t && etat.jeu === 'blackjack' && t.croupier.length) {
+    etiquetteCentre.visible = true;
+    majEtiquette(etiquetteCentre, 'Croupier · ' + t.valeur_croupier + (t.croupier.includes('??') ? ' + ?' : ''), false, false);
+    majPileJetons(pileCentre, 0);
+  } else if (t && etat.jeu === 'poker') {
+    etiquetteCentre.visible = true;
+    majEtiquette(etiquetteCentre, 'Pot · ' + t.pot, etat.phase === 'jeu', false);
+    majPileJetons(pileCentre, etat.phase === 'jeu' ? t.pot - t.mise_tour.reduce((a, b) => a + b, 0) : 0, 10);
+    const s = sieges[t.bouton];
+    if (s) {
+      boutonDonneur.visible = true;
+      boutonDonneur.position.copy(s.dir).multiplyScalar(R_MISE).addScaledVector(s.cote, -0.16);
+      boutonDonneur.position.y = 0.012;
+    }
+  } else {
+    etiquetteCentre.visible = false;
+    majPileJetons(pileCentre, 0);
+  }
+}
+
+function annoncerBilan(etat) {
+  const b = etat.bilan;
+  const moi = b.lignes.find(l => l.joueur === MOI);
+  b.lignes.forEach(l => {
+    const s = sieges[l.joueur];
+    if (!s) return;
+    if (l.gorgees > 0) {
+      encaisser(l.joueur);
+      texteFlottant(s.chope.position, '+' + l.gorgees + ' 🍺', l.delta + ' jetons', '#ffb44c', 0.36);
+    } else if (l.delta > 0) {
+      texteFlottant(s.chope.position, '+' + l.delta, l.distribue ? 'distribue ' + l.distribue + ' 🍺' : 'jetons', '#7dffb0', 0.36);
+    }
+  });
+  if (moi) {
+    if (moi.cul_sec) messageCentral('CUL SEC', 'fauché : la banque te recharge 1000 jetons', '#ff4d5e', 3);
+    else if (moi.distribue) messageCentral('+' + moi.delta, 'distribue ' + moi.distribue + ' gorgée' + (moi.distribue > 1 ? 's' : ''), '#7dffb0', 2.6);
+    else if (moi.gorgees) messageCentral(moi.delta + ' jetons', 'tu bois ' + moi.gorgees + ' gorgée' + (moi.gorgees > 1 ? 's' : ''), '#ffb44c', 2.6);
+    else if (moi.delta > 0) messageCentral('+' + moi.delta, 'jetons gagnés', '#7dffb0', 2.2);
+    else messageCentral('Égalité', 'mise rendue', '#f4f1ea', 1.8);
+  } else if (etat.jeu === 'roulette' && etat.table) {
+    const n = etat.table.numero;
+    messageCentral(String(n), couleurNumero(n), TEINTES[couleurNumero(n)] === '#161b22' ? '#f4f1ea' : '#ff8a8a', 2.2);
+  }
+}
+
+// =====================================================================
+// BANDEAU, COMPTEUR, LISTE DES JOUEURS
+// =====================================================================
+function majBandeau(etat) {
+  const n = etat.joueurs.length;
+  const t = etat.table;
+  if (MOI >= n) elMessage.textContent = 'Tu regardes le casino';
+  else if (etat.phase === 'hall') elMessage.textContent = 'Le hall du casino';
+  else if (etat.jeu === 'roulette') elMessage.textContent = etat.phase === 'mises' ? 'Faites vos jeux' : 'Rien ne va plus';
+  else if (etat.jeu === 'blackjack') {
+    if (etat.phase === 'mises') elMessage.textContent = 'Blackjack : misez';
+    else if (etat.phase === 'jeu') elMessage.textContent = t.courant === MOI ? 'À toi de jouer' : 'Au tour de ' + etat.joueurs[t.courant];
+    else elMessage.textContent = 'Le croupier abat';
+  } else if (etat.jeu === 'poker') {
+    if (etat.phase === 'jeu') elMessage.textContent = t.courant === MOI ? 'À toi de parler' : 'Au tour de ' + etat.joueurs[t.courant];
+    else elMessage.textContent = 'Fin du coup';
+  }
+  elRappel.textContent = etat.message || dernierEvenement || '';
+}
+
+function majCompteur() {
+  const etat = etatCourant;
+  if (!etat || !enPartie) { elCompteur.innerHTML = ''; return; }
+  const parts = [];
+  if (etat.jeu) parts.push('<b>' + JEUX[etat.jeu].ico + ' ' + JEUX[etat.jeu].nom + '</b> · coup ' + etat.manche);
+  if (MOI < etat.jetons.length) parts.push('🪙 ' + etat.jetons[MOI]);
+  if (echeanceLocale && (etat.phase === 'mises' || etat.phase === 'jeu')) {
+    const s = Math.max(0, Math.round((echeanceLocale - Date.now()) / 1000));
+    parts.push('<span class="chrono' + (s <= 8 ? ' urgent' : '') + '">⏱ ' + s + ' s</span>');
+  }
+  elCompteur.innerHTML = parts.join(' · ');
+}
+setInterval(majCompteur, 1000);
+
+function joueurActif(etat, i) {
+  const t = etat.table;
+  return !!t && etat.phase === 'jeu' && t.courant === i;
+}
+
+function majListeJoueurs(etat) {
+  elJoueurs.innerHTML = '';
+  const t = etat.table;
+  etat.joueurs.forEach((nom, i) => {
+    const d = document.createElement('div');
+    const actif = joueurActif(etat, i);
+    d.className = 'joueur' + (actif ? ' actif' : '') + (etat.partis[i] ? ' absent' : '');
+    const p = document.createElement('span');
+    p.className = 'pastille';
+    p.style.background = '#' + COULEURS[i % COULEURS.length].toString(16).padStart(6, '0');
+    const nm = document.createElement('span');
+    nm.className = 'nom';
+    let extra = '';
+    if (etat.phase === 'mises' && t && t.prets && t.prets[i]) extra = ' ✓';
+    if (etat.jeu === 'poker' && t && t.couches[i] && t.dans_coup[i]) extra = ' (couché)';
+    nm.textContent = nom + (i === MOI ? ' (toi)' : '') + extra;
+    const inf = document.createElement('span');
+    inf.className = 'info';
+    inf.textContent = '🪙 ' + etat.jetons[i] + ' · 🍺 ' + etat.gorgees[i];
+    inf.title = 'jetons · gorgées bues';
+    d.append(p, nm, inf);
+    elJoueurs.appendChild(d);
+  });
+  etat.joueurs.forEach((nom, i) => {
+    if (!sieges[i]) return;
+    let txt = nom + ' · ' + etat.jetons[i];
+    if (etat.jeu === 'blackjack' && t && t.mains[i] && t.mains[i].length) txt = nom + ' · ' + t.valeurs[i];
+    majEtiquette(sieges[i].etiquette, txt, joueurActif(etat, i), etat.partis[i]);
+  });
+}
+
+// =====================================================================
+// PANNEAUX D'INTERFACE
+// =====================================================================
+function cacherPanneau() { elPanneau.className = 'cache'; elPanneau.innerHTML = ''; }
+function boutonMenuJeux() { return bouton('🎲 Tous les jeux', 'sombre', () => { location.href = 'index.html'; }); }
+function bouton(texte, classe, onClick) {
+  const b = document.createElement('button');
+  b.textContent = texte;
+  if (classe) b.className = classe;
+  b.addEventListener('click', onClick);
+  return b;
+}
+function ouvrirPanneau(titre) {
+  const defil = elPanneau.scrollTop;
+  elPanneau.className = '';
+  elPanneau.innerHTML = '';
+  if (titre) {
+    const h = document.createElement('h2');
+    h.textContent = titre;
+    elPanneau.appendChild(h);
+  }
+  elPanneau.dataset.defil = defil;
+  return elPanneau;
+}
+// Le panneau est reconstruit à chaque état : on garde où l'on en était.
+function garderDefilement() { elPanneau.scrollTop = Number(elPanneau.dataset.defil || 0); }
+function aide(texte) {
+  const d = document.createElement('p');
+  d.className = 'aide';
+  d.textContent = texte;
+  return d;
+}
+function rangee() {
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  return r;
+}
+function el(tag, classe, texte) {
+  const e = document.createElement(tag);
+  if (classe) e.className = classe;
+  if (texte !== undefined) e.textContent = texte;
+  return e;
+}
+// Envoie une intention et gèle le panneau : l'état suivant le reconstruira.
+function agir(msg) {
+  elPanneau.querySelectorAll('button').forEach(b => { b.disabled = true; });
+  envoyerIntention(msg);
+}
+function soldeMoi(etat, misé) {
+  const d = el('div', 'solde');
+  d.innerHTML = 'Solde : <b></b>' + (misé ? ' · Misé : <b></b>' : '');
+  const bs = d.querySelectorAll('b');
+  bs[0].textContent = etat.jetons[MOI] + ' 🪙';
+  if (misé) bs[1].textContent = misé;
+  return d;
+}
+function boutonHall() {
+  return bouton('🏛 Hall', 'sombre petit', () => agir({ type: 'cs_hall' }));
+}
+
+function carteHTML(code, forte) {
+  const d = el('div', 'carte');
+  if (!code || code === '??') { d.classList.add('dos'); return d; }
+  if (estRouge(code)) d.classList.add('rouge');
+  if (forte) d.classList.add('forte');
+  d.append(el('span', 'r', rangAff(code)), el('span', 's', SYMBOLES[code[1]]));
+  return d;
+}
+function blocCartes(cartes, fortes, vides) {
+  const d = el('div', 'cartes');
+  cartes.forEach(c => d.appendChild(carteHTML(c, fortes && fortes.includes(c))));
+  for (let k = cartes.length; k < (vides || 0); k++) d.appendChild(el('div', 'carte vide'));
+  return d;
+}
+
+function rafraichirPanneau() {
+  if (!enPartie || !etatCourant) return;
+  const etat = etatCourant;
+  if (MOI >= etat.joueurs.length) { panneauSpectateur(); return; }
+  if (etat.phase === 'hall') panneauHall(etat);
+  else if (etat.jeu === 'roulette') panneauRoulette(etat);
+  else if (etat.jeu === 'blackjack') panneauBlackjack(etat);
+  else if (etat.jeu === 'poker') panneauPoker(etat);
+  garderDefilement();
+}
+
+// --- Classement (hall) et bilan d'un coup ---
+function tableauClassement(etat) {
+  const t = el('table', 'bilan');
+  const r = etat.regles || { recharge: 1000 };
+  const tete = el('tr');
+  ['Joueur', '🪙', 'Bilan', '🍺 bues', '🎯 données', 'Recharges'].forEach(h => tete.appendChild(el('th', '', h)));
+  t.appendChild(tete);
+  const net = i => etat.jetons[i] - 1000 - etat.recharges[i] * r.recharge;
+  etat.joueurs.map((nom, i) => i).sort((a, b) => net(b) - net(a)).forEach((i, rang) => {
+    const tr = el('tr', i === MOI ? 'moi' : '');
+    tr.appendChild(el('td', '', (rang === 0 ? '👑 ' : '') + etat.joueurs[i] + (i === MOI ? ' (toi)' : '')));
+    tr.appendChild(el('td', '', etat.jetons[i]));
+    const n = net(i);
+    tr.appendChild(el('td', n > 0 ? 'plus' : n < 0 ? 'moins' : '', (n > 0 ? '+' : '') + n));
+    tr.appendChild(el('td', '', etat.gorgees[i]));
+    tr.appendChild(el('td', '', etat.distribuees[i]));
+    tr.appendChild(el('td', '', etat.recharges[i] ? etat.recharges[i] + ' 💀' : '0'));
+    t.appendChild(tr);
+  });
+  return t;
+}
+
+function tableauBilan(etat) {
+  const b = etat.bilan;
+  const t = el('table', 'bilan');
+  b.lignes.forEach(l => {
+    const tr = el('tr', l.joueur === MOI ? 'moi' : '');
+    tr.appendChild(el('td', '', etat.joueurs[l.joueur] + (l.joueur === MOI ? ' (toi)' : '')));
+    tr.appendChild(el('td', '', l.detail));
+    tr.appendChild(el('td', l.delta > 0 ? 'plus' : l.delta < 0 ? 'moins' : '', (l.delta > 0 ? '+' : '') + l.delta));
+    let boire = '';
+    if (l.gorgees) boire = 'boit ' + l.gorgees + ' 🍺';
+    if (l.distribue) boire = 'distribue ' + l.distribue + ' 🎯';
+    if (l.cul_sec) boire += (boire ? ' + ' : '') + 'cul sec 💀';
+    tr.appendChild(el('td', '', boire || '-'));
+    t.appendChild(tr);
+  });
+  if (!b.lignes.length) {
+    const tr = el('tr');
+    tr.appendChild(el('td', '', 'Personne n’a joué ce coup.'));
+    t.appendChild(tr);
+  }
+  return t;
+}
+
+// --- Le hall ---
+function panneauHall(etat) {
+  const p = ouvrirPanneau('🏛 Le hall : choisissez une table');
+  const d = el('div', 'tables');
+  const presents = etat.partis.filter(x => !x).length;
+  Object.entries(JEUX).forEach(([cle, j]) => {
+    const tuile = el('div', 'table-jeu');
+    tuile.setAttribute('role', 'button');
+    const bloquee = cle === 'poker' && presents < 2;
+    if (bloquee) tuile.classList.add('inactif');
+    const txt = el('div');
+    txt.append(el('b', '', j.nom), el('span', 'd', bloquee ? 'Il faut être 2 au moins.' : j.desc));
+    tuile.append(el('span', 'ico', j.ico), txt);
+    if (!bloquee) tuile.addEventListener('click', () => { tuile.style.pointerEvents = 'none'; envoyerIntention({ type: 'cs_choisir', jeu: cle }); });
+    d.appendChild(tuile);
+  });
+  p.appendChild(d);
+  p.appendChild(aide('Tout le monde suit la table choisie. 1 gorgée par tranche de 100 jetons perdus, 1 à distribuer par tranche de 200 gagnés.'));
+  p.appendChild(tableauClassement(etat));
+  const r = rangee();
+  r.appendChild(boutonMenuJeux());
+  p.appendChild(r);
+}
+
+// --- Choix de la valeur du jeton ---
+function choixJetons(etat) {
+  const d = el('div', 'jetons-choix');
+  [10, 50, 100, 500].forEach(v => {
+    const j = el('div', 'jeton j' + v + (v === valeurJeton ? ' choisi' : ''), String(v));
+    j.setAttribute('role', 'button');
+    if (v > etat.jetons[MOI]) j.style.opacity = 0.35;
+    j.addEventListener('click', () => { valeurJeton = v; rafraichirPanneau(); });
+    d.appendChild(j);
+  });
+  return d;
+}
+function miseAjustee(etat) {
+  // Pas assez pour le jeton choisi : on mise ce qui reste (au moins 10).
+  return Math.min(valeurJeton, etat.jetons[MOI]);
+}
+
+// --- Roulette ---
+function historique(etat) {
+  const d = el('div', 'historique');
+  (etat.historique || []).forEach(n => {
+    const s = el('span', '', String(n));
+    s.style.background = TEINTES[couleurNumero(n)];
+    d.appendChild(s);
+  });
+  return d;
+}
+
+const LIBELLES_PARIS = {
+  rouge: 'Rouge', noir: 'Noir', pair: 'Pair', impair: 'Impair', manque: '1-18', passe: '19-36',
+  d1: '1-12', d2: '13-24', d3: '25-36', c1: '2:1', c2: '2:1', c3: '2:1',
+};
+function libellePari(p) { return p[0] === 'n' && !LIBELLES_PARIS[p] ? 'n°' + p.slice(1) : LIBELLES_PARIS[p]; }
+
+function panneauRoulette(etat) {
+  const t = etat.table;
+  const enMises = etat.phase === 'mises';
+  const mesMises = t.mises[MOI] || [];
+  const miseMoi = {};
+  mesMises.forEach(m => { miseMoi[m.pari] = m.montant; });
+  const autres = {};
+  t.mises.forEach((ms, j) => { if (j !== MOI) ms.forEach(m => { autres[m.pari] = (autres[m.pari] || 0) + 1; }); });
+  const total = mesMises.reduce((a, m) => a + m.montant, 0);
+  const numero = t.numero;
+  const gagne = pari => numero !== null && pariGagne(pari, numero);
+
+  const p = ouvrirPanneau(enMises ? '🎡 Faites vos jeux' : '🎡 Le ' + numero + ' ' + couleurNumero(numero));
+  if (!enMises && numero !== null) {
+    const g = el('div', 'grand-numero', String(numero));
+    g.style.background = TEINTES[couleurNumero(numero)];
+    p.appendChild(g);
+  }
+  p.appendChild(historique(etat));
+  if (enMises) {
+    p.appendChild(soldeMoi(etat, total));
+    p.appendChild(choixJetons(etat));
+  }
+
+  const caseMise = (pari, texte, classe) => {
+    const c = el('div', 'case ' + classe, texte);
+    if (miseMoi[pari]) c.appendChild(el('span', 'mise', String(miseMoi[pari])));
+    if (autres[pari]) c.appendChild(el('span', 'autres', '👥' + autres[pari]));
+    if (gagne(pari)) c.classList.add('gagnant');
+    if (enMises) {
+      c.setAttribute('role', 'button');
+      c.addEventListener('click', () => {
+        const m = miseAjustee(etat);
+        if (m < (etat.regles ? etat.regles.mise_min : 10)) { elRappel.textContent = 'Plus assez de jetons.'; return; }
+        envoyerIntention({ type: 'cs_rl_miser', pari, montant: m });
+      });
+    }
+    return c;
+  };
+
+  // Le tapis : 0 à gauche, trois rangées de 12, les colonnes 2:1 à droite.
+  const tapis = el('div', 'tapis');
+  const zero = caseMise('n0', '0', 'vert');
+  zero.style.gridRow = '1 / span 3';
+  zero.style.gridColumn = '1';
+  tapis.appendChild(zero);
+  for (let ligne = 0; ligne < 3; ligne++) {
+    for (let col = 0; col < 12; col++) {
+      const n = col * 3 + (3 - ligne);
+      const c = caseMise('n' + n, String(n), couleurNumero(n));
+      c.style.gridRow = String(ligne + 1);
+      c.style.gridColumn = String(col + 2);
+      tapis.appendChild(c);
+    }
+    const colonne = caseMise('c' + (3 - ligne), '2:1', 'ext');
+    colonne.style.gridRow = String(ligne + 1);
+    colonne.style.gridColumn = '14';
+    tapis.appendChild(colonne);
+  }
+  p.appendChild(tapis);
+  const dz = el('div', 'tapis-ext d3');
+  ['d1', 'd2', 'd3'].forEach(k => dz.appendChild(caseMise(k, LIBELLES_PARIS[k], 'ext')));
+  p.appendChild(dz);
+  const simples = el('div', 'tapis-ext');
+  [['manque', 'ext'], ['pair', 'ext'], ['rouge', 'rouge'], ['noir', 'noir'], ['impair', 'ext'], ['passe', 'ext']]
+    .forEach(([k, cl]) => simples.appendChild(caseMise(k, LIBELLES_PARIS[k], cl)));
+  p.appendChild(simples);
+
+  const r = rangee();
+  if (enMises) {
+    const pret = t.prets[MOI];
+    r.appendChild(bouton(pret ? '✓ Prêt (annuler)' : total ? 'Prêt' : 'Je passe', pret ? 'vert' : '', () => agir({ type: 'cs_pret' })));
+    if (total) r.appendChild(bouton('Reprendre mes mises', 'sombre petit', () => agir({ type: 'cs_rl_annuler' })));
+    const attendus = etat.joueurs.filter((nm, j) => !etat.partis[j] && !t.prets[j] && j !== MOI);
+    p.appendChild(aide(attendus.length ? 'On attend : ' + attendus.join(', ') + '.' : 'Tout le monde est prêt dès que tu l’es.'));
+  } else {
+    if (etat.bilan) p.appendChild(tableauBilan(etat));
+    p.appendChild(aide('Nouveau tour dans quelques secondes…'));
+  }
+  r.appendChild(boutonHall());
+  p.appendChild(r);
+}
+
+function pariGagne(pari, n) {
+  if (pari[0] === 'n' && !LIBELLES_PARIS[pari] && pari !== 'noir') return Number(pari.slice(1)) === n;
+  switch (pari) {
+    case 'rouge': return ROUGES.includes(n);
+    case 'noir': return n !== 0 && !ROUGES.includes(n);
+    case 'pair': return n !== 0 && n % 2 === 0;
+    case 'impair': return n % 2 === 1;
+    case 'manque': return n >= 1 && n <= 18;
+    case 'passe': return n >= 19;
+    case 'd1': return n >= 1 && n <= 12;
+    case 'd2': return n >= 13 && n <= 24;
+    case 'd3': return n >= 25;
+    case 'c1': return n !== 0 && n % 3 === 1;
+    case 'c2': return n !== 0 && n % 3 === 2;
+    case 'c3': return n !== 0 && n % 3 === 0;
+  }
+  return false;
+}
+
+// --- Blackjack ---
+const STATUTS_BJ = { joue: 'joue', reste: 'reste', saute: 'saute !', blackjack: 'BLACKJACK' };
+function ligneMain(titre, cartes, valeur, vides) {
+  const l = el('div', 'ligne-cartes');
+  const e = el('div', 'etiq');
+  e.textContent = titre;
+  const b = el('b', '', String(valeur));
+  e.appendChild(b);
+  l.append(e, blocCartes(cartes, null, vides));
+  return l;
+}
+
+function panneauBlackjack(etat) {
+  const t = etat.table;
+  if (etat.phase === 'mises') {
+    const p = ouvrirPanneau('🃏 Blackjack : place ta mise');
+    p.appendChild(soldeMoi(etat, t.mises[MOI]));
+    p.appendChild(choixJetons(etat));
+    const r1 = rangee();
+    r1.appendChild(bouton('Miser ' + miseAjustee(etat), '', () => agir({ type: 'cs_bj_miser', montant: miseAjustee(etat) })));
+    if (t.mises[MOI]) r1.appendChild(bouton('Reprendre', 'sombre petit', () => agir({ type: 'cs_bj_annuler' })));
+    p.appendChild(r1);
+    const r = rangee();
+    r.style.marginTop = '10px';
+    const pret = t.prets[MOI];
+    r.appendChild(bouton(pret ? '✓ Prêt (annuler)' : t.mises[MOI] ? 'Prêt, on distribue' : 'Je passe ce coup', pret ? 'vert' : 'sombre', () => agir({ type: 'cs_pret' })));
+    r.appendChild(boutonHall());
+    p.appendChild(r);
+    const attendus = etat.joueurs.filter((nm, j) => !etat.partis[j] && !t.prets[j] && j !== MOI);
+    p.appendChild(aide(attendus.length ? 'On attend : ' + attendus.join(', ') + '.' : 'Tout le monde est prêt dès que tu l’es.'));
+    return;
+  }
+  const maMain = t.mains[MOI] || [];
+  const joue = maMain.length > 0;
+  const aMoi = etat.phase === 'jeu' && t.courant === MOI;
+  const titre = etat.phase === 'resultat'
+    ? (t.resultats && t.resultats[MOI] ? resultatBJ(t.resultats[MOI]) : '🃏 Fin du coup')
+    : aMoi ? '🃏 À toi : ' + t.valeurs[MOI] : '🃏 Au tour de ' + (t.courant !== null ? etat.joueurs[t.courant] : 'du croupier');
+  const p = ouvrirPanneau(titre);
+  p.appendChild(ligneMain('Croupier', t.croupier, t.valeur_croupier + (t.croupier.includes('??') ? '+' : '')));
+  if (joue) {
+    p.appendChild(ligneMain('Toi · ' + t.mises[MOI] + ' 🪙', maMain, t.valeurs[MOI]));
+    if (t.statuts[MOI] && t.statuts[MOI] !== 'joue') p.appendChild(aide(STATUTS_BJ[t.statuts[MOI]] || ''));
+  } else {
+    p.appendChild(aide('Tu ne joues pas ce coup : tu regardes.'));
+  }
+  if (aMoi) {
+    const r = rangee();
+    r.appendChild(bouton('Tirer', '', () => agir({ type: 'cs_bj_tirer' })));
+    r.appendChild(bouton('Rester', 'vert', () => agir({ type: 'cs_bj_rester' })));
+    if (maMain.length === 2 && etat.jetons[MOI] >= t.mises[MOI]) {
+      r.appendChild(bouton('Doubler (' + (t.mises[MOI] * 2) + ')', 'sombre', () => agir({ type: 'cs_bj_doubler' })));
+    }
+    p.appendChild(r);
+  } else if (etat.phase === 'resultat') {
+    if (etat.bilan) p.appendChild(tableauBilan(etat));
+    const r = rangee();
+    r.appendChild(boutonHall());
+    p.appendChild(r);
+    p.appendChild(aide('Nouveau coup dans quelques secondes…'));
+  }
+}
+function resultatBJ(r) {
+  return { 'gagné': '🎉 Gagné !', 'blackjack': '🎉 BLACKJACK !', 'égalité': '🤝 Égalité', 'perdu': '😬 Perdu', 'sauté': '💥 Sauté' }[r] || r;
+}
+
+// --- Poker ---
+const TOURS_PK = { preflop: 'Avant le flop', flop: 'Flop', turn: 'Tournant', river: 'Rivière' };
+function panneauPoker(etat) {
+  const t = etat.table;
+  const dansCoup = t.dans_coup[MOI];
+  const aMoi = etat.phase === 'jeu' && t.courant === MOI;
+  const montrees = t.montrees || {};
+  const titre = etat.phase === 'resultat'
+    ? '♠️ ' + etat.message
+    : aMoi ? '♠️ À toi de parler · ' + TOURS_PK[t.tour] : '♠️ ' + TOURS_PK[t.tour] + ' · au tour de ' + etat.joueurs[t.courant];
+  const p = ouvrirPanneau(titre);
+
+  // Le tableau, et les mains montrées à l'abattage.
+  const fortes = [];
+  if (etat.phase === 'resultat' && t.pots) {
+    t.pots.forEach(pt => (pt.gagnants || []).forEach(g => { const m = montrees[String(g)]; if (m) fortes.push(...m.meilleures); }));
+  }
+  const lt = el('div', 'ligne-cartes');
+  const et = el('div', 'etiq', 'Pot');
+  et.appendChild(el('b', '', String(t.pot)));
+  lt.append(et, blocCartes(t.tableau, fortes, 5));
+  p.appendChild(lt);
+
+  const mesCartes = mesCartesDuCoup();
+  if (dansCoup && mesCartes.length) {
+    const lm = el('div', 'ligne-cartes');
+    const em = el('div', 'etiq', t.couches[MOI] ? 'Couché' : 'Toi');
+    em.appendChild(el('b', '', String(etat.jetons[MOI])));
+    lm.append(em, blocCartes(mesCartes, fortes));
+    p.appendChild(lm);
+  } else if (!dansCoup) {
+    p.appendChild(aide('Tu regardes ce coup : tu joues au prochain.'));
+  }
+
+  if (aMoi) {
+    const du = t.mise_max - t.mise_tour[MOI];
+    const pile = etat.jetons[MOI];
+    const maxTotal = t.mise_tour[MOI] + pile;
+    const minTotal = Math.min(maxTotal, t.mise_max + t.relance_min);
+    if (montantRelance === null || montantRelance < minTotal || montantRelance > maxTotal) montantRelance = minTotal;
+    p.appendChild(aide(du > 0 ? 'Il faut ' + du + ' pour suivre (mise à ' + t.mise_max + ').' : 'Personne n’a misé : tu peux parler.'));
+    const r = rangee();
+    r.appendChild(bouton('Se coucher', 'danger', () => agir({ type: 'cs_pk_coucher' })));
+    r.appendChild(bouton(du <= 0 ? 'Parler' : du >= pile ? 'Tapis ' + pile : 'Suivre ' + du, 'vert', () => agir({ type: 'cs_pk_suivre' })));
+    p.appendChild(r);
+    if (maxTotal > t.mise_max && du < pile) {
+      const rel = el('div', 'relance');
+      const pas = etat.regles ? etat.regles.grosse : 20;
+      const m = el('span', 'montant', String(montantRelance));
+      const fixer = v => { montantRelance = Math.max(minTotal, Math.min(maxTotal, v)); m.textContent = String(montantRelance); bR.textContent = libRelance(); };
+      const libRelance = () => montantRelance >= maxTotal ? 'Tapis (' + maxTotal + ')' : (t.mise_max === 0 ? 'Miser ' : 'Relancer à ') + montantRelance;
+      rel.appendChild(bouton('−', 'sombre petit', () => fixer(montantRelance - pas)));
+      rel.appendChild(m);
+      rel.appendChild(bouton('+', 'sombre petit', () => fixer(montantRelance + pas)));
+      rel.appendChild(bouton('½ pot', 'sombre petit', () => fixer(t.mise_max + Math.round(t.pot / 2 / 10) * 10)));
+      rel.appendChild(bouton('Pot', 'sombre petit', () => fixer(t.mise_max + t.pot + du)));
+      rel.appendChild(bouton('Tapis', 'sombre petit', () => fixer(maxTotal)));
+      p.appendChild(rel);
+      const r2 = rangee();
+      const bR = bouton('', '', () => agir(montantRelance >= maxTotal
+        ? { type: 'cs_pk_relancer', tapis: true }
+        : { type: 'cs_pk_relancer', montant: montantRelance }));
+      bR.textContent = libRelance();
+      r2.appendChild(bR);
+      p.appendChild(r2);
+    }
+  } else if (etat.phase === 'jeu') {
+    const actions = el('div', 'aide');
+    const parts = [];
+    etat.joueurs.forEach((nm, j) => {
+      if (!t.dans_coup[j]) return;
+      let s = nm + (j === t.bouton ? ' (D)' : '') + ' : ';
+      if (t.couches[j]) s += 'couché';
+      else if (t.tapis[j]) s += 'tapis';
+      else s += t.mise_tour[j] ? 'mise ' + t.mise_tour[j] : '-';
+      parts.push(s);
+    });
+    actions.textContent = parts.join(' · ');
+    p.appendChild(actions);
+  } else if (etat.phase === 'resultat') {
+    // Les mains montrées, puis le bilan.
+    Object.entries(montrees).forEach(([j, m]) => {
+      const l = el('div', 'ligne-cartes');
+      const e = el('div', 'etiq', etat.joueurs[Number(j)] + (Number(j) === MOI ? ' (toi)' : ''));
+      e.appendChild(el('b', '', m.main));
+      l.append(e, blocCartes(m.cartes, fortes));
+      p.appendChild(l);
+    });
+    if (etat.bilan) p.appendChild(tableauBilan(etat));
+    const r = rangee();
+    r.appendChild(boutonHall());
+    p.appendChild(r);
+    p.appendChild(aide('Prochaine donne dans quelques secondes…'));
+  }
+}
+
+function panneauSpectateur() {
+  const p = ouvrirPanneau('Spectateur');
+  p.appendChild(aide('Le casino est complet (8 joueurs) : tu regardes. Une place se libère quand quelqu’un part.'));
+  const r = rangee();
+  r.appendChild(bouton('Quitter le salon', 'sombre', () => {
+    enPartie = false; oublierSession(); monJeton = null;
+    if (ws) { try { ws.close(); } catch (e) { /* deja ferme */ } }
+    location.href = location.pathname;
+  }));
+  p.appendChild(r);
+}
+
+// =====================================================================
+// ACCUEIL ET SALON
+// =====================================================================
+const SERVEURS = {
+  render: { http: 'https://kinito-serveur.onrender.com', ws: 'wss://kinito-serveur.onrender.com' },
+  local:  { http: 'http://127.0.0.1:8000',               ws: 'ws://127.0.0.1:8000' },
+};
+let serveurChoisi = 'render';
+
+let monNom = '';
+let codeSalon = '';
+let estCreateur = false;
+let joueursSalon = [];
+let enPartie = false;
+let monJeton = null;
+
+const JOUEURS_MAX = 8;
+
+// Le jeton permet de retrouver sa place après une coupure ou un rechargement.
+// localStorage peut lever (navigation privée, site data bloqué) : tout est gardé.
+const CLE_SESSION = 'casino3d.session';
+
+function lireSession() {
+  try { return JSON.parse(localStorage.getItem(CLE_SESSION) || 'null'); }
+  catch (e) { return null; }
+}
+function ecrireSession(s) {
+  try { localStorage.setItem(CLE_SESSION, JSON.stringify(s)); } catch (e) { /* tant pis */ }
+}
+function oublierSession() {
+  lienActif = false;
+  try { localStorage.removeItem(CLE_SESSION); } catch (e) { /* tant pis */ }
+}
+
+function champTexte(id, placeholder, longueurMax) {
+  const i = document.createElement('input');
+  i.type = 'text';
+  i.id = id;
+  i.placeholder = placeholder;
+  if (longueurMax) i.maxLength = longueurMax;
+  return i;
+}
+
+function afficherErreur(texte) { elRappel.textContent = texte; }
+
+function panneauAccueil() {
+  elMessage.textContent = 'Casino 3D';
+  elRappel.textContent = 'Roulette, blackjack et poker : tes jetons, tes gorgées';
+  elCompteur.innerHTML = '';
+  const p = panneauEnLigne();
+  const s = lireSession();
+  if (s && s.code && s.jeton) {
+    const r2 = rangee();
+    r2.style.marginTop = '12px';
+    r2.appendChild(bouton('Reprendre la partie ' + s.code, 'sombre', () => {
+      monNom = s.nom; codeSalon = s.code; monJeton = s.jeton;
+      serveurChoisi = s.serveur || 'render';
+      estCreateur = false;
+      afficherErreur('Reconnexion...');
+      seConnecter();
+    }));
+    p.appendChild(r2);
+  }
+}
+
+function boutonServeur() {
+  const b = bouton('', 'sombre petit', () => {
+    serveurChoisi = serveurChoisi === 'render' ? 'local' : 'render';
+    majLibelleServeur(b);
+  });
+  majLibelleServeur(b);
+  return b;
+}
+
+function panneauRejoindreDirect(code) {
+  codeSalon = code;
+  elMessage.textContent = 'Casino 3D';
+  elRappel.textContent = 'Salon ' + code;
+  const p = ouvrirPanneau('Rejoindre le salon');
+  const c = el('div', 'code-salon', code);
+  p.appendChild(c);
+  const l1 = rangee();
+  const pseudo = champTexte('pseudo', 'Ton prénom', 16);
+  pseudo.value = monNom;
+  l1.appendChild(pseudo);
+  p.appendChild(l1);
+  const l2 = rangee();
+  l2.style.marginTop = '10px';
+  l2.appendChild(bouton('Rejoindre', '', async () => {
+    if (!lireNom()) return;
+    afficherErreur('Connexion au serveur...');
+    try {
+      const rep = await fetch(SERVEURS[serveurChoisi].http + '/salon/' + codeSalon);
+      if (!(await rep.json()).existe) { afficherErreur('Ce salon n’existe plus'); return; }
+      estCreateur = false;
+      seConnecter();
+    } catch (e) {
+      afficherErreur('Serveur injoignable.');
+    }
+  }));
+  p.appendChild(l2);
+  const l3 = rangee();
+  l3.style.marginTop = '12px';
+  l3.appendChild(boutonServeur());
+  l3.appendChild(bouton('Autre salon', 'sombre petit', panneauAccueil));
+  p.appendChild(l3);
+}
+
+function panneauEnLigne() {
+  const p = ouvrirPanneau('Jouer en ligne');
+  const l1 = rangee();
+  const pseudo = champTexte('pseudo', 'Ton prénom', 16);
+  pseudo.value = monNom;
+  l1.appendChild(pseudo);
+  p.appendChild(l1);
+  const l2 = rangee();
+  l2.style.marginTop = '10px';
+  l2.appendChild(bouton('Créer un salon', '', creerSalon));
+  p.appendChild(l2);
+  const l3 = rangee();
+  l3.style.marginTop = '10px';
+  l3.appendChild(champTexte('code-salon', 'CODE', 4));
+  l3.appendChild(bouton('Rejoindre', 'sombre', rejoindreSalon));
+  p.appendChild(l3);
+  const l4 = rangee();
+  l4.style.marginTop = '14px';
+  l4.appendChild(boutonServeur());
+  p.appendChild(l4);
+  const note = el('div', 'note', "Le serveur Render s'endort : la première connexion peut prendre 30 s.");
+  p.appendChild(note);
+  return p;
+}
+
+function majLibelleServeur(b) {
+  b.textContent = serveurChoisi === 'render' ? 'Serveur : Render' : 'Serveur : local';
+}
+
+function lireNom() {
+  const champ = document.getElementById('pseudo');
+  monNom = champ ? champ.value.trim() : '';
+  if (!monNom) { afficherErreur('Entre ton prénom'); return false; }
+  return true;
+}
+
+async function creerSalon() {
+  if (!lireNom()) return;
+  afficherErreur('Connexion au serveur...');
+  try {
+    const rep = await fetch(SERVEURS[serveurChoisi].http + '/creer-salon');
+    codeSalon = (await rep.json()).code;
+    estCreateur = true;
+    seConnecter();
+  } catch (e) {
+    afficherErreur("Serveur injoignable. S'il dort, réessaie dans 30 s.");
+  }
+}
+
+async function rejoindreSalon() {
+  if (!lireNom()) return;
+  const champ = document.getElementById('code-salon');
+  codeSalon = (champ ? champ.value : '').trim().toUpperCase();
+  if (codeSalon.length !== 4) { afficherErreur('Le code fait 4 lettres'); return; }
+  afficherErreur('Connexion au serveur...');
+  try {
+    const rep = await fetch(SERVEURS[serveurChoisi].http + '/salon/' + codeSalon);
+    if (!(await rep.json()).existe) { afficherErreur('Salon introuvable'); return; }
+    estCreateur = false;
+    seConnecter();
+  } catch (e) {
+    afficherErreur('Serveur injoignable.');
+  }
+}
+
+// --- Connexion au serveur : reconnexion automatique et battement de cœur ---
+// (même mécanique que les autres jeux : battement toutes les 5 s, reconnexion
+// toute seule, et au retour sur la page on redemande l'état de la partie.)
+let lienActif = false;
+let tentativesLien = 0;
+let minuteurLien = null;
+let dernierSignal = 0;
+let cacheeDepuis = 0;
+
+function seConnecter() {
+  if (!monJeton) {
+    const s = lireSession();
+    if (s && s.code === codeSalon && s.jeton) monJeton = s.jeton;
+  }
+  clearTimeout(minuteurLien);
+  minuteurLien = null;
+  lienActif = true;
+  let url = SERVEURS[serveurChoisi].ws + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom) + '?bat=1';
+  if (monJeton) url += '&jeton=' + encodeURIComponent(monJeton);
+  const socket = new WebSocket(url);
+  ws = socket;
+  dernierSignal = Date.now();
+  socket.onopen = () => {
+    if (ws !== socket) return;
+    if (tentativesLien > 0) afficherErreur('Reconnecté.');
+    tentativesLien = 0;
+    dernierSignal = Date.now();
+    mode = 'ligne';
+    if (!enPartie) panneauAttente();
+  };
+  socket.onmessage = e => {
+    if (ws !== socket) return;
+    dernierSignal = Date.now();
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'pong') return;
+    if (msg.type === 'remplace') { lienActif = false; panneauRemplace(); return; }
+    clientRecevoir(msg);
+  };
+  socket.onerror = () => { if (ws === socket && !lienActif) afficherErreur('Erreur de connexion au serveur'); };
+  socket.onclose = () => { if (ws === socket && lienActif) programmerReconnexion(); };
+}
+
+function programmerReconnexion() {
+  if (!lienActif || minuteurLien) return;
+  tentativesLien++;
+  if (tentativesLien > 14) { lienActif = false; panneauReconnexion(); return; }
+  afficherErreur('Connexion perdue, reconnexion…');
+  const delai = Math.min(1000 * tentativesLien, 5000);
+  minuteurLien = setTimeout(() => { minuteurLien = null; if (lienActif) seConnecter(); }, delai);
+}
+
+function verifierLien() {
+  if (!lienActif) return;
+  const absence = cacheeDepuis ? Date.now() - cacheeDepuis : 0;
+  cacheeDepuis = 0;
+  if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+    clearTimeout(minuteurLien);
+    minuteurLien = null;
+    tentativesLien = 0;
+    seConnecter();
+  } else if (ws.readyState === WebSocket.OPEN && absence > 2000) {
+    try { ws.send('{"type":"ping"}'); ws.send('{"type":"resync"}'); } catch (e) { /* elle se fermera */ }
+  }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) cacheeDepuis = Date.now(); else verifierLien();
+});
+window.addEventListener('pageshow', verifierLien);
+window.addEventListener('online', verifierLien);
+
+setInterval(() => {
+  if (!lienActif || !ws || ws.readyState !== WebSocket.OPEN) return;
+  try { ws.send('{"type":"ping"}'); } catch (e) { /* elle se fermera */ }
+  if (!document.hidden && Date.now() - dernierSignal > 15000) seConnecter();
+}, 5000);
+
+function panneauRemplace() {
+  elMessage.textContent = 'Partie reprise ailleurs';
+  const p = ouvrirPanneau('Tu joues sur un autre écran');
+  p.appendChild(el('p', '', 'Ta place a été reprise depuis un autre onglet ou un autre téléphone, avec le même prénom.'));
+  const r = rangee();
+  r.appendChild(bouton('Reprendre ici', '', () => { cacherPanneau(); tentativesLien = 0; seConnecter(); }));
+  r.appendChild(bouton('Tous les jeux', 'sombre', () => { location.href = 'index.html'; }));
+  p.appendChild(r);
+}
+
+function panneauReconnexion() {
+  elMessage.textContent = 'Connexion perdue';
+  const p = ouvrirPanneau('Déconnecté');
+  p.appendChild(aide('Ta place et tes jetons sont gardés ; en attendant, le tour te saute. Reconnecte-toi pour les reprendre.'));
+  const r = rangee();
+  r.appendChild(bouton('Reconnecter', '', () => { cacherPanneau(); tentativesLien = 0; seConnecter(); }));
+  r.appendChild(bouton('Quitter', 'sombre', () => {
+    enPartie = false; oublierSession(); monJeton = null; location.href = location.pathname;
+  }));
+  p.appendChild(r);
+}
+
+const SITE_PUBLIE = 'https://ozaxe.github.io/table-de-jeu/casino-3d-jeu.html';
+
+function lienSalon(code) {
+  const fichierLocal = location.protocol === 'file:';
+  const base = fichierLocal ? SITE_PUBLIE : location.origin + location.pathname;
+  return { url: base + '?salon=' + encodeURIComponent(code), repli: fichierLocal };
+}
+
+function majQRModale() {
+  const bloc = document.getElementById('bloc-qr-regles');
+  if (!bloc) return;
+  if (mode !== 'ligne' || !codeSalon) { bloc.className = 'cache'; return; }
+  bloc.className = '';
+  document.getElementById('qr-code-salon').textContent = codeSalon;
+  const lien = lienSalon(codeSalon);
+  const cv = document.getElementById('qr-regles');
+  const note = document.getElementById('qr-note-regles');
+  cv.style.display = 'none';
+  if (typeof QRious !== 'undefined') {
+    try {
+      new QRious({ element: cv, value: lien.url, size: 340, level: 'M', background: '#f4ebe0', foreground: '#26100e' });
+      cv.style.display = '';
+    } catch (e) { /* pas de QR : le code à 4 lettres suffit */ }
+  }
+  const avertissements = [];
+  if (lien.repli) {
+    avertissements.push('Ce QR mène au site en ligne : la page est ouverte en fichier local, il n’y a pas d’adresse à partager.');
+    if (serveurChoisi === 'local') avertissements.push('Tu joues sur le serveur local : ceux qui scannent arriveront sur le serveur en ligne.');
+  }
+  if (enPartie) avertissements.push('Celui qui rejoint s’assoit avec 1000 jetons et joue dès le coup suivant.');
+  note.textContent = avertissements.join(' ');
+  document.getElementById('copier-lien-regles').onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(lien.url);
+      note.textContent = 'Lien copié : ' + lien.url;
+    } catch (e) {
+      note.textContent = lien.url;
+    }
+  };
+}
+
+function panneauAttente() {
+  const p = ouvrirPanneau('Salon');
+  p.appendChild(el('div', 'code-salon', codeSalon));
+  p.appendChild(aide('Donne ce code aux autres pour qu’ils rejoignent. Jusqu’à 8 joueurs, on peut s’asseoir à tout moment.'));
+  const lien = lienSalon(codeSalon);
+  if (typeof QRious !== 'undefined') {
+    const cv = document.createElement('canvas');
+    cv.className = 'qr';
+    try {
+      new QRious({ element: cv, value: lien.url, size: 340, level: 'M', background: '#f4ebe0', foreground: '#3a2a05' });
+      p.appendChild(cv);
+      p.appendChild(aide(lien.repli
+        ? 'Ce QR mène au site en ligne : la page est ouverte en fichier local, il n’y a pas d’adresse à partager.'
+        : 'Ou fais scanner ce code : ils n’auront que leur prénom à entrer.'));
+      const rl = rangee();
+      rl.appendChild(bouton('Copier le lien', 'sombre petit', async () => {
+        try { await navigator.clipboard.writeText(lien.url); afficherErreur('Lien copié'); }
+        catch (e) { afficherErreur(lien.url); }
+      }));
+      p.appendChild(rl);
+    } catch (e) { /* pas de QR : le code à 4 lettres suffit */ }
+  }
+  p.appendChild(el('div', 'liste-attente', joueursSalon.length
+    ? joueursSalon.map((n, i) => (i === MOI ? n + ' (toi)' : n)).join(' · ')
+    : 'En attente de joueurs...'));
+  if (estCreateur) {
+    const r = rangee();
+    r.style.marginTop = '6px';
+    const trop = joueursSalon.length > JOUEURS_MAX;
+    const b = bouton('Ouvrir le casino', '', () => envoyerIntention({ type: 'cs_demarrer' }));
+    b.disabled = trop || !joueursSalon.length;
+    r.appendChild(b);
+    p.appendChild(r);
+    if (trop) {
+      p.appendChild(el('div', 'alerte', 'Vous êtes ' + joueursSalon.length + ' : le casino accueille ' + JOUEURS_MAX + ' joueurs au plus.'));
+    } else {
+      p.appendChild(aide('Le poker demande 2 joueurs, la roulette et le blackjack se jouent même seul.'));
+    }
+  } else {
+    p.appendChild(aide('En attente du créateur du salon, qui ouvre le casino...'));
+  }
+}
+
+// =====================================================================
+// MISE EN PLACE DE LA TABLE
+// =====================================================================
+let moiDeLaTable = -1;
+
+function construireTable(noms) {
+  creerSieges(noms);
+  const etat = etatCourant;
+  sieges.forEach((s, i) => {
+    const g = etat && etat.gorgees ? etat.gorgees[i] || 0 : 0;
+    s.niveau = s.objectif = niveauGorgees(g);
+    dessinerChope(s);
+  });
+  moiDeLaTable = MOI;
+  // Les places ont tourné : les cartes repartent de zéro.
+  viderCartes();
+}
+
+function demarrerScene(noms) {
+  enPartie = true;
+  etatCourant = null;
+  dernierEvenement = '';
+  cacherPanneau();
+  viderCartes();
+  construireTable(noms);
+  camObjectifPos = CAM_POS.clone();
+  camObjectifCible = CAM_CIBLE.clone();
+}
+
+quandPoliceChargee(() => sieges.forEach(st => {
+  const d = st.etiquette.userData.dernier;
+  st.etiquette.userData.cle = null;
+  if (d) majEtiquette(st.etiquette, ...d); else majEtiquette(st.etiquette, st.nom, false, false);
+}));
+
+// =====================================================================
+// BOUCLE DE RENDU
+// =====================================================================
+const clock = new THREE.Clock();
+
+function boucle() {
+  requestAnimationFrame(boucle);
+  const rattrapage = fileActions.length > 3 ? 4 : 1;
+  const dt = Math.min(clock.getDelta(), 0.1) * rattrapage;
+
+  for (let i = animations.length - 1; i >= 0; i--) {
+    const a = animations[i];
+    a.t += dt;
+    if (a.maj) a.maj(a);
+    if (a.t >= a.duree) {
+      animations.splice(i, 1);
+      if (a.fin) a.fin();
+    }
+  }
+
+  // La roue tourne doucement en permanence, vite pendant un lancer.
+  if (roue.groupe.visible) {
+    roue.angle += (roue.enLancer ? roue.vitesse : 0.15) * dt;
+    roue.disque.rotation.y = roue.angle;
+    placerBille();
+  }
+
+  sieges.forEach(s => {
+    if (Math.abs(s.niveau - s.objectif) > 0.001) {
+      s.niveau += (s.objectif - s.niveau) * 0.09;
+      dessinerChope(s);
+    }
+  });
+
+  for (let i = textesFlottants.length - 1; i >= 0; i--) {
+    const f = textesFlottants[i];
+    f.t += dt;
+    const k = f.t / f.duree;
+    f.sprite.position.y = f.depart.y + k * 0.45;
+    f.sprite.material.opacity = k < 0.1 ? k / 0.1 : Math.max(0, Math.min(1, (1 - k) / 0.45));
+    if (f.t >= f.duree) { scene.remove(f.sprite); textesFlottants.splice(i, 1); }
+  }
+
+  if (messageSprite.courant) {
+    const m = messageSprite.courant;
+    m.t += dt;
+    const k = m.t, D = m.duree;
+    let opac = 1;
+    if (k < 0.12) opac = k / 0.12;
+    else if (k > D - 0.35) opac = Math.max(0, (D - k) / 0.35);
+    m.sprite.material.opacity = opac;
+    const dist = camera.position.distanceTo(camCibleActuelle);
+    m.sprite.scale.set(dist * 0.30, dist * 0.15, 1);
+    m.sprite.position.set(0, 1.0 + Math.min(k, 0.5) * 0.25, 0);
+    if (k >= D) { scene.remove(m.sprite); messageSprite.courant = null; }
+  }
+
+  zoneVue.decalageCourant += (zoneVue.decalage - zoneVue.decalageCourant) * CAM_VITESSE;
+  const W = window.innerWidth, H = window.innerHeight;
+  camera.setViewOffset(W, H, 0, Math.round(zoneVue.decalageCourant), W, H);
+  camera.position.lerp(camObjectifPos, CAM_VITESSE);
+  camCibleActuelle.lerp(camObjectifCible, CAM_VITESSE);
+  camera.lookAt(camCibleActuelle);
+  renderer.render(scene, camera);
+}
+
+// Le panneau change de taille à chaque état : la table suit.
+if ('ResizeObserver' in window) new ResizeObserver(() => recadrer()).observe(elPanneau);
+
+// =====================================================================
+// DÉMARRAGE
+// =====================================================================
+if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) serveurChoisi = 'local';
+
+const salonDansUrl = new URLSearchParams(location.search).get('salon');
+if (salonDansUrl && /^[A-Za-z]{4}$/.test(salonDansUrl)) {
+  panneauRejoindreDirect(salonDansUrl.toUpperCase());
+} else {
+  panneauAccueil();
+}
+lisserScene(scene);
+boucle();
+</script>
+<script>
+  // Appli installable (PWA) : voir service-worker.js
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(() => {});
+</script>
+</body>
+</html>
