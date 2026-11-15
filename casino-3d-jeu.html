@@ -411,10 +411,31 @@ function majCadrageTable(cam) {
   CAM_POS.copy(CAM_CIBLE).addScaledVector(dir, d);
   if (scene.fog) scene.fog.density = Math.min(FOG_DENSITE_MAX, 0.536 / d);
 }
+// Pendant un lancer de roulette, la caméra plonge sur la roue.
+let zoomRoue = false;
+const CIBLE_ROUE = new THREE.Vector3(0, 0.05, 0);
+function positionZoomRoue(cam) {
+  mesurerZoneVue();
+  const vHalf = THREE.MathUtils.degToRad(cam.fov) / 2;
+  const hHalf = Math.atan(Math.tan(vHalf) * cam.aspect);
+  const vUtile = Math.atan(Math.tan(vHalf) * zoneVue.hauteur / window.innerHeight);
+  // La roue (cuve comprise, 0.7 de rayon) et un peu de tapis autour.
+  const d = 0.85 / Math.tan(Math.min(hHalf, vUtile));
+  return CIBLE_ROUE.clone().addScaledVector(new THREE.Vector3(0, 0.8, 0.6).normalize(), d);
+}
 function recadrer() {
   majCadrageTable(camera);
-  camObjectifPos = CAM_POS.clone();
-  camObjectifCible = CAM_CIBLE.clone();
+  if (zoomRoue) {
+    camObjectifPos = positionZoomRoue(camera);
+    camObjectifCible = CIBLE_ROUE.clone();
+  } else {
+    camObjectifPos = CAM_POS.clone();
+    camObjectifCible = CAM_CIBLE.clone();
+  }
+}
+function zoomerRoue(actif) {
+  zoomRoue = actif;
+  recadrer();
 }
 
 let camObjectifPos = CAM_POS.clone();
@@ -1122,9 +1143,22 @@ function clientRecevoir(msg) {
       break;
     case 'cs_roulette':
       quandLibre(() => {
+        // Zoom sur la roue : le panneau des mises se range le temps du
+        // lancer (il revient avec le résultat), la caméra plonge dessus.
         roue.groupe.visible = true;
+        cacherPanneau();
+        elMessage.textContent = 'Rien ne va plus';
+        elRappel.textContent = 'La bille est lancée…';
+        zoomerRoue(true);
         lancerRoulette(msg.numero, 5.2);
-        messageCentral('Rien ne va plus', 'la bille est lancée', '#facc15', 1.6);
+        // La bille posée, on lit le numéro de près avant de reculer.
+        attendre(5.2 + 1.6, () => {
+          zoomerRoue(false);
+        });
+        attendre(4.9, () => {
+          elMessage.textContent = 'Le ' + msg.numero + ' ' + couleurNumero(msg.numero) + ' !';
+          elRappel.textContent = '';
+        });
       });
       break;
     case 'cs_pk_action':
