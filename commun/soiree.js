@@ -159,8 +159,9 @@
       const rep = await fetch(Soiree.http(serveur) + '/salon/' + encodeURIComponent(code));
       return rep.json();
     },
-    async infoSoiree(code, serveur) {
-      const rep = await fetch(Soiree.http(serveur) + '/soiree/' + encodeURIComponent(code));
+    // nom : se compter présent dans la soirée (la liste « Dans la soirée » de l'accueil)
+    async infoSoiree(code, serveur, nom) {
+      const rep = await fetch(Soiree.http(serveur) + '/soiree/' + encodeURIComponent(code) + (nom ? '?nom=' + encodeURIComponent(nom) : ''));
       return rep.json();
     },
     async nouvelleTable(code, serveur) {
