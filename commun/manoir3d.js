@@ -235,13 +235,26 @@ function rayonnage(l) {
 // ---------------------------------------------------------------------
 const MOBILIER = {
   hall(g, l, p) {
-    // Grand escalier le long d'un mur, tapis rouge et rampe en laiton
-    const marches = 10, prof = Math.min(0.09, (p * 0.8) / marches);
-    for (let k = 0; k < marches; k++) g.add(place(boite(0.4, 0.035 * (k + 1), prof, NOYER()), l / 2 - 0.24, 0.0175 * (k + 1), p / 2 - 0.1 - k * prof));
-    for (let k = 0; k < marches; k++) g.add(place(boite(0.24, 0.004, prof, VELOURS(0x7a1f2a)), l / 2 - 0.24, 0.035 * (k + 1) + 0.002, p / 2 - 0.1 - k * prof));
-    const rampe = boite(0.012, 0.012, marches * prof * 1.1, LAITON());
-    rampe.position.set(l / 2 - 0.45, 0.33, p / 2 - 0.1 - marches * prof / 2);
-    rampe.rotation.x = Math.atan2(0.35, marches * prof);
+    // Mezzanine : galerie en hauteur le long du mur du fond, sur piliers,
+    // avec garde-corps ; le grand escalier y monte.
+    const HM = 0.36, PM = 0.42;
+    const zBord = -p / 2 + PM;
+    g.add(place(boite(l, 0.03, PM, NOYER()), 0, HM, -p / 2 + PM / 2));
+    g.add(place(boite(l, 0.004, PM - 0.06, VELOURS(0x5a1a22)), 0, HM + 0.017, -p / 2 + PM / 2));
+    [-0.4, 0, 0.4].forEach((f) => g.add(place(cyl(0.022, 0.026, HM, mat(0xeee8dc, { roughness: 0.3 }), 10), f * l, HM / 2, zBord - 0.03)));
+    g.add(place(boite(l * 0.62, 0.012, 0.012, LAITON()), -l * 0.19, HM + 0.15, zBord));
+    for (let k = 0; k <= 12; k++) g.add(place(boite(0.006, 0.15, 0.006, LAITON()), -l / 2 + k * (l * 0.62) / 12, HM + 0.075, zBord));
+    const fm = fauteuil(0x2a4a3a); fm.scale.setScalar(0.8); fm.position.set(-l * 0.25, HM + 0.015, -p / 2 + 0.18); g.add(fm);
+    g.add(place(plante(0.06, 0x2f6b3a), l * 0.05, HM + 0.015, -p / 2 + 0.15));
+    const marches = 10, prof = 0.08, xe = l / 2 - 0.22;
+    for (let k = 0; k < marches; k++) {
+      const z = zBord + (marches - 1 - k) * prof + prof / 2;
+      g.add(place(boite(0.36, HM * (k + 1) / marches, prof, NOYER()), xe, HM * (k + 1) / marches / 2, z));
+      g.add(place(boite(0.22, 0.004, prof, VELOURS(0x7a1f2a)), xe, HM * (k + 1) / marches + 0.002, z));
+    }
+    const rampe = boite(0.012, 0.012, Math.hypot(marches * prof, HM), LAITON());
+    rampe.position.set(xe - 0.19, HM / 2 + 0.15, zBord + marches * prof / 2);
+    rampe.rotation.x = Math.atan2(HM, marches * prof);
     g.add(rampe);
     // Guéridon central et bouquet
     g.add(place(cyl(0.13, 0.13, 0.02, mat(0xe8e2d6, { roughness: 0.2 })), -0.05, 0.16, 0));
@@ -255,6 +268,16 @@ const MOBILIER = {
     });
     const l1 = lustre(0.18); l1.position.set(-0.05, 0.62, 0); g.add(l1);
     tapis(g, l * 0.45, p * 0.55, '#5a1a22', '#2a0d10', '#c9a24a', -0.05, 0);
+    // Horloge de parquet et porte-manteau
+    const horloge = new THREE.Group();
+    horloge.add(place(boite(0.1, 0.42, 0.07, NOYER_FONCE()), 0, 0.21, 0));
+    horloge.add(place(cyl(0.035, 0.035, 0.01, mat(0xf2efe6), 16), 0, 0.34, 0.036));
+    horloge.children[1].rotation.x = Math.PI / 2;
+    horloge.add(place(boite(0.012, 0.12, 0.005, LAITON()), 0, 0.18, 0.037));
+    horloge.position.set(-l / 2 + 0.08, 0, 0); horloge.rotation.y = Math.PI / 2;
+    g.add(horloge);
+    g.add(place(cyl(0.008, 0.012, 0.36, NOYER_FONCE(), 8), l * 0.2, 0.18, p / 2 - 0.1));
+    [0, 2.1, 4.2].forEach((a) => g.add(place(sphere(0.03, VELOURS([0x2a2a3a, 0x5a2414, 0x1f3a2a][Math.round(a) % 3]), 8), l * 0.2 + Math.cos(a) * 0.03, 0.32, p / 2 - 0.1 + Math.sin(a) * 0.03)));
   },
   bibliotheque(g, l, p) {
     const b1 = rayonnage(l * 0.9); b1.position.set(0, 0, -p / 2 + 0.05); g.add(b1);
@@ -267,6 +290,12 @@ const MOBILIER = {
     g.add(place(cyl(0.012, 0.03, 0.14, NOYER()), l * 0.36, 0.07, -p * 0.1));
     g.add(place(sphere(0.06, mat(0x6a8a6a, { roughness: 0.4 })), l * 0.36, 0.2, -p * 0.1));
     const echelle = boite(0.08, 0.5, 0.01, NOYER()); echelle.position.set(-l * 0.25, 0.25, -p / 2 + 0.11); echelle.rotation.x = -0.18; g.add(echelle);
+    // Pupitre avec piles de livres et chandelier
+    g.add(place(boite(0.2, 0.02, 0.12, NOYER()), -l * 0.28, 0.17, p * 0.3));
+    g.add(place(boite(0.02, 0.16, 0.1, NOYER()), -l * 0.28, 0.08, p * 0.3));
+    [0x7a2630, 0x2f4a6e, 0x8a6a2a].forEach((c, k) => g.add(place(boite(0.07, 0.018, 0.05, mat(c)), -l * 0.32, 0.19 + k * 0.018, p * 0.3, k * 0.3)));
+    g.add(place(cyl(0.006, 0.012, 0.06, LAITON(), 6), -l * 0.22, 0.21, p * 0.3));
+    g.add(place(sphere(0.009, lueur(0xffb04a, 3), 6), -l * 0.22, 0.25, p * 0.3));
   },
   serre(g, l, p) {
     g.add(place(boite(l * 0.2, 0.006, p * 0.9, mat(0x8a8072, { roughness: 0.9 })), 0, 0.004, 0));
@@ -280,6 +309,8 @@ const MOBILIER = {
     g.add(place(cyl(0.14, 0.15, 0.06, mat(0x9a9284, { roughness: 0.6 })), 0, 0.03, p * 0.18));
     g.add(place(cyl(0.12, 0.12, 0.005, mat(0x2a5a7a, { roughness: 0.05, metalness: 0.2 })), 0, 0.062, p * 0.18));
     g.add(place(boite(0.26, 0.02, 0.07, NOYER()), 0, 0.09, -p * 0.3));
+    // Arrosoir
+    g.add(place(cyl(0.03, 0.035, 0.06, mat(0x5a7a6a, { metalness: 0.6, roughness: 0.4 }), 10), l * 0.12, 0.03, p * 0.35));
     // Toit de verre : armature en laiton
     const verre = new THREE.MeshPhysicalMaterial({ color: 0xcfe8dc, transparent: true, opacity: 0.1, roughness: 0.05 });
     g.add(place(boite(l, 0.005, p, verre), 0, H_EXT, 0));
@@ -301,6 +332,11 @@ const MOBILIER = {
     piano.position.set(l * 0.25, 0, -p * 0.28); piano.rotation.y = -0.6;
     g.add(piano);
     for (let k = 0; k < 4; k++) { const c = chaise(VELOURS(0x7a1f2a)); c.position.set(-l / 2 + 0.16, 0, -p * 0.3 + k * 0.2); c.rotation.y = Math.PI / 2; g.add(c); }
+    // Buffet : nappe blanche, chandeliers, coupes
+    g.add(place(boite(0.5, 0.15, 0.14, mat(0xf4f0e8, { roughness: 0.9 })), -l * 0.05, 0.075, p / 2 - 0.12));
+    [-0.18, 0.18].forEach((x) => { g.add(place(cyl(0.008, 0.02, 0.1, LAITON(), 8), -l * 0.05 + x, 0.2, p / 2 - 0.12)); g.add(place(sphere(0.01, lueur(0xffc46b, 3), 6), -l * 0.05 + x, 0.26, p / 2 - 0.12)); });
+    const coupe = new THREE.MeshPhysicalMaterial({ color: 0xf2e6b8, transparent: true, opacity: 0.6, roughness: 0.1 });
+    for (let k = 0; k < 6; k++) g.add(place(cyl(0.012, 0.004, 0.035, coupe, 8), -l * 0.05 - 0.1 + k * 0.04, 0.17, p / 2 - 0.1));
   },
   fumoir(g, l, p) {
     g.add(place(boite(0.4, 0.34, 0.1, mat(0x6e665c, { roughness: 0.8 })), 0, 0.17, -p / 2 + 0.05));
@@ -323,6 +359,9 @@ const MOBILIER = {
     [0xf2efe6, 0xc0392b, 0xf1c40f].forEach((col, k) => billard.add(place(sphere(0.012, mat(col, { roughness: 0.2 }), 8), -0.08 + k * 0.06, 0.218, (k - 1) * 0.04)));
     billard.position.set(l * 0.1, 0, p * 0.25);
     g.add(billard);
+    // Bar à liqueurs
+    g.add(place(boite(0.12, 0.3, 0.26, NOYER_FONCE()), l / 2 - 0.07, 0.15, -p * 0.15));
+    [0x6a2a10, 0x2a4a1a, 0xc8a050, 0x3a1020].forEach((c, k) => g.add(place(cyl(0.012, 0.014, 0.06, mat(c, { roughness: 0.15 }), 8), l / 2 - 0.07, 0.33, -p * 0.15 - 0.09 + k * 0.06)));
   },
   cave(g, l, p) {
     const bois = materiauNoyer(0x5a3a1e, 0.8);
@@ -335,6 +374,9 @@ const MOBILIER = {
     casier.position.set(l / 2 - 0.08, 0, 0);
     g.add(casier);
     g.add(place(cyl(0.08, 0.08, 0.2, bois), -l * 0.1, 0.1, p * 0.22));
+    // Caisses de vin empilées
+    const caisse = materiauNoyer(0x7a5a32, 0.9);
+    [[0, 0.05, 0], [0.13, 0.05, 0.02], [0.06, 0.15, 0.01]].forEach(([x, y, z]) => g.add(place(boite(0.12, 0.1, 0.1, caisse), l * 0.15 + x, y, p * 0.3 + z, x * 2)));
     [-0.03, 0.03].forEach((x) => {
       g.add(place(cyl(0.008, 0.008, 0.05, mat(0xf2efe6), 6), -l * 0.1 + x, 0.225, p * 0.22));
       g.add(place(sphere(0.008, lueur(0xffb04a, 3), 6), -l * 0.1 + x, 0.26, p * 0.22));
@@ -350,6 +392,9 @@ const MOBILIER = {
     g.add(place(boite(l * 0.6, 0.008, 0.008, LAITON()), 0, 0.48, -p / 2 + 0.1));
     const t = table(0.6, 0.22, 0.17, NOYER()); t.position.set(0, 0, p * 0.15); g.add(t);
     for (let k = 0; k < 3; k++) [-1, 1].forEach((s) => { const c = chaise(NOYER()); c.position.set(-0.2 + k * 0.2, 0, p * 0.15 + s * 0.17); c.rotation.y = s > 0 ? Math.PI : 0; g.add(c); });
+    // Sacs de farine et pain
+    [0, 0.09].forEach((x) => g.add(place(cyl(0.04, 0.045, 0.1, mat(0xe8dcc2, { roughness: 1 }), 10), -l * 0.4 + x, 0.05, p * 0.35)));
+    g.add(place(new THREE.Mesh(new THREE.CapsuleGeometry(0.015, 0.06, 4, 8), mat(0xc08a4a)), 0.12, 0.215, p * 0.15));
     g.add(place(cyl(0.05, 0.03, 0.025, mat(0xe8e2d6)), 0, 0.2, p * 0.15));
     [0xc0392b, 0xe67e22, 0x7aa83a].forEach((col, k) => g.add(place(sphere(0.018, mat(col), 8), -0.02 + k * 0.02, 0.225, p * 0.15)));
   },
@@ -366,6 +411,13 @@ const MOBILIER = {
     g.add(place(plante(0.07, 0x2f6b3a), -l * 0.4, 0, p * 0.25));
     g.add(place(palmier(), l * 0.38, 0, p * 0.2));
     g.add(place(boite(0.24, 0.006, 0.14, VELOURS(0x7a1f2a)), 0, 0.004, p / 2 - 0.1));
+    // Cage à oiseau et gramophone
+    g.add(place(cyl(0.006, 0.006, 0.3, LAITON(), 6), l * 0.2, 0.15, -p * 0.3));
+    g.add(place(new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8, 0, Math.PI * 2, 0, Math.PI / 1.6), new THREE.MeshStandardMaterial({ color: 0xc9a25a, metalness: 0.9, roughness: 0.3, wireframe: true })), l * 0.2, 0.33, -p * 0.3));
+    g.add(place(boite(0.1, 0.06, 0.1, NOYER()), -l * 0.4, 0.03, -p * 0.3));
+    const pavillon = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.1, 14, 1, true), LAITON());
+    pavillon.position.set(-l * 0.4 + 0.02, 0.12, -p * 0.3); pavillon.rotation.z = -1.1;
+    g.add(pavillon);
   },
   bureau(g, l, p) {
     tapis(g, l * 0.6, p * 0.55, '#1f2a44', '#0f1524', '#b08a4a', 0, p * 0.05);
@@ -378,6 +430,10 @@ const MOBILIER = {
     const b = rayonnage(l * 0.55); b.position.set(-l * 0.15, 0, -p / 2 + 0.05); g.add(b);
     g.add(place(boite(0.14, 0.18, 0.13, mat(0x2a2a2e, { metalness: 0.6, roughness: 0.4 })), l * 0.36, 0.09, -p * 0.3));
     g.add(place(cyl(0.025, 0.025, 0.01, LAITON(), 12), l * 0.36, 0.11, -p * 0.3 + 0.07));
+    // Machine à écrire et classeur
+    g.add(place(boite(0.08, 0.03, 0.06, mat(0x141414, { roughness: 0.3, metalness: 0.4 })), -0.12, 0.215, -p * 0.12));
+    g.add(place(boite(0.06, 0.004, 0.02, mat(0xf2efe6)), -0.12, 0.245, -p * 0.14));
+    g.add(place(boite(0.12, 0.26, 0.12, mat(0x4a5048, { metalness: 0.5, roughness: 0.4 })), -l * 0.4, 0.13, p * 0.3));
   },
 };
 function mobilierGenerique(g, l, p) {
@@ -431,6 +487,7 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
   const cx = vx + vw / 2, cz = vy + vh / 2;
   const X = (x) => (x - cx) * E, Z = (y) => (y - cz) * E;
   const vitrees = new Set(plan.vitrees || []);
+  const niv = (id) => (plan.niveaux || {})[id] || 0;   // niveau du sol de chaque pièce
   const couleursMurs = plan.murs || {};
 
   const surfaces = {};
@@ -463,7 +520,8 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
     const premier = Math.round((debut + fin) / 2 / PAS) * PAS - Math.floor(LARG_PORTE / 2) * PAS;
     percer(sens, premier, fixe);
     const milieu = premier + LARG_PORTE * PAS / 2;
-    portes.push({ a, b, sens, pos: sens === 'h' ? new THREE.Vector3(X(milieu), SOCLE, Z(fixe)) : new THREE.Vector3(X(fixe), SOCLE, Z(milieu)) });
+    const y0 = SOCLE + Math.min(niv(a), niv(b));
+    portes.push({ a, b, sens, pos: sens === 'h' ? new THREE.Vector3(X(milieu), y0, Z(fixe)) : new THREE.Vector3(X(fixe), y0, Z(milieu)) });
   });
   // Porte d'entrée : sur le côté extérieur le plus long de la pièce d'entrée
   let entree = null;
@@ -492,8 +550,9 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
   Object.values(surfaces).forEach((sf) => {
     const [x, y, w, h] = sf.r;
     const l = w * E, p = h * E;
-    const centre = new THREE.Vector3(X(x + w / 2), SOCLE, Z(y + h / 2));
-    scene.add(place(boite(l + 0.1, SOCLE, p + 0.1, matSocle), centre.x, SOCLE / 2, centre.z));
+    const centre = new THREE.Vector3(X(x + w / 2), SOCLE + niv(sf.id), Z(y + h / 2));
+    const hs = Math.max(0.02, SOCLE + niv(sf.id));
+    scene.add(place(boite(l + 0.1, hs, p + 0.1, matSocle), centre.x, hs / 2, centre.z));
     const g = new THREE.Group();
     g.position.copy(centre);
     const sol = boite(l, 0.012, p, solDe(sf.id, l, p));
@@ -537,29 +596,36 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
     return pans;
   };
   // Groupe posé le long d'un pan : x local = le long du mur, z local = à travers.
-  const surPan = (sens, fixe, milieu) => {
+  const surPan = (sens, fixe, milieu, y = SOCLE) => {
     const g = new THREE.Group();
-    if (sens === 'h') g.position.set(X(milieu), SOCLE, Z(fixe));
-    else { g.position.set(X(fixe), SOCLE, Z(milieu)); g.rotation.y = -Math.PI / 2; }
+    if (sens === 'h') g.position.set(X(milieu), y, Z(fixe));
+    else { g.position.set(X(fixe), y, Z(milieu)); g.rotation.y = -Math.PI / 2; }
     murs.add(g);
     return g;
   };
   const lignes = {};
   troncons.forEach((t) => {
     const genre = t.surfaces.length === 1 ? (vitrees.has(t.surfaces[0]) ? 'verre' : 'ext') : 'int';
-    const cle = `${t.sens}:${t.fixe}:${genre}`;
+    // Un mur entre deux niveaux part du plus bas et monte jusqu'au plus haut.
+    const nivs = t.surfaces.map(niv);
+    const bas = Math.min(...nivs), ecart = Math.max(...nivs) - bas;
+    const interieur = genre === 'int' ? 0 : (t.sens === 'h' ? (surfaces[t.surfaces[0]].r[1] === t.fixe ? 1 : -1)
+      : (surfaces[t.surfaces[0]].r[0] === t.fixe ? -1 : 1));
+    const cle = `${t.sens}|${t.fixe}|${genre}|${bas}|${ecart}|${interieur}`;
     (lignes[cle] = lignes[cle] || []).push(t.i);
   });
+  const matRideau = VELOURS(0x6a1622);
   Object.entries(lignes).forEach(([cle, positions]) => {
-    const [sens, fixeS, genre] = cle.split(':');
-    const fixe = Number(fixeS);
+    const [sens, fixeS, genre, basS, ecartS, intS] = cle.split('|');
+    const fixe = Number(fixeS), base = SOCLE + Number(basS), ecart = Number(ecartS), interieur = Number(intS);
     pansDe(positions).forEach(([a, b]) => {
       const ep = genre === 'int' ? EP_INT : EP_EXT;
       const L = (b - a) * E + ep;
-      const g = surPan(sens, fixe, (a + b) / 2);
+      const g = surPan(sens, fixe, (a + b) / 2, base);
       if (genre === 'int') {
-        g.add(place(boite(L, H_INT, ep, matCloison), 0, H_INT / 2, 0));
-        g.add(place(boite(L, 0.012, ep + 0.004, matDessus), 0, H_INT + 0.006, 0));
+        const H = H_INT + ecart;
+        g.add(place(boite(L, H, ep, matCloison), 0, H / 2, 0));
+        g.add(place(boite(L, 0.012, ep + 0.004, matDessus), 0, H + 0.006, 0));
       } else if (genre === 'verre') {
         g.add(place(boite(L, 0.14, ep, matFacade), 0, 0.07, 0));
         g.add(place(boite(L, H_EXT - 0.14, 0.01, matVerre), 0, (H_EXT + 0.14) / 2, 0));
@@ -582,6 +648,8 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
             g.add(place(boite(lf, haut - bas, 0.012, matVitreFacade), c, (bas + haut) / 2, 0));
             g.add(place(boite(lf + 0.04, 0.02, ep + 0.04, matChambranle), c, bas, 0));
             g.add(place(boite(0.012, haut - bas, 0.02, matChambranle), c, (bas + haut) / 2, 0));
+            [-1, 1].forEach((sr) => g.add(place(boite(0.06, haut - bas + 0.1, 0.012, matRideau), c + sr * (lf / 2 + 0.01), (bas + haut) / 2 + 0.02, interieur * (ep / 2 + 0.02))));
+            g.add(place(boite(lf + 0.16, 0.01, 0.01, LAITON()), c, haut + 0.07, interieur * (ep / 2 + 0.02)));
             x0 = c + lf / 2;
           }
           const reste = L / 2 - x0;
@@ -611,9 +679,10 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
       pansDe(pos).forEach(([a, b]) => {
         const t = troncons.get(cleT(sens, fixe, a));
         const ext = t.surfaces.length === 1;
-        const ep = ext ? EP_EXT : EP_INT, H = ext ? H_EXT : H_INT;
+        const ep = ext ? EP_EXT : EP_INT;
+        const H = ext ? H_EXT : H_INT + Math.max(...t.surfaces.map(niv)) - niv(sf.id);
         const L = (b - a) * E - 0.01;
-        const g = surPan(sens, fixe, (a + b) / 2);
+        const g = surPan(sens, fixe, (a + b) / 2, SOCLE + niv(sf.id));
         const off = interieur * (ep / 2 + 0.004);
         g.add(place(boite(L, H - 0.02, 0.006, matPapier), 0, (H - 0.02) / 2, off));
         g.add(place(boite(L, 0.17, 0.01, matLambris), 0, 0.085, off + interieur * 0.003));
@@ -647,9 +716,20 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
     const g = new THREE.Group();
     g.position.copy(po.pos);
     if (po.sens === 'v') g.rotation.y = -Math.PI / 2;
+    const ecart = Math.abs(niv(po.a) - niv(po.b));
     const b = battant(H_INT, -1.15); b.position.x = -larg / 2; g.add(b);
     g.add(place(boite(larg, 0.012, EP_INT, mat(0x8a6a3a, { roughness: 0.5 })), 0, 0.006, 0));
-    g.add(place(boite(larg + 0.04, 0.03, EP_INT + 0.01, matChambranle), 0, H_INT * 0.9, 0));
+    g.add(place(boite(larg + 0.04, 0.03, EP_INT + 0.01, matChambranle), 0, H_INT * 0.9 + ecart, 0));
+    if (ecart > 0.01) {
+      // Marches dans le passage, du côté de la pièce la plus basse
+      const basse = niv(po.a) < niv(po.b) ? po.a : po.b, haute = basse === po.a ? po.b : po.a;
+      const cb = pieces[basse].centre;
+      let sensZ = po.sens === 'h' ? Math.sign(cb.z - po.pos.z) : -Math.sign(cb.x - po.pos.x);
+      const n = Math.max(1, Math.round(ecart / 0.04));
+      g.add(place(boite(larg, ecart, EP_INT + 0.004, matSocle), 0, ecart / 2, 0));
+      for (let k = 0; k < n; k++) g.add(place(boite(larg, ecart * (n - k) / n, 0.05, NOYER()), 0, ecart * (n - k) / n / 2, sensZ * (EP_INT / 2 + 0.025 + k * 0.05)));
+      po.marches = { basse, haute };
+    }
     scene.add(g);
   });
   if (entree) {
@@ -658,11 +738,12 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
     if (entree.sens === 'v') g.rotation.y = -Math.PI / 2;
     // dehors en z local : pour un mur 'v' tourné de -90°, +x monde = -z local
     const d = entree.sens === 'h' ? entree.dehors : -entree.dehors;
-    const b = battant(H_EXT, d > 0 ? 1.2 : -1.2); b.position.set(-larg / 2, SOCLE, 0); g.add(b);
-    for (let k = 0; k < 3; k++) g.add(place(boite(larg + 0.14 - k * 0.04, SOCLE / 3 * (3 - k), 0.07, matSocle), 0, SOCLE / 6 * (3 - k), d * (0.09 + (2 - k) * 0.07)));
+    const H0 = SOCLE + niv(plan.entree);
+    const b = battant(H_EXT, d > 0 ? 1.2 : -1.2); b.position.set(-larg / 2, H0, 0); g.add(b);
+    for (let k = 0; k < 3; k++) g.add(place(boite(larg + 0.14 - k * 0.04, H0 / 3 * (3 - k), 0.07, matSocle), 0, H0 / 6 * (3 - k), d * (0.09 + (2 - k) * 0.07)));
     [-1, 1].forEach((s) => {
-      g.add(place(boite(0.04, 0.06, 0.04, LAITON()), s * (larg / 2 + 0.08), SOCLE + 0.5, d * 0.07));
-      g.add(place(sphere(0.016, lueur(0xffc46b, 3), 8), s * (larg / 2 + 0.08), SOCLE + 0.5, d * 0.07));
+      g.add(place(boite(0.04, 0.06, 0.04, LAITON()), s * (larg / 2 + 0.08), H0 + 0.5, d * 0.07));
+      g.add(place(sphere(0.016, lueur(0xffc46b, 3), 8), s * (larg / 2 + 0.08), H0 + 0.5, d * 0.07));
     });
     scene.add(g);
   }
@@ -745,6 +826,56 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
     else { const gz = allee.depart.z; segmentMur(x1, Math.min(z1, z2), x1, gz - o); segmentMur(x1, gz + o, x1, Math.max(z1, z2)); [gz - o, gz + o].forEach((pz) => scene.add(place(boite(0.12, 0.3, 0.12, matSocle), x1, 0.15, pz))); }
   }
 
+  // Parterres de fleurs et bancs le long de l'allée
+  if (allee) {
+    const fleurs = [0xb3263a, 0xe0b84a, 0x8a5ab8, 0xf2efe6];
+    const rf = aleatoire(4);
+    [-1, 1].forEach((s) => {
+      const c = allee.depart.clone().addScaledVector(allee.dir, 0.9).addScaledVector(allee.lat, s * 0.95);
+      const lb = allee.lat.x ? 0.7 : 0.3, pb = allee.lat.x ? 0.3 : 0.7;
+      scene.add(place(boite(lb, 0.05, pb, mat(0x3a2a1c, { roughness: 1 })), c.x, 0.025, c.z));
+      for (let k = 0; k < 22; k++) scene.add(place(sphere(0.022, mat(fleurs[k % 4], { roughness: 0.8 }), 6), c.x + (rf() - 0.5) * (lb - 0.06), 0.065, c.z + (rf() - 0.5) * (pb - 0.06)));
+      const pbc = allee.depart.clone().addScaledVector(allee.dir, 1.7).addScaledVector(allee.lat, s * 0.78);
+      const banc = new THREE.Group();
+      banc.add(place(boite(0.3, 0.02, 0.09, NOYER()), 0, 0.09, 0));
+      banc.add(place(boite(0.3, 0.07, 0.015, NOYER()), 0, 0.14, -0.045));
+      [-0.13, 0.13].forEach((x) => banc.add(place(boite(0.02, 0.09, 0.08, matChambranle), x, 0.045, 0)));
+      banc.position.copy(pbc);
+      banc.rotation.y = Math.atan2(-allee.lat.x * s, -allee.lat.z * s);
+      scene.add(banc);
+    });
+  }
+
+  // Cheminées de pierre qui dépassent du toit, collées au mur extérieur
+  const matCheminee = mat(0x6a5e52, { roughness: 1 });
+  (plan.cheminees || []).forEach(([px, py]) => {
+    let ox = 0, oz = 0;
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (!dansMaison(X(px) + dx * 0.12, Z(py) + dz * 0.12, 0)) { ox = dx; oz = dz; break; }
+    const cx0 = X(px) + ox * 0.05, cz0 = Z(py) + oz * 0.05, hc = SOCLE + H_EXT + 0.28;
+    scene.add(place(boite(0.16, hc, 0.16, matCheminee), cx0, hc / 2, cz0));
+    scene.add(place(boite(0.2, 0.04, 0.2, matCheminee), cx0, hc, cz0));
+    [-0.035, 0.035].forEach((d) => scene.add(place(cyl(0.022, 0.022, 0.07, mat(0x8a4a32), 8), cx0 + d * Math.abs(oz), hc + 0.05, cz0 + d * Math.abs(ox))));
+  });
+
+  // Tour ronde à toit conique, fenêtres éclairées
+  (plan.tours || []).forEach(([tx, ty, tr]) => {
+    const R = tr * E, ht = SOCLE + H_EXT + 0.32, x0 = X(tx), z0 = Z(ty);
+    const tour = new THREE.Group();
+    tour.add(place(cyl(R + 0.03, R + 0.04, SOCLE, matSocle, 28), 0, SOCLE / 2, 0));
+    tour.add(place(cyl(R, R, ht - SOCLE, mat(0xb8a98e, { roughness: 0.95 }), 28), 0, SOCLE + (ht - SOCLE) / 2, 0));
+    tour.add(place(cyl(R + 0.025, R + 0.025, 0.03, matChambranle, 28), 0, ht, 0));
+    const toitC = new THREE.Mesh(new THREE.ConeGeometry(R + 0.06, 0.5, 28), mat(0x2e3440, { roughness: 0.6, metalness: 0.2 }));
+    toitC.position.y = ht + 0.25; tour.add(toitC);
+    tour.add(place(sphere(0.02, LAITON(), 8), 0, ht + 0.52, 0));
+    for (let k = 0; k < 6; k++) {
+      const a = k * Math.PI / 3 + 0.3, hf = k % 2 ? 0.55 : 0.3;
+      const f = place(boite(0.05, 0.1, 0.01, lueur(0xffc46b, 1.8)), Math.cos(a) * (R + 0.003), SOCLE + hf, Math.sin(a) * (R + 0.003));
+      f.rotation.y = -a + Math.PI / 2; tour.add(f);
+    }
+    tour.position.set(x0, 0, z0);
+    scene.add(tour);
+  });
+
   // Quelques lumières chaudes à l'intérieur (lustres, cheminée)
   [['hall', 0.7, 0xffc87a, 1.4], ['salle_de_bal', 0.7, 0xffc87a, 1.4], ['fumoir', 0.25, 0xff7a2a, 1.6], ['bibliotheque', 0.45, 0xffd08a, 1.1], ['cuisine', 0.45, 0xffd08a, 1.0]]
     .forEach(([id, hl, c, i]) => { if (!pieces[id]) return; const pl = new THREE.PointLight(c, i, 2.6, 1.3); pl.position.copy(pieces[id].centre).setY(SOCLE + hl); scene.add(pl); });
@@ -792,7 +923,7 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
   }
   function pointDans(id) {
     const pc = pieces[id];
-    return new THREE.Vector3(pc.centre.x + (Math.random() - 0.5) * (pc.l * 0.55), SOCLE + 0.012, pc.centre.z + (Math.random() - 0.5) * (pc.p * 0.55));
+    return new THREE.Vector3(pc.centre.x + (Math.random() - 0.5) * (pc.l * 0.55), pc.centre.y + 0.012, pc.centre.z + (Math.random() - 0.5) * (pc.p * 0.55));
   }
   // Destinations : les pièces ouvertes et le hall (on s'y croise souvent).
   const destinations = () => Object.keys(pieces).filter((id) => pieces[id].ouvert);
@@ -829,7 +960,11 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
       const ctr = pieces[vers].centre;
       if (porte.sens === 'h') { const s = Math.sign(ctr.z - porte.pos.z); avant.z -= s * 0.16; apres.z += s * 0.16; }
       else { const s = Math.sign(ctr.x - porte.pos.x); avant.x -= s * 0.16; apres.x += s * 0.16; }
-      p.etapes.push({ point: avant.setY(SOCLE + 0.012) }, { point: apres.setY(SOCLE + 0.012), salle: vers });
+      const depuis = porte.a === vers ? porte.b : porte.a;
+      const ecart = Math.abs(niv(porte.a) - niv(porte.b)) > 0.01 ? 0.12 : 0;   // le temps de passer les marches
+      if (porte.sens === 'h') { const s = Math.sign(pieces[vers].centre.z - porte.pos.z); avant.z -= s * ecart; apres.z += s * ecart; }
+      else { const s = Math.sign(pieces[vers].centre.x - porte.pos.x); avant.x -= s * ecart; apres.x += s * ecart; }
+      p.etapes.push({ point: avant.setY(pieces[depuis].centre.y + 0.012) }, { point: apres.setY(pieces[vers].centre.y + 0.012), salle: vers });
     });
     if (but && route) p.etapes.push({ point: pointDans(but), salle: but });
   }
