@@ -4,7 +4,7 @@
 // arrive tout de suite dans l'appli). La dernière copie de chaque page sert seulement de secours
 // quand le réseau du bar est trop lent : l'écran s'affiche quand même au lieu de rester blanc.
 
-const CACHE = "table-v29";
+const CACHE = "table-v30";
 const PAGE_TIMEOUT_MS = 5000;
 
 self.addEventListener("install", () => self.skipWaiting());

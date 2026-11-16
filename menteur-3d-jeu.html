@@ -1147,7 +1147,7 @@ function animerRevelation(rev) {
   if (!rev || rev.num <= derniereRevelation) return;
   derniereRevelation = rev.num;
   const nomA = nomDe(rev.appelant, true), nomP = nomDe(rev.poseur, true);
-  messageCentral('🗣️ MENTEUR !', (rev.appelant === MOI ? 'Tu accuses ' : nomA + ' accuse ') + (rev.poseur === MOI ? 'toi' : nomP), '#ff6b8a', 1.8,
+  messageCentral('🗣️ MENTEUR !', rev.appelant === MOI ? 'Tu accuses ' + nomP : rev.poseur === MOI ? nomA + ' t’accuse' : nomA + ' accuse ' + nomP, '#ff6b8a', 1.8,
     { flash: true, vibrer: (rev.appelant === MOI || rev.poseur === MOI) ? [60, 40, 60] : null });
   viderRevelees();
   const n = rev.cartes.length;
