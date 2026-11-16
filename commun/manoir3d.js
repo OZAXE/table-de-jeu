@@ -50,7 +50,7 @@ function aleatoire(graine) {
   return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
 }
 
-function texteSprite(texte, { taille = 44, hauteur = 0.3, fond = 'rgba(10,4,6,0.8)', couleur = '#f3e6cf', police = 'Cormorant Garamond, Georgia, serif', poids = 700 } = {}) {
+function texteSprite(texte, { taille = 44, hauteur = 0.3, fond = 'rgba(10,4,6,0.8)', couleur = '#f3e6cf', police = 'Cormorant Garamond, Georgia, serif', poids = 700, bord = null, barre = null } = {}) {
   const c = document.createElement('canvas');
   const ctx = c.getContext('2d');
   ctx.font = `${poids} ${taille}px ${police}`;
@@ -63,10 +63,16 @@ function texteSprite(texte, { taille = 44, hauteur = 0.3, fond = 'rgba(10,4,6,0.
     ctx.beginPath();
     ctx.moveTo(r, 0); ctx.arcTo(l, 0, l, c.height, r); ctx.arcTo(l, c.height, 0, c.height, r);
     ctx.arcTo(0, c.height, 0, 0, r); ctx.arcTo(0, 0, l, 0, r); ctx.closePath(); ctx.fill();
+    if (bord) { ctx.strokeStyle = bord; ctx.lineWidth = 4; ctx.stroke(); }
   }
   ctx.fillStyle = couleur;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(texte, l / 2, c.height / 2 + 2);
+  if (barre) {
+    // Nom barré, comme les jetons éliminés sous le plan
+    ctx.strokeStyle = barre; ctx.lineWidth = Math.max(3, taille / 9); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(taille * 0.45, c.height / 2 + 2); ctx.lineTo(l - taille * 0.45, c.height / 2 + 2); ctx.stroke();
+  }
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
@@ -610,7 +616,10 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
     halo.position.y = 0.018;
     g.add(halo);
     const lieu = pack.lieux.find((x2) => x2.id === sf.id) || { nom: sf.id };
-    const etiquette = texteSprite((lieu.icone ? lieu.icone + ' ' : '') + lieu.nom, { police: T.police, fond: T.etiquette });
+    const texteEtiquette = (lieu.icone ? lieu.icone + ' ' : '') + lieu.nom;
+    const etiquette = texteSprite(texteEtiquette, { police: T.police, fond: T.etiquette });
+    etiquette.userData.texte = texteEtiquette;
+    etiquette.userData.style = '';
     etiquette.position.set(0, H_EXT + 0.3, 0);
     g.add(etiquette);
     pieces[sf.id] = { centre, l, p, halo, meubles, etiquette, ouvert: true };
@@ -1056,6 +1065,17 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
 
   // ---------------- états du carnet ----------------
   let crime = null;
+  function restylerEtiquette(sprite, style) {
+    const opts = { police: T.police, fond: T.etiquette };
+    if (style === 'elimine') Object.assign(opts, { fond: 'rgba(30,30,32,0.88)', couleur: '#b3aba0', barre: '#f3e6cf' });
+    if (style === 'suspect') Object.assign(opts, { fond: 'rgba(179,38,30,0.95)', couleur: '#ffffff', bord: '#ffb4a8' });
+    const neuf = texteSprite(sprite.userData.texte, opts);
+    sprite.material.map.dispose();
+    sprite.material.map = neuf.material.map;
+    sprite.material.needsUpdate = true;
+    sprite.scale.copy(neuf.scale);
+    sprite.userData.style = style;
+  }
   function majEtats(etats, ouverts, lieuCrime) {
     crime = lieuCrime || null;
     Object.entries(pieces).forEach(([id, pc]) => {
@@ -1066,9 +1086,12 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
       pc.etiquette.material.opacity = pc.ouvert ? 1 : 0.35;
       if (!pc.ouvert) { halo.color.set(0x000000); halo.opacity = 0.7; }
       else if (crime) { halo.color.set(crime === id ? 0xb3261e : 0x000000); halo.opacity = 0.55; }
-      else if (e === 'elimine') { halo.color.set(0x000000); halo.opacity = 0.55; }
-      else if (e === 'suspect') { halo.color.set(0xb3261e); halo.opacity = 0.42; }
+      else if (e === 'elimine') { halo.color.set(0x000000); halo.opacity = 0.62; }
+      else if (e === 'suspect') { halo.color.set(0xb3261e); halo.opacity = 0.5; }
       else halo.opacity = 0;
+      // L'étiquette suit le carnet : barrée et grisée si éliminée, rouge si suspecte
+      const style = !pc.ouvert ? '' : crime ? (crime === id ? 'suspect' : 'elimine') : e;
+      if (pc.etiquette.userData.style !== style) restylerEtiquette(pc.etiquette, style);
     });
     demanderImage();
   }
