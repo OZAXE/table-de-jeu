@@ -112,6 +112,39 @@
   .liste-elements span { border: 1px solid var(--bord); border-radius: 10px; padding: 5px 9px; font-size: 0.88rem; }
   .recit { font: 500 1.3rem/1.4 var(--titre); }
   .masque { display: none !important; }
+
+  /* Tranche 2 : points, plis, archive, carnet */
+  .solde { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-top: 10px; color: var(--doux); }
+  .solde b { font: 700 1.6rem var(--titre); color: var(--texte); }
+  .pli { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; animation: pli 2.4s ease-in-out infinite; }
+  @keyframes pli { 50% { box-shadow: 0 0 0 1px var(--accent) inset, 0 0 22px rgba(201, 162, 74, 0.35); } }
+  .archive-ligne { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--bord); }
+  .archive-ligne:first-of-type { border-top: 0; }
+  .archive-ligne .txt { flex: 1; min-width: 0; font-size: 0.9rem; }
+  .archive-ligne .txt span { display: block; color: var(--doux); font-size: 0.8rem; }
+  .archive-ligne button { padding: 8px 12px; font-size: 0.85rem; white-space: nowrap; }
+  .tampon { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 6px; font-size: 0.72rem; border: 1px solid currentColor; }
+  .notes-carnet { display: grid; gap: 6px; margin-top: 8px; }
+  .notes-carnet div { display: flex; gap: 8px; align-items: flex-start; font-size: 0.9rem; background: rgba(0, 0, 0, 0.2); border-radius: 10px; padding: 8px 10px; }
+  .notes-carnet div span { flex: 1; overflow-wrap: anywhere; }
+  .notes-carnet div em { color: var(--doux); font-style: normal; font-size: 0.8rem; }
+  .notes-carnet button { padding: 2px 8px; font-size: 0.8rem; }
+  .carnet .liste-elements span { cursor: pointer; user-select: none; }
+  .carnet .liste-elements span.elimine { text-decoration: line-through; opacity: 0.45; }
+  .carnet .liste-elements span.suspect { border-color: #ff6b5e; color: #ffb4a8; background: rgba(179, 38, 30, 0.18); }
+  textarea { width: 100%; min-height: 64px; border-radius: 12px; border: 1px solid var(--bord); background: rgba(0, 0, 0, 0.3); color: var(--texte); padding: 10px 12px; font: 500 0.95rem 'Outfit', sans-serif; resize: vertical; }
+  .fil p { font-size: 0.9rem; padding: 6px 0; border-top: 1px solid var(--bord); }
+  .fil p:first-of-type { border-top: 0; }
+  .fil p small { color: var(--doux); margin-right: 6px; }
+  .voile { position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, 0.72); display: grid; place-items: center; padding: 20px; }
+  .lettre { max-width: 460px; width: 100%; background: #f1e3c4; color: #2a1a10; border-radius: 6px; padding: 26px 22px 20px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6); }
+  .lettre .corps { font: 600 1.45rem/1.35 var(--titre); }
+  .lettre .meta { margin-top: 14px; font-size: 0.82rem; color: #6b5440; }
+  .lettre .avis { margin-top: 10px; font-size: 0.85rem; color: #6b5440; }
+  .lettre button { margin-top: 16px; background: #2a1a10; color: #f1e3c4; }
+  .toast { position: fixed; left: 16px; right: 16px; bottom: max(18px, env(safe-area-inset-bottom)); z-index: 60; max-width: 520px; margin: 0 auto;
+    background: #2a1216; border: 1px solid var(--accent); border-radius: 16px; padding: 14px 16px; font-weight: 600; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
+  .toast.gorgee { background: #4a1410; border-color: #ff6b5e; font-size: 1.1rem; }
 </style>
 </head>
 <body>
@@ -262,6 +295,15 @@
         return;
       case 'enq_annulee':
         etat = null; couches = couches.filter((c) => c !== 'enq'); afficher(); return;
+      case 'enq_texte':
+        montrerLettre(msg); return;
+      case 'enq_gorgee':
+        toast('🍺 Bois ' + msg.nombre + ' ' + msg.unite + (msg.nombre > 1 && !/s$/.test(msg.unite) ? 's' : '') + ' : ' + msg.raison.toLowerCase() + '.', 'gorgee', 7000);
+        return;
+      case 'enq_pe':
+        toast('+' + msg.gain + ' PE (' + msg.raison + ') · total ' + msg.total, '', 4000); return;
+      case 'enq_nouvel_indice':
+        toast('📜 Un pli t’attend · ' + msg.source, '', 4000); return;
     }
   }
 
@@ -273,7 +315,18 @@
     const cle = JSON.stringify([couches.includes('enq'), etat, moi, pack && pack.id]);
     if (cle === rendu) return;
     rendu = cle;
+    // Un message peut arriver pendant qu'on écrit une note : on garde le
+    // champ actif et sa saisie à travers le redessin.
+    const actif = document.activeElement && document.activeElement.id ? document.activeElement : null;
+    const garde = actif ? { id: actif.id, valeur: actif.value, debut: actif.selectionStart, fin: actif.selectionEnd } : null;
     ecran.textContent = '';
+    setTimeout(() => {
+      if (!garde) return;
+      const e = document.getElementById(garde.id);
+      if (!e) return;
+      e.value = garde.valeur; e.focus();
+      try { e.setSelectionRange(garde.debut, garde.fin); } catch (x) { /* pas un champ texte */ }
+    }, 0);
     if (!couches.includes('enq') || !etat) return ecranAucune();
     if (!pack || !moi) return;
     ({ lobby: ecranLobby, ouverture: ecranOuverture, enquete: ecranEnquete, fin: ecranFin }[etat.phase] || ecranAucune)();
@@ -463,34 +516,206 @@
   let minuteurCompte = null;
   function ecranEnquete() {
     titre(pack.nom, 'Enquête en cours');
+    const ecart = Date.now() / 1000 - etat.maintenant;
+    const serveurMaintenant = () => Date.now() / 1000 - ecart;
+
+    // Temps restant et points d'enquête
     const t = carte('Temps restant');
     const compte = el('div', { className: 'compte' });
     t.appendChild(compte);
-    const ecart = Date.now() / 1000 - etat.maintenant;
+    if (moi.inscrit) {
+      const solde = el('div', { className: 'solde' });
+      solde.append(el('b', {}, moi.pe + ' PE'), 'un indice : ' + moi.cout_indice + ' PE · ' +
+        moi.indices_heure + '/' + moi.indices_heure_max + ' cette heure');
+      t.appendChild(solde);
+      const l = el('div', { className: 'ligne' }); l.style.marginTop = '10px';
+      const plein = moi.indices_heure >= moi.indices_heure_max || etat.dossier_epuise;
+      const dem = el('button', { type: 'button', disabled: plein || moi.pe < moi.cout_indice }, 'Demander un indice');
+      dem.addEventListener('click', () => envoyer({ type: 'enq_indice' }));
+      const ach = el('button', { type: 'button', className: 'discret', disabled: plein },
+        'Acheter (' + etat.gorgees_achat + ' ' + etat.unite + (etat.gorgees_achat > 1 ? 's' : '') + ')');
+      ach.addEventListener('click', () => {
+        if (confirm('Acheter un indice contre ' + etat.gorgees_achat + ' ' + etat.unite + (etat.gorgees_achat > 1 ? 's' : '') + ' ?')) envoyer({ type: 'enq_acheter' });
+      });
+      l.append(dem, ach);
+      t.appendChild(l);
+      t.appendChild(el('p', { style: 'margin-top:8px;font-size:0.85rem' }, etat.dossier_epuise
+        ? 'Le dossier est épuisé : plus aucun indice à distribuer.'
+        : 'Gagne des PE en gagnant aux jeux de la soirée : ' + etat.jeux.map((x) => (Soiree.JEUX[x] || {}).titre || x).join(', ') + '.'));
+    }
+
+    // Nouveaux plis (lecture libre, une seule fois)
+    (moi.archive || []).filter((e) => !e.lu).forEach((e) => {
+      const c = carte();
+      c.classList.add('pli');
+      c.appendChild(el('h2', {}, '📜 Un pli pour toi'));
+      c.appendChild(el('p', {}, e.source + ' · reçu à ' + heure(e.recu_a) + '. Tu peux le lire librement une fois ; ensuite il ira dans ton archive.'));
+      const b = el('button', { type: 'button' }, 'Ouvrir le pli');
+      b.style.marginTop = '10px';
+      b.addEventListener('click', () => envoyer({ type: 'enq_lire', id: e.id }));
+      c.appendChild(b);
+    });
+
+    carteRole();
+    if (moi.inscrit) carteCarnet();
+    if (moi.inscrit) carteArchive(serveurMaintenant);
+    carteFil();
+
     clearInterval(minuteurCompte);
     const maj = () => {
-      const reste = Math.max(0, etat.fin_a - (Date.now() / 1000 - ecart));
+      const reste = Math.max(0, etat.fin_a - serveurMaintenant());
       const h = Math.floor(reste / 3600), m = Math.floor((reste % 3600) / 60), sec = Math.floor(reste % 60);
       compte.textContent = (h ? h + ':' : '') + String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+      document.querySelectorAll('[data-relire]').forEach(majRelire);
+    };
+    const majRelire = (b) => {
+      const reste = Math.ceil((moi.consultation_possible_a || 0) - serveurMaintenant());
+      if (reste > 0) {
+        b.disabled = true;
+        b.textContent = 'Relire dans ' + Math.floor(reste / 60) + ':' + String(reste % 60).padStart(2, '0');
+      } else {
+        b.disabled = false;
+        b.textContent = 'Relire (' + etat.gorgees_consultation + ' ' + etat.unite + ')';
+      }
     };
     maj();
     minuteurCompte = setInterval(maj, 1000);
-    carteRole();
-    const d = carte('Le dossier');
-    d.appendChild(el('div', { className: 'etiquette' }, 'Suspects'));
-    const ls = el('div', { className: 'liste-elements' });
-    etat.joueurs.forEach((x) => { const p = portrait(x.portrait); ls.appendChild(el('span', {}, (p ? p.icone + ' ' : '') + x.nom)); });
-    d.appendChild(ls);
-    d.appendChild(el('div', { className: 'etiquette' }, 'Lieux possibles'));
-    const ll = el('div', { className: 'liste-elements' });
-    etat.lieux.forEach((id) => ll.appendChild(el('span', {}, element('lieux', id))));
-    d.appendChild(ll);
-    d.appendChild(el('div', { className: 'etiquette' }, 'Armes possibles'));
-    const la = el('div', { className: 'liste-elements' });
-    etat.armes.forEach((id) => { const a = pack.armes.find((x) => x.id === id); la.appendChild(el('span', {}, (a ? a.icone + ' ' : '') + element('armes', id))); });
-    d.appendChild(la);
-    const p = carte();
-    p.appendChild(el('p', {}, 'Bientôt ici : le plan illustré du manoir, les indices gagnés aux jeux, l’archive et les accusations.'));
+  }
+
+  function heure(t) {
+    const d = new Date(t * 1000);
+    return String(d.getHours()).padStart(2, '0') + 'h' + String(d.getMinutes()).padStart(2, '0');
+  }
+
+  // ---------------- Carnet (local, jamais envoyé au serveur) ----------------
+  // Il sert à noter ce qu'on a lu et ce que les autres ont DIT : tout y est
+  // modifiable, il ne prouve donc rien. Seule l'archive fait foi.
+  function cleCarnet() { return 'shield.carnet.' + s.code + '.' + Math.round(etat.ouverture_fin_a || 0); }
+  function lireCarnet() {
+    try { return JSON.parse(localStorage.getItem(cleCarnet()) || 'null') || { etats: {}, notes: [] }; }
+    catch (e) { return { etats: {}, notes: [] }; }
+  }
+  function ecrireCarnet(c) { try { localStorage.setItem(cleCarnet(), JSON.stringify(c)); } catch (e) { /* tant pis */ } }
+
+  function carteCarnet() {
+    const carnet = lireCarnet();
+    const c = carte('Ton carnet');
+    c.classList.add('carnet');
+    c.appendChild(el('p', { style: 'font-size:0.85rem' }, 'Touche un nom pour le marquer : éliminé, puis suspect, puis inconnu. Ton carnet reste sur ton téléphone ; il ne prouve rien.'));
+    const ETATS = ['', 'elimine', 'suspect'];
+    const groupe = (titreG, cat, elements) => {
+      c.appendChild(el('div', { className: 'etiquette' }, titreG));
+      const l = el('div', { className: 'liste-elements' });
+      elements.forEach(([id, libelle]) => {
+        const cle = cat + ':' + id;
+        const span = el('span', { className: carnet.etats[cle] || '' }, libelle);
+        span.addEventListener('click', () => {
+          const c2 = lireCarnet();
+          const suivant = ETATS[(ETATS.indexOf(c2.etats[cle] || '') + 1) % ETATS.length];
+          if (suivant) c2.etats[cle] = suivant; else delete c2.etats[cle];
+          ecrireCarnet(c2);
+          span.className = suivant;
+        });
+        l.appendChild(span);
+      });
+      c.appendChild(l);
+    };
+    groupe('Suspects', 'suspect', etat.joueurs.map((x) => { const p = portrait(x.portrait); return [x.nom, (p ? p.icone + ' ' : '') + x.nom]; }));
+    groupe('Lieux', 'lieu', etat.lieux.map((id) => [id, element('lieux', id)]));
+    groupe('Armes', 'arme', etat.armes.map((id) => { const a = pack.armes.find((x) => x.id === id); return [id, (a ? a.icone + ' ' : '') + element('armes', id)]; }));
+
+    c.appendChild(el('div', { className: 'etiquette' }, 'Notes'));
+    const zone = el('textarea', { id: 'note-texte', placeholder: 'Ce que tu as lu, ce qu’on t’a dit…', maxLength: 300 });
+    c.appendChild(zone);
+    const l = el('div', { className: 'ligne' }); l.style.marginTop = '8px';
+    const source = el('input', { type: 'text', id: 'note-source', placeholder: 'dit par… (facultatif)', maxLength: 20 });
+    source.style.flex = '1 1 140px';
+    const ajouter = el('button', { type: 'button', className: 'discret' }, 'Noter');
+    ajouter.addEventListener('click', () => {
+      const texte = zone.value.trim();
+      if (!texte) return;
+      const c2 = lireCarnet();
+      c2.notes.unshift({ texte, source: source.value.trim(), t: Date.now() });
+      ecrireCarnet(c2);
+      zone.value = ''; source.value = '';
+      rendu = ''; afficher();
+    });
+    l.append(source, ajouter);
+    c.appendChild(l);
+    const liste = el('div', { className: 'notes-carnet' });
+    carnet.notes.forEach((n, i) => {
+      const d = el('div');
+      const t = el('span', {}, n.texte);
+      if (n.source) { t.appendChild(document.createElement('br')); t.appendChild(el('em', {}, 'dit par ' + n.source)); }
+      const x = el('button', { type: 'button', className: 'discret' }, '✕');
+      x.addEventListener('click', () => { const c2 = lireCarnet(); c2.notes.splice(i, 1); ecrireCarnet(c2); rendu = ''; afficher(); });
+      d.append(t, x);
+      liste.appendChild(d);
+    });
+    c.appendChild(liste);
+  }
+
+  // ---------------- Archive officielle (infalsifiable) ----------------
+  function carteArchive() {
+    const lus = (moi.archive || []).filter((e) => e.lu);
+    const c = carte('Ton archive');
+    if (!lus.length) {
+      c.appendChild(el('p', {}, 'Aucun indice rangé pour l’instant. Relire un indice demande d’attendre ' +
+        Math.round(etat.timer_consultation / 60) + ' min depuis la dernière consultation, et coûte ' +
+        etat.gorgees_consultation + ' ' + etat.unite + '.'));
+      return;
+    }
+    c.appendChild(el('p', { style: 'font-size:0.85rem;margin-bottom:6px' }, 'Seule preuve possible : montre ton écran en relisant. Chaque relecture coûte la même chose, même devant les autres.'));
+    lus.slice().reverse().forEach((e) => {
+      const l = el('div', { className: 'archive-ligne' });
+      const txt = el('div', { className: 'txt' }, 'Indice n°' + e.id);
+      if (e.tampon) txt.appendChild(el('span', { className: 'tampon' }, e.tampon === 'authentique' ? 'Authentique' : 'Falsifié'));
+      txt.appendChild(el('span', {}, e.source + ' · ' + heure(e.recu_a)));
+      const b = el('button', { type: 'button', className: 'discret' });
+      b.dataset.relire = '1';
+      b.addEventListener('click', () => {
+        if (confirm('Relire cet indice ? Ça coûte ' + etat.gorgees_consultation + ' ' + etat.unite + ' et relance le chrono.')) envoyer({ type: 'enq_consulter', id: e.id });
+      });
+      l.append(txt, b);
+      c.appendChild(l);
+    });
+  }
+
+  // ---------------- Fil du narrateur ----------------
+  function carteFil() {
+    const c = carte(pack.narrateur.icone + ' ' + pack.narrateur.nom);
+    c.classList.add('fil');
+    const j = (etat.journal || []).slice().reverse();
+    if (!j.length) c.appendChild(el('p', {}, 'Rien à signaler pour l’instant.'));
+    j.forEach((x) => { const p = el('p'); p.append(el('small', {}, heure(x.t)), x.texte); c.appendChild(p); });
+  }
+
+  // ---------------- Lettre (lecture d'un indice) et alertes ----------------
+  function montrerLettre(msg) {
+    const voile = el('div', { className: 'voile' });
+    const l = el('div', { className: 'lettre' });
+    l.appendChild(el('div', { className: 'corps' }, msg.texte));
+    l.appendChild(el('div', { className: 'meta' }, msg.source + ' · reçu à ' + heure(msg.recu_a) +
+      (msg.tampon ? ' · ' + (msg.tampon === 'authentique' ? 'Authentique' : 'Falsifié') : '')));
+    l.appendChild(el('div', { className: 'avis' }, msg.gratuit
+      ? 'Lecture libre, une seule fois. Pour le relire plus tard, il faudra attendre le chrono et payer en ' + (etat ? etat.unite : 'gorgée') + 's.'
+      : 'Relecture de l’archive.'));
+    const b = el('button', { type: 'button' }, msg.gratuit ? 'Ranger dans l’archive' : 'Fermer');
+    b.addEventListener('click', () => voile.remove());
+    l.appendChild(b);
+    voile.appendChild(l);
+    document.body.appendChild(voile);
+  }
+
+  let minuteurToast = null;
+  function toast(texte, genre, duree) {
+    let t = document.getElementById('toast');
+    if (!t) { t = el('div', { id: 'toast', className: 'toast' }); t.setAttribute('role', 'status'); document.body.appendChild(t); }
+    t.className = 'toast ' + (genre || '');
+    t.textContent = texte;
+    t.style.display = 'block';
+    clearTimeout(minuteurToast);
+    minuteurToast = setTimeout(() => { t.style.display = 'none'; }, duree || 4000);
   }
 
   function ecranFin() {
