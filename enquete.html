@@ -127,6 +127,25 @@
   .role-voile.tueur .titre-role { color: #ff6b5e; }
   .role-voile p { color: var(--texte); font-size: 1.05rem; max-width: 420px; }
   .role-voile p + p { margin-top: 8px; }
+  /* Même zone pour tous : on glisse le doigt dessus et on lâche pour ouvrir son dossier */
+  .zone-dossier { position: fixed; left: 24px; right: 24px; bottom: calc(28px + env(safe-area-inset-bottom)); padding: 16px; border: 1px dashed var(--accent);
+    border-radius: 16px; color: var(--doux); font-size: 0.9rem; }
+  .zone-dossier.survol { background: rgba(201, 162, 74, 0.15); color: var(--texte); }
+  /* Dossier (enquêteur) ou console (tueur) : même panneau */
+  .dossier-panneau { position: fixed; inset: 0; z-index: 70; background: var(--fond); display: none; flex-direction: column; }
+  .dossier-panneau.ouvert { display: flex; }
+  .dossier-panneau header { display: flex; align-items: center; gap: 10px; padding: 14px 14px 8px; }
+  .dossier-panneau header h2 { flex: 1; font: 700 1.4rem/1.1 var(--titre); color: var(--accent); }
+  .dossier-panneau .contenu { flex: 1; overflow-y: auto; padding: 4px 14px 18px; display: grid; gap: 10px; align-content: start; }
+  .choix-ligne { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .choix-ligne button { padding: 8px 11px; font-size: 0.85rem; background: rgba(255, 255, 255, 0.06); color: var(--texte); border: 1px solid var(--bord); }
+  .choix-ligne button.actif { background: var(--accent); color: #1a0b0e; border-color: var(--accent); }
+  .choix-ligne button small { display: block; font-size: 0.68rem; opacity: 0.85; }
+  .risque-faible { color: #7fc98a; } .risque-moyen { color: #e0b84a; } .risque-eleve { color: #ff7a6e; }
+  .charges { font-size: 1.3rem; letter-spacing: 4px; }
+  .fil p.rumeur { font-style: italic; color: #e6d3a8; }
+  .plan .ping { fill: none; stroke: #ffd36b; stroke-width: 4; transform-box: fill-box; transform-origin: center; animation: ping 1.4s ease-out infinite; }
+  @keyframes ping { from { transform: scale(0.4); opacity: 1; } to { transform: scale(2.2); opacity: 0; } }
 
   /* Plan */
   .plan { width: 100%; max-height: 46dvh; display: block; margin: 0 auto 6px; touch-action: manipulation; }
@@ -241,6 +260,7 @@
 <nav class="onglets masque" id="onglets"></nav>
 <div class="erreur" id="erreur" role="alert"></div>
 <div class="role-voile" id="role-voile" aria-live="polite"></div>
+<div class="dossier-panneau" id="dossier" role="dialog" aria-modal="true"></div>
 
 <script src="commun/soiree.js"></script>
 <script>
@@ -259,6 +279,12 @@
   const elEtat = document.getElementById('etat-jeu');
   const elOnglets = document.getElementById('onglets');
   const elRole = document.getElementById('role-voile');
+  const elDossier = document.getElementById('dossier');
+  let dossierOuvert = false;
+  // Console du tueur : choix en cours (gardés à travers les mises à jour).
+  const sab = { sabotage: null, cible: null, categorie: null, mode: null, element: null };
+  // Repères des rumeurs localisées sur le plan : lieu -> heure de fin.
+  const pings = {};
 
   const s = Soiree.actuelle();
   let monNom = Soiree.nom();
@@ -418,6 +444,13 @@
         toast(msg.source === 'Témoin anonyme' ? '📜 Un témoin anonyme t’a glissé un pli' : '📜 Un pli t’attend · ' + msg.source, '', 4500); return;
       case 'enq_verdict':
         montrerVerdict(msg); return;
+      case 'enq_rumeur':
+        toast('🗣️ ' + msg.texte, '', 6000);
+        if (msg.lieu) signalerLieu(msg.lieu);
+        return;
+      case 'enq_ecoute':
+        montrerLettre(Object.assign({}, msg, { ecoute: true }));
+        return;
     }
   }
 
@@ -458,6 +491,7 @@
     if (!couches.includes('enq') || !etat) ecranAucune();
     else if (pack && moi) ({ lobby: ecranLobby, ouverture: ecranOuverture, enquete: ecranEnquete, fin: ecranFin }[etat.phase] || ecranAucune)();
     ecran.scrollTop = defilement;
+    if (dossierOuvert) rendreDossier();
     if (garde) {
       const e = document.getElementById(garde.id);
       if (e) { e.value = garde.valeur; e.focus(); try { e.setSelectionRange(garde.debut, garde.fin); } catch (x) { /* pas un champ texte */ } }
@@ -629,14 +663,197 @@
       d.appendChild(el('p', {}, 'Trouve qui, où et avec quoi. Méfie-toi : ' + voc.tueur + ' est parmi vous.'));
     }
     elRole.appendChild(d);
+    // Même zone, même geste pour tout le monde : rien ne distingue le tueur de loin.
+    if (etat.phase === 'enquete') elRole.appendChild(el('div', { className: 'zone-dossier' }, 'Glisse le doigt jusqu’ici et lâche pour ouvrir ton dossier.'));
   }
   function brancherRole(cible) {
     let m = null;
-    const ouvrir = (e) => { e.preventDefault(); m = setTimeout(() => { contenuRole(); elRole.classList.add('ouvert'); }, 350); };
-    const fermer = () => { clearTimeout(m); elRole.classList.remove('ouvert'); };
+    const surZone = (e) => {
+      const z = elRole.querySelector('.zone-dossier');
+      if (!z || !elRole.classList.contains('ouvert')) return false;
+      const r = z.getBoundingClientRect();
+      return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+    };
+    const ouvrir = (e) => {
+      e.preventDefault();
+      try { cible.setPointerCapture(e.pointerId); } catch (x) { /* pas grave */ }
+      m = setTimeout(() => { contenuRole(); elRole.classList.add('ouvert'); }, 350);
+    };
+    const fermer = (e) => {
+      clearTimeout(m);
+      const dossier = e && e.type === 'pointerup' && surZone(e);
+      elRole.classList.remove('ouvert');
+      if (dossier) ouvrirDossier();
+    };
     cible.addEventListener('pointerdown', ouvrir);
-    ['pointerup', 'pointerleave', 'pointercancel'].forEach((t) => cible.addEventListener(t, fermer));
+    cible.addEventListener('pointermove', (e) => { const z = elRole.querySelector('.zone-dossier'); if (z) z.classList.toggle('survol', surZone(e)); });
+    ['pointerup', 'pointercancel'].forEach((t) => cible.addEventListener(t, fermer));
+    cible.addEventListener('lostpointercapture', () => { clearTimeout(m); elRole.classList.remove('ouvert'); });
     cible.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+
+  // ---------------- Dossier : enquêteur ou console du tueur ----------------
+  function ouvrirDossier() {
+    if (!etat || etat.phase !== 'enquete' || !moi.inscrit) return;
+    dossierOuvert = true;
+    rendreDossier();
+  }
+  function fermerDossier() {
+    dossierOuvert = false;
+    elDossier.classList.remove('ouvert');
+    elDossier.textContent = '';
+  }
+  document.addEventListener('visibilitychange', () => { if (document.hidden) fermerDossier(); });
+  let minuteurDossier = null;
+  function rendreDossier() {
+    clearInterval(minuteurDossier);
+    if (!dossierOuvert || !etat || etat.phase !== 'enquete') { fermerDossier(); return; }
+    const garde = elDossier.querySelector('.contenu');
+    const defil = garde ? garde.scrollTop : 0;
+    elDossier.textContent = '';
+    elDossier.classList.add('ouvert');
+    const h = el('header');
+    const fermer = el('button', { type: 'button', className: 'discret' }, 'Fermer');
+    fermer.addEventListener('click', fermerDossier);
+    h.append(el('h2', {}, moi.console ? 'Ta console' : 'Ton dossier'), fermer);
+    const contenu = el('div', { className: 'contenu' });
+    elDossier.append(h, contenu);
+    if (moi.console) consoleTueur(contenu); else dossierEnqueteur(contenu);
+    contenu.scrollTop = defil;
+  }
+  function bloc(parent, titre) {
+    const c = el('section', { className: 'carte' });
+    if (titre) c.appendChild(el('h2', {}, titre));
+    parent.appendChild(c);
+    return c;
+  }
+  function dossierEnqueteur(contenu) {
+    const archive = moi.archive || [];
+    const c = bloc(contenu, 'Ta mission');
+    c.appendChild(el('p', {}, 'Trouve qui, où et avec quoi avant l’heure butoir. ' + majusculeInit(pack.vocabulaire.tueur) +
+      ' peut glisser de faux plis, retarder ton courrier ou lancer des rumeurs : seul le tampon d’une contre-expertise fait foi.'));
+    const b = bloc(contenu, 'Ton bilan');
+    b.appendChild(el('p', {}, archive.length + ' pli' + (archive.length > 1 ? 's' : '') + ' reçu' + (archive.length > 1 ? 's' : '') +
+      ' · ' + archive.filter((e) => e.tampon).length + ' expertisé(s) · ' + (moi.accusations || []).length + ' accusation(s).'));
+    b.appendChild(el('p', {}, 'Si ' + (pack.narrateur ? pack.narrateur.nom : 'le narrateur') + ' annonce une interférence, quelqu’un a été saboté : peut-être toi.'));
+  }
+  function majusculeInit(t) { return t.charAt(0).toUpperCase() + t.slice(1); }
+  const NOMS_SABOTAGES = {
+    fausse_piste: ['🃏 Fausse piste', 'Un faux pli, au même format que les vrais, qui écarte un élément de la vraie solution.'],
+    interception: ['✉️ Interception', 'Le prochain pli de la cible arrivera avec du retard.'],
+    ecoute: ['👂 Écoute', 'Tu lis le dernier pli reçu par la cible, sans laisser de trace.'],
+    rumeur: ['🗣️ Fausse rumeur', 'Une rumeur anonyme qui accuse un innocent, vue par tous. Une seule par partie.'],
+  };
+  const NOMS_CATEGORIES = { suspect: 'Personnage', lieu: 'Lieu', arme: 'Arme' };
+  const NOMS_RISQUES = { faible: 'risque faible', moyen: 'risque moyen', eleve: 'risque élevé' };
+  function consoleTueur(contenu) {
+    const k = moi.console;
+    const pret = () => !k.prochain_sabotage_a || k.prochain_sabotage_a <= serveurMaintenant();
+    // Réserve
+    const r = bloc(contenu, 'Réserve');
+    r.appendChild(el('div', { className: 'charges' }, '🔪'.repeat(k.charges) + '·'.repeat(Math.max(0, k.charges_max - k.charges))));
+    r.appendChild(el('p', {}, k.charges + '/' + k.charges_max + ' charges · ' + moi.pe + ' PE. Une charge coûte ' + k.cout_charge + ' PE (autant qu’un indice de couverture).'));
+    const ach = el('button', { type: 'button', disabled: k.charges >= k.charges_max || moi.pe < k.cout_charge }, 'Acheter une charge (' + k.cout_charge + ' PE)');
+    ach.style.marginTop = '8px';
+    ach.addEventListener('click', () => envoyer({ type: 'enq_charge' }));
+    r.appendChild(ach);
+    const etatS = el('p', { style: 'margin-top:8px' });
+    r.appendChild(etatS);
+    const majEtat = () => {
+      const reste = (k.prochain_sabotage_a || 0) - serveurMaintenant();
+      etatS.textContent = 'Détection actuelle : ' + Math.round(k.detection * 100) + ' % · ' + (reste > 0 ? 'prochain sabotage dans ' + mmss(reste) : 'prêt à saboter');
+      const b = elDossier.querySelector('[data-saboter]');
+      if (b) b.disabled = b.dataset.complet !== '1' || reste > 0 || k.charges < 1;
+    };
+    // Choix du sabotage
+    const c = bloc(contenu, 'Sabotage');
+    const ligne = el('div', { className: 'choix-ligne' });
+    Object.entries(NOMS_SABOTAGES).forEach(([id, [nom]]) => {
+      const b = el('button', { type: 'button', className: sab.sabotage === id ? 'actif' : '', disabled: id === 'rumeur' && k.rumeur_utilisee }, nom);
+      b.dataset.sabotage = id;
+      b.addEventListener('click', () => { Object.assign(sab, { sabotage: id, categorie: null, mode: null, element: null }); rendreDossier(); });
+      ligne.appendChild(b);
+    });
+    c.appendChild(ligne);
+    if (sab.sabotage) c.appendChild(el('p', { className: 'legende', style: 'margin-top:8px' }, NOMS_SABOTAGES[sab.sabotage][1] +
+      (sab.sabotage === 'interception' ? ' (' + k.interception_minutes + ' min)' : '')));
+    const choix = (titre, options, cle) => {
+      c.appendChild(el('div', { className: 'etiquette', style: 'margin-top:10px' }, titre));
+      const l = el('div', { className: 'choix-ligne' });
+      options.forEach((o) => {
+        const b = el('button', { type: 'button', className: sab[cle] === o.valeur ? 'actif' : '', disabled: !!o.desactive });
+        b.dataset[cle] = o.valeur;
+        b.append(o.libelle);
+        if (o.petit) b.appendChild(el('small', { className: o.classe || '' }, o.petit));
+        b.addEventListener('click', () => { sab[cle] = o.valeur; if (cle === 'categorie') sab.element = null; if (cle === 'cible') sab.categorie = null; rendreDossier(); });
+        l.appendChild(b);
+      });
+      c.appendChild(l);
+    };
+    let complet = false;
+    if (sab.sabotage && sab.sabotage !== 'rumeur') {
+      if (sab.cible && !k.cibles.includes(sab.cible)) sab.cible = null;
+      choix('Cible', k.cibles.map((n) => ({ valeur: n, libelle: joueurAvecIcone(n),
+        petit: sab.sabotage === 'interception' && k.interceptions.includes(n) ? 'déjà guettée' : sab.sabotage === 'fausse_piste' && k.faux_en_attente.includes(n) ? 'un faux l’attend' : '',
+        desactive: (sab.sabotage === 'interception' && k.interceptions.includes(n)) })), 'cible');
+      complet = !!sab.cible;
+      if (sab.sabotage === 'fausse_piste') {
+        complet = false;
+        if (sab.cible) {
+          const risques = k.risques[sab.cible] || {};
+          choix('Ce que le faux écarte', ['suspect', 'lieu', 'arme'].map((cat) => ({ valeur: cat, libelle: NOMS_CATEGORIES[cat],
+            petit: risques[cat] ? NOMS_RISQUES[risques[cat]] : 'impossible', classe: risques[cat] ? 'risque-' + risques[cat] : '', desactive: !risques[cat] })), 'categorie');
+          choix('Livraison', [
+            { valeur: 'remplacement', libelle: 'Remplacement', petit: 'son prochain pli', desactive: k.faux_en_attente.includes(sab.cible) },
+            { valeur: 'detournement', libelle: 'Détournement', petit: 'le prochain témoin', desactive: !k.detournement_possible }], 'mode');
+          complet = !!(sab.categorie && sab.mode);
+        }
+      }
+    } else if (sab.sabotage === 'rumeur') {
+      choix('Elle vise', ['suspect', 'lieu', 'arme'].map((cat) => ({ valeur: cat, libelle: NOMS_CATEGORIES[cat] })), 'categorie');
+      if (sab.categorie) {
+        choix('Quel innocent', (k.innocents[sab.categorie] || []).map((x) => ({ valeur: x,
+          libelle: sab.categorie === 'suspect' ? joueurAvecIcone(x) : (trouver(sab.categorie === 'lieu' ? 'lieux' : 'armes', x) || {}).nom || x })), 'element');
+      }
+      complet = !!(sab.categorie && sab.element);
+    }
+    const go = el('button', { type: 'button' }, 'Saboter · ' + Math.round(k.detection * 100) + ' % de risque d’être repéré');
+    go.dataset.saboter = '1';
+    go.dataset.complet = complet ? '1' : '0';
+    go.style.marginTop = '12px';
+    go.addEventListener('click', () => {
+      const m = { type: 'enq_sabotage', sabotage: sab.sabotage };
+      if (sab.sabotage !== 'rumeur') m.cible = sab.cible;
+      if (sab.sabotage === 'fausse_piste') { m.categorie = sab.categorie; m.mode = sab.mode; }
+      if (sab.sabotage === 'rumeur') { m.categorie = sab.categorie; m.element = sab.element; }
+      envoyer(m);
+      Object.assign(sab, { sabotage: null, cible: null, categorie: null, mode: null, element: null });
+    });
+    c.appendChild(go);
+    c.appendChild(el('p', { className: 'legende', style: 'margin-top:6px' }, 'Repéré, ' + (pack.narrateur ? pack.narrateur.nom : 'le narrateur') +
+      ' annonce une « interférence » un peu plus tard, sans dire qui, quoi ni sur qui.'));
+    // Historique
+    if (k.historique.length) {
+      const hst = bloc(contenu, 'Tes sabotages');
+      k.historique.slice().reverse().forEach((x) => hst.appendChild(el('p', {}, heure(x.t) + ' · ' + NOMS_SABOTAGES[x.type][0] +
+        (x.cible ? ' sur ' + x.cible : '') + (x.element ? ' (' + x.element + ')' : ''))));
+    }
+    majEtat();
+    minuteurDossier = setInterval(majEtat, 1000);
+  }
+
+  // ---------------- Rumeurs : repère sur le plan ----------------
+  function signalerLieu(lieu) {
+    pings[lieu] = serveurMaintenant() + 20;
+    if (manoir && manoir.signaler) manoir.signaler(lieu);
+    const z = document.querySelector('.plan .zone[data-lieu="' + lieu + '"]');
+    if (z) ajouterPing(z, lieu);
+  }
+  function ajouterPing(g, lieu) {
+    const [x, y, w, h] = pack.plan.zones[lieu];
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('cx', x + w / 2); c.setAttribute('cy', y + h / 2); c.setAttribute('r', Math.min(w, h) / 3); c.setAttribute('class', 'ping');
+    g.appendChild(c);
   }
 
   // ---------------- Enquête en cours ----------------
@@ -740,6 +957,7 @@
       else if (carnet.etats['lieu:' + l.id]) classe += ' ' + carnet.etats['lieu:' + l.id];
       const g = svg('g', { class: classe });
       g.dataset.lieu = l.id;
+      if (mode === 'carnet' && pings[l.id] && pings[l.id] > serveurMaintenant()) setTimeout(() => ajouterPing(g, l.id), 0);
       g.appendChild(svg('rect', { x, y, width: w, height: h, rx: 10 }));
       g.appendChild(svg('line', { x1: x + 8, y1: y + 8, x2: x + w - 8, y2: y + h - 8, class: 'barre' }));
       const ico = svg('text', { x: x + w / 2, y: y + h / 2 - 4, class: 'ico' }); ico.textContent = l.icone || '';
@@ -1012,9 +1230,15 @@
   function ongletFil() {
     const c = carte();
     c.classList.add('fil');
-    const j = (etat.journal || []).slice().reverse();
+    const j = (etat.journal || []).map((x) => Object.assign({ rumeur: false }, x))
+      .concat((etat.rumeurs || []).map((x) => Object.assign({ rumeur: true }, x)))
+      .sort((a, b) => b.t - a.t);
     if (!j.length) c.appendChild(el('p', {}, 'Rien à signaler pour l’instant.'));
-    j.forEach((x) => { const p = el('p'); p.append(el('small', {}, heure(x.t)), x.texte); c.appendChild(p); });
+    j.forEach((x) => {
+      const p = el('p', { className: x.rumeur ? 'rumeur' : '' });
+      p.append(el('small', {}, heure(x.t)), (x.rumeur ? '🗣️ ' + majusculeInit(pack.vocabulaire.rumeurs || 'rumeur') + ' : ' : '') + x.texte);
+      c.appendChild(p);
+    });
   }
 
   // ---------------- Fin ----------------
@@ -1056,6 +1280,11 @@
         t.appendChild(tr);
       });
       i.appendChild(t);
+      const sb = carte('Les sabotages de ' + pack.vocabulaire.tueur);
+      const liste = f.recap.sabotages || [];
+      if (!liste.length) sb.appendChild(el('p', {}, 'Aucun : ' + pack.vocabulaire.tueur + ' a joué sans tricher.'));
+      liste.forEach((x) => sb.appendChild(el('p', {}, NOMS_SABOTAGES[x.type][0] + (x.cible ? ' sur ' + x.cible : '') +
+        ' · ' + (x.detecte ? 'repéré' : 'passé inaperçu'))));
     }
   }
 
@@ -1070,7 +1299,8 @@
       const j = (etat ? etat.joueurs : []).find((x) => x.nom === msg.element);
       const p = j && portrait(j.portrait);
       icone = p ? p.icone : '👤'; fond = p ? p.couleur : fond;
-      rubrique = p ? 'Témoin · ' + p.archetype : 'Témoin';
+      const qui = majusculeInit((pack.vocabulaire && pack.vocabulaire.enqueteur) || 'suspect');
+      rubrique = p ? qui + ' · ' + p.archetype : qui;
     } else {
       const cle = msg.categorie === 'lieu' ? 'lieux' : 'armes';
       const e = trouver(cle, msg.element);
@@ -1083,7 +1313,7 @@
     const photo = el('div', { className: 'photo' });
     const image = el('div', { className: 'image' }, icone);
     image.style.setProperty('--fond-photo', fond);
-    photo.append(el('div', { className: 'punaise' }), image, el('div', { className: 'bande' }, 'HORS DE CAUSE'), el('div', { className: 'legende-photo' }, 'Scellé n°' + msg.id));
+    photo.append(el('div', { className: 'punaise' }), image, el('div', { className: 'bande' }, 'HORS DE CAUSE'), el('div', { className: 'legende-photo' }, (msg.id ? 'Scellé n°' + msg.id : 'Copie')));
     const dossier = el('div', { className: 'dossier' });
     dossier.append(el('span', {}, rubrique), el('b', {}, msg.categorie === 'suspect' ? nom : elementLe(msg.categorie === 'lieu' ? 'lieux' : 'armes', msg.element)));
     if (msg.categorie === 'lieu' && pack.plan && pack.plan.zones) dossier.appendChild(miniPlan(msg.element));
@@ -1110,6 +1340,7 @@
   function montrerLettre(msg) {
     const voile = el('div', { className: 'voile' });
     const l = el('div', { className: 'lettre' });
+    if (msg.ecoute) l.appendChild(el('h3', {}, '👂 Écoute : le dernier pli de ' + msg.cible));
     const vig = vignetteIndice(msg);
     if (vig) l.appendChild(vig);
     l.appendChild(el('div', { className: 'corps' }, msg.texte));
@@ -1117,9 +1348,10 @@
       (msg.tampon ? ' · ' + (msg.tampon === 'authentique' ? 'Authentique' : 'Falsifié') : '')));
     l.appendChild(el('div', { className: 'avis' }, msg.gratuit
       ? 'Lecture libre, une seule fois. Pour le relire plus tard, il faudra attendre le chrono et payer en ' + (etat ? etat.unite : 'gorgée') + 's.'
+      : msg.ecoute ? 'Il ne sait pas que tu l’as lu. Ce pli n’entre pas dans ton archive.'
       : msg.expertise ? 'Contre-expertise : le tampon reste sur cet indice. À toi de voir ce que tu en dis.' : 'Relecture de l’archive.'));
     if (msg.expertise && msg.tampon) l.appendChild(el('div', { className: 'cachet ' + msg.tampon }, msg.tampon === 'authentique' ? 'AUTHENTIQUE' : 'FALSIFIÉ'));
-    const b = el('button', { type: 'button' }, msg.gratuit ? 'Ranger dans l’archive' : 'Fermer');
+    const b = el('button', { type: 'button' }, msg.gratuit && !msg.ecoute ? 'Ranger dans l’archive' : 'Fermer');
     b.addEventListener('click', () => voile.remove());
     l.appendChild(b);
     voile.appendChild(l);
