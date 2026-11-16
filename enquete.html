@@ -9,6 +9,12 @@
 <meta name="theme-color" content="#1a0b0e">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* Les couleurs viennent du pack de l'univers (palette) ; valeurs du Manoir par défaut. */
@@ -146,6 +152,12 @@
   .jetons button.suspect { border-color: #ff6b5e; color: #ffb4a8; background: rgba(179, 38, 30, 0.2); }
   .jetons button.choisi { border-color: var(--accent); background: rgba(201, 162, 74, 0.3); color: var(--texte); }
   .legende { color: var(--doux); font-size: 0.75rem; margin-top: 6px; }
+  /* Maison 3D : la scène prend le haut de l'onglet Plan */
+  .plan3d { position: relative; height: 46dvh; min-height: 230px; border-radius: 18px; overflow: hidden; border: 1px solid var(--bord); margin-bottom: 8px; touch-action: none; background: var(--fond); }
+  .plan3d canvas { width: 100%; height: 100%; display: block; }
+  .plan3d .bascule { position: absolute; top: 8px; right: 8px; padding: 6px 10px; font-size: 0.78rem; border-radius: 999px; }
+  .plan3d .aide3d { position: absolute; left: 10px; bottom: 8px; right: 10px; font-size: 0.72rem; color: var(--doux); pointer-events: none; text-shadow: 0 1px 3px #000; }
+  .bascule-plan { display: block; margin: -2px 0 8px auto; padding: 6px 10px; font-size: 0.78rem; border-radius: 999px; }
   /* Accuser : plan réduit, et le résumé avec son bouton toujours visibles en bas */
   .plan.petit { max-height: 27dvh; }
   .barre-accuser { position: sticky; bottom: -12px; margin: 0 -14px -12px; padding: 8px 14px 12px; display: flex; align-items: center; gap: 10px;
@@ -411,6 +423,7 @@
     const actif = document.activeElement && document.activeElement.id ? document.activeElement : null;
     const garde = actif ? { id: actif.id, valeur: actif.value, debut: actif.selectionStart, fin: actif.selectionEnd } : null;
     const defilement = ecran.scrollTop;
+    arreterManoir();
     cacherCadre();
     if (!couches.includes('enq') || !etat) ecranAucune();
     else if (pack && moi) ({ lobby: ecranLobby, ouverture: ecranOuverture, enquete: ecranEnquete, fin: ecranFin }[etat.phase] || ecranAucune)();
@@ -725,8 +738,63 @@
   const listeSuspects = () => etat.joueurs.map((x) => [x.nom, joueurAvecIcone(x.nom)]);
   const listeArmes = () => etat.armes.map((id) => { const a = trouver('armes', id); return [id, (a ? a.icone + ' ' : '') + element('armes', id)]; });
 
+  // --- Maison 3D (écran principal de l'enquête) ---
+  // Une seule scène pour toute la partie : elle est rattachée à l'onglet à
+  // chaque affichage (le redessin de l'écran ne la recrée pas) et mise en
+  // pause dès qu'elle n'est plus visible.
+  let manoir = null, manoirConteneur = null, manoirEnCours = null, manoirImpossible = false;
+  let vue2D = false;
+  try { vue2D = localStorage.getItem('shield.plan2d') === '1'; } catch (e) { /* tant pis */ }
+  function preparerManoir() {
+    if (manoir) return Promise.resolve(manoir);
+    if (manoirEnCours) return manoirEnCours;
+    manoirEnCours = import('./commun/manoir3d.js').then((mod) => {
+      if (!mod.webglDisponible()) throw new Error('webgl');
+      manoir = mod.creerManoir3D(manoirConteneur, pack, {
+        surAppui: (id) => { basculer('lieu:' + id); majManoir(); },
+      });
+      return manoir;
+    }).catch(() => { manoirImpossible = true; rendu = ''; afficher(); return null; });
+    return manoirEnCours;
+  }
+  function majManoir() {
+    if (!manoir || !etat) return;
+    const carnet = lireCarnet();
+    const etats = {};
+    Object.entries(carnet.etats).forEach(([k, v]) => { if (k.startsWith('lieu:')) etats[k.slice(5)] = v; });
+    manoir.majEtats(etats, etat.lieux, null);
+    manoir.majPersonnages(etat.joueurs.map((j) => {
+      const p = portrait(j.portrait) || {};
+      return { nom: j.nom, couleur: p.couleur, icone: p.icone };
+    }));
+  }
+  function arreterManoir() { if (manoir) manoir.arreter(); }
+  // L'enquête ouverte par-dessus un jeu : le calque prévient quand il se ferme.
+  window.addEventListener('message', (e) => {
+    if (e.data === 'enquete:pause') arreterManoir();
+    if (e.data === 'enquete:reprise' && manoir && etat && etat.phase === 'enquete' && onglet.enquete === 'plan' && manoirConteneur && manoirConteneur.isConnected) manoir.reprendre();
+  });
+
   function ongletPlan() {
-    ecran.appendChild(plan('carnet'));
+    if (!vue2D && !manoirImpossible) {
+      if (!manoirConteneur) manoirConteneur = el('div', { className: 'plan3d' });
+      ecran.appendChild(manoirConteneur);
+      let b = manoirConteneur.querySelector('.bascule');
+      if (!b) {
+        b = el('button', { type: 'button', className: 'discret bascule' }, 'Vue 2D');
+        b.addEventListener('click', () => { vue2D = true; try { localStorage.setItem('shield.plan2d', '1'); } catch (e) {} arreterManoir(); rendu = ''; afficher(); });
+        manoirConteneur.appendChild(b);
+
+      }
+      preparerManoir().then((m) => { if (m && manoirConteneur.isConnected) { majManoir(); m.reprendre(); } });
+    } else {
+      if (!manoirImpossible) {
+        const b = el('button', { type: 'button', className: 'discret bascule-plan' }, 'Vue 3D');
+        b.addEventListener('click', () => { vue2D = false; try { localStorage.removeItem('shield.plan2d'); } catch (e) {} rendu = ''; afficher(); });
+        ecran.appendChild(b);
+      }
+      ecran.appendChild(plan('carnet'));
+    }
     const c = carte();
     c.appendChild(el('div', { className: 'etiquette' }, 'Suspects'));
     c.appendChild(jetons('suspect', listeSuspects(), 'carnet'));

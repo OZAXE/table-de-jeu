@@ -247,7 +247,11 @@
       fermer.textContent = '✕ Retour au jeu';
       fermer.style.cssText = 'align-self:flex-end;margin:max(10px, env(safe-area-inset-top)) 12px 0 0;border:1px solid rgba(201,162,74,.4);' +
         'border-radius:999px;padding:8px 14px;background:rgba(243,230,207,.08);color:#f3e6cf;font:600 14px Outfit, system-ui, sans-serif;cursor:pointer';
-      fermer.addEventListener('click', () => { calque.style.display = 'none'; });
+      fermer.addEventListener('click', () => {
+        calque.style.display = 'none';
+        // La maison 3D de l'enquête se met en pause : un seul rendu 3D à la fois.
+        try { cadre.contentWindow.postMessage('enquete:pause', '*'); } catch (e) { /* tant pis */ }
+      });
       const cadre = document.createElement('iframe');
       cadre.src = 'enquete.html?dans=1';
       cadre.title = 'Enquête';
@@ -256,6 +260,8 @@
       document.body.appendChild(calque);
     }
     calque.style.display = 'flex';
+    const cadreOuvert = calque.querySelector('iframe');
+    try { cadreOuvert.contentWindow.postMessage('enquete:reprise', '*'); } catch (e) { /* tant pis */ }
   }
 
   window.Soiree = Soiree;
