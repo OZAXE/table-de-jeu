@@ -65,6 +65,9 @@
   .evenement-bande b { display: block; color: var(--accent); font: 700 1rem/1.2 var(--titre); }
   .evenement-bande .reste { font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 700; }
   .evenement-bande button { padding: 6px 10px; font-size: 0.8rem; }
+  .evenement-bande .interroges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .evenement-bande .interroge { padding: 3px 8px; border-radius: 999px; background: rgba(0, 0, 0, 0.3); font-size: 0.78rem; }
+  .evenement-bande .actions-interro { display: flex; flex-direction: column; gap: 6px; }
   .evenement-bande.coupure { background: rgba(0, 0, 0, 0.5); border-color: #6a7a9a; }
   .evenement-bande.alerte { background: rgba(179, 38, 30, 0.22); border-color: #ff6b5e; }
   @keyframes arrivee { from { transform: translateY(-8px); opacity: 0; } to { transform: none; opacity: 1; } }
@@ -979,7 +982,7 @@
       decouverte: 'Un indice vrai vient d’être publié à tous (onglet ' + (pack.narrateur ? pack.narrateur.nom : 'fil') + ').',
       alerte: 'Délai d’accusation divisé par 2, mais une erreur coûte double.',
       brouhaha: 'Les rumeurs fusent deux fois plus vite.',
-      interrogatoire: n(evt.interroges || []) + ' doivent livrer à voix haute un indice de leur choix, vrai ou faux. Refuser : ' + unite(etat.gorgees_refus) + '.',
+      interrogatoire: n(evt.interroges || []) + ' doivent livrer à voix haute un indice de leur choix, vrai ou faux, puis taper « J’ai répondu ». Refuser, ou se taire jusqu’au bout : ' + unite(etat.gorgees_refus) + '.',
       maree: 'Chaque victoire rapporte le double de PE.',
     }[evt.type] || '';
   }
@@ -1034,10 +1037,21 @@
       const reste = el('span', { className: 'reste' });
       reste.dataset.finEvt = evt.fin;
       bande.append(txt, reste);
-      if (evt.type === 'interrogatoire' && evt.interroges.includes(monNom) && !(evt.refus || []).includes(monNom)) {
-        const r = el('button', { type: 'button', className: 'discret' }, 'Je refuse (' + unite(etat.gorgees_refus) + ')');
-        r.addEventListener('click', () => demander('Refuser de livrer un indice ? Tu bois ' + unite(etat.gorgees_refus) + '.', 'Je refuse').then((ok) => { if (ok) envoyer({ type: 'enq_refuser' }); }));
-        bande.appendChild(r);
+      if (evt.type === 'interrogatoire') {
+        const fait = (n) => (evt.repondu || []).includes(n) ? '✓ a répondu' : (evt.refus || []).includes(n) ? '✗ a refusé' : '⏳';
+        const statut = el('div', { className: 'interroges' });
+        evt.interroges.forEach((n) => statut.appendChild(el('span', { className: 'interroge' }, joueurAvecIcone(n) + ' ' + fait(n))));
+        txt.appendChild(statut);
+        if (evt.interroges.includes(monNom) && fait(monNom) === '⏳') {
+          const actions = el('div', { className: 'actions-interro' });
+          const ok = el('button', { type: 'button' }, 'J’ai répondu ✓');
+          ok.dataset.repondu = '1';
+          ok.addEventListener('click', () => envoyer({ type: 'enq_repondu' }));
+          const r = el('button', { type: 'button', className: 'discret' }, 'Je refuse (' + unite(etat.gorgees_refus) + ')');
+          r.addEventListener('click', () => demander('Refuser de livrer un indice ? Tu bois ' + unite(etat.gorgees_refus) + '.', 'Je refuse').then((oui) => { if (oui) envoyer({ type: 'enq_refuser' }); }));
+          actions.append(ok, r);
+          bande.appendChild(actions);
+        }
       }
       elEtat.appendChild(bande);
     }
