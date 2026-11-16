@@ -99,23 +99,39 @@
       return nom;
     },
 
-    // --- Soirée en cours (code du salon commun) ---
+    // --- Soirée en cours ---
+    // code : la soirée (4 lettres, c'est aussi sa table 1) ;
+    // table : la table où l'on joue ("ABCD", "ABCD-2"...).
     actuelle() {
       const s = lire(CLE_SOIREE);
       if (!s || !/^[A-Z]{4}$/.test(s.code || '')) return null;
       if (Date.now() - (s.vu || 0) > DUREE_SOIREE) { ecrire(CLE_SOIREE, null); return null; }
+      if (!Soiree.estTable(s.table) || Soiree.soireeDe(s.table) !== s.code) s.table = s.code;
       return s;
     },
+    estTable(code) { return /^[A-Z]{4}(-[2-9])?$/.test(String(code || '')); },
+    soireeDe(code) { return String(code || '').split('-')[0]; },
+    numeroTable(code) { const n = String(code || '').split('-')[1]; return n ? Number(n) : 1; },
+    // Appelé à chaque connexion d'une page de jeu, et par l'accueil.
     memoriser(code, serveur) {
       code = String(code || '').toUpperCase();
-      if (!/^[A-Z]{4}$/.test(code)) return;
-      ecrire(CLE_SOIREE, { code, serveur: SERVEURS[serveur] ? serveur : 'render', vu: Date.now() });
+      if (!Soiree.estTable(code)) return;
+      ecrire(CLE_SOIREE, { code: Soiree.soireeDe(code), table: code,
+        serveur: SERVEURS[serveur] ? serveur : 'render', vu: Date.now() });
     },
     oublier() { ecrire(CLE_SOIREE, null); },
 
     http(serveur) { return (SERVEURS[serveur] || SERVEURS.render).http; },
     async info(code, serveur) {
       const rep = await fetch(Soiree.http(serveur) + '/salon/' + encodeURIComponent(code));
+      return rep.json();
+    },
+    async infoSoiree(code, serveur) {
+      const rep = await fetch(Soiree.http(serveur) + '/soiree/' + encodeURIComponent(code));
+      return rep.json();
+    },
+    async nouvelleTable(code, serveur) {
+      const rep = await fetch(Soiree.http(serveur) + '/soiree/' + encodeURIComponent(code) + '/nouvelle-table');
       return rep.json();
     },
     lienJeu(jeu, code) {
@@ -135,13 +151,13 @@
         if (msg.jeu === jeuPage) { cacherBandeau(); return true; }
         const titre = msg.titre || (JEUX[msg.jeu] || {}).titre || 'un autre jeu';
         afficherBandeau('Le groupe passe à ' + titre + '…');
-        setTimeout(() => { location.href = Soiree.lienJeu(msg.page || msg.jeu, s && s.code); }, 1200);
+        setTimeout(() => { location.href = Soiree.lienJeu(msg.page || msg.jeu, s && s.table); }, 1200);
         return true;
       }
       if (msg.type === 'salon_retour') {
         // Retour en salle d'attente : on recharge la page, qui rejoint le
         // salon et affiche sa salle d'attente.
-        location.href = Soiree.lienJeu(jeuPage, s && s.code);
+        location.href = Soiree.lienJeu(jeuPage, s && s.table);
         return true;
       }
       return false;
@@ -155,11 +171,12 @@
       const s = Soiree.actuelle();
       if (!s) return;
       try {
-        const info = await Soiree.info(s.code, s.serveur);
+        const info = await Soiree.info(s.table, s.serveur);
         if (info.existe && info.jeu && info.jeu !== jeuPage && JEUX[info.jeu]) {
           const j = JEUX[info.jeu];
-          afficherBandeau(j.icone + ' Le groupe joue à ' + j.titre + '.', [
-            ['Rejoindre', () => { location.href = Soiree.lienJeu(info.jeu, s.code); }],
+          const ou = Soiree.numeroTable(s.table) > 1 ? ' (table ' + Soiree.numeroTable(s.table) + ')' : '';
+          afficherBandeau(j.icone + ' Ta table joue à ' + j.titre + ou + '.', [
+            ['Rejoindre', () => { location.href = Soiree.lienJeu(info.jeu, s.table); }],
             ['Rester ici', cacherBandeau, true],
           ]);
         } else {
@@ -174,10 +191,10 @@
       const s = Soiree.actuelle();
       if (s) {
         try {
-          const info = await Soiree.info(s.code, s.serveur);
+          const info = await Soiree.info(s.table, s.serveur);
           if (info.existe && info.jeu && info.jeu !== jeuPage && JEUX[info.jeu]) {
-            const ok = confirm('Une partie de ' + JEUX[info.jeu].titre + ' est en cours.\n' +
-              'La remplacer par ' + (JEUX[jeuPage] || {}).titre + ' pour tout le monde ?');
+            const ok = confirm('Une partie de ' + JEUX[info.jeu].titre + ' est en cours à ta table.\n' +
+              'La remplacer par ' + (JEUX[jeuPage] || {}).titre + ' pour toute la table ?');
             if (!ok) return;
           }
         } catch (e) { /* serveur injoignable : le lancement partira quand même */ }
