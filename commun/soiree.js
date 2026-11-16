@@ -160,8 +160,10 @@
       return rep.json();
     },
     // nom : se compter présent dans la soirée (la liste « Dans la soirée » de l'accueil)
-    async infoSoiree(code, serveur, nom) {
-      const rep = await fetch(Soiree.http(serveur) + '/soiree/' + encodeURIComponent(code) + (nom ? '?nom=' + encodeURIComponent(nom) : ''));
+    // table : la sienne, pour qu'on puisse le rejoindre depuis la liste des présents
+    async infoSoiree(code, serveur, nom, table) {
+      const rep = await fetch(Soiree.http(serveur) + '/soiree/' + encodeURIComponent(code) +
+        (nom ? '?nom=' + encodeURIComponent(nom) + (table ? '&table=' + encodeURIComponent(table) : '') : ''));
       return rep.json();
     },
     async nouvelleTable(code, serveur) {
