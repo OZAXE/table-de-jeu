@@ -81,6 +81,39 @@
     if (bandeau) bandeau.style.display = 'none';
   }
 
+  // Confirmation dessinée dans la page. Surtout pas confirm() : la boîte
+  // native fige toute la page (battement de cœur compris) ; un joueur qui
+  // met plus de 25 s à répondre était alors déclaré parti par le serveur,
+  // sa connexion coupée, et son « oui » partait dans le vide.
+  function confirmer(texte, oui, non) {
+    return new Promise((resolve) => {
+      const voile = document.createElement('div');
+      voile.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:20px';
+      const boiteC = document.createElement('div');
+      boiteC.setAttribute('role', 'dialog');
+      boiteC.style.cssText = 'max-width:420px;width:100%;background:#0d1626;color:#f4f1ea;border:1px solid rgba(255,255,255,.16);' +
+        'border-radius:18px;padding:18px;font:500 16px/1.4 Outfit, system-ui, sans-serif;box-shadow:0 20px 50px rgba(0,0,0,.5)';
+      const p = document.createElement('p');
+      p.style.whiteSpace = 'pre-line';
+      p.textContent = texte;
+      const ligne = document.createElement('div');
+      ligne.style.cssText = 'display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap';
+      const bouton = (libelle, valeur, principal) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = libelle;
+        b.style.cssText = 'border:0;border-radius:12px;padding:10px 16px;font:700 15px Outfit, system-ui, sans-serif;cursor:pointer;' +
+          (principal ? 'background:#dfe6ef;color:#0b1220' : 'background:rgba(255,255,255,.1);color:#f4f1ea');
+        b.addEventListener('click', () => { voile.remove(); resolve(valeur); });
+        return b;
+      };
+      ligne.append(bouton(non || 'Annuler', false, false), bouton(oui || 'Confirmer', true, true));
+      boiteC.append(p, ligne);
+      voile.appendChild(boiteC);
+      document.body.appendChild(voile);
+    });
+  }
+
   // Jeu de la page ouverte (connu dès sa première connexion). Sert au réveil
   // du téléphone : s'il dormait pendant que le groupe changeait de jeu, il a
   // pu rater l'annonce « salon_jeu » (connexion restée ouverte mais muette),
@@ -194,8 +227,8 @@
         try {
           const info = await Soiree.info(s.table, s.serveur);
           if (info.existe && info.jeu && info.jeu !== jeuPage && JEUX[info.jeu]) {
-            const ok = confirm('Une partie de ' + JEUX[info.jeu].titre + ' est en cours à ta table.\n' +
-              'La remplacer par ' + (JEUX[jeuPage] || {}).titre + ' pour toute la table ?');
+            const ok = await confirmer('Une partie de ' + JEUX[info.jeu].titre + ' est en cours à ta table.\n' +
+              'La remplacer par ' + (JEUX[jeuPage] || {}).titre + ' pour toute la table ?', 'Remplacer', 'Garder ' + JEUX[info.jeu].titre);
             if (!ok) return;
           }
         } catch (e) { /* serveur injoignable : le lancement partira quand même */ }
@@ -264,5 +297,6 @@
     try { cadreOuvert.contentWindow.postMessage('enquete:reprise', '*'); } catch (e) { /* tant pis */ }
   }
 
+  Soiree.confirmer = confirmer;
   window.Soiree = Soiree;
 })();

@@ -452,8 +452,10 @@
         if (!/^[A-Z]{4}$/.test(c)) { erreur.textContent = 'Le code fait 4 lettres.'; return; }
         erreur.textContent = 'Connexion au serveur…';
         try {
-          const info = await Soiree.info(c, serveur);
-          if (!info.existe) { erreur.textContent = 'Soirée introuvable.'; return; }
+          // Code inconnu : soit une faute de frappe, soit une soirée oubliée
+          // par un redémarrage du serveur. On la (r)ouvre : au pire, une
+          // soirée vide sous ce code.
+          await fetch(Soiree.http(serveur) + '/soiree/' + c + '/rouvrir');
           Soiree.memoriser(c, serveur);
           erreur.textContent = '';
           afficher();
@@ -536,7 +538,21 @@
         etat.textContent = 'Serveur injoignable pour le moment.';
         return;
       }
-      if (!info.existe) { etat.textContent = 'Cette soirée est terminée.'; return; }
+      if (!info.existe) {
+        // Le serveur a redémarré (mise à jour, mise en veille) et a oublié
+        // les tables : on rouvre la soirée sous le même code.
+        try {
+          const r = await (await fetch(Soiree.http(s.serveur) + '/soiree/' + s.code + '/rouvrir')).json();
+          if (r.existe) {
+            erreur.textContent = '';
+            const n = el('p', { className: 'etat' }, 'Le serveur a redémarré : la soirée repart à vide, avec le même code et le même QR.');
+            setTimeout(() => afficher().then(() => contenu.appendChild(n)), 0);
+            return;
+          }
+        } catch (e) { /* on retombe sur le message ci-dessous */ }
+        etat.textContent = 'Serveur injoignable pour le moment.';
+        return;
+      }
       const tables = info.tables.slice();
       // Ma table a pu être libérée (tout le monde parti un moment) : elle
       // reste ma table, elle se rouvrira quand j'y retournerai.
@@ -607,8 +623,8 @@
       const actuelle = Soiree.actuelle();
       if (actuelle && actuelle.code === code) return;
       try {
-        const info = await Soiree.info(code, serveur);
-        if (!info.existe) { erreur.textContent = 'La soirée ' + code + ' est terminée.'; return; }
+        // Une soirée oubliée par un redémarrage du serveur est rouverte.
+        await fetch(Soiree.http(serveur) + '/soiree/' + code + '/rouvrir');
         Soiree.memoriser(code, serveur);
         if (!Soiree.nom()) {
           erreur.textContent = 'Bienvenue dans la soirée ' + code + ' ! Entre ton prénom pour jouer.';
