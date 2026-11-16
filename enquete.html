@@ -23,146 +23,190 @@
     --titre: 'Cormorant Garamond', Georgia, serif;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { background: var(--fond); }
+  html, body { background: var(--fond); height: 100%; }
+  /* Une seule page, sans défilement : bandeau en haut, contenu, onglets en bas. */
   body {
     color: var(--texte); font: 400 16px/1.45 'Outfit', system-ui, sans-serif;
-    min-height: 100dvh; padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+    height: 100dvh; overflow: hidden; display: flex; flex-direction: column;
     background:
       radial-gradient(120% 60% at 50% -10%, rgba(201, 162, 74, 0.16), transparent 60%),
       radial-gradient(80% 50% at 100% 100%, rgba(179, 38, 30, 0.12), transparent 60%),
       var(--fond);
   }
-  .page { max-width: 560px; margin: 0 auto; }
-  header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
-  header .retour { color: var(--doux); text-decoration: none; font-size: 0.9rem; border: 1px solid var(--bord); border-radius: 999px; padding: 6px 12px; }
-  header h1 { font: 700 1.9rem/1.05 var(--titre); letter-spacing: 0.01em; flex: 1; }
-  header h1 small { display: block; font: 500 0.82rem 'Outfit', sans-serif; color: var(--doux); letter-spacing: 0.04em; text-transform: uppercase; }
-  .carte {
-    background: color-mix(in srgb, var(--surface) 88%, transparent); border: 1px solid var(--bord);
-    border-radius: 20px; padding: 16px; margin-bottom: 14px;
+  header {
+    flex: none; display: flex; align-items: center; gap: 10px;
+    padding: max(10px, env(safe-area-inset-top)) 14px 8px; max-width: 620px; width: 100%; margin: 0 auto;
   }
-  .carte h2 { font: 700 1.35rem/1.2 var(--titre); margin-bottom: 8px; color: var(--accent); }
-  .carte p { color: var(--doux); }
-  .carte p + p { margin-top: 8px; }
+  header .retour { color: var(--doux); text-decoration: none; font-size: 0.85rem; border: 1px solid var(--bord); border-radius: 999px; padding: 5px 11px; white-space: nowrap; }
+  header h1 { font: 700 1.35rem/1.05 var(--titre); flex: 1; min-width: 0; }
+  header h1 small { display: block; font: 500 0.7rem 'Outfit', sans-serif; color: var(--doux); letter-spacing: 0.05em; text-transform: uppercase; }
+  .etat-jeu {
+    flex: none; display: flex; align-items: center; gap: 8px; padding: 0 14px 8px; max-width: 620px; width: 100%; margin: 0 auto;
+  }
+  .etat-jeu .chrono { font: 700 1.5rem/1 var(--titre); color: var(--accent); }
+  .etat-jeu .pe { color: var(--doux); font-size: 0.9rem; flex: 1; }
+  .etat-jeu .pe b { color: var(--texte); }
+  .etat-jeu button { padding: 8px 12px; font-size: 0.85rem; }
+  main { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 14px 12px; max-width: 620px; width: 100%; margin: 0 auto; }
+  nav.onglets {
+    flex: none; display: flex; border-top: 1px solid var(--bord); background: rgba(10, 4, 6, 0.85);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  nav.onglets button {
+    flex: 1; background: none; border: 0; border-radius: 0; color: var(--doux); padding: 8px 2px 9px;
+    display: grid; justify-items: center; gap: 1px; font: 600 0.7rem 'Outfit', sans-serif; position: relative;
+  }
+  nav.onglets button .ico { font-size: 1.25rem; line-height: 1.2; }
+  nav.onglets button.actif { color: var(--accent); box-shadow: inset 0 2px 0 var(--accent); }
+  nav.onglets .pastille { position: absolute; top: 4px; right: calc(50% - 22px); min-width: 17px; height: 17px; border-radius: 9px; padding: 0 4px;
+    background: var(--alerte); color: #fff; font-size: 0.68rem; line-height: 17px; }
+
+  .carte { background: color-mix(in srgb, var(--surface) 88%, transparent); border: 1px solid var(--bord); border-radius: 18px; padding: 14px; margin-bottom: 10px; }
+  .carte h2 { font: 700 1.25rem/1.2 var(--titre); margin-bottom: 6px; color: var(--accent); }
+  .carte p { color: var(--doux); font-size: 0.93rem; }
+  .carte p + p { margin-top: 6px; }
   .ligne { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .ligne + .ligne { margin-top: 10px; }
+  .ligne + .ligne { margin-top: 8px; }
   button, .bouton {
-    border: 0; border-radius: 14px; padding: 12px 16px; cursor: pointer; text-decoration: none; display: inline-block;
-    background: var(--accent); color: #1a0f05; font: 600 0.95rem 'Outfit', sans-serif;
-    transition: transform 0.12s ease, filter 0.12s ease;
+    border: 0; border-radius: 14px; padding: 11px 15px; cursor: pointer; text-decoration: none; display: inline-block;
+    background: var(--accent); color: #1a0f05; font: 600 0.92rem 'Outfit', sans-serif; transition: transform 0.12s ease;
   }
   button:active { transform: scale(0.97); }
   button.discret { background: rgba(243, 230, 207, 0.08); color: var(--texte); border: 1px solid var(--bord); }
-  button.puce { padding: 8px 12px; border-radius: 999px; font-size: 0.85rem; }
+  button.puce { padding: 7px 11px; border-radius: 999px; font-size: 0.83rem; }
   button.puce.choisie { background: var(--accent); color: #1a0f05; border-color: transparent; }
   button:disabled { opacity: 0.45; cursor: default; transform: none; }
-  input[type=text], select {
+  input[type=text], select, textarea {
     border-radius: 12px; border: 1px solid var(--bord); background: rgba(0, 0, 0, 0.3); color: var(--texte);
-    padding: 10px 12px; font: 500 0.95rem 'Outfit', sans-serif; min-width: 0;
+    padding: 9px 11px; font: 500 0.93rem 'Outfit', sans-serif; min-width: 0;
   }
-  label.case { display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--texte); padding: 6px 10px; border: 1px solid var(--bord); border-radius: 999px; }
-  .etiquette { color: var(--doux); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; margin: 12px 0 6px; }
-  .erreur { color: #ffb4a8; font-size: 0.9rem; margin-top: 8px; }
+  textarea { width: 100%; min-height: 70px; resize: vertical; }
+  label.case { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; padding: 5px 9px; border: 1px solid var(--bord); border-radius: 999px; }
+  .etiquette { color: var(--doux); font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.06em; margin: 10px 0 5px; }
+  .etiquette:first-child { margin-top: 0; }
+  .erreur { position: fixed; left: 14px; right: 14px; top: max(54px, calc(env(safe-area-inset-top) + 44px)); z-index: 40; max-width: 560px; margin: 0 auto;
+    background: #4a1410; border: 1px solid #ff6b5e; color: #ffd9d3; border-radius: 12px; padding: 9px 12px; font-size: 0.88rem; }
   .erreur:empty { display: none; }
 
-  /* Portraits : grille 3 colonnes sur téléphone */
-  .portraits { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .portrait {
-    position: relative; border-radius: 16px; padding: 12px 6px 10px; text-align: center; cursor: pointer;
-    background: rgba(0, 0, 0, 0.25); border: 1px solid var(--bord); color: var(--texte); font: inherit;
-    display: grid; justify-items: center; gap: 4px; min-height: 108px;
-  }
-  .portrait .visage {
-    width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; font-size: 1.6rem;
-    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.12), 0 4px 14px rgba(0, 0, 0, 0.35);
-  }
-  .portrait .arch { font: 600 0.95rem/1.1 var(--titre); }
-  .portrait .qui { font-size: 0.75rem; color: var(--doux); min-height: 1em; }
-  .portrait.pris { opacity: 0.55; cursor: default; }
+  /* Portraits */
+  .portraits { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .portrait { border-radius: 14px; padding: 8px 3px 6px; text-align: center; cursor: pointer; background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--bord); color: var(--texte); font: inherit; display: grid; justify-items: center; gap: 2px; }
+  .portrait .visage { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 1.25rem;
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.12), 0 4px 12px rgba(0, 0, 0, 0.35); }
+  .portrait .arch { font: 600 0.82rem/1.05 var(--titre); }
+  .portrait .qui { font-size: 0.68rem; color: var(--doux); min-height: 1em; }
+  .portrait.pris { opacity: 0.5; cursor: default; }
   .portrait.moi { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; opacity: 1; }
-
   .joueurs { display: flex; flex-wrap: wrap; gap: 6px; }
   .joueurs span { background: rgba(243, 230, 207, 0.08); border-radius: 999px; padding: 5px 10px; font-size: 0.85rem; }
 
-  /* Ouverture : le narrateur parle, une phrase après l'autre */
-  .narration p { font: 500 1.35rem/1.35 var(--titre); color: var(--texte); opacity: 0; transform: translateY(6px); transition: opacity 0.9s ease, transform 0.9s ease; }
+  /* Ouverture */
+  .narration p { font: 500 1.28rem/1.33 var(--titre); color: var(--texte); opacity: 0; transform: translateY(6px); transition: opacity 0.9s ease, transform 0.9s ease; }
   .narration p.vue { opacity: 1; transform: none; }
-  .narration p + p { margin-top: 14px; }
-  .narrateur { display: flex; align-items: center; gap: 10px; color: var(--accent); font: 700 1.1rem var(--titre); margin-bottom: 14px; }
-  .narrateur span { font-size: 1.6rem; }
-  .eclair { position: fixed; inset: 0; pointer-events: none; background: #fff; opacity: 0; }
+  .narration p + p { margin-top: 12px; }
+  .narrateur { display: flex; align-items: center; gap: 10px; color: var(--accent); font: 700 1.05rem var(--titre); margin-bottom: 10px; }
+  .narrateur span { font-size: 1.5rem; }
+  .eclair { position: fixed; inset: 0; pointer-events: none; background: #fff; opacity: 0; z-index: 70; }
   .eclair.flash { animation: eclair 1.6s ease-out; }
   @keyframes eclair { 0% { opacity: 0; } 4% { opacity: 0.55; } 8% { opacity: 0.05; } 12% { opacity: 0.35; } 100% { opacity: 0; } }
 
-  /* Rôle : appui long, rien ne s'affiche par-dessus l'épaule */
-  .role {
-    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none;
-    border-radius: 20px; padding: 22px 16px; text-align: center; cursor: pointer;
-    background: repeating-linear-gradient(45deg, rgba(201, 162, 74, 0.08) 0 12px, rgba(201, 162, 74, 0.02) 12px 24px);
-    border: 1px dashed var(--bord);
-  }
-  .role .cache { color: var(--doux); }
-  .role .revele { display: none; }
-  .role.ouvert .cache { display: none; }
-  .role.ouvert .revele { display: block; }
-  .role .titre-role { font: 700 1.8rem/1.1 var(--titre); color: var(--accent); }
-  .role.tueur .titre-role { color: #ff6b5e; }
-  .compte { font: 700 2.2rem/1 var(--titre); color: var(--accent); }
-  .liste-elements { display: flex; flex-wrap: wrap; gap: 6px; }
-  .liste-elements span { border: 1px solid var(--bord); border-radius: 10px; padding: 5px 9px; font-size: 0.88rem; }
-  .recit { font: 500 1.3rem/1.4 var(--titre); }
-  .masque { display: none !important; }
+  /* Rôle : appui long */
+  .bouton-role { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none; }
+  .zone-role { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none; border-radius: 18px; padding: 18px 14px; text-align: center; cursor: pointer;
+    background: repeating-linear-gradient(45deg, rgba(201, 162, 74, 0.08) 0 12px, rgba(201, 162, 74, 0.02) 12px 24px); border: 1px dashed var(--bord); color: var(--doux); }
+  .role-voile { position: fixed; inset: 0; z-index: 80; background: rgba(10, 4, 6, 0.96); display: none; place-items: center; padding: 24px; text-align: center; pointer-events: none; }
+  .role-voile.ouvert { display: grid; }
+  .role-voile .titre-role { font: 700 2rem/1.1 var(--titre); color: var(--accent); margin-bottom: 10px; }
+  .role-voile.tueur .titre-role { color: #ff6b5e; }
+  .role-voile p { color: var(--texte); font-size: 1.05rem; max-width: 420px; }
+  .role-voile p + p { margin-top: 8px; }
 
-  /* Tranche 2 : points, plis, archive, carnet */
-  .solde { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-top: 10px; color: var(--doux); }
-  .solde b { font: 700 1.6rem var(--titre); color: var(--texte); }
-  .pli { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; animation: pli 2.4s ease-in-out infinite; }
-  @keyframes pli { 50% { box-shadow: 0 0 0 1px var(--accent) inset, 0 0 22px rgba(201, 162, 74, 0.35); } }
-  .archive-ligne { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--bord); }
+  /* Plan */
+  .plan { width: 100%; max-height: 46dvh; display: block; margin: 0 auto 6px; touch-action: manipulation; }
+  .plan .zone rect { fill: rgba(243, 230, 207, 0.06); stroke: var(--bord); stroke-width: 1.5; transition: fill 0.25s ease; }
+  .plan .zone { cursor: pointer; }
+  .plan .zone text { fill: var(--texte); font: 600 13px 'Cormorant Garamond', serif; text-anchor: middle; pointer-events: none; }
+  .plan .zone .ico { font-size: 18px; }
+  .plan .zone.elimine rect { fill: rgba(0, 0, 0, 0.4); }
+  .plan .zone.elimine text { opacity: 0.4; }
+  .plan .zone .barre { stroke: rgba(243, 230, 207, 0.35); stroke-width: 1.5; display: none; pointer-events: none; }
+  .plan .zone.elimine .barre { display: inline; }
+  .plan .zone.suspect rect { fill: rgba(179, 38, 30, 0.35); stroke: #ff6b5e; }
+  .plan .zone.choisi rect { fill: rgba(201, 162, 74, 0.35); stroke: var(--accent); stroke-width: 3; }
+  .plan .zone.fermee { cursor: default; }
+  .plan .zone.fermee rect { fill: url(#hachures); stroke: rgba(243, 230, 207, 0.1); }
+  .plan .zone.fermee text { opacity: 0.35; }
+  .plan .zone.crime rect { fill: rgba(179, 38, 30, 0.55); stroke: #ff6b5e; stroke-width: 3; animation: crime 1.6s ease-in-out infinite; }
+  @keyframes crime { 50% { fill: rgba(179, 38, 30, 0.25); } }
+  .plan .murs { fill: none; stroke: rgba(201, 162, 74, 0.45); stroke-width: 3; }
+  .jetons { display: flex; flex-wrap: wrap; gap: 5px; }
+  .jetons button { padding: 5px 9px; border-radius: 10px; font-size: 0.82rem; background: rgba(243, 230, 207, 0.06); color: var(--texte); border: 1px solid var(--bord); }
+  .jetons button.elimine { text-decoration: line-through; opacity: 0.45; }
+  .jetons button.suspect { border-color: #ff6b5e; color: #ffb4a8; background: rgba(179, 38, 30, 0.2); }
+  .jetons button.choisi { border-color: var(--accent); background: rgba(201, 162, 74, 0.3); color: var(--texte); }
+  .legende { color: var(--doux); font-size: 0.75rem; margin-top: 6px; }
+  /* Accuser : plan réduit, et le résumé avec son bouton toujours visibles en bas */
+  .plan.petit { max-height: 27dvh; }
+  .barre-accuser { position: sticky; bottom: -12px; margin: 0 -14px -12px; padding: 8px 14px 12px; display: flex; align-items: center; gap: 10px;
+    background: linear-gradient(transparent, var(--fond) 18%); }
+  .barre-accuser .resume { flex: 1; margin: 0; font-size: 1rem; }
+  .barre-accuser button { flex: none; }
+
+  /* Indices, archive, notes, fil */
+  .pli { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .archive-ligne { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--bord); }
   .archive-ligne:first-of-type { border-top: 0; }
   .archive-ligne .txt { flex: 1; min-width: 0; font-size: 0.9rem; }
-  .archive-ligne .txt span { display: block; color: var(--doux); font-size: 0.8rem; }
-  .archive-ligne button { padding: 8px 12px; font-size: 0.85rem; white-space: nowrap; }
+  .archive-ligne .txt span { display: block; color: var(--doux); font-size: 0.78rem; }
+  .archive-ligne button { padding: 7px 11px; font-size: 0.82rem; white-space: nowrap; }
   .tampon { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 6px; font-size: 0.72rem; border: 1px solid currentColor; }
   .notes-carnet { display: grid; gap: 6px; margin-top: 8px; }
   .notes-carnet div { display: flex; gap: 8px; align-items: flex-start; font-size: 0.9rem; background: rgba(0, 0, 0, 0.2); border-radius: 10px; padding: 8px 10px; }
   .notes-carnet div span { flex: 1; overflow-wrap: anywhere; }
   .notes-carnet div em { color: var(--doux); font-style: normal; font-size: 0.8rem; }
   .notes-carnet button { padding: 2px 8px; font-size: 0.8rem; }
-  .carnet .liste-elements span { cursor: pointer; user-select: none; }
-  .carnet .liste-elements span.elimine { text-decoration: line-through; opacity: 0.45; }
-  .carnet .liste-elements span.suspect { border-color: #ff6b5e; color: #ffb4a8; background: rgba(179, 38, 30, 0.18); }
-  textarea { width: 100%; min-height: 64px; border-radius: 12px; border: 1px solid var(--bord); background: rgba(0, 0, 0, 0.3); color: var(--texte); padding: 10px 12px; font: 500 0.95rem 'Outfit', sans-serif; resize: vertical; }
-  .fil p { font-size: 0.9rem; padding: 6px 0; border-top: 1px solid var(--bord); }
+  .fil p { font-size: 0.9rem; padding: 6px 0; border-top: 1px solid var(--bord); color: var(--texte); }
   .fil p:first-of-type { border-top: 0; }
   .fil p small { color: var(--doux); margin-right: 6px; }
+  .resume { font: 600 1.1rem/1.3 var(--titre); color: var(--texte); margin: 8px 0; }
+  .recit { font: 500 1.22rem/1.38 var(--titre); color: var(--texte); }
+  table.recap { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  table.recap td, table.recap th { padding: 6px 4px; border-top: 1px solid var(--bord); text-align: left; vertical-align: top; }
+  table.recap th { color: var(--doux); font-weight: 500; font-size: 0.75rem; text-transform: uppercase; }
+
+  /* Lettre et alertes */
   .voile { position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, 0.72); display: grid; place-items: center; padding: 20px; }
-  .lettre { max-width: 460px; width: 100%; background: #f1e3c4; color: #2a1a10; border-radius: 6px; padding: 26px 22px 20px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6); }
-  .lettre .corps { font: 600 1.45rem/1.35 var(--titre); }
-  .lettre .meta { margin-top: 14px; font-size: 0.82rem; color: #6b5440; }
-  .lettre .avis { margin-top: 10px; font-size: 0.85rem; color: #6b5440; }
-  .lettre button { margin-top: 16px; background: #2a1a10; color: #f1e3c4; }
-  .toast { position: fixed; left: 16px; right: 16px; bottom: max(18px, env(safe-area-inset-bottom)); z-index: 60; max-width: 520px; margin: 0 auto;
-    background: #2a1216; border: 1px solid var(--accent); border-radius: 16px; padding: 14px 16px; font-weight: 600; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
-  .toast.gorgee { background: #4a1410; border-color: #ff6b5e; font-size: 1.1rem; }
+  .lettre { max-width: 460px; width: 100%; background: #f1e3c4; color: #2a1a10; border-radius: 6px; padding: 24px 20px 18px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6); }
+  .lettre .corps { font: 600 1.4rem/1.35 var(--titre); }
+  .lettre .meta { margin-top: 12px; font-size: 0.82rem; color: #6b5440; }
+  .lettre .avis { margin-top: 8px; font-size: 0.85rem; color: #6b5440; }
+  .lettre button { margin-top: 14px; background: #2a1a10; color: #f1e3c4; }
+  .toast { position: fixed; left: 14px; right: 14px; bottom: calc(66px + env(safe-area-inset-bottom)); z-index: 60; max-width: 520px; margin: 0 auto;
+    background: #2a1216; border: 1px solid var(--accent); border-radius: 14px; padding: 12px 14px; font-weight: 600; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
+  .toast.gorgee { background: #4a1410; border-color: #ff6b5e; font-size: 1.05rem; }
+  .masque { display: none !important; }
 </style>
 </head>
 <body>
 <div class="eclair" id="eclair"></div>
-<main class="page">
-  <header>
-    <a class="retour" id="retour" href="index.html">← Soirée</a>
-    <h1 id="titre"><small>Enquête</small>Chargement…</h1>
-  </header>
-  <div id="ecran"></div>
-  <div class="erreur" id="erreur" role="alert"></div>
-</main>
+<header>
+  <a class="retour" id="retour" href="index.html">← Soirée</a>
+  <h1 id="titre"><small>Enquête</small>Chargement…</h1>
+</header>
+<div class="etat-jeu masque" id="etat-jeu"></div>
+<main id="ecran"></main>
+<nav class="onglets masque" id="onglets"></nav>
+<div class="erreur" id="erreur" role="alert"></div>
+<div class="role-voile" id="role-voile" aria-live="polite"></div>
 
 <script src="commun/soiree.js"></script>
 <script>
-// Enquête : jeu fil conducteur de la soirée. La page parle au serveur par la
-// connexion « soirée » (/ws-soiree), distincte de la place à une table : on
-// peut l'ouvrir par-dessus un jeu sans quitter sa partie.
+// Enquête : jeu fil conducteur de la soirée. Tout tient sur un écran : un
+// bandeau en haut, le contenu de l'onglet choisi, la barre d'onglets en bas.
+// La page parle au serveur par la connexion « soirée » (/ws-soiree),
+// distincte de la place à une table : on l'ouvre par-dessus un jeu sans
+// quitter sa partie.
 (function () {
   const dansJeu = new URLSearchParams(location.search).get('dans') === '1';
   if (dansJeu) document.getElementById('retour').classList.add('masque');
@@ -170,12 +214,19 @@
   const ecran = document.getElementById('ecran');
   const elErreur = document.getElementById('erreur');
   const elTitre = document.getElementById('titre');
+  const elEtat = document.getElementById('etat-jeu');
+  const elOnglets = document.getElementById('onglets');
+  const elRole = document.getElementById('role-voile');
 
   const s = Soiree.actuelle();
   let monNom = Soiree.nom();
   let pack = null, etat = null, moi = null, couches = [];
   let ws = null, tentatives = 0, minuteur = null, dernierSignal = 0;
   let ouvertureLancee = false;
+  // Onglet choisi par phase (gardé à travers les mises à jour).
+  const onglet = { lobby: 'perso', enquete: 'plan', fin: 'recit' };
+  // Accusation en préparation (lieu, arme, personnage).
+  const accusation = { lieu: null, arme: null, suspect: null };
 
   function el(balise, attrs, texte) {
     const e = document.createElement(balise);
@@ -183,10 +234,10 @@
     if (texte != null) e.textContent = texte;
     return e;
   }
-  function carte(titre) {
+  function carte(titre, parent) {
     const c = el('section', { className: 'carte' });
     if (titre) c.appendChild(el('h2', {}, titre));
-    ecran.appendChild(c);
+    (parent || ecran).appendChild(c);
     return c;
   }
   function envoyer(msg) {
@@ -197,22 +248,39 @@
     elTitre.appendChild(el('small', {}, sous || 'Enquête'));
     elTitre.append(principal);
   }
+  function erreur(texte) {
+    elErreur.textContent = texte;
+    setTimeout(() => { if (elErreur.textContent === texte) elErreur.textContent = ''; }, 5000);
+  }
   function appliquerPalette(p) {
     const r = document.documentElement.style;
-    if (p.fond) r.setProperty('--fond', p.fond);
-    if (p.surface) r.setProperty('--surface', p.surface);
-    if (p.accent) r.setProperty('--accent', p.accent);
-    if (p.texte) r.setProperty('--texte', p.texte);
-    if (p.alerte) r.setProperty('--alerte', p.alerte);
+    ['fond', 'surface', 'accent', 'texte', 'alerte'].forEach((k) => { if (p[k]) r.setProperty('--' + k, p[k]); });
   }
   function portrait(id) { return pack && pack.portraits.find((p) => p.id === id); }
-  function element(cle, id) { const e = pack && pack[cle].find((x) => x.id === id); return e ? e.nom : id; }
-  // Avec l'article (« la Cuisine », « le Tisonnier »), pour les phrases.
-  function elementLe(cle, id) { const e = pack && pack[cle].find((x) => x.id === id); return e ? (e.le || e.nom) : id; }
+  function trouver(cle, id) { return pack && pack[cle].find((x) => x.id === id); }
+  function element(cle, id) { const e = trouver(cle, id); return e ? e.nom : id; }
+  function elementLe(cle, id) { const e = trouver(cle, id); return e ? (e.le || e.nom) : id; }
+  function joueurAvecIcone(nom) {
+    const j = etat.joueurs.find((x) => x.nom === nom);
+    const p = j && portrait(j.portrait);
+    return (p ? p.icone + ' ' : '') + nom;
+  }
   function duree(sec) {
     const h = Math.floor(sec / 3600), mn = Math.round((sec % 3600) / 60);
     return h ? h + ' h' + (mn ? ' ' + String(mn).padStart(2, '0') : '') : mn + ' min';
   }
+  function heure(t) {
+    const d = new Date(t * 1000);
+    return String(d.getHours()).padStart(2, '0') + 'h' + String(d.getMinutes()).padStart(2, '0');
+  }
+  function mmss(sec) {
+    sec = Math.max(0, Math.ceil(sec));
+    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), x = sec % 60;
+    return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0');
+  }
+  function unite(n) { return n + ' ' + etat.unite + (n > 1 && !/s$/.test(etat.unite) ? 's' : ''); }
+  let ecartHorloge = 0;
+  function serveurMaintenant() { return Date.now() / 1000 - ecartHorloge; }
 
   // ---------------- Préalables : soirée et prénom ----------------
   if (!s) {
@@ -247,15 +315,14 @@
     socket.onmessage = (e) => {
       if (ws !== socket) return;
       dernierSignal = Date.now();
-      const msg = JSON.parse(e.data);
-      recevoir(msg, socket);
+      recevoir(JSON.parse(e.data), socket);
     };
     socket.onclose = () => { if (ws === socket) reconnecter(); };
   }
   function reconnecter() {
     if (minuteur) return;
     tentatives++;
-    elErreur.textContent = tentatives > 1 ? 'Connexion perdue, reconnexion…' : '';
+    if (tentatives > 1) elErreur.textContent = 'Connexion perdue, reconnexion…';
     minuteur = setTimeout(() => { minuteur = null; seConnecter(); }, Math.min(1000 * tentatives, 5000));
   }
   setInterval(() => {
@@ -274,7 +341,7 @@
       case 'pong': return;
       case 'remplace':
         ws = null; try { socket.close(); } catch (e) {}
-        ecran.textContent = '';
+        cacherCadre();
         titre('Ouverte ailleurs');
         carte('Ton enquête est ouverte sur un autre écran')
           .appendChild(el('p', {}, 'Ferme cet onglet, ou recharge la page pour la reprendre ici.'));
@@ -285,51 +352,73 @@
         return;
       case 'enq_pack':
         pack = msg; appliquerPalette(msg.palette || {}); afficher(); return;
-      case 'enq_etat':
+      case 'enq_etat': {
         if (!couches.includes('enq')) couches.push('enq');
-        etat = msg; afficher(); return;
+        const fini = msg.phase === 'fin' && (!etat || etat.phase !== 'fin');
+        etat = msg;
+        ecartHorloge = Date.now() / 1000 - msg.maintenant;
+        if (fini) onglet.fin = 'recit';
+        afficher(); return;
+      }
       case 'enq_moi':
         moi = msg; afficher(); return;
       case 'enq_erreur':
-        elErreur.textContent = msg.message; setTimeout(() => { if (elErreur.textContent === msg.message) elErreur.textContent = ''; }, 5000);
-        return;
+        erreur(msg.message); return;
       case 'enq_annulee':
         etat = null; couches = couches.filter((c) => c !== 'enq'); afficher(); return;
       case 'enq_texte':
         montrerLettre(msg); return;
       case 'enq_gorgee':
-        toast('🍺 Bois ' + msg.nombre + ' ' + msg.unite + (msg.nombre > 1 && !/s$/.test(msg.unite) ? 's' : '') + ' : ' + msg.raison.toLowerCase() + '.', 'gorgee', 7000);
-        return;
+        toast('🍺 Bois ' + unite(msg.nombre) + ' : ' + msg.raison.toLowerCase() + '.', 'gorgee', 7000); return;
       case 'enq_pe':
         toast('+' + msg.gain + ' PE (' + msg.raison + ') · total ' + msg.total, '', 4000); return;
       case 'enq_nouvel_indice':
         toast('📜 Un pli t’attend · ' + msg.source, '', 4000); return;
+      case 'enq_verdict':
+        montrerVerdict(msg); return;
     }
+  }
+
+  // ---------------- Cadre : bandeau et onglets ----------------
+  function cacherCadre() {
+    ecran.textContent = '';
+    elEtat.classList.add('masque');
+    elOnglets.classList.add('masque');
+  }
+  function onglets(phase, liste) {
+    elOnglets.textContent = '';
+    elOnglets.classList.remove('masque');
+    if (!liste.some((o) => o.id === onglet[phase])) onglet[phase] = liste[0].id;
+    liste.forEach((o) => {
+      const b = el('button', { type: 'button', className: o.id === onglet[phase] ? 'actif' : '' });
+      b.dataset.onglet = o.id;
+      b.append(el('span', { className: 'ico' }, o.ico), o.titre);
+      if (o.pastille) b.appendChild(el('span', { className: 'pastille' }, String(o.pastille)));
+      b.addEventListener('click', () => { onglet[phase] = o.id; rendu = ''; afficher(); ecran.scrollTop = 0; });
+      elOnglets.appendChild(b);
+    });
+    return onglet[phase];
   }
 
   // ---------------- Écrans ----------------
   let rendu = '';
   function afficher() {
-    // On ne redessine pas un écran identique : un appui long en cours ne
-    // doit pas être interrompu par un message sans changement.
-    const cle = JSON.stringify([couches.includes('enq'), etat, moi, pack && pack.id]);
+    // On ne redessine pas un écran identique : un appui long ou une saisie
+    // en cours ne doivent pas être interrompus.
+    const cle = JSON.stringify([couches.includes('enq'), etat && Object.assign({}, etat, { maintenant: 0 }), moi, pack && pack.id, onglet]);
     if (cle === rendu) return;
     rendu = cle;
-    // Un message peut arriver pendant qu'on écrit une note : on garde le
-    // champ actif et sa saisie à travers le redessin.
     const actif = document.activeElement && document.activeElement.id ? document.activeElement : null;
     const garde = actif ? { id: actif.id, valeur: actif.value, debut: actif.selectionStart, fin: actif.selectionEnd } : null;
-    ecran.textContent = '';
-    setTimeout(() => {
-      if (!garde) return;
+    const defilement = ecran.scrollTop;
+    cacherCadre();
+    if (!couches.includes('enq') || !etat) ecranAucune();
+    else if (pack && moi) ({ lobby: ecranLobby, ouverture: ecranOuverture, enquete: ecranEnquete, fin: ecranFin }[etat.phase] || ecranAucune)();
+    ecran.scrollTop = defilement;
+    if (garde) {
       const e = document.getElementById(garde.id);
-      if (!e) return;
-      e.value = garde.valeur; e.focus();
-      try { e.setSelectionRange(garde.debut, garde.fin); } catch (x) { /* pas un champ texte */ }
-    }, 0);
-    if (!couches.includes('enq') || !etat) return ecranAucune();
-    if (!pack || !moi) return;
-    ({ lobby: ecranLobby, ouverture: ecranOuverture, enquete: ecranEnquete, fin: ecranFin }[etat.phase] || ecranAucune)();
+      if (e) { e.value = garde.valeur; e.focus(); try { e.setSelectionRange(garde.debut, garde.fin); } catch (x) { /* pas un champ texte */ } }
+    }
   }
 
   function ecranAucune() {
@@ -344,80 +433,27 @@
     c.appendChild(l);
   }
 
+  // ---------------- Salle d'attente ----------------
   function ecranLobby() {
     titre(pack.nom, 'Enquête · ' + (pack.epoque || ''));
-    const hote = moi.hote;
-    const intro = carte();
-    intro.appendChild(el('p', {}, pack.ambiance + ' La victime : ' + pack.victime + '. ' +
-      'Narrateur : ' + pack.narrateur.nom + ', ' + pack.narrateur.role + '.'));
-    intro.appendChild(el('p', {}, 'Hôte : ' + etat.hote + (hote ? ' (toi)' : '') + '.'));
+    const pret = etat.joueurs.length >= etat.joueurs_min && etat.joueurs.every((x) => x.portrait);
+    const o = onglets('lobby', [
+      { id: 'perso', ico: '🎭', titre: 'Personnage' },
+      { id: 'joueurs', ico: '👥', titre: 'Joueurs', pastille: etat.joueurs.length },
+      { id: 'reglages', ico: '⚙️', titre: 'Réglages' },
+    ]);
+    if (o === 'perso') lobbyPersonnage();
+    else if (o === 'joueurs') lobbyJoueurs(pret);
+    else lobbyReglages();
+  }
 
-    // Réglages (l'hôte modifie, les autres voient)
-    const r = carte('Réglages');
-    const v = etat.vitesses[etat.vitesse];
-    if (hote) {
-      if (etat.univers_disponibles.length > 1) {
-        r.appendChild(el('div', { className: 'etiquette' }, 'Univers'));
-        const lu = el('div', { className: 'ligne' });
-        etat.univers_disponibles.forEach((u) => {
-          const b = el('button', { type: 'button', className: 'discret puce' + (u.id === etat.univers ? ' choisie' : '') }, u.nom);
-          b.addEventListener('click', () => envoyer({ type: 'enq_config', univers: u.id }));
-          lu.appendChild(b);
-        });
-        r.appendChild(lu);
-      }
-      r.appendChild(el('div', { className: 'etiquette' }, 'Vitesse'));
-      const lv = el('div', { className: 'ligne' });
-      Object.entries(etat.vitesses).forEach(([id, x]) => {
-        const b = el('button', { type: 'button', className: 'discret puce' + (id === etat.vitesse ? ' choisie' : '') },
-          x.titre + ' · ' + duree(x.duree));
-        b.addEventListener('click', () => envoyer({ type: 'enq_config', vitesse: id }));
-        lv.appendChild(b);
-      });
-      r.appendChild(lv);
-      r.appendChild(el('div', { className: 'etiquette' }, 'Durée de l’enquête'));
-      const ld = el('div', { className: 'ligne' });
-      const sel = el('select');
-      [1800, 3600, 5400, 7200, 10800, 14400, 18000, 21600].forEach((d) => {
-        const o = el('option', { value: d, selected: d === etat.duree }, duree(d));
-        sel.appendChild(o);
-      });
-      if (![...sel.options].some((o) => o.selected)) sel.appendChild(el('option', { value: etat.duree, selected: true }, duree(etat.duree)));
-      sel.addEventListener('change', () => envoyer({ type: 'enq_config', duree: Number(sel.value) }));
-      ld.appendChild(sel);
-      r.appendChild(ld);
-      r.appendChild(el('div', { className: 'etiquette' }, 'Jeux qui rapportent des indices'));
-      const lj = el('div', { className: 'ligne' });
-      v.jeux.forEach((j) => {
-        const lab = el('label', { className: 'case' });
-        const cb = el('input', { type: 'checkbox', checked: etat.jeux.includes(j) });
-        cb.addEventListener('change', () => {
-          const jeux = v.jeux.filter((x) => x === j ? cb.checked : etat.jeux.includes(x));
-          envoyer({ type: 'enq_config', jeux });
-        });
-        lab.append(cb, ((Soiree.JEUX[j] || {}).icone || '') + ' ' + ((Soiree.JEUX[j] || {}).titre || j));
-        lj.appendChild(lab);
-      });
-      r.appendChild(lj);
-      r.appendChild(el('div', { className: 'etiquette' }, 'Unité de pénalité'));
-      const lu2 = el('div', { className: 'ligne' });
-      const unite = el('input', { type: 'text', value: etat.unite, maxLength: 20 });
-      unite.addEventListener('change', () => envoyer({ type: 'enq_config', unite: unite.value }));
-      lu2.appendChild(unite);
-      lu2.appendChild(el('span', { className: 'etiquette', style: 'margin:0' }, '« pompe » pour un mode sans alcool'));
-      r.appendChild(lu2);
-    } else {
-      r.appendChild(el('p', {}, v.titre + ' · ' + duree(etat.duree) + ' · pénalité : ' + etat.unite));
-      r.appendChild(el('p', {}, 'Jeux comptés : ' + etat.jeux.map((j) => (Soiree.JEUX[j] || {}).titre || j).join(', ') + '.'));
-    }
-
-    // Portraits
-    const c = carte('Choisis ton personnage');
-    c.appendChild(el('p', {}, 'Ton personnage porte ton prénom. Un portrait par joueur, premier arrivé, premier servi.'));
-    const g = el('div', { className: 'portraits' }); g.style.marginTop = '12px';
+  function lobbyPersonnage() {
+    const c = carte();
+    c.appendChild(el('p', {}, pack.ambiance + ' Victime : ' + pack.victime + '. Ton personnage porte ton prénom ; un portrait par joueur.'));
+    const g = el('div', { className: 'portraits' }); g.style.marginTop = '10px';
     pack.portraits.forEach((p) => {
       const qui = etat.joueurs.find((j) => j.portrait === p.id);
-      const mien = qui && Soiree.nom().toLowerCase() === qui.nom.toLowerCase();
+      const mien = qui && monNom.toLowerCase() === qui.nom.toLowerCase();
       const b = el('button', { type: 'button', className: 'portrait' + (qui ? ' pris' : '') + (mien ? ' moi' : '') });
       const visage = el('div', { className: 'visage' }, p.icone);
       visage.style.background = p.couleur;
@@ -427,26 +463,24 @@
       g.appendChild(b);
     });
     c.appendChild(g);
+  }
 
-    // Joueurs et lancement
+  function lobbyJoueurs(pret) {
     const voc = pack.vocabulaire.enqueteurs;   // « les invités » : l'article est dans le pack
     const j = carte(voc.charAt(0).toUpperCase() + voc.slice(1) + ' (' + etat.joueurs.length + '/' + etat.joueurs_max + ')');
     const lj = el('div', { className: 'joueurs' });
-    etat.joueurs.forEach((x) => { const p = portrait(x.portrait); lj.appendChild(el('span', {}, (p ? p.icone + ' ' : '') + x.nom)); });
+    etat.joueurs.forEach((x) => lj.appendChild(el('span', {}, joueurAvecIcone(x.nom))));
     if (!etat.joueurs.length) lj.appendChild(el('span', {}, 'Personne pour l’instant'));
     j.appendChild(lj);
-    const la = el('div', { className: 'ligne' }); la.style.marginTop = '14px';
-    if (hote) {
-      const pret = etat.joueurs.length >= etat.joueurs_min && etat.joueurs.every((x) => x.portrait);
+    j.appendChild(el('p', { style: 'margin-top:10px' }, 'Hôte : ' + etat.hote + (moi.hote ? ' (toi)' : '') + '. ' +
+      (pret ? 'Tout le monde est prêt.' : 'Il faut au moins ' + etat.joueurs_min + ' joueurs, chacun avec son portrait.')));
+    const la = el('div', { className: 'ligne' }); la.style.marginTop = '12px';
+    if (moi.hote) {
       const b = el('button', { type: 'button', disabled: !pret }, 'Lancer l’enquête');
       b.addEventListener('click', () => envoyer({ type: 'enq_lancer' }));
-      la.appendChild(b);
       const a = el('button', { type: 'button', className: 'discret' }, 'Annuler');
       a.addEventListener('click', () => { if (confirm('Annuler l’enquête pour tout le monde ?')) envoyer({ type: 'enq_annuler' }); });
-      la.appendChild(a);
-      if (!pret) j.appendChild(el('p', {}, 'Il faut au moins ' + etat.joueurs_min + ' joueurs, chacun avec son portrait.'));
-    } else {
-      la.appendChild(el('p', {}, 'L’hôte lancera l’enquête quand tout le monde sera prêt.'));
+      la.append(b, a);
     }
     if (moi.inscrit) {
       const q = el('button', { type: 'button', className: 'discret' }, 'Ne pas participer');
@@ -456,6 +490,56 @@
     j.appendChild(la);
   }
 
+  function lobbyReglages() {
+    const r = carte();
+    const v = etat.vitesses[etat.vitesse];
+    if (!moi.hote) {
+      r.appendChild(el('p', {}, 'L’hôte (' + etat.hote + ') règle la partie.'));
+      r.appendChild(el('p', {}, v.titre + ' · ' + duree(etat.duree) + ' · pénalité : ' + etat.unite));
+      r.appendChild(el('p', {}, 'Jeux comptés : ' + etat.jeux.map((j) => (Soiree.JEUX[j] || {}).titre || j).join(', ') + '.'));
+      return;
+    }
+    if (etat.univers_disponibles.length > 1) {
+      r.appendChild(el('div', { className: 'etiquette' }, 'Univers'));
+      const lu = el('div', { className: 'ligne' });
+      etat.univers_disponibles.forEach((u) => {
+        const b = el('button', { type: 'button', className: 'discret puce' + (u.id === etat.univers ? ' choisie' : '') }, u.nom);
+        b.addEventListener('click', () => envoyer({ type: 'enq_config', univers: u.id }));
+        lu.appendChild(b);
+      });
+      r.appendChild(lu);
+    }
+    r.appendChild(el('div', { className: 'etiquette' }, 'Vitesse'));
+    const lv = el('div', { className: 'ligne' });
+    Object.entries(etat.vitesses).forEach(([id, x]) => {
+      const b = el('button', { type: 'button', className: 'discret puce' + (id === etat.vitesse ? ' choisie' : '') }, x.titre + ' · ' + duree(x.duree));
+      b.addEventListener('click', () => envoyer({ type: 'enq_config', vitesse: id }));
+      lv.appendChild(b);
+    });
+    r.appendChild(lv);
+    r.appendChild(el('div', { className: 'etiquette' }, 'Durée de l’enquête'));
+    const sel = el('select');
+    [1800, 3600, 5400, 7200, 10800, 14400, 18000, 21600].forEach((d) => sel.appendChild(el('option', { value: d, selected: d === etat.duree }, duree(d))));
+    if (![...sel.options].some((x) => x.selected)) sel.appendChild(el('option', { value: etat.duree, selected: true }, duree(etat.duree)));
+    sel.addEventListener('change', () => envoyer({ type: 'enq_config', duree: Number(sel.value) }));
+    r.appendChild(sel);
+    r.appendChild(el('div', { className: 'etiquette' }, 'Jeux qui rapportent des indices'));
+    const lj = el('div', { className: 'ligne' });
+    v.jeux.forEach((j) => {
+      const lab = el('label', { className: 'case' });
+      const cb = el('input', { type: 'checkbox', checked: etat.jeux.includes(j) });
+      cb.addEventListener('change', () => envoyer({ type: 'enq_config', jeux: v.jeux.filter((x) => x === j ? cb.checked : etat.jeux.includes(x)) }));
+      lab.append(cb, ((Soiree.JEUX[j] || {}).icone || '') + ' ' + ((Soiree.JEUX[j] || {}).titre || j));
+      lj.appendChild(lab);
+    });
+    r.appendChild(lj);
+    r.appendChild(el('div', { className: 'etiquette' }, 'Unité de pénalité (« pompe » sans alcool)'));
+    const u = el('input', { type: 'text', id: 'unite', value: etat.unite, maxLength: 20 });
+    u.addEventListener('change', () => envoyer({ type: 'enq_config', unite: u.value }));
+    r.appendChild(u);
+  }
+
+  // ---------------- Ouverture ----------------
   function ecranOuverture() {
     titre(pack.nom, 'Enquête');
     const c = carte();
@@ -468,126 +552,99 @@
     c.appendChild(texte);
     // Les phrases apparaissent au rythme de l'ouverture, recalé sur l'horloge
     // du serveur (un joueur qui arrive en retard voit déjà le début).
-    const duree = 25;   // duree_ouverture de enquete_config.json
-    const ecart = Date.now() / 1000 - etat.maintenant;
-    const debut = etat.ouverture_fin_a - duree;
+    const DUREE = 25;   // duree_ouverture de enquete_config.json
+    const debut = etat.ouverture_fin_a - DUREE;
     lignes.forEach((p, i) => {
-      const quand = debut + (i * duree * 0.85) / lignes.length;
-      const attente = Math.max(0, (quand - (Date.now() / 1000 - ecart)) * 1000);
-      setTimeout(() => p.classList.add('vue'), attente + 60);
+      const quand = debut + (i * DUREE * 0.85) / lignes.length;
+      setTimeout(() => p.classList.add('vue'), Math.max(0, (quand - serveurMaintenant()) * 1000) + 60);
     });
     if (!ouvertureLancee) {
       ouvertureLancee = true;
       const eclair = document.getElementById('eclair');
       eclair.classList.remove('flash'); void eclair.offsetWidth; eclair.classList.add('flash');
     }
-    carteRole();
+    if (moi.inscrit) {
+      const z = el('div', { className: 'zone-role' }, 'Maintiens le doigt appuyé ici pour voir ton rôle, à l’abri des regards.');
+      brancherRole(z);
+      ecran.appendChild(z);
+    }
   }
 
-  function carteRole() {
-    if (!moi.inscrit) {
-      carte().appendChild(el('p', {}, 'Tu n’es pas inscrit à cette enquête : tu peux suivre, mais pas jouer.'));
-      return;
-    }
-    const c = carte('Ton rôle');
-    const r = el('div', { className: 'role' + (moi.role === 'tueur' ? ' tueur' : '') });
-    r.appendChild(el('div', { className: 'cache' }, 'Maintiens le doigt appuyé pour voir ton rôle, à l’abri des regards.'));
-    const rev = el('div', { className: 'revele' });
+  // ---------------- Rôle : appui long ----------------
+  function contenuRole() {
+    elRole.textContent = '';
+    elRole.className = 'role-voile' + (moi.role === 'tueur' ? ' tueur' : '');
+    const d = el('div');
     const voc = pack.vocabulaire;
     if (moi.role === 'tueur') {
-      rev.appendChild(el('div', { className: 'titre-role' }, 'Tu es ' + voc.tueur));
+      d.appendChild(el('div', { className: 'titre-role' }, 'Tu es ' + voc.tueur));
       const sol = moi.solution;
-      rev.appendChild(el('p', {}, 'Tu as tué ' + pack.victime + ' dans ' + elementLe('lieux', sol.lieu) + ', avec ' + elementLe('armes', sol.arme) + '.'));
-      rev.appendChild(el('p', {}, 'Personne ne doit le découvrir avant la fin.'));
+      d.appendChild(el('p', {}, 'Tu as tué ' + pack.victime + ' dans ' + elementLe('lieux', sol.lieu) + ', avec ' + elementLe('armes', sol.arme) + '.'));
+      d.appendChild(el('p', {}, 'Personne ne doit le découvrir avant la fin.'));
     } else {
-      rev.appendChild(el('div', { className: 'titre-role' }, 'Tu es ' + (voc.enqueteur ? 'un ' + voc.enqueteur : 'enquêteur')));
-      rev.appendChild(el('p', {}, 'Trouve qui, où et avec quoi. Méfie-toi : ' + voc.tueur + ' est parmi vous.'));
+      d.appendChild(el('div', { className: 'titre-role' }, 'Tu es ' + (voc.enqueteur ? 'un ' + voc.enqueteur : 'enquêteur')));
+      d.appendChild(el('p', {}, 'Trouve qui, où et avec quoi. Méfie-toi : ' + voc.tueur + ' est parmi vous.'));
     }
-    r.appendChild(rev);
-    let minuteurAppui = null;
-    const ouvrir = (e) => { e.preventDefault(); minuteurAppui = setTimeout(() => r.classList.add('ouvert'), 350); };
-    const fermer = () => { clearTimeout(minuteurAppui); r.classList.remove('ouvert'); };
-    r.addEventListener('pointerdown', ouvrir);
-    ['pointerup', 'pointerleave', 'pointercancel'].forEach((t) => r.addEventListener(t, fermer));
-    r.addEventListener('contextmenu', (e) => e.preventDefault());
-    c.appendChild(r);
+    elRole.appendChild(d);
+  }
+  function brancherRole(cible) {
+    let m = null;
+    const ouvrir = (e) => { e.preventDefault(); m = setTimeout(() => { contenuRole(); elRole.classList.add('ouvert'); }, 350); };
+    const fermer = () => { clearTimeout(m); elRole.classList.remove('ouvert'); };
+    cible.addEventListener('pointerdown', ouvrir);
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach((t) => cible.addEventListener(t, fermer));
+    cible.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 
-  let minuteurCompte = null;
+  // ---------------- Enquête en cours ----------------
+  let minuteurSec = null;
   function ecranEnquete() {
     titre(pack.nom, 'Enquête en cours');
-    const ecart = Date.now() / 1000 - etat.maintenant;
-    const serveurMaintenant = () => Date.now() / 1000 - ecart;
-
-    // Temps restant et points d'enquête
-    const t = carte('Temps restant');
-    const compte = el('div', { className: 'compte' });
-    t.appendChild(compte);
+    // Bandeau : chrono, points, rôle
+    elEtat.classList.remove('masque');
+    elEtat.textContent = '';
+    const chrono = el('span', { className: 'chrono' });
+    const pe = el('span', { className: 'pe' });
+    if (moi.inscrit) { pe.append(el('b', {}, moi.pe + ' PE')); pe.append(' · échecs ' + etat.echecs + '/' + etat.seuil_patience); }
+    elEtat.append(chrono, pe);
     if (moi.inscrit) {
-      const solde = el('div', { className: 'solde' });
-      solde.append(el('b', {}, moi.pe + ' PE'), 'un indice : ' + moi.cout_indice + ' PE · ' +
-        moi.indices_heure + '/' + moi.indices_heure_max + ' cette heure');
-      t.appendChild(solde);
-      const l = el('div', { className: 'ligne' }); l.style.marginTop = '10px';
-      const plein = moi.indices_heure >= moi.indices_heure_max || etat.dossier_epuise;
-      const dem = el('button', { type: 'button', disabled: plein || moi.pe < moi.cout_indice }, 'Demander un indice');
-      dem.addEventListener('click', () => envoyer({ type: 'enq_indice' }));
-      const ach = el('button', { type: 'button', className: 'discret', disabled: plein },
-        'Acheter (' + etat.gorgees_achat + ' ' + etat.unite + (etat.gorgees_achat > 1 ? 's' : '') + ')');
-      ach.addEventListener('click', () => {
-        if (confirm('Acheter un indice contre ' + etat.gorgees_achat + ' ' + etat.unite + (etat.gorgees_achat > 1 ? 's' : '') + ' ?')) envoyer({ type: 'enq_acheter' });
-      });
-      l.append(dem, ach);
-      t.appendChild(l);
-      t.appendChild(el('p', { style: 'margin-top:8px;font-size:0.85rem' }, etat.dossier_epuise
-        ? 'Le dossier est épuisé : plus aucun indice à distribuer.'
-        : 'Gagne des PE en gagnant aux jeux de la soirée : ' + etat.jeux.map((x) => (Soiree.JEUX[x] || {}).titre || x).join(', ') + '.'));
+      const r = el('button', { type: 'button', className: 'discret bouton-role' }, '🎭 Rôle');
+      r.title = 'Maintiens appuyé';
+      brancherRole(r);
+      elEtat.appendChild(r);
     }
+    const nonLus = (moi.archive || []).filter((e) => !e.lu).length;
+    const o = onglets('enquete', [
+      { id: 'plan', ico: '🗺️', titre: 'Plan' },
+      { id: 'indices', ico: '📜', titre: 'Indices', pastille: nonLus || null },
+      { id: 'notes', ico: '📝', titre: 'Notes' },
+      { id: 'accuser', ico: '⚖️', titre: 'Accuser' },
+      { id: 'fil', ico: pack.narrateur.icone, titre: pack.narrateur.nom },
+    ]);
+    if (!moi.inscrit && (o === 'indices' || o === 'notes' || o === 'accuser')) {
+      carte().appendChild(el('p', {}, 'Tu n’es pas inscrit à cette enquête : tu peux suivre, mais pas jouer.'));
+    } else ({ plan: ongletPlan, indices: ongletIndices, notes: ongletNotes, accuser: ongletAccuser, fil: ongletFil }[o])();
 
-    // Nouveaux plis (lecture libre, une seule fois)
-    (moi.archive || []).filter((e) => !e.lu).forEach((e) => {
-      const c = carte();
-      c.classList.add('pli');
-      c.appendChild(el('h2', {}, '📜 Un pli pour toi'));
-      c.appendChild(el('p', {}, e.source + ' · reçu à ' + heure(e.recu_a) + '. Tu peux le lire librement une fois ; ensuite il ira dans ton archive.'));
-      const b = el('button', { type: 'button' }, 'Ouvrir le pli');
-      b.style.marginTop = '10px';
-      b.addEventListener('click', () => envoyer({ type: 'enq_lire', id: e.id }));
-      c.appendChild(b);
-    });
-
-    carteRole();
-    if (moi.inscrit) carteCarnet();
-    if (moi.inscrit) carteArchive(serveurMaintenant);
-    carteFil();
-
-    clearInterval(minuteurCompte);
+    clearInterval(minuteurSec);
     const maj = () => {
-      const reste = Math.max(0, etat.fin_a - serveurMaintenant());
-      const h = Math.floor(reste / 3600), m = Math.floor((reste % 3600) / 60), sec = Math.floor(reste % 60);
-      compte.textContent = (h ? h + ':' : '') + String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
-      document.querySelectorAll('[data-relire]').forEach(majRelire);
-    };
-    const majRelire = (b) => {
-      const reste = Math.ceil((moi.consultation_possible_a || 0) - serveurMaintenant());
-      if (reste > 0) {
-        b.disabled = true;
-        b.textContent = 'Relire dans ' + Math.floor(reste / 60) + ':' + String(reste % 60).padStart(2, '0');
-      } else {
-        b.disabled = false;
-        b.textContent = 'Relire (' + etat.gorgees_consultation + ' ' + etat.unite + ')';
-      }
+      chrono.textContent = mmss(etat.fin_a - serveurMaintenant());
+      document.querySelectorAll('[data-relire]').forEach((b) => {
+        const reste = (moi.consultation_possible_a || 0) - serveurMaintenant();
+        b.disabled = reste > 0;
+        b.textContent = reste > 0 ? 'Relire dans ' + mmss(reste) : 'Relire (' + unite(etat.gorgees_consultation) + ')';
+      });
+      document.querySelectorAll('[data-accuser]').forEach((b) => {
+        const reste = (moi.prochaine_accusation_a || 0) - serveurMaintenant();
+        const complet = accusation.lieu && accusation.arme && accusation.suspect;
+        b.disabled = reste > 0 || !complet;
+        b.textContent = reste > 0 ? 'Attendre ' + mmss(reste) : 'Accuser';
+      });
     };
     maj();
-    minuteurCompte = setInterval(maj, 1000);
+    minuteurSec = setInterval(maj, 1000);
   }
 
-  function heure(t) {
-    const d = new Date(t * 1000);
-    return String(d.getHours()).padStart(2, '0') + 'h' + String(d.getMinutes()).padStart(2, '0');
-  }
-
-  // ---------------- Carnet (local, jamais envoyé au serveur) ----------------
+  // --- Carnet local (jamais envoyé au serveur) ---
   // Il sert à noter ce qu'on a lu et ce que les autres ont DIT : tout y est
   // modifiable, il ne prouve donc rien. Seule l'archive fait foi.
   function cleCarnet() { return 'shield.carnet.' + s.code + '.' + Math.round(etat.ouverture_fin_a || 0); }
@@ -596,36 +653,140 @@
     catch (e) { return { etats: {}, notes: [] }; }
   }
   function ecrireCarnet(c) { try { localStorage.setItem(cleCarnet(), JSON.stringify(c)); } catch (e) { /* tant pis */ } }
+  const ETATS = ['', 'elimine', 'suspect'];
+  function basculer(cle) {
+    const c = lireCarnet();
+    const suivant = ETATS[(ETATS.indexOf(c.etats[cle] || '') + 1) % ETATS.length];
+    if (suivant) c.etats[cle] = suivant; else delete c.etats[cle];
+    ecrireCarnet(c);
+    return suivant;
+  }
 
-  function carteCarnet() {
+  // --- Plan SVG : les lieux du pack, cliquables ---
+  // mode 'carnet' : un appui change l'état (inconnu, éliminé, suspect) ;
+  // mode 'accuser' : un appui choisit le lieu ; mode 'fin' : le lieu du crime s'allume.
+  const SVG = 'http://www.w3.org/2000/svg';
+  function svg(balise, attrs) {
+    const e = document.createElementNS(SVG, balise);
+    Object.entries(attrs || {}).forEach(([k, v]) => e.setAttribute(k, v));
+    return e;
+  }
+  function plan(mode, surChoix) {
     const carnet = lireCarnet();
-    const c = carte('Ton carnet');
-    c.classList.add('carnet');
-    c.appendChild(el('p', { style: 'font-size:0.85rem' }, 'Touche un nom pour le marquer : éliminé, puis suspect, puis inconnu. Ton carnet reste sur ton téléphone ; il ne prouve rien.'));
-    const ETATS = ['', 'elimine', 'suspect'];
-    const groupe = (titreG, cat, elements) => {
-      c.appendChild(el('div', { className: 'etiquette' }, titreG));
-      const l = el('div', { className: 'liste-elements' });
-      elements.forEach(([id, libelle]) => {
-        const cle = cat + ':' + id;
-        const span = el('span', { className: carnet.etats[cle] || '' }, libelle);
-        span.addEventListener('click', () => {
-          const c2 = lireCarnet();
-          const suivant = ETATS[(ETATS.indexOf(c2.etats[cle] || '') + 1) % ETATS.length];
-          if (suivant) c2.etats[cle] = suivant; else delete c2.etats[cle];
-          ecrireCarnet(c2);
-          span.className = suivant;
+    const racine = svg('svg', { viewBox: pack.plan.vue, class: 'plan' + (mode === 'accuser' ? ' petit' : ''), role: 'img', 'aria-label': 'Plan : ' + pack.nom });
+    const defs = svg('defs');
+    const motif = svg('pattern', { id: 'hachures', width: 8, height: 8, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' });
+    motif.appendChild(svg('rect', { width: 8, height: 8, fill: 'rgba(0,0,0,0.35)' }));
+    motif.appendChild(svg('line', { x1: 0, y1: 0, x2: 0, y2: 8, stroke: 'rgba(243,230,207,0.12)', 'stroke-width': 3 }));
+    defs.appendChild(motif);
+    racine.appendChild(defs);
+    const [vx, vy, vw, vh] = pack.plan.vue.split(' ').map(Number);
+    racine.appendChild(svg('rect', { x: vx + 3, y: vy + 3, width: vw - 6, height: vh - 6, rx: 14, class: 'murs' }));
+    pack.lieux.forEach((l) => {
+      const [x, y, w, h] = pack.plan.zones[l.id];
+      const ouvert = etat.lieux.includes(l.id);
+      let classe = 'zone';
+      if (!ouvert) classe += ' fermee';
+      else if (mode === 'fin') { if (etat.fin.solution.lieu === l.id) classe += ' crime'; else classe += ' elimine'; }
+      else if (mode === 'accuser') { if (accusation.lieu === l.id) classe += ' choisi'; else if (carnet.etats['lieu:' + l.id]) classe += ' ' + carnet.etats['lieu:' + l.id]; }
+      else if (carnet.etats['lieu:' + l.id]) classe += ' ' + carnet.etats['lieu:' + l.id];
+      const g = svg('g', { class: classe });
+      g.dataset.lieu = l.id;
+      g.appendChild(svg('rect', { x, y, width: w, height: h, rx: 10 }));
+      g.appendChild(svg('line', { x1: x + 8, y1: y + 8, x2: x + w - 8, y2: y + h - 8, class: 'barre' }));
+      const ico = svg('text', { x: x + w / 2, y: y + h / 2 - 4, class: 'ico' }); ico.textContent = l.icone || '';
+      const nom = svg('text', { x: x + w / 2, y: y + h / 2 + 16 }); nom.textContent = ouvert ? l.nom : 'Fermé';
+      g.append(ico, nom);
+      if (ouvert && mode !== 'fin') {
+        g.addEventListener('click', () => {
+          if (mode === 'accuser') surChoix(l.id);
+          else { const etatZone = basculer('lieu:' + l.id); g.setAttribute('class', 'zone' + (etatZone ? ' ' + etatZone : '')); }
         });
-        l.appendChild(span);
+      }
+      racine.appendChild(g);
+    });
+    return racine;
+  }
+  function jetons(cat, elements, mode, choisi, surChoix) {
+    const carnet = lireCarnet();
+    const l = el('div', { className: 'jetons' });
+    elements.forEach(([id, libelle]) => {
+      const cle = cat + ':' + id;
+      const b = el('button', { type: 'button', className: mode === 'accuser' && choisi === id ? 'choisi' : (carnet.etats[cle] || '') }, libelle);
+      b.dataset[cat] = id;
+      b.addEventListener('click', () => {
+        if (mode === 'accuser') surChoix(id);
+        else b.className = basculer(cle);
       });
-      c.appendChild(l);
-    };
-    groupe('Suspects', 'suspect', etat.joueurs.map((x) => { const p = portrait(x.portrait); return [x.nom, (p ? p.icone + ' ' : '') + x.nom]; }));
-    groupe('Lieux', 'lieu', etat.lieux.map((id) => [id, element('lieux', id)]));
-    groupe('Armes', 'arme', etat.armes.map((id) => { const a = pack.armes.find((x) => x.id === id); return [id, (a ? a.icone + ' ' : '') + element('armes', id)]; }));
+      l.appendChild(b);
+    });
+    return l;
+  }
+  const listeSuspects = () => etat.joueurs.map((x) => [x.nom, joueurAvecIcone(x.nom)]);
+  const listeArmes = () => etat.armes.map((id) => { const a = trouver('armes', id); return [id, (a ? a.icone + ' ' : '') + element('armes', id)]; });
 
-    c.appendChild(el('div', { className: 'etiquette' }, 'Notes'));
-    const zone = el('textarea', { id: 'note-texte', placeholder: 'Ce que tu as lu, ce qu’on t’a dit…', maxLength: 300 });
+  function ongletPlan() {
+    ecran.appendChild(plan('carnet'));
+    const c = carte();
+    c.appendChild(el('div', { className: 'etiquette' }, 'Suspects'));
+    c.appendChild(jetons('suspect', listeSuspects(), 'carnet'));
+    c.appendChild(el('div', { className: 'etiquette' }, 'Armes'));
+    c.appendChild(jetons('arme', listeArmes(), 'carnet'));
+    c.appendChild(el('div', { className: 'legende' }, 'Touche un lieu, un suspect ou une arme : éliminé, puis suspect, puis inconnu. Ton carnet reste sur ton téléphone.'));
+  }
+
+  function ongletIndices() {
+    const t = carte();
+    t.appendChild(el('p', {}, 'Un indice : ' + moi.cout_indice + ' PE · ' + moi.indices_heure + '/' + moi.indices_heure_max + ' cette heure.'));
+    const l = el('div', { className: 'ligne' }); l.style.marginTop = '8px';
+    const plein = moi.indices_heure >= moi.indices_heure_max || etat.dossier_epuise;
+    const dem = el('button', { type: 'button', disabled: plein || moi.pe < moi.cout_indice }, 'Demander un indice');
+    dem.addEventListener('click', () => envoyer({ type: 'enq_indice' }));
+    const ach = el('button', { type: 'button', className: 'discret', disabled: plein }, 'Acheter (' + unite(etat.gorgees_achat) + ')');
+    ach.addEventListener('click', () => { if (confirm('Acheter un indice contre ' + unite(etat.gorgees_achat) + ' ?')) envoyer({ type: 'enq_acheter' }); });
+    l.append(dem, ach);
+    t.appendChild(l);
+    if (etat.dossier_epuise) t.appendChild(el('p', { style: 'margin-top:8px' }, 'Le dossier est épuisé : plus aucun indice à distribuer.'));
+
+    (moi.archive || []).filter((e) => !e.lu).forEach((e) => {
+      const c = carte('📜 Un pli pour toi');
+      c.classList.add('pli');
+      c.appendChild(el('p', {}, e.source + ' · reçu à ' + heure(e.recu_a) + '. Lecture libre une fois ; ensuite il ira dans ton archive.'));
+      const b = el('button', { type: 'button' }, 'Ouvrir le pli');
+      b.style.marginTop = '8px';
+      b.addEventListener('click', () => envoyer({ type: 'enq_lire', id: e.id }));
+      c.appendChild(b);
+    });
+
+    const lus = (moi.archive || []).filter((e) => e.lu);
+    const a = carte('Ton archive');
+    if (!lus.length) {
+      a.appendChild(el('p', {}, 'Aucun indice rangé. Relire un indice demande d’attendre ' + Math.round(etat.timer_consultation / 60) +
+        ' min depuis la dernière consultation, et coûte ' + unite(etat.gorgees_consultation) + '.'));
+      return;
+    }
+    a.appendChild(el('p', { style: 'margin-bottom:4px' }, 'Seule preuve possible : montre ton écran en relisant. Même prix devant les autres.'));
+    lus.slice().reverse().forEach((e) => {
+      const ligne = el('div', { className: 'archive-ligne' });
+      const txt = el('div', { className: 'txt' }, 'Indice n°' + e.id);
+      if (e.tampon) txt.appendChild(el('span', { className: 'tampon' }, e.tampon === 'authentique' ? 'Authentique' : 'Falsifié'));
+      txt.appendChild(el('span', {}, e.source + ' · ' + heure(e.recu_a)));
+      const b = el('button', { type: 'button', className: 'discret' });
+      b.dataset.relire = '1';
+      b.addEventListener('click', () => {
+        if (confirm('Relire cet indice ? Ça coûte ' + unite(etat.gorgees_consultation) + ' et relance le chrono.')) envoyer({ type: 'enq_consulter', id: e.id });
+      });
+      ligne.append(txt, b);
+      a.appendChild(ligne);
+    });
+  }
+
+  function ongletNotes() {
+    const carnet = lireCarnet();
+    const c = carte();
+    c.appendChild(el('p', {}, 'Ce que tu as lu, ce qu’on t’a dit. Ton carnet reste sur ton téléphone ; il ne prouve rien.'));
+    const zone = el('textarea', { id: 'note-texte', placeholder: 'Ta note…', maxLength: 300 });
+    zone.style.marginTop = '8px';
     c.appendChild(zone);
     const l = el('div', { className: 'ligne' }); l.style.marginTop = '8px';
     const source = el('input', { type: 'text', id: 'note-source', placeholder: 'dit par… (facultatif)', maxLength: 20 });
@@ -638,6 +799,7 @@
       c2.notes.unshift({ texte, source: source.value.trim(), t: Date.now() });
       ecrireCarnet(c2);
       zone.value = ''; source.value = '';
+      document.activeElement && document.activeElement.blur();
       rendu = ''; afficher();
     });
     l.append(source, ajouter);
@@ -655,42 +817,90 @@
     c.appendChild(liste);
   }
 
-  // ---------------- Archive officielle (infalsifiable) ----------------
-  function carteArchive() {
-    const lus = (moi.archive || []).filter((e) => e.lu);
-    const c = carte('Ton archive');
-    if (!lus.length) {
-      c.appendChild(el('p', {}, 'Aucun indice rangé pour l’instant. Relire un indice demande d’attendre ' +
-        Math.round(etat.timer_consultation / 60) + ' min depuis la dernière consultation, et coûte ' +
-        etat.gorgees_consultation + ' ' + etat.unite + '.'));
-      return;
-    }
-    c.appendChild(el('p', { style: 'font-size:0.85rem;margin-bottom:6px' }, 'Seule preuve possible : montre ton écran en relisant. Chaque relecture coûte la même chose, même devant les autres.'));
-    lus.slice().reverse().forEach((e) => {
-      const l = el('div', { className: 'archive-ligne' });
-      const txt = el('div', { className: 'txt' }, 'Indice n°' + e.id);
-      if (e.tampon) txt.appendChild(el('span', { className: 'tampon' }, e.tampon === 'authentique' ? 'Authentique' : 'Falsifié'));
-      txt.appendChild(el('span', {}, e.source + ' · ' + heure(e.recu_a)));
-      const b = el('button', { type: 'button', className: 'discret' });
-      b.dataset.relire = '1';
-      b.addEventListener('click', () => {
-        if (confirm('Relire cet indice ? Ça coûte ' + etat.gorgees_consultation + ' ' + etat.unite + ' et relance le chrono.')) envoyer({ type: 'enq_consulter', id: e.id });
-      });
-      l.append(txt, b);
-      c.appendChild(l);
+  // --- Accusation : on touche le lieu sur le plan, puis l'arme et le personnage ---
+  function ongletAccuser() {
+    const choisir = (cle) => (id) => { accusation[cle] = accusation[cle] === id ? null : id; rendu = ''; afficher(); };
+    ecran.appendChild(plan('accuser', choisir('lieu')));
+    const c = carte();
+    c.appendChild(el('div', { className: 'etiquette' }, 'Avec quelle arme ?'));
+    c.appendChild(jetons('arme', listeArmes(), 'accuser', accusation.arme, choisir('arme')));
+    c.appendChild(el('div', { className: 'etiquette' }, 'Qui ?'));
+    c.appendChild(jetons('suspect', listeSuspects(), 'accuser', accusation.suspect, choisir('suspect')));
+    const complet = accusation.lieu && accusation.arme && accusation.suspect;
+    c.appendChild(el('p', { style: 'margin-top:8px' }, 'On apprend combien d’éléments sont justes, pas lesquels. ' +
+      'Échecs cumulés : ' + etat.echecs + '/' + etat.seuil_patience + ' ; au-delà, ' + pack.vocabulaire.tueur + ' gagne.'));
+    const barre = el('div', { className: 'barre-accuser' });
+    barre.appendChild(el('div', { className: 'resume' }, complet
+      ? accusation.suspect + ', ' + elementLe('lieux', accusation.lieu) + ', ' + elementLe('armes', accusation.arme) + '.'
+      : 'Touche un lieu, une arme, un personnage.'));
+    const b = el('button', { type: 'button' }, 'Accuser');
+    b.dataset.accuser = '1';
+    b.addEventListener('click', () => {
+      if (!complet) return;
+      if (!confirm('Accuser ' + accusation.suspect + ' ? Si tu te trompes : ' + unite(prochainesGorgees()) + ' et un délai doublé.')) return;
+      envoyer({ type: 'enq_accuser', suspect: accusation.suspect, arme: accusation.arme, lieu: accusation.lieu });
     });
+    barre.appendChild(b);
+    if ((moi.accusations || []).length) {
+      const h = carte('Tes accusations');
+      moi.accusations.slice().reverse().forEach((x) => {
+        h.appendChild(el('p', {}, heure(x.t) + ' · ' + x.suspect + ', ' + element('lieux', x.lieu) + ', ' + element('armes', x.arme) +
+          ' : ' + x.justes + ' juste' + (x.justes > 1 ? 's' : '') + ' sur 3'));
+      });
+    }
+    ecran.appendChild(barre);
+  }
+  function prochainesGorgees() {
+    const echecs = (moi.accusations || []).filter((x) => x.justes < 3).length;
+    return [2, 4, 6][Math.min(echecs, 2)];
   }
 
-  // ---------------- Fil du narrateur ----------------
-  function carteFil() {
-    const c = carte(pack.narrateur.icone + ' ' + pack.narrateur.nom);
+  function ongletFil() {
+    const c = carte();
     c.classList.add('fil');
     const j = (etat.journal || []).slice().reverse();
     if (!j.length) c.appendChild(el('p', {}, 'Rien à signaler pour l’instant.'));
     j.forEach((x) => { const p = el('p'); p.append(el('small', {}, heure(x.t)), x.texte); c.appendChild(p); });
   }
 
-  // ---------------- Lettre (lecture d'un indice) et alertes ----------------
+  // ---------------- Fin ----------------
+  function ecranFin() {
+    clearInterval(minuteurSec);
+    titre(pack.nom, 'Enquête close');
+    const f = etat.fin;
+    const o = onglets('fin', [{ id: 'recit', ico: '📖', titre: 'Dénouement' }, { id: 'recap', ico: '📋', titre: 'Récapitulatif' }]);
+    if (o === 'recit') {
+      ecran.appendChild(plan('fin'));
+      const majuscule = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+      const c = carte(majuscule(f.vainqueur === 'tueur' ? pack.vocabulaire.tueur + ' l’emporte' : pack.vocabulaire.detective + ' : ' + f.detective));
+      const arme = trouver('armes', f.solution.arme);
+      c.appendChild(el('p', { className: 'resume' }, joueurAvecIcone(f.solution.tueur) + ' · ' + (arme ? arme.icone + ' ' : '') +
+        element('armes', f.solution.arme) + ' · ' + element('lieux', f.solution.lieu)));
+      c.appendChild(el('p', { className: 'recit' }, f.recit));
+      (f.recap.gorgees || []).forEach((g) => c.appendChild(el('p', { style: 'margin-top:8px;color:var(--texte)' }, '🍺 ' + g.qui + ' ' + g.action + ' ' + unite(g.nombre) + '.')));
+    } else {
+      const a = carte('Accusations');
+      if (!f.recap.accusations.length) a.appendChild(el('p', {}, 'Aucune accusation.'));
+      else {
+        const t = el('table', { className: 'recap' });
+        t.appendChild(el('tr')).append(el('th', {}, 'Qui'), el('th', {}, 'Accusation'), el('th', {}, 'Justes'));
+        f.recap.accusations.forEach((x) => {
+          const tr = el('tr');
+          tr.append(el('td', {}, x.nom + (x.par_le_tueur ? ' (bluff)' : '')),
+            el('td', {}, x.suspect + ', ' + element('lieux', x.lieu) + ', ' + element('armes', x.arme)), el('td', {}, x.justes + '/3'));
+          t.appendChild(tr);
+        });
+        a.appendChild(t);
+      }
+      const i = carte('Indices reçus');
+      const t = el('table', { className: 'recap' });
+      t.appendChild(el('tr')).append(el('th', {}, 'Joueur'), el('th', {}, 'Reçus'), el('th', {}, 'Faux'));
+      f.recap.indices.forEach((x) => { const tr = el('tr'); tr.append(el('td', {}, joueurAvecIcone(x.nom)), el('td', {}, String(x.recus)), el('td', {}, String(x.faux))); t.appendChild(tr); });
+      i.appendChild(t);
+    }
+  }
+
+  // ---------------- Lettre, verdict et alertes ----------------
   function montrerLettre(msg) {
     const voile = el('div', { className: 'voile' });
     const l = el('div', { className: 'lettre' });
@@ -706,7 +916,19 @@
     voile.appendChild(l);
     document.body.appendChild(voile);
   }
-
+  function montrerVerdict(msg) {
+    accusation.lieu = accusation.arme = accusation.suspect = null;
+    const voile = el('div', { className: 'voile' });
+    const l = el('div', { className: 'lettre' });
+    l.appendChild(el('div', { className: 'corps' }, msg.justes + ' élément' + (msg.justes > 1 ? 's' : '') + ' juste' + (msg.justes > 1 ? 's' : '') + ' sur 3.'));
+    l.appendChild(el('div', { className: 'meta' }, msg.suspect + ', ' + element('lieux', msg.lieu) + ', ' + element('armes', msg.arme) + '.'));
+    l.appendChild(el('div', { className: 'avis' }, 'Lesquels ? À toi de le déduire. Prochaine accusation à ' + heure(msg.prochaine_a) + '.'));
+    const b = el('button', { type: 'button' }, 'Compris');
+    b.addEventListener('click', () => voile.remove());
+    l.appendChild(b);
+    voile.appendChild(l);
+    document.body.appendChild(voile);
+  }
   let minuteurToast = null;
   function toast(texte, genre, duree) {
     let t = document.getElementById('toast');
@@ -716,14 +938,6 @@
     t.style.display = 'block';
     clearTimeout(minuteurToast);
     minuteurToast = setTimeout(() => { t.style.display = 'none'; }, duree || 4000);
-  }
-
-  function ecranFin() {
-    clearInterval(minuteurCompte);
-    titre(pack.nom, 'Enquête close');
-    const f = etat.fin;
-    const c = carte(f.vainqueur === 'tueur' ? pack.vocabulaire.tueur + ' l’emporte' : pack.vocabulaire.detective + ' : ' + f.detective);
-    c.appendChild(el('p', { className: 'recit' }, f.recit));
   }
 
   seConnecter();
