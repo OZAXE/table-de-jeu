@@ -276,7 +276,7 @@
 <div id="modale-regles" class="cache">
   <div class="modale">
     <h2>Règles de BeerBattle</h2>
-    <p>Chaque joueur a un verre de 20 gorgées. On s'attaque pour faire boire les autres : éliminé à 20. Le dernier debout gagne. De 3 à 5 joueurs sur un plateau 6×6 de cartes face cachée.</p>
+    <p>Chaque joueur a un verre de 20 gorgées. On s'attaque pour faire boire les autres : éliminé à 20. Le dernier debout gagne. De 3 à 8 joueurs sur un plateau de cartes face cachée (6×6, ou 8×8 au-delà de 5).</p>
     <h3>Un tour : une seule action</h3>
     <ul>
       <li>Se déplacer (1 case gratuite, ou carte déplacement).</li>
@@ -352,9 +352,11 @@ elModaleRegles.addEventListener('click', e => {
 // =====================================================================
 // CONSTANTES DE LA SCÈNE
 // =====================================================================
-const TAILLE = 6;             // plateau 6x6, comme BB_TAILLE cote serveur
-const CASE = 0.42;            // cote d'une case
-const DEMI = (TAILLE - 1) / 2 * CASE;   // du centre au centre de la case du bord
+// Plateau 6x6 jusqu'à 5 joueurs, 8x8 de 6 à 8 (le serveur envoie "taille").
+// Le damier garde la même taille sur la table : les cases rétrécissent.
+const COTE_PLATEAU = 6 * 0.42;
+let TAILLE = 6;
+let CASE = COTE_PLATEAU / TAILLE;   // côté d'une case
 const PLATEAU_Y = 0.015;      // les cases reposent juste au-dessus du feutre
 
 const R_TABLE = 2.35;         // rayon du plateau de table
@@ -603,7 +605,7 @@ function creerTextureFace(carte) {
 }
 
 const TEXTURE_DOS = creerTextureDos();
-const GEO_CARTE = new THREE.BoxGeometry(CASE * 0.74, 0.014, CASE * 0.94);
+let GEO_CARTE = new THREE.BoxGeometry(CASE * 0.74, 0.014, CASE * 0.94);
 const MAT_TRANCHE = new THREE.MeshStandardMaterial({ color: 0xe8e0cc, roughness: 0.8 });
 
 // Une carte posée : dos visible sur le dessus. L'ordre des matériaux d'une
@@ -646,6 +648,22 @@ function retirerCarte(l, c) {
     },
     fin: () => { groupeCartes.remove(m); },
   });
+}
+
+// Nouvelle partie à une autre taille de table : on refait le damier (cases
+// cliquables, cartes) à la bonne taille. Les pions et les verres se
+// replacent d'eux-mêmes au prochain état.
+function redimensionnerPlateau(t) {
+  if (!Number.isInteger(t) || t === TAILLE) return;
+  viderPlateau();
+  while (groupeCases.children.length) groupeCases.remove(groupeCases.children[0]);
+  cellules.length = 0;
+  TAILLE = t;
+  CASE = COTE_PLATEAU / TAILLE;
+  GEO_CARTE = new THREE.BoxGeometry(CASE * 0.74, 0.014, CASE * 0.94);
+  cartesMesh.length = 0;
+  for (let l = 0; l < TAILLE; l++) cartesMesh.push(new Array(TAILLE).fill(null));
+  creerCases();
 }
 
 function majCartesPlateau(plateau) {
@@ -801,7 +819,8 @@ function messageCentral(gros, petit, couleur, duree) {
 // =====================================================================
 // PIONS : un joueur sur le plateau
 // =====================================================================
-const COULEURS = [0xe0563b, 0x4fb3d4, 0xe0a23b, 0xb06fd4, 0xe8e2d0];
+// Une couleur par joueur, jusqu'à 8 (rose, citron vert et bleu roi au-delà de 5).
+const COULEURS = [0xe0563b, 0x4fb3d4, 0xe0a23b, 0xb06fd4, 0xe8e2d0, 0xe86aa6, 0xb8e04a, 0x4a6ee0];
 const pions = [];    // pions[i] = { groupe, corps, tete, etiquette, mats, ... }
 
 function creerPion(couleur) {
@@ -1268,7 +1287,7 @@ function bbInitialiser(nbJoueurs) {
   const paquet = melanger(bbCreerPaquet());
   // 54 cartes en tout : 36 sur le plateau, le reste dans les mains. À 6
   // joueurs (24 + 36 = 60) il n'y en aurait plus assez — c'est pour ça que
-  // le serveur plafonne la table à 5.
+  // ce moteur local reste à 5 (le serveur passe en 8x8 au-delà).
   const maxCartes = nbJoueurs === 5 ? 3 : 4;
 
   let index = 0;
@@ -1704,7 +1723,10 @@ function clientRecevoir(msg) {
       break;
 
     case 'bb_etat':
-      quandLibre(() => appliquerEtat(normaliserEtat(msg)));
+      quandLibre(() => {
+        redimensionnerPlateau(msg.taille || (msg.plateau ? msg.plateau.length : TAILLE));
+        appliquerEtat(normaliserEtat(msg));
+      });
       break;
 
     case 'bb_ta_main':
@@ -2564,10 +2586,10 @@ let joueursSalon = [];
 let enPartie = false;
 let monJeton = null;
 
-// BeerBattle se joue de 3 à 5. Le plafond n'est pas décoratif : 54 cartes
-// en tout, 36 sur le plateau, il n'en resterait pas assez pour six mains.
+// BeerBattle en ligne se joue de 3 à 8 : jusqu'à 5, un paquet sur un
+// plateau 6x6 ; de 6 à 8, deux paquets sur un plateau 8x8 (voir le serveur).
 const JOUEURS_MIN = 3;
-const JOUEURS_MAX = 5;
+const JOUEURS_MAX = 8;
 
 // Le jeton permet de retrouver sa place après une coupure ou un rechargement.
 // localStorage peut lever (navigation privée, site data bloqué) : tout est gardé.
@@ -2953,7 +2975,7 @@ function panneauAttente() {
   code.textContent = codeSalon;
   p.appendChild(code);
 
-  p.appendChild(aide('Donne ce code aux autres pour qu’ils rejoignent. De 3 à 5 joueurs.'));
+  p.appendChild(aide('Donne ce code aux autres pour qu’ils rejoignent. De 3 à 8 joueurs.'));
 
   const lien = lienSalon(codeSalon);
   if (typeof QRious !== 'undefined') {
