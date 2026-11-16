@@ -2421,7 +2421,8 @@ if ('ResizeObserver' in window) new ResizeObserver(() => recadrer()).observe(elP
 if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) serveurChoisi = 'local';
 
 const salonDansUrl = new URLSearchParams(location.search).get('salon');
-if (salonDansUrl && /^[A-Za-z]{4}$/.test(salonDansUrl)) {
+// Code de table : ABCD (table 1 de la soirée) ou ABCD-2 ... ABCD-9.
+if (salonDansUrl && /^[A-Za-z]{4}(-[2-9])?$/.test(salonDansUrl)) {
   if (monNom) {
     // Prénom déjà connu (soirée en cours, lien de l'accueil) : on rejoint
     // directement le salon, sans repasser par le panneau. Dans une soirée,

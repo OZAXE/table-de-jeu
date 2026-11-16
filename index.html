@@ -127,6 +127,16 @@
   .soiree .etat b { color: var(--texte); font-weight: 600; }
   .soiree .code-grand { font-size: 1.6rem; font-weight: 800; letter-spacing: 0.25em; }
   #soiree-contenu { margin-top: 10px; }
+  .soiree .tables { display: grid; gap: 8px; margin: 12px 0 2px; }
+  .soiree .table {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px;
+    background: rgba(0, 0, 0, 0.22); border: 1px solid var(--bord);
+  }
+  .soiree .table.moi { border-color: rgba(122, 162, 214, 0.55); background: rgba(122, 162, 214, 0.1); }
+  .soiree .table .texte { flex: 1; min-width: 0; display: grid; gap: 2px; font-size: 0.9rem; }
+  .soiree .table .texte span { color: var(--texte-doux); overflow-wrap: anywhere; }
+  .soiree .table button { padding: 9px 12px; font-size: 0.85rem; }
+  .soiree .table button:disabled { opacity: 0.5; cursor: default; }
   .soiree .erreur { color: #f2a7a7; font-size: 0.88rem; margin-top: 8px; }
   .soiree .erreur:empty { display: none; }
 
@@ -454,7 +464,7 @@
     }
 
     async function avecSoiree(s) {
-      majLiens(s.code);
+      majLiens(s.table);
       contenu.textContent = '';
       const l1 = el('div', { className: 'ligne' });
       l1.appendChild(el('span', { className: 'code-grand' }, s.code));
@@ -462,6 +472,8 @@
       etat.style.flex = '1 1 160px';
       l1.appendChild(etat);
       contenu.appendChild(l1);
+      const liste = el('div', { className: 'tables' });
+      contenu.appendChild(liste);
 
       const l2 = el('div', { className: 'ligne' });
       const partager = el('button', { type: 'button', className: 'discret' }, 'Partager le code');
@@ -473,41 +485,84 @@
           else { await navigator.clipboard.writeText(texte + ' : ' + url); partager.textContent = 'Copié'; }
         } catch (e) { /* partage annulé */ }
       });
+      // Une table a 8 places : au-delà, on en ouvre une autre, avec son jeu.
+      const nouvelle = el('button', { type: 'button', className: 'discret' }, 'Nouvelle table');
+      nouvelle.addEventListener('click', async () => {
+        try {
+          const r = await Soiree.nouvelleTable(s.code, s.serveur);
+          if (!r.code) { erreur.textContent = r.message || 'Impossible d\'ouvrir une table.'; return; }
+          Soiree.memoriser(r.code, s.serveur);
+          erreur.textContent = '';
+          await afficher();
+          etatTable('Table ' + Soiree.numeroTable(r.code) + ' ouverte : choisis son jeu ci-dessous.');
+        } catch (e) { erreur.textContent = 'Serveur injoignable.'; }
+      });
       const quitter = el('button', { type: 'button', className: 'discret' }, 'Quitter la soirée');
       quitter.addEventListener('click', () => { Soiree.oublier(); afficher(); });
       l2.appendChild(partager);
+      l2.appendChild(nouvelle);
       l2.appendChild(quitter);
       contenu.appendChild(l2);
 
+      let info;
       try {
-        const info = await Soiree.info(s.code, s.serveur);
-        if (!info.existe) {
-          etat.textContent = 'Cette soirée est terminée.';
-          return;
-        }
-        const n = info.joueurs.length;
-        const j = info.jeu && Soiree.JEUX[info.jeu];
-        etat.textContent = '';
-        if (j) {
-          etat.append(j.icone + ' En cours : ');
-          etat.appendChild(el('b', {}, j.titre));
-          const aller = el('button', { type: 'button' }, 'Rejoindre la partie');
-          aller.addEventListener('click', () => {
-            if (prenomOk()) location.href = Soiree.lienJeu(info.jeu, s.code);
-          });
-          l2.insertBefore(aller, l2.firstChild);
-        } else {
-          etat.append('Salle d\'attente : choisis un jeu ci-dessous.');
-        }
-        if (n) etat.append(' · ' + n + ' joueur' + (n > 1 ? 's' : ''));
+        info = await Soiree.infoSoiree(s.code, s.serveur);
       } catch (e) {
         etat.textContent = 'Serveur injoignable pour le moment.';
+        return;
       }
+      if (!info.existe) { etat.textContent = 'Cette soirée est terminée.'; return; }
+      const tables = info.tables.slice();
+      // Ma table a pu être libérée (tout le monde parti un moment) : elle
+      // reste ma table, elle se rouvrira quand j'y retournerai.
+      if (!tables.some((t) => t.code === s.table)) {
+        tables.push({ code: s.table, numero: Soiree.numeroTable(s.table), jeu: null, joueurs: [] });
+        tables.sort((a, b) => a.numero - b.numero);
+      }
+      const total = tables.reduce((n, t) => n + t.joueurs.length, 0);
+      etat.textContent = total + ' joueur' + (total > 1 ? 's' : '') +
+        (tables.length > 1 ? ' · ' + tables.length + ' tables' : '');
+
+      tables.forEach((t) => {
+        const moi = t.code === s.table;
+        const j = t.jeu && Soiree.JEUX[t.jeu];
+        const ligne = el('div', { className: 'table' + (moi ? ' moi' : '') });
+        const texte = el('div', { className: 'texte' });
+        const titre = el('b', {}, 'Table ' + t.numero + (moi ? ' · ta table' : ''));
+        texte.appendChild(titre);
+        texte.appendChild(el('span', {}, (j ? j.icone + ' ' + j.titre : 'Salle d\'attente') +
+          (t.joueurs.length ? ' · ' + t.joueurs.join(', ') : '')));
+        ligne.appendChild(texte);
+        if (moi && j) {
+          const aller = el('button', { type: 'button' }, 'Rejoindre la partie');
+          aller.addEventListener('click', () => { if (prenomOk()) location.href = Soiree.lienJeu(t.jeu, t.code); });
+          ligne.appendChild(aller);
+        } else if (!moi && t.joueurs.length >= 8) {
+          // 8 places par table : au-delà, on ouvre une nouvelle table.
+          ligne.appendChild(el('button', { type: 'button', className: 'discret', disabled: true }, 'Complète'));
+        } else if (!moi) {
+          const asseoir = el('button', { type: 'button', className: 'discret' }, 'S\'asseoir ici');
+          asseoir.addEventListener('click', () => {
+            if (!prenomOk()) return;
+            Soiree.memoriser(t.code, s.serveur);
+            if (j) location.href = Soiree.lienJeu(t.jeu, t.code); else afficher();
+          });
+          ligne.appendChild(asseoir);
+        }
+        liste.appendChild(ligne);
+      });
+      if (!tables.find((t) => t.code === s.table).jeu) etatTable('Ta table est en salle d\'attente : choisis un jeu ci-dessous.');
+    }
+
+    function etatTable(texte) {
+      let n = contenu.querySelector('.note-table');
+      if (!n) { n = el('p', { className: 'etat note-table' }); n.style.marginTop = '10px'; contenu.appendChild(n); }
+      n.textContent = texte;
     }
 
     function afficher() {
       const s = Soiree.actuelle();
-      if (s) avecSoiree(s); else sansSoiree();
+      return s ? avecSoiree(s) : sansSoiree();
     }
     afficher();
     // Retour sur l'accueil (appli rouverte) : l'état de la soirée a pu changer.
