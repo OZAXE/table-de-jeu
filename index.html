@@ -137,6 +137,8 @@
   .soiree .table .texte span { color: var(--texte-doux); overflow-wrap: anywhere; }
   .soiree .table button { padding: 9px 12px; font-size: 0.85rem; }
   .soiree .table button:disabled { opacity: 0.5; cursor: default; }
+  .soiree .qr-soiree { display: grid; justify-items: center; gap: 8px; margin-top: 12px; text-align: center; }
+  .soiree .qr-soiree canvas { width: min(220px, 70vw); height: auto; border-radius: 14px; background: #f4f1ea; padding: 8px; }
   .soiree .bouton-enquete {
     border-radius: 12px; padding: 11px 16px; text-decoration: none; white-space: nowrap;
     background: #2a1216; color: #f3e6cf; border: 1px solid rgba(201, 162, 74, 0.45); font: 600 0.92rem 'Outfit', sans-serif;
@@ -385,6 +387,7 @@
     <footer class="pied">À consommer avec modération · Fait maison entre potes</footer>
   </main>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 <script src="commun/soiree.js"></script>
 <script>
   // --- La soirée : un prénom et un code de salon pour tous les jeux ---
@@ -480,14 +483,30 @@
       contenu.appendChild(liste);
 
       const l2 = el('div', { className: 'ligne' });
-      const partager = el('button', { type: 'button', className: 'discret' }, 'Partager le code');
-      partager.addEventListener('click', async () => {
-        const url = location.origin + location.pathname.replace(/[^/]*$/, '') + 'index.html';
-        const texte = 'Rejoins la soirée ' + s.code + ' sur SHIELD';
-        try {
-          if (navigator.share) await navigator.share({ title: 'SHIELD', text: texte, url });
-          else { await navigator.clipboard.writeText(texte + ' : ' + url); partager.textContent = 'Copié'; }
-        } catch (e) { /* partage annulé */ }
+      // QR code : le scanner ouvre l'accueil et fait rejoindre la soirée.
+      const partager = el('button', { type: 'button', className: 'discret' }, '📱 QR code');
+      partager.addEventListener('click', () => {
+        const ouvert = contenu.querySelector('.qr-soiree');
+        if (ouvert) { ouvert.remove(); partager.textContent = '📱 QR code'; return; }
+        partager.textContent = 'Masquer le QR';
+        const bloc = el('div', { className: 'qr-soiree' });
+        const url = lienSoiree(s.code);
+        if (typeof QRious !== 'undefined') {
+          const cv = el('canvas');
+          new QRious({ element: cv, value: url, size: 440, level: 'M', background: '#f4f1ea', foreground: '#0b1220' });
+          bloc.appendChild(cv);
+        }
+        bloc.appendChild(el('p', { className: 'etat' }, 'Scanne pour rejoindre la soirée ' + s.code + '.'));
+        const envoi = el('button', { type: 'button', className: 'discret' }, 'Envoyer le lien');
+        envoi.addEventListener('click', async () => {
+          const texte = 'Rejoins la soirée ' + s.code + ' sur SHIELD';
+          try {
+            if (navigator.share) await navigator.share({ title: 'SHIELD', text: texte, url });
+            else { await navigator.clipboard.writeText(texte + ' : ' + url); envoi.textContent = 'Lien copié'; }
+          } catch (e) { /* partage annulé */ }
+        });
+        bloc.appendChild(envoi);
+        l2.after(bloc);
       });
       // Une table a 8 places : au-delà, on en ouvre une autre, avec son jeu.
       const nouvelle = el('button', { type: 'button', className: 'discret' }, 'Nouvelle table');
@@ -526,7 +545,7 @@
         tables.sort((a, b) => a.numero - b.numero);
       }
       const total = tables.reduce((n, t) => n + t.joueurs.length, 0);
-      etat.textContent = total + ' joueur' + (total > 1 ? 's' : '') +
+      etat.textContent = (total ? total + ' joueur' + (total > 1 ? 's' : '') : 'Personne n’est encore assis') +
         (tables.length > 1 ? ' · ' + tables.length + ' tables' : '');
 
       tables.forEach((t) => {
@@ -570,6 +589,36 @@
       const s = Soiree.actuelle();
       return s ? avecSoiree(s) : sansSoiree();
     }
+
+    // Lien d'invitation : l'accueil avec le code de la soirée. Ouvert en
+    // fichier local (double-clic), on vise le site publié : un QR vers
+    // file:// ne mènerait nulle part sur le téléphone qui scanne.
+    function lienSoiree(code) {
+      const base = location.protocol === 'file:' ? 'https://ozaxe.github.io/table-de-jeu/index.html'
+        : location.origin + location.pathname.replace(/[^/]*$/, '') + 'index.html';
+      return base + '?soiree=' + encodeURIComponent(code);
+    }
+
+    // Arrivée par un QR code ou un lien : on rejoint la soirée tout de suite.
+    async function rejoindreParLien() {
+      const code = (new URLSearchParams(location.search).get('soiree') || '').toUpperCase();
+      if (!/^[A-Z]{4}$/.test(code)) return;
+      history.replaceState(null, '', location.pathname);
+      const actuelle = Soiree.actuelle();
+      if (actuelle && actuelle.code === code) return;
+      try {
+        const info = await Soiree.info(code, serveur);
+        if (!info.existe) { erreur.textContent = 'La soirée ' + code + ' est terminée.'; return; }
+        Soiree.memoriser(code, serveur);
+        if (!Soiree.nom()) {
+          erreur.textContent = 'Bienvenue dans la soirée ' + code + ' ! Entre ton prénom pour jouer.';
+          champPrenom.focus();
+        }
+      } catch (e) {
+        erreur.textContent = 'Serveur injoignable : réessaie dans un instant (il peut mettre 30 s à se réveiller).';
+      }
+    }
+    rejoindreParLien().then(afficher);
     afficher();
     // Retour sur l'accueil (appli rouverte) : l'état de la soirée a pu changer.
     document.addEventListener('visibilitychange', () => { if (!document.hidden) afficher(); });
