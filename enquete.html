@@ -157,7 +157,7 @@
   .zone-role { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none; border-radius: 18px; padding: 18px 14px; text-align: center; cursor: pointer;
     background: repeating-linear-gradient(45deg, rgba(201, 162, 74, 0.08) 0 12px, rgba(201, 162, 74, 0.02) 12px 24px); border: 1px dashed var(--bord); color: var(--doux); }
   .role-voile { position: fixed; inset: 0; z-index: 80; background: rgba(10, 4, 6, 0.96); display: none; place-items: center; padding: 24px; text-align: center; pointer-events: none; }
-  .role-voile.ouvert { display: grid; }
+  .role-voile.ouvert { display: grid; pointer-events: auto; }
   .role-voile .titre-role { font: 700 2rem/1.1 var(--titre); color: var(--accent); margin-bottom: 10px; }
   .role-voile.tueur .titre-role { color: #ff6b5e; }
   .role-voile p { color: var(--texte); font-size: 1.05rem; max-width: 420px; }
@@ -535,11 +535,14 @@
 
   // ---------------- Écrans ----------------
   let rendu = '';
+  let rendreApresRole = false;
+  let appuiRole = null;        // appui long en cours sur un bouton « Rôle »
   function afficher() {
     // On ne redessine pas un écran identique : un appui long ou une saisie
     // en cours ne doivent pas être interrompus.
     const cle = JSON.stringify([couches.includes('enq'), etat && Object.assign({}, etat, { maintenant: 0 }), moi, pack && pack.id, onglet]);
     if (cle === rendu) return;
+    if (appuiRole) { rendreApresRole = true; return; }   // on redessinera quand le doigt sera levé
     rendu = cle;
     const actif = document.activeElement && document.activeElement.id ? document.activeElement : null;
     const garde = actif ? { id: actif.id, valeur: actif.value, debut: actif.selectionStart, fin: actif.selectionEnd } : null;
@@ -804,31 +807,46 @@
     // Même zone, même geste pour tout le monde : rien ne distingue le tueur de loin.
     if (etat.phase === 'enquete') elRole.appendChild(el('div', { className: 'zone-dossier' }, 'Glisse le doigt jusqu’ici et lâche pour ouvrir ton dossier.'));
   }
+  // Un seul appui à la fois. Le doigt levé est écouté sur toute la page :
+  // si l'écran est redessiné pendant l'appui (le bouton remplacé sous le
+  // doigt), le rôle se recache quand même.
+  function surZoneDossier(e) {
+    const z = elRole.querySelector('.zone-dossier');
+    if (!z || !elRole.classList.contains('ouvert')) return false;
+    const r = z.getBoundingClientRect();
+    return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+  }
+  function finAppuiRole(e) {
+    if (!appuiRole) return;
+    clearTimeout(appuiRole.minuteur);
+    ['pointerup', 'pointercancel'].forEach((t) => window.removeEventListener(t, finAppuiRole, true));
+    window.removeEventListener('pointermove', bougerAppuiRole, true);
+    appuiRole = null;
+    const dossier = e && e.type === 'pointerup' && surZoneDossier(e);
+    elRole.classList.remove('ouvert');
+    if (rendreApresRole) { rendreApresRole = false; rendu = ''; afficher(); }
+    if (dossier) ouvrirDossier();
+  }
+  function bougerAppuiRole(e) {
+    const z = elRole.querySelector('.zone-dossier');
+    if (z) z.classList.toggle('survol', surZoneDossier(e));
+  }
   function brancherRole(cible) {
-    let m = null;
-    const surZone = (e) => {
-      const z = elRole.querySelector('.zone-dossier');
-      if (!z || !elRole.classList.contains('ouvert')) return false;
-      const r = z.getBoundingClientRect();
-      return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
-    };
-    const ouvrir = (e) => {
+    cible.addEventListener('pointerdown', (e) => {
       e.preventDefault();
+      finAppuiRole();
       try { cible.setPointerCapture(e.pointerId); } catch (x) { /* pas grave */ }
-      m = setTimeout(() => { contenuRole(); elRole.classList.add('ouvert'); }, 350);
-    };
-    const fermer = (e) => {
-      clearTimeout(m);
-      const dossier = e && e.type === 'pointerup' && surZone(e);
-      elRole.classList.remove('ouvert');
-      if (dossier) ouvrirDossier();
-    };
-    cible.addEventListener('pointerdown', ouvrir);
-    cible.addEventListener('pointermove', (e) => { const z = elRole.querySelector('.zone-dossier'); if (z) z.classList.toggle('survol', surZone(e)); });
-    ['pointerup', 'pointercancel'].forEach((t) => cible.addEventListener(t, fermer));
-    cible.addEventListener('lostpointercapture', () => { clearTimeout(m); elRole.classList.remove('ouvert'); });
+      appuiRole = { minuteur: setTimeout(() => { contenuRole(); elRole.classList.add('ouvert'); }, 350) };
+      ['pointerup', 'pointercancel'].forEach((t) => window.addEventListener(t, finAppuiRole, true));
+      window.addEventListener('pointermove', bougerAppuiRole, true);
+    });
     cible.addEventListener('contextmenu', (e) => e.preventDefault());
   }
+  // Filet de sécurité : toucher l'écran de rôle le referme, et il se cache
+  // si l'appli passe en arrière-plan.
+  elRole.addEventListener('click', () => { finAppuiRole(); elRole.classList.remove('ouvert'); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { finAppuiRole(); elRole.classList.remove('ouvert'); } });
+
 
   // ---------------- Dossier : enquêteur ou console du tueur ----------------
   function ouvrirDossier() {
