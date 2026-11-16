@@ -173,6 +173,9 @@
   .archive-ligne .txt span { display: block; color: var(--doux); font-size: 0.78rem; }
   .archive-ligne button { padding: 7px 11px; font-size: 0.82rem; white-space: nowrap; }
   .tampon { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 6px; font-size: 0.72rem; border: 1px solid currentColor; }
+  .tampon.authentique { color: #7fc98a; }
+  .tampon.falsifie { color: #ff7a6e; }
+  .archive-ligne .actions { display: flex; flex-direction: column; gap: 6px; }
   .notes-carnet { display: grid; gap: 6px; margin-top: 8px; }
   .notes-carnet div { display: flex; gap: 8px; align-items: flex-start; font-size: 0.9rem; background: rgba(0, 0, 0, 0.2); border-radius: 10px; padding: 8px 10px; }
   .notes-carnet div span { flex: 1; overflow-wrap: anywhere; }
@@ -189,11 +192,38 @@
 
   /* Lettre et alertes */
   .voile { position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, 0.72); display: grid; place-items: center; padding: 20px; }
-  .lettre { max-width: 460px; width: 100%; background: #f1e3c4; color: #2a1a10; border-radius: 6px; padding: 24px 20px 18px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6); }
+  .lettre { position: relative; overflow: hidden; max-width: 460px; width: 100%; background: #f1e3c4; color: #2a1a10; border-radius: 6px; padding: 24px 20px 18px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6); }
   .lettre .corps { font: 600 1.4rem/1.35 var(--titre); }
   .lettre .meta { margin-top: 12px; font-size: 0.82rem; color: #6b5440; }
   .lettre .avis { margin-top: 8px; font-size: 0.85rem; color: #6b5440; }
   .lettre button { margin-top: 14px; background: #2a1a10; color: #f1e3c4; }
+  .lettre .choix { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+  .lettre .choix button.discret { background: transparent; color: #2a1a10; border: 1px solid #2a1a10; }
+  .lettre h3 { font: 700 1.3rem/1.2 var(--titre); margin-bottom: 8px; }
+  /* Tampon d'expertise : frappé en travers de la lettre */
+  .cachet { position: absolute; bottom: 24px; right: 18px; padding: 3px 9px; border: 3px solid currentColor; border-radius: 8px;
+    font: 800 1.05rem/1 system-ui, sans-serif; letter-spacing: 0.1em; transform: rotate(-12deg); opacity: 0.85; pointer-events: none;
+    animation: frappe 0.45s cubic-bezier(.2, 1.6, .4, 1) both; }
+  .cachet.authentique { color: #1f6b2e; }
+  .cachet.falsifie { color: #a3161b; }
+  /* Vignette de l'indice : photo de la pièce à conviction, épinglée sur la lettre */
+  .vignette { display: flex; gap: 12px; align-items: stretch; margin: -4px 0 14px; }
+  .vignette .photo { position: relative; flex: none; width: 118px; padding: 6px 6px 22px; background: #fbf6ea; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    transform: rotate(-3deg); }
+  .vignette .photo .image { height: 96px; display: grid; place-items: center; font-size: 3.4rem; overflow: hidden;
+    background: radial-gradient(circle at 50% 40%, rgba(255, 240, 210, 0.35), transparent 65%), var(--fond-photo, #3a2418);
+    filter: sepia(0.25) contrast(1.05); }
+  .vignette .photo .legende-photo { position: absolute; left: 0; right: 0; bottom: 4px; text-align: center; font: 600 0.72rem/1.1 'Courier New', monospace; color: #3a2a1c;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 4px; }
+  .vignette .photo .bande { position: absolute; left: -8px; right: -8px; top: 74px; transform: rotate(-12deg); background: rgba(163, 22, 27, 0.88); color: #fff;
+    font: 800 0.66rem/1 system-ui, sans-serif; letter-spacing: 0.14em; text-align: center; padding: 4px 0; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
+  .vignette .photo .punaise { position: absolute; top: -6px; left: 50%; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #ff8a7a, #a3161b); box-shadow: 0 2px 3px rgba(0, 0, 0, 0.4); }
+  .vignette .dossier { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 6px;
+    font: 600 0.74rem/1.3 'Courier New', monospace; color: #5a4430; text-transform: uppercase; letter-spacing: 0.04em; }
+  .vignette .dossier b { font: 700 1.05rem/1.2 var(--titre); color: #2a1a10; text-transform: none; letter-spacing: 0; }
+  .vignette svg.mini { width: 100%; max-height: 90px; }
+  @keyframes frappe { from { transform: rotate(-12deg) scale(2.4); opacity: 0; } to { transform: rotate(-12deg) scale(1); opacity: 0.85; } }
   .toast { position: fixed; left: 14px; right: 14px; bottom: calc(66px + env(safe-area-inset-bottom)); z-index: 60; max-width: 520px; margin: 0 auto;
     background: #2a1216; border: 1px solid var(--accent); border-radius: 14px; padding: 12px 14px; font-weight: 600; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
   .toast.gorgee { background: #4a1410; border-color: #ff6b5e; font-size: 1.05rem; }
@@ -385,7 +415,7 @@
       case 'enq_pe':
         toast('+' + msg.gain + ' PE (' + msg.raison + ') · total ' + msg.total, '', 4000); return;
       case 'enq_nouvel_indice':
-        toast('📜 Un pli t’attend · ' + msg.source, '', 4000); return;
+        toast(msg.source === 'Témoin anonyme' ? '📜 Un témoin anonyme t’a glissé un pli' : '📜 Un pli t’attend · ' + msg.source, '', 4500); return;
       case 'enq_verdict':
         montrerVerdict(msg); return;
     }
@@ -492,7 +522,7 @@
       const b = el('button', { type: 'button', disabled: !pret }, 'Lancer l’enquête');
       b.addEventListener('click', () => envoyer({ type: 'enq_lancer' }));
       const a = el('button', { type: 'button', className: 'discret' }, 'Annuler');
-      a.addEventListener('click', () => { if (confirm('Annuler l’enquête pour tout le monde ?')) envoyer({ type: 'enq_annuler' }); });
+      a.addEventListener('click', () => demander('Annuler l’enquête pour tout le monde ?', 'Annuler l’enquête').then((ok) => { if (ok) envoyer({ type: 'enq_annuler' }); }));
       la.append(b, a);
     }
     if (moi.inscrit) {
@@ -645,6 +675,11 @@
         const reste = (moi.consultation_possible_a || 0) - serveurMaintenant();
         b.disabled = reste > 0;
         b.textContent = reste > 0 ? 'Relire dans ' + mmss(reste) : 'Relire (' + unite(etat.gorgees_consultation) + ')';
+      });
+      document.querySelectorAll('[data-expertiser]').forEach((b) => {
+        const reste = (moi.consultation_possible_a || 0) - serveurMaintenant();
+        b.disabled = reste > 0;
+        b.textContent = reste > 0 ? 'Expertise dans ' + mmss(reste) : 'Expertiser';
       });
       document.querySelectorAll('[data-accuser]').forEach((b) => {
         const reste = (moi.prochaine_accusation_a || 0) - serveurMaintenant();
@@ -803,6 +838,45 @@
     c.appendChild(el('div', { className: 'legende' }, 'Touche un lieu, un suspect ou une arme : éliminé, puis suspect, puis inconnu. Ton carnet reste sur ton téléphone.'));
   }
 
+  // Pas de confirm() natif : il gèle la page, donc le battement de cœur,
+  // et le serveur finit par croire que le joueur est parti.
+  function demander(texte, oui) {
+    return window.Soiree && Soiree.confirmer ? Soiree.confirmer(texte, oui || 'Confirmer', 'Annuler') : Promise.resolve(true);
+  }
+  // Choix entre plusieurs options, sur papier comme une lettre.
+  function choisir(titre, texte, options) {
+    return new Promise((resolve) => {
+      const voile = el('div', { className: 'voile' });
+      const l = el('div', { className: 'lettre' });
+      l.setAttribute('role', 'dialog');
+      l.appendChild(el('h3', {}, titre));
+      l.appendChild(el('p', {}, texte));
+      const ligne = el('div', { className: 'choix' });
+      const fermer = (v) => { voile.remove(); resolve(v); };
+      const annuler = el('button', { type: 'button', className: 'discret' }, 'Annuler');
+      annuler.addEventListener('click', () => fermer(null));
+      ligne.appendChild(annuler);
+      options.forEach((o) => {
+        const b = el('button', { type: 'button', disabled: !!o.desactive }, o.libelle);
+        b.addEventListener('click', () => fermer(o.valeur));
+        ligne.appendChild(b);
+      });
+      l.appendChild(ligne);
+      voile.appendChild(l);
+      voile.addEventListener('click', (ev) => { if (ev.target === voile) fermer(null); });
+      document.body.appendChild(voile);
+    });
+  }
+  function expertiser(e) {
+    const cout = moi.cout_indice;
+    choisir('Contre-expertise',
+      'Gaspard fait examiner l’indice n°' + e.id + ' : le verdict, « Authentique » ou « Falsifié », restera tamponné dessus. ' +
+      'Ça compte comme une consultation (même chrono). Personne d’autre ne saura le résultat.',
+      [{ libelle: cout + ' PE', valeur: 'pe', desactive: moi.pe < cout },
+       { libelle: unite(etat.gorgees_expertise || 1), valeur: 'gorgee' }])
+      .then((paiement) => { if (paiement) envoyer({ type: 'enq_expertise', id: e.id, paiement }); });
+  }
+
   function ongletIndices() {
     const t = carte();
     t.appendChild(el('p', {}, 'Un indice : ' + moi.cout_indice + ' PE · ' + moi.indices_heure + '/' + moi.indices_heure_max + ' cette heure.'));
@@ -811,10 +885,11 @@
     const dem = el('button', { type: 'button', disabled: plein || moi.pe < moi.cout_indice }, 'Demander un indice');
     dem.addEventListener('click', () => envoyer({ type: 'enq_indice' }));
     const ach = el('button', { type: 'button', className: 'discret', disabled: plein }, 'Acheter (' + unite(etat.gorgees_achat) + ')');
-    ach.addEventListener('click', () => { if (confirm('Acheter un indice contre ' + unite(etat.gorgees_achat) + ' ?')) envoyer({ type: 'enq_acheter' }); });
+    ach.addEventListener('click', () => demander('Acheter un indice contre ' + unite(etat.gorgees_achat) + ' ?', 'Acheter').then((ok) => { if (ok) envoyer({ type: 'enq_acheter' }); }));
     l.append(dem, ach);
     t.appendChild(l);
-    if (etat.dossier_epuise) t.appendChild(el('p', { style: 'margin-top:8px' }, 'Le dossier est épuisé : plus aucun indice à distribuer.'));
+    if (etat.dossier_epuise) t.appendChild(el('p', { style: 'margin-top:8px' }, 'Le dossier est épuisé : plus aucun indice à distribuer. Tes PE servent encore aux contre-expertises.'));
+    t.appendChild(el('p', { className: 'legende', style: 'margin-top:8px' }, 'De temps en temps, un témoin anonyme glisse un pli à quelqu’un, au hasard.'));
 
     (moi.archive || []).filter((e) => !e.lu).forEach((e) => {
       const c = carte('📜 Un pli pour toi');
@@ -837,14 +912,23 @@
     lus.slice().reverse().forEach((e) => {
       const ligne = el('div', { className: 'archive-ligne' });
       const txt = el('div', { className: 'txt' }, 'Indice n°' + e.id);
-      if (e.tampon) txt.appendChild(el('span', { className: 'tampon' }, e.tampon === 'authentique' ? 'Authentique' : 'Falsifié'));
+      if (e.tampon) txt.appendChild(el('span', { className: 'tampon ' + e.tampon }, e.tampon === 'authentique' ? 'Authentique' : 'Falsifié'));
       txt.appendChild(el('span', {}, e.source + ' · ' + heure(e.recu_a)));
+      const actions = el('div', { className: 'actions' });
       const b = el('button', { type: 'button', className: 'discret' });
       b.dataset.relire = '1';
       b.addEventListener('click', () => {
-        if (confirm('Relire cet indice ? Ça coûte ' + unite(etat.gorgees_consultation) + ' et relance le chrono.')) envoyer({ type: 'enq_consulter', id: e.id });
+        demander('Relire cet indice ? Ça coûte ' + unite(etat.gorgees_consultation) + ' et relance le chrono.', 'Relire')
+          .then((ok) => { if (ok) envoyer({ type: 'enq_consulter', id: e.id }); });
       });
-      ligne.append(txt, b);
+      actions.appendChild(b);
+      if (!e.tampon) {
+        const x = el('button', { type: 'button', className: 'discret' }, 'Expertiser');
+        x.dataset.expertiser = '1';
+        x.addEventListener('click', () => expertiser(e));
+        actions.appendChild(x);
+      }
+      ligne.append(txt, actions);
       a.appendChild(ligne);
     });
   }
@@ -903,10 +987,12 @@
       : 'Touche un lieu, une arme, un personnage.'));
     const b = el('button', { type: 'button' }, 'Accuser');
     b.dataset.accuser = '1';
-    b.addEventListener('click', () => {
+    b.addEventListener('click', async () => {
       if (!complet) return;
-      if (!confirm('Accuser ' + accusation.suspect + ' ? Si tu te trompes : ' + unite(prochainesGorgees()) + ' et un délai doublé.')) return;
-      envoyer({ type: 'enq_accuser', suspect: accusation.suspect, arme: accusation.arme, lieu: accusation.lieu });
+      const choix = { suspect: accusation.suspect, arme: accusation.arme, lieu: accusation.lieu };
+      const ok = await demander('Accuser ' + choix.suspect + ' ? Si tu te trompes : ' + unite(prochainesGorgees()) + ' et un délai doublé.', 'Accuser');
+      if (!ok) return;
+      envoyer({ type: 'enq_accuser', ...choix });
     });
     barre.appendChild(b);
     if ((moi.accusations || []).length) {
@@ -962,22 +1048,77 @@
       }
       const i = carte('Indices reçus');
       const t = el('table', { className: 'recap' });
-      t.appendChild(el('tr')).append(el('th', {}, 'Joueur'), el('th', {}, 'Reçus'), el('th', {}, 'Faux'));
-      f.recap.indices.forEach((x) => { const tr = el('tr'); tr.append(el('td', {}, joueurAvecIcone(x.nom)), el('td', {}, String(x.recus)), el('td', {}, String(x.faux))); t.appendChild(tr); });
+      t.appendChild(el('tr')).append(el('th', {}, 'Joueur'), el('th', {}, 'Reçus'), el('th', {}, 'Témoin'), el('th', {}, 'Faux'), el('th', {}, 'Expertises'));
+      f.recap.indices.forEach((x) => {
+        const tr = el('tr');
+        tr.append(el('td', {}, joueurAvecIcone(x.nom)), el('td', {}, String(x.recus)), el('td', {}, String(x.temoins || 0)),
+          el('td', {}, String(x.faux)), el('td', {}, String(x.expertises || 0)));
+        t.appendChild(tr);
+      });
       i.appendChild(t);
     }
   }
 
   // ---------------- Lettre, verdict et alertes ----------------
+  // L'illustration d'un indice : la « photo » de l'élément écarté (portrait,
+  // pièce ou arme) et, pour une pièce, sa place sur le plan. Même gabarit
+  // pour tous les indices, vrais ou faux.
+  function vignetteIndice(msg) {
+    if (!msg.categorie || !pack) return null;
+    let icone = '❔', nom = msg.element, fond = '#3a2418', rubrique = '';
+    if (msg.categorie === 'suspect') {
+      const j = (etat ? etat.joueurs : []).find((x) => x.nom === msg.element);
+      const p = j && portrait(j.portrait);
+      icone = p ? p.icone : '👤'; fond = p ? p.couleur : fond;
+      rubrique = p ? 'Témoin · ' + p.archetype : 'Témoin';
+    } else {
+      const cle = msg.categorie === 'lieu' ? 'lieux' : 'armes';
+      const e = trouver(cle, msg.element);
+      icone = e && e.icone ? e.icone : (cle === 'lieux' ? '🚪' : '🔍');
+      nom = e ? e.nom : msg.element;
+      fond = cle === 'lieux' ? ((pack.plan && pack.plan.murs && pack.plan.murs[msg.element]) || fond) : '#2a1216';
+      rubrique = cle === 'lieux' ? 'Lieu' : 'Pièce à conviction';
+    }
+    const v = el('div', { className: 'vignette' });
+    const photo = el('div', { className: 'photo' });
+    const image = el('div', { className: 'image' }, icone);
+    image.style.setProperty('--fond-photo', fond);
+    photo.append(el('div', { className: 'punaise' }), image, el('div', { className: 'bande' }, 'HORS DE CAUSE'), el('div', { className: 'legende-photo' }, 'Scellé n°' + msg.id));
+    const dossier = el('div', { className: 'dossier' });
+    dossier.append(el('span', {}, rubrique), el('b', {}, msg.categorie === 'suspect' ? nom : elementLe(msg.categorie === 'lieu' ? 'lieux' : 'armes', msg.element)));
+    if (msg.categorie === 'lieu' && pack.plan && pack.plan.zones) dossier.appendChild(miniPlan(msg.element));
+    else dossier.appendChild(el('span', {}, msg.categorie === 'suspect' ? 'Innocenté par ' + (pack.narrateur ? pack.narrateur.nom : 'le narrateur') : 'Écarté du dossier'));
+    v.append(photo, dossier);
+    return v;
+  }
+  function miniPlan(cible) {
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', pack.plan.vue || '0 0 400 400');
+    svg.setAttribute('class', 'mini');
+    const zones = Object.assign({}, pack.plan.couloirs || {}, pack.plan.zones);
+    Object.entries(zones).forEach(([id, [x, y, w, h]]) => {
+      const r = document.createElementNS(NS, 'rect');
+      r.setAttribute('x', x + 2); r.setAttribute('y', y + 2); r.setAttribute('width', w - 4); r.setAttribute('height', h - 4);
+      r.setAttribute('fill', id === cible ? '#a3161b' : 'rgba(58,42,28,0.12)');
+      r.setAttribute('stroke', '#3a2a1c'); r.setAttribute('stroke-width', '3');
+      svg.appendChild(r);
+    });
+    return svg;
+  }
+
   function montrerLettre(msg) {
     const voile = el('div', { className: 'voile' });
     const l = el('div', { className: 'lettre' });
+    const vig = vignetteIndice(msg);
+    if (vig) l.appendChild(vig);
     l.appendChild(el('div', { className: 'corps' }, msg.texte));
     l.appendChild(el('div', { className: 'meta' }, msg.source + ' · reçu à ' + heure(msg.recu_a) +
       (msg.tampon ? ' · ' + (msg.tampon === 'authentique' ? 'Authentique' : 'Falsifié') : '')));
     l.appendChild(el('div', { className: 'avis' }, msg.gratuit
       ? 'Lecture libre, une seule fois. Pour le relire plus tard, il faudra attendre le chrono et payer en ' + (etat ? etat.unite : 'gorgée') + 's.'
-      : 'Relecture de l’archive.'));
+      : msg.expertise ? 'Contre-expertise : le tampon reste sur cet indice. À toi de voir ce que tu en dis.' : 'Relecture de l’archive.'));
+    if (msg.expertise && msg.tampon) l.appendChild(el('div', { className: 'cachet ' + msg.tampon }, msg.tampon === 'authentique' ? 'AUTHENTIQUE' : 'FALSIFIÉ'));
     const b = el('button', { type: 'button' }, msg.gratuit ? 'Ranger dans l’archive' : 'Fermer');
     b.addEventListener('click', () => voile.remove());
     l.appendChild(b);
