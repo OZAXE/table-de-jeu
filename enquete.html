@@ -49,6 +49,26 @@
   .etat-jeu {
     flex: none; display: flex; align-items: center; gap: 8px; padding: 0 14px 8px; max-width: 620px; width: 100%; margin: 0 auto;
   }
+  .etat-jeu { flex-wrap: wrap; }
+  .evenement-bande { flex-basis: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px;
+    background: rgba(201, 162, 74, 0.14); border: 1px solid var(--accent); font-size: 0.85rem; animation: arrivee 0.5s ease-out; }
+  .evenement-bande .txt { flex: 1; min-width: 0; }
+  .evenement-bande b { display: block; color: var(--accent); font: 700 1rem/1.2 var(--titre); }
+  .evenement-bande .reste { font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 700; }
+  .evenement-bande button { padding: 6px 10px; font-size: 0.8rem; }
+  .evenement-bande.coupure { background: rgba(0, 0, 0, 0.5); border-color: #6a7a9a; }
+  .evenement-bande.alerte { background: rgba(179, 38, 30, 0.22); border-color: #ff6b5e; }
+  @keyframes arrivee { from { transform: translateY(-8px); opacity: 0; } to { transform: none; opacity: 1; } }
+  /* Effets sur le plan pendant un événement */
+  .plan3d::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.6s; }
+  body.evt-coupure .plan3d::after { opacity: 1; background: rgba(0, 0, 8, 0.72); animation: vacille 3.2s steps(1) infinite; }
+  body.evt-coupure svg.plan { filter: brightness(0.35); }
+  body.evt-alerte .plan3d::after { opacity: 1; background: radial-gradient(transparent 40%, rgba(179, 38, 30, 0.55)); animation: alerte 1.2s ease-in-out infinite; }
+  body.evt-alerte svg.plan { animation: alerte 1.2s ease-in-out infinite; }
+  body.evt-flash .plan3d::after { opacity: 1; background: rgba(255, 220, 150, 0.35); animation: eclat 1.4s ease-out forwards; }
+  @keyframes vacille { 0%, 100% { opacity: 1; } 7% { opacity: 0.55; } 9% { opacity: 1; } 52% { opacity: 0.8; } }
+  @keyframes alerte { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+  @keyframes eclat { to { opacity: 0; } }
   .etat-jeu .chrono { font: 700 1.5rem/1 var(--titre); color: var(--accent); }
   .etat-jeu .pe { color: var(--doux); font-size: 0.9rem; flex: 1; }
   .etat-jeu .pe b { color: var(--texte); }
@@ -448,6 +468,16 @@
         toast('🗣️ ' + msg.texte, '', 6000);
         if (msg.lieu) signalerLieu(msg.lieu);
         return;
+      case 'enq_evenement':
+        toast('⚡ ' + msg.nom + ' : ' + msg.texte, '', 6000);
+        document.body.classList.remove('evt-flash'); void document.body.offsetWidth; document.body.classList.add('evt-flash');
+        setTimeout(() => document.body.classList.remove('evt-flash'), 1500);
+        return;
+      case 'enq_evenement_fin':
+        return;
+      case 'enq_decouverte':
+        montrerLettre(Object.assign({}, msg, { decouverte: true }));
+        return;
       case 'enq_ecoute':
         montrerLettre(Object.assign({}, msg, { ecoute: true }));
         return;
@@ -488,6 +518,7 @@
     const defilement = ecran.scrollTop;
     arreterManoir();
     cacherCadre();
+    document.body.classList.remove('evt-coupure', 'evt-alerte');
     if (!couches.includes('enq') || !etat) ecranAucune();
     else if (pack && moi) ({ lobby: ecranLobby, ouverture: ecranOuverture, enquete: ecranEnquete, fin: ecranFin }[etat.phase] || ecranAucune)();
     ecran.scrollTop = defilement;
@@ -761,15 +792,19 @@
     r.appendChild(etatS);
     const majEtat = () => {
       const reste = (k.prochain_sabotage_a || 0) - serveurMaintenant();
-      etatS.textContent = 'Détection actuelle : ' + Math.round(k.detection * 100) + ' % · ' + (reste > 0 ? 'prochain sabotage dans ' + mmss(reste) : 'prêt à saboter');
+      const gratuit = sab.sabotage === 'rumeur' && k.rumeur_gratuite;
+      etatS.textContent = 'Détection actuelle : ' + Math.round(k.detection * 100) + ' %, elle baisse jusqu’à ' + Math.round(k.detection_fin * 100) +
+        ' % d’ici la fin · ' + (reste > 0 ? 'prochain sabotage dans ' + mmss(reste) : 'prêt à saboter');
       const b = elDossier.querySelector('[data-saboter]');
-      if (b) b.disabled = b.dataset.complet !== '1' || reste > 0 || k.charges < 1;
+      if (b) b.disabled = b.dataset.complet !== '1' || (!gratuit && (reste > 0 || k.charges < 1));
     };
     // Choix du sabotage
     const c = bloc(contenu, 'Sabotage');
     const ligne = el('div', { className: 'choix-ligne' });
     Object.entries(NOMS_SABOTAGES).forEach(([id, [nom]]) => {
-      const b = el('button', { type: 'button', className: sab.sabotage === id ? 'actif' : '', disabled: id === 'rumeur' && k.rumeur_utilisee }, nom);
+      const gratuite = id === 'rumeur' && k.rumeur_gratuite;
+      const b = el('button', { type: 'button', className: sab.sabotage === id ? 'actif' : '', disabled: id === 'rumeur' && k.rumeur_utilisee && !gratuite },
+        nom + (gratuite ? ' (gratuite)' : ''));
       b.dataset.sabotage = id;
       b.addEventListener('click', () => { Object.assign(sab, { sabotage: id, categorie: null, mode: null, element: null }); rendreDossier(); });
       ligne.appendChild(b);
@@ -842,6 +877,19 @@
     minuteurDossier = setInterval(majEtat, 1000);
   }
 
+  function regleEvenement(evt) {
+    const n = (x) => x.join(' et ');
+    return {
+      coupure: 'Archive verrouillée et plis illisibles jusqu’au retour du courant.',
+      decouverte: 'Un indice vrai vient d’être publié à tous (onglet ' + (pack.narrateur ? pack.narrateur.nom : 'fil') + ').',
+      alerte: 'Délai d’accusation divisé par 2, mais une erreur coûte double.',
+      brouhaha: 'Les rumeurs fusent deux fois plus vite.',
+      interrogatoire: n(evt.interroges || []) + ' doivent livrer à voix haute un indice de leur choix, vrai ou faux. Refuser : ' + unite(etat.gorgees_refus) + '.',
+      maree: 'Chaque victoire rapporte le double de PE.',
+    }[evt.type] || '';
+  }
+  function courantCoupe() { return !!(etat && etat.evenement && etat.evenement.type === 'coupure' && etat.evenement.fin > serveurMaintenant()); }
+
   // ---------------- Rumeurs : repère sur le plan ----------------
   function signalerLieu(lieu) {
     pings[lieu] = serveurMaintenant() + 20;
@@ -873,6 +921,24 @@
       brancherRole(r);
       elEtat.appendChild(r);
     }
+    // Événement d'ambiance en cours : bandeau, règle active, effet sur le plan
+    const evt = etat.evenement;
+    ['coupure', 'alerte'].forEach((t) => document.body.classList.toggle('evt-' + t, !!evt && evt.type === t));
+    if (evt) {
+      const bande = el('div', { className: 'evenement-bande ' + evt.type });
+      const txt = el('div', { className: 'txt' });
+      const nomE = (pack.evenements && pack.evenements[evt.type] && pack.evenements[evt.type].nom) || evt.type;
+      txt.append(el('b', {}, nomE), regleEvenement(evt));
+      const reste = el('span', { className: 'reste' });
+      reste.dataset.finEvt = evt.fin;
+      bande.append(txt, reste);
+      if (evt.type === 'interrogatoire' && evt.interroges.includes(monNom) && !(evt.refus || []).includes(monNom)) {
+        const r = el('button', { type: 'button', className: 'discret' }, 'Je refuse (' + unite(etat.gorgees_refus) + ')');
+        r.addEventListener('click', () => demander('Refuser de livrer un indice ? Tu bois ' + unite(etat.gorgees_refus) + '.', 'Je refuse').then((ok) => { if (ok) envoyer({ type: 'enq_refuser' }); }));
+        bande.appendChild(r);
+      }
+      elEtat.appendChild(bande);
+    }
     const nonLus = (moi.archive || []).filter((e) => !e.lu).length;
     const o = onglets('enquete', [
       { id: 'plan', ico: '🗺️', titre: 'Plan' },
@@ -888,15 +954,21 @@
     clearInterval(minuteurSec);
     const maj = () => {
       chrono.textContent = mmss(etat.fin_a - serveurMaintenant());
+      document.querySelectorAll('[data-fin-evt]').forEach((x) => { x.textContent = mmss(Number(x.dataset.finEvt) - serveurMaintenant()); });
+      const coupe = courantCoupe();
       document.querySelectorAll('[data-relire]').forEach((b) => {
         const reste = (moi.consultation_possible_a || 0) - serveurMaintenant();
-        b.disabled = reste > 0;
-        b.textContent = reste > 0 ? 'Relire dans ' + mmss(reste) : 'Relire (' + unite(etat.gorgees_consultation) + ')';
+        b.disabled = reste > 0 || coupe;
+        b.textContent = coupe ? '🕯️ Courant coupé' : reste > 0 ? 'Relire dans ' + mmss(reste) : 'Relire (' + unite(etat.gorgees_consultation) + ')';
       });
       document.querySelectorAll('[data-expertiser]').forEach((b) => {
         const reste = (moi.consultation_possible_a || 0) - serveurMaintenant();
-        b.disabled = reste > 0;
-        b.textContent = reste > 0 ? 'Expertise dans ' + mmss(reste) : 'Expertiser';
+        b.disabled = reste > 0 || coupe;
+        b.textContent = coupe ? '🕯️ Courant coupé' : reste > 0 ? 'Expertise dans ' + mmss(reste) : 'Expertiser';
+      });
+      document.querySelectorAll('[data-ouvrir-pli]').forEach((b) => {
+        b.disabled = coupe;
+        b.textContent = coupe ? '🕯️ Illisible dans le noir' : 'Ouvrir le pli';
       });
       document.querySelectorAll('[data-accuser]').forEach((b) => {
         const reste = (moi.prochaine_accusation_a || 0) - serveurMaintenant();
@@ -1114,6 +1186,7 @@
       c.classList.add('pli');
       c.appendChild(el('p', {}, e.source + ' · reçu à ' + heure(e.recu_a) + '. Lecture libre une fois ; ensuite il ira dans ton archive.'));
       const b = el('button', { type: 'button' }, 'Ouvrir le pli');
+      b.dataset.ouvrirPli = '1';
       b.style.marginTop = '8px';
       b.addEventListener('click', () => envoyer({ type: 'enq_lire', id: e.id }));
       c.appendChild(b);
@@ -1313,7 +1386,7 @@
     const photo = el('div', { className: 'photo' });
     const image = el('div', { className: 'image' }, icone);
     image.style.setProperty('--fond-photo', fond);
-    photo.append(el('div', { className: 'punaise' }), image, el('div', { className: 'bande' }, 'HORS DE CAUSE'), el('div', { className: 'legende-photo' }, (msg.id ? 'Scellé n°' + msg.id : 'Copie')));
+    photo.append(el('div', { className: 'punaise' }), image, el('div', { className: 'bande' }, 'HORS DE CAUSE'), el('div', { className: 'legende-photo' }, (msg.id ? 'Scellé n°' + msg.id : msg.decouverte ? 'Découverte' : 'Copie')));
     const dossier = el('div', { className: 'dossier' });
     dossier.append(el('span', {}, rubrique), el('b', {}, msg.categorie === 'suspect' ? nom : elementLe(msg.categorie === 'lieu' ? 'lieux' : 'armes', msg.element)));
     if (msg.categorie === 'lieu' && pack.plan && pack.plan.zones) dossier.appendChild(miniPlan(msg.element));
@@ -1348,10 +1421,11 @@
       (msg.tampon ? ' · ' + (msg.tampon === 'authentique' ? 'Authentique' : 'Falsifié') : '')));
     l.appendChild(el('div', { className: 'avis' }, msg.gratuit
       ? 'Lecture libre, une seule fois. Pour le relire plus tard, il faudra attendre le chrono et payer en ' + (etat ? etat.unite : 'gorgée') + 's.'
+      : msg.decouverte ? 'Indice public : tout le monde l’a reçu en même temps.'
       : msg.ecoute ? 'Il ne sait pas que tu l’as lu. Ce pli n’entre pas dans ton archive.'
       : msg.expertise ? 'Contre-expertise : le tampon reste sur cet indice. À toi de voir ce que tu en dis.' : 'Relecture de l’archive.'));
     if (msg.expertise && msg.tampon) l.appendChild(el('div', { className: 'cachet ' + msg.tampon }, msg.tampon === 'authentique' ? 'AUTHENTIQUE' : 'FALSIFIÉ'));
-    const b = el('button', { type: 'button' }, msg.gratuit && !msg.ecoute ? 'Ranger dans l’archive' : 'Fermer');
+    const b = el('button', { type: 'button' }, msg.gratuit && !msg.ecoute && !msg.decouverte ? 'Ranger dans l’archive' : 'Fermer');
     b.addEventListener('click', () => voile.remove());
     l.appendChild(b);
     voile.appendChild(l);
