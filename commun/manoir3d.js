@@ -19,6 +19,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { preparerAmbiance, lisser, materiauNoyer, LAITON, textureBois, creerPersonnage } from '../da/bar-moderne.js';
+import { decors } from './decors3d.js';
 
 const E = 0.02;                // 1 unité du plan = 2 cm de maquette
 const PAS = 10;                // murs découpés en tronçons de 10 unités
@@ -461,26 +462,66 @@ function solDe(id, l, p) {
 }
 
 // =====================================================================
+// Thèmes : ce qui change d'un univers à l'autre (lumière, matériaux,
+// extérieur, effet d'ambiance). Le plan du pack choisit avec plan.decor.
+const ACIER = () => mat(0x9aa6b6, { metalness: 0.7, roughness: 0.3 });
+const THEMES = {
+  manoir: {
+    nuit: 0x101827, flash: 0x2a3550, brouillard: [18, 36], exposition: 1.25,
+    lune: [0xbcd0ff, 1.1], ambiante: [0xffe8cc, 0.85], hemi: [0x8aa0d0, 0x2a1a10, 0.5],
+    facade: () => new THREE.MeshStandardMaterial({ map: pierre('#9a8f7e'), roughness: 0.9 }),
+    socle: () => { const m = new THREE.MeshStandardMaterial({ map: pierre('#5c544a'), roughness: 0.95 }); m.map.repeat.set(3, 1); return m; },
+    cloison: 0xd9cfbd, dessus: 0x2b2523, vitre: 0xffb45a, chambranle: 0x2a201a, rideau: 0x6a1622,
+    montant: LAITON, porte: 'battant', papier: 'boiseries', applique: 0xffc46b,
+    exterieur: 'jardin', effet: 'orage', police: 'Cormorant Garamond, Georgia, serif', etiquette: 'rgba(10,4,6,0.8)',
+    lumieres: [['hall', 0.7, 0xffc87a, 1.4], ['salle_de_bal', 0.7, 0xffc87a, 1.4], ['fumoir', 0.25, 0xff7a2a, 1.6], ['bibliotheque', 0.45, 0xffd08a, 1.1], ['cuisine', 0.45, 0xffd08a, 1.0]],
+  },
+  station: {
+    nuit: 0x03060f, flash: 0x3a0810, brouillard: [40, 80], exposition: 1.2,
+    lune: [0xd8e6ff, 1.3], ambiante: [0xcfe6ff, 0.9], hemi: [0x6fa8ff, 0x10141c, 0.55],
+    facade: (D) => new THREE.MeshStandardMaterial({ map: D.textures.panneaux(), metalness: 0.45, roughness: 0.45 }),
+    socle: () => mat(0x2a3240, { metalness: 0.6, roughness: 0.4 }),
+    cloison: 0xc8d0da, dessus: 0x2a3442, vitre: 0x4fd6ff, chambranle: 0x3a4452, rideau: null,
+    montant: ACIER, porte: 'coulissante', papier: 'panneaux', applique: 0x4fd6ff,
+    exterieur: 'espace', effet: 'alarme', police: '"Exo 2", system-ui, sans-serif', etiquette: 'rgba(4,12,26,0.85)',
+    lumieres: [['coursive', 0.5, 0x9fe6ff, 1.2], ['passerelle', 0.5, 0x4fd6ff, 1.2], ['reacteur', 0.35, 0x4fd6ff, 1.8], ['hydroponie', 0.45, 0xc070ff, 1.0], ['laboratoire', 0.5, 0xdff4ff, 0.9]],
+  },
+  velvet: {
+    nuit: 0x0a0608, flash: 0x3a0810, brouillard: [16, 34], exposition: 1.3,
+    lune: [0x9aa0c0, 0.7], ambiante: [0xffd8b0, 0.8], hemi: [0x7a6a9a, 0x1a0a08, 0.45],
+    facade: (D) => new THREE.MeshStandardMaterial({ map: D.textures.brique(), roughness: 0.9 }),
+    socle: () => { const m = new THREE.MeshStandardMaterial({ map: pierre('#3a3836'), roughness: 0.95 }); m.map.repeat.set(3, 1); return m; },
+    cloison: 0x3a2a22, dessus: 0x1a1210, vitre: 0xff9a4a, chambranle: 0x1a1210, rideau: 0x7a0a18,
+    montant: LAITON, porte: 'battant', papier: 'boiseries', applique: 0xff8a4a,
+    exterieur: 'rue', effet: 'neon', police: 'Limelight, Georgia, serif', etiquette: 'rgba(12,4,6,0.85)',
+    lumieres: [['salle_de_jeu', 0.5, 0xffb060, 1.3], ['scene', 0.6, 0xff4a6a, 1.5], ['comptoir', 0.45, 0xffa050, 1.3], ['arriere_salle', 0.35, 0x9aff9a, 0.9], ['bureau_patron', 0.4, 0xffc070, 0.9]],
+  },
+};
+
 export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'low-power' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.25;
+  const T = THEMES[(pack.plan && pack.plan.decor) || 'manoir'] || THEMES.manoir;
+  const D = decors({ THREE, boite, cyl, sphere, mat, lueur, place, couche, texture, carreaux, pierre, tapis, table, chaise, fauteuil, plante,
+    NOYER, NOYER_FONCE, CUIR, VELOURS, LAITON, aleatoire, texteSprite, materiauNoyer });
+  renderer.toneMappingExposure = T.exposition;
   conteneur.appendChild(renderer.domElement);
 
   const accent = new THREE.Color((pack.palette && pack.palette.accent) || '#c9a24a');
   const scene = new THREE.Scene();
   preparerAmbiance(renderer, scene, { accent });
-  const NUIT = new THREE.Color(0x101827);
-  const FLASH = new THREE.Color(0x2a3550);
+  const NUIT = new THREE.Color(T.nuit);
+  const FLASH = new THREE.Color(T.flash);
   scene.background = NUIT.clone();
-  scene.fog = new THREE.Fog(NUIT, 18, 36);
-  const lune = new THREE.DirectionalLight(0xbcd0ff, 1.1);
+  scene.fog = new THREE.Fog(NUIT, T.brouillard[0], T.brouillard[1]);
+  const LUNE = T.lune[1];
+  const lune = new THREE.DirectionalLight(T.lune[0], LUNE);
   lune.position.set(-4, 7, 3);
   scene.add(lune);
-  scene.add(new THREE.AmbientLight(0xffe8cc, 0.85));
-  scene.add(new THREE.HemisphereLight(0x8aa0d0, 0x2a1a10, 0.5));
+  scene.add(new THREE.AmbientLight(T.ambiante[0], T.ambiante[1]));
+  scene.add(new THREE.HemisphereLight(T.hemi[0], T.hemi[1], T.hemi[2]));
 
   const plan = pack.plan;
   const [vx, vy, vw, vh] = plan.vue.split(' ').map(Number);
@@ -543,8 +584,7 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
   }
 
   // ---------------- soubassement, sols, mobilier ----------------
-  const matSocle = new THREE.MeshStandardMaterial({ map: pierre('#5c544a'), roughness: 0.95 });
-  matSocle.map.repeat.set(3, 1);
+  const matSocle = T.socle();
   const pieces = {};
   const sols = [];
   Object.values(surfaces).forEach((sf) => {
@@ -555,13 +595,13 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
     scene.add(place(boite(l + 0.1, hs, p + 0.1, matSocle), centre.x, hs / 2, centre.z));
     const g = new THREE.Group();
     g.position.copy(centre);
-    const sol = boite(l, 0.012, p, solDe(sf.id, l, p));
+    const sol = boite(l, 0.012, p, D.sol(sf.id, l, p) || solDe(sf.id, l, p));
     sol.position.y = 0.006;
     sol.userData.lieu = sf.id;
     g.add(sol);
     const meubles = new THREE.Group();
     meubles.position.y = 0.012;
-    (MOBILIER[sf.id] || mobilierGenerique)(meubles, l - EP_INT * 2, p - EP_INT * 2);
+    (D.MOBILIER[sf.id] || MOBILIER[sf.id] || mobilierGenerique)(meubles, l - EP_INT * 2, p - EP_INT * 2);
     g.add(meubles);
     scene.add(g);
     if (!sf.piece) { pieces[sf.id] = { centre, l, p, ouvert: true, couloir: true }; return; }
@@ -570,19 +610,19 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
     halo.position.y = 0.018;
     g.add(halo);
     const lieu = pack.lieux.find((x2) => x2.id === sf.id) || { nom: sf.id };
-    const etiquette = texteSprite((lieu.icone ? lieu.icone + ' ' : '') + lieu.nom);
+    const etiquette = texteSprite((lieu.icone ? lieu.icone + ' ' : '') + lieu.nom, { police: T.police, fond: T.etiquette });
     etiquette.position.set(0, H_EXT + 0.3, 0);
     g.add(etiquette);
     pieces[sf.id] = { centre, l, p, halo, meubles, etiquette, ouvert: true };
   });
 
   // ---------------- murs : façade, cloisons, verrières ----------------
-  const matFacade = new THREE.MeshStandardMaterial({ map: pierre('#9a8f7e'), roughness: 0.9 });
-  const matCloison = mat(0xd9cfbd, { roughness: 0.85 });
-  const matDessus = mat(0x2b2523, { roughness: 0.7 });
-  const matVitreFacade = new THREE.MeshStandardMaterial({ color: 0x1a1208, emissive: 0xffb45a, emissiveIntensity: 0.55, roughness: 0.2 });
+  const matFacade = T.facade(D);
+  const matCloison = mat(T.cloison, { roughness: 0.85 });
+  const matDessus = mat(T.dessus, { roughness: 0.7 });
+  const matVitreFacade = new THREE.MeshStandardMaterial({ color: 0x1a1208, emissive: T.vitre, emissiveIntensity: 0.55, roughness: 0.2 });
   const matVerre = new THREE.MeshPhysicalMaterial({ color: 0xcfe8dc, transparent: true, opacity: 0.18, roughness: 0.05 });
-  const matChambranle = mat(0x2a201a, { roughness: 0.5 });
+  const matChambranle = mat(T.chambranle, { roughness: 0.5 });
   const murs = new THREE.Group();
   const pansDe = (positions) => {
     positions.sort((a, b) => a - b);
@@ -614,7 +654,7 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
     const cle = `${t.sens}|${t.fixe}|${genre}|${bas}|${ecart}|${interieur}`;
     (lignes[cle] = lignes[cle] || []).push(t.i);
   });
-  const matRideau = VELOURS(0x6a1622);
+  const matRideau = T.rideau ? VELOURS(T.rideau) : null;
   Object.entries(lignes).forEach(([cle, positions]) => {
     const [sens, fixeS, genre, basS, ecartS, intS] = cle.split('|');
     const fixe = Number(fixeS), base = SOCLE + Number(basS), ecart = Number(ecartS), interieur = Number(intS);
@@ -629,9 +669,9 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
       } else if (genre === 'verre') {
         g.add(place(boite(L, 0.14, ep, matFacade), 0, 0.07, 0));
         g.add(place(boite(L, H_EXT - 0.14, 0.01, matVerre), 0, (H_EXT + 0.14) / 2, 0));
-        g.add(place(boite(L, 0.015, 0.03, LAITON()), 0, H_EXT, 0));
+        g.add(place(boite(L, 0.015, 0.03, T.montant()), 0, H_EXT, 0));
         const n = Math.max(1, Math.round(L / 0.3));
-        for (let k = 0; k <= n; k++) g.add(place(boite(0.015, H_EXT - 0.14, 0.03, LAITON()), -L / 2 + k * L / n, (H_EXT + 0.14) / 2, 0));
+        for (let k = 0; k <= n; k++) g.add(place(boite(0.015, H_EXT - 0.14, 0.03, T.montant()), -L / 2 + k * L / n, (H_EXT + 0.14) / 2, 0));
       } else {
         // Façade en pierre, fenêtres éclairées de l'intérieur
         const nf = Math.floor((b - a) / 60);
@@ -648,8 +688,10 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
             g.add(place(boite(lf, haut - bas, 0.012, matVitreFacade), c, (bas + haut) / 2, 0));
             g.add(place(boite(lf + 0.04, 0.02, ep + 0.04, matChambranle), c, bas, 0));
             g.add(place(boite(0.012, haut - bas, 0.02, matChambranle), c, (bas + haut) / 2, 0));
-            [-1, 1].forEach((sr) => g.add(place(boite(0.06, haut - bas + 0.1, 0.012, matRideau), c + sr * (lf / 2 + 0.01), (bas + haut) / 2 + 0.02, interieur * (ep / 2 + 0.02))));
-            g.add(place(boite(lf + 0.16, 0.01, 0.01, LAITON()), c, haut + 0.07, interieur * (ep / 2 + 0.02)));
+            if (matRideau) {
+              [-1, 1].forEach((sr) => g.add(place(boite(0.06, haut - bas + 0.1, 0.012, matRideau), c + sr * (lf / 2 + 0.01), (bas + haut) / 2 + 0.02, interieur * (ep / 2 + 0.02))));
+              g.add(place(boite(lf + 0.16, 0.01, 0.01, LAITON()), c, haut + 0.07, interieur * (ep / 2 + 0.02)));
+            } else g.add(place(boite(lf + 0.02, 0.008, 0.008, lueur(T.applique, 1.6)), c, haut + 0.03, interieur * (ep / 2 + 0.01)));
             x0 = c + lf / 2;
           }
           const reste = L / 2 - x0;
@@ -665,12 +707,13 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
   // Avec surPan, +z local pointe vers +z du monde pour un mur 'h', et vers
   // -x du monde pour un mur 'v' (rotation de -90°).
   const graine = aleatoire(42);
-  const matApplique = lueur(0xffc46b, 2.2);
+  const matApplique = lueur(T.applique, 2.2);
   Object.values(surfaces).forEach((sf) => {
     if (vitrees.has(sf.id)) return;
     const couleur = new THREE.Color(couleursMurs[sf.id] || '#d9cfbd');
-    const matPapier = mat(couleur, { roughness: 0.9 });
-    const matLambris = materiauNoyer(couleur.clone().multiplyScalar(0.45).getHex(), 0.6);
+    const panneaux = T.papier === 'panneaux';
+    const matPapier = panneaux ? mat(couleur, { roughness: 0.45, metalness: 0.3 }) : mat(couleur, { roughness: 0.9 });
+    const matLambris = panneaux ? lueur(T.applique, 1.2) : materiauNoyer(couleur.clone().multiplyScalar(0.45).getHex(), 0.6);
     const [x, y, w, h] = sf.r;
     const cote = (sens, fixe, debut, long, interieur) => {
       const pos = [];
@@ -685,11 +728,18 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
         const g = surPan(sens, fixe, (a + b) / 2, SOCLE + niv(sf.id));
         const off = interieur * (ep / 2 + 0.004);
         g.add(place(boite(L, H - 0.02, 0.006, matPapier), 0, (H - 0.02) / 2, off));
-        g.add(place(boite(L, 0.17, 0.01, matLambris), 0, 0.085, off + interieur * 0.003));
+        if (panneaux) g.add(place(boite(L, 0.008, 0.006, matLambris), 0, 0.07, off + interieur * 0.003));
+        else g.add(place(boite(L, 0.17, 0.01, matLambris), 0, 0.085, off + interieur * 0.003));
         if (L > 0.7 && graine() < 0.75) {
           const dx = (graine() - 0.5) * (L - 0.4);
-          g.add(place(boite(0.22, 0.16, 0.012, LAITON()), dx, 0.36, off + interieur * 0.008));
-          g.add(place(boite(0.19, 0.13, 0.004, new THREE.MeshStandardMaterial({ map: toile(Math.floor(graine() * 1000)), roughness: 0.8 })), dx, 0.36, off + interieur * 0.015));
+          if (panneaux) {
+            // Écran mural plutôt qu'un tableau
+            g.add(place(boite(0.22, 0.14, 0.012, mat(0x1a2230, { metalness: 0.5 })), dx, 0.34, off + interieur * 0.008));
+            g.add(place(boite(0.19, 0.11, 0.004, lueur(graine() < 0.5 ? 0x2aa8ff : 0x3affc8, 1.2)), dx, 0.34, off + interieur * 0.015));
+          } else {
+            g.add(place(boite(0.22, 0.16, 0.012, LAITON()), dx, 0.36, off + interieur * 0.008));
+            g.add(place(boite(0.19, 0.13, 0.004, new THREE.MeshStandardMaterial({ map: toile(Math.floor(graine() * 1000)), roughness: 0.8 })), dx, 0.36, off + interieur * 0.015));
+          }
         }
         if (L > 0.5) g.add(place(sphere(0.014, matApplique, 8), -L * 0.3, 0.45, off + interieur * 0.02));
         if (L > 1) g.add(place(sphere(0.014, matApplique, 8), L * 0.3, 0.45, off + interieur * 0.02));
@@ -705,6 +755,14 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
   const matPorte = materiauNoyer(0x2a1a10, 0.4);
   const larg = LARG_PORTE * PAS * E;
   function battant(H, angle) {
+    if (T.porte === 'coulissante') {
+      // Porte de station : le panneau a glissé dans la cloison, cadre lumineux
+      const g = new THREE.Group();
+      g.add(place(boite(larg * 0.9, H * 0.86, 0.02, ACIER()), larg * 1.25, H * 0.43, 0));
+      g.add(place(boite(0.012, H * 0.86, 0.03, lueur(T.applique, 1.6)), 0.006, H * 0.43, 0));
+      g.add(place(boite(0.012, H * 0.86, 0.03, lueur(T.applique, 1.6)), larg - 0.006, H * 0.43, 0));
+      return g;
+    }
     const charniere = new THREE.Group();
     charniere.add(place(boite(larg * 0.92, H * 0.86, 0.022, matPorte), larg * 0.46, H * 0.43, 0));
     charniere.add(place(boite(larg * 0.7, H * 0.3, 0.026, materiauNoyer(0x3b2618, 0.4)), larg * 0.46, H * 0.62, 0));
@@ -743,19 +801,21 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
     for (let k = 0; k < 3; k++) g.add(place(boite(larg + 0.14 - k * 0.04, H0 / 3 * (3 - k), 0.07, matSocle), 0, H0 / 6 * (3 - k), d * (0.09 + (2 - k) * 0.07)));
     [-1, 1].forEach((s) => {
       g.add(place(boite(0.04, 0.06, 0.04, LAITON()), s * (larg / 2 + 0.08), H0 + 0.5, d * 0.07));
-      g.add(place(sphere(0.016, lueur(0xffc46b, 3), 8), s * (larg / 2 + 0.08), H0 + 0.5, d * 0.07));
+      g.add(place(sphere(0.016, lueur(T.applique, 3), 8), s * (larg / 2 + 0.08), H0 + 0.5, d * 0.07));
     });
     scene.add(g);
   }
   scene.add(murs);
 
-  // ---------------- jardin, nuit d'orage ----------------
+  // ---------------- extérieur : jardin d'orage, espace, rue ----------------
   const largeur = vw * E, profondeur = vh * E;
+  const dansMaison = (x, z, marge) => Object.values(surfaces).some(({ r: [rx, ry, rw, rh] }) =>
+    x > X(rx) - marge && x < X(rx + rw) + marge && z > Z(ry) - marge && z < Z(ry + rh) + marge);
+  if (T.exterieur !== 'jardin') D.EXTERIEURS[T.exterieur]({ scene, largeur, profondeur, entree, dansMaison });
+  else {
   const terrain = boite(largeur + 6, 0.04, profondeur + 6, new THREE.MeshStandardMaterial({ map: herbe(), roughness: 1 }));
   terrain.position.y = -0.02;
   scene.add(terrain);
-  const dansMaison = (x, z, marge) => Object.values(surfaces).some(({ r: [rx, ry, rw, rh] }) =>
-    x > X(rx) - marge && x < X(rx + rw) + marge && z > Z(ry) - marge && z < Z(ry + rh) + marge);
   let allee = null;
   const lx = largeur + 4.8, lz = profondeur + 4.8;
   if (entree) {
@@ -845,6 +905,7 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
       scene.add(banc);
     });
   }
+  }   // fin du jardin
 
   // Cheminées de pierre qui dépassent du toit, collées au mur extérieur
   const matCheminee = mat(0x6a5e52, { roughness: 1 });
@@ -877,7 +938,7 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
   });
 
   // Quelques lumières chaudes à l'intérieur (lustres, cheminée)
-  [['hall', 0.7, 0xffc87a, 1.4], ['salle_de_bal', 0.7, 0xffc87a, 1.4], ['fumoir', 0.25, 0xff7a2a, 1.6], ['bibliotheque', 0.45, 0xffd08a, 1.1], ['cuisine', 0.45, 0xffd08a, 1.0]]
+  T.lumieres
     .forEach(([id, hl, c, i]) => { if (!pieces[id]) return; const pl = new THREE.PointLight(c, i, 2.6, 1.3); pl.position.copy(pieces[id].centre).setY(SOCLE + hl); scene.add(pl); });
 
   lisser(scene);
@@ -1028,6 +1089,9 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
   // ---------------- boucle de rendu sobre, éclairs ----------------
   let actif = false, demande = false, dernier = 0, raf = null, cadree = false;
   let prochainEclair = 6000 + Math.random() * 8000, eclair = 0;
+  // Objets que l'effet d'ambiance anime : gyrophares de la station, néons du bar
+  const alarmes = [], neons = [];
+  scene.traverse((o) => { if (o.userData.alarme) alarmes.push(o.material); if (o.userData.neon) neons.push(o.material); });
   function taille() {
     const l = conteneur.clientWidth, h = conteneur.clientHeight;
     if (!l || !h) return;
@@ -1063,13 +1127,35 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
       animerPersonnages(dt);
       // Éclair : deux flashs rapprochés, puis le noir
       prochainEclair -= dt * 1000;
-      if (prochainEclair <= 0) { eclair = 0.5; prochainEclair = 9000 + Math.random() * 14000; }
-      if (eclair > 0) {
-        eclair -= dt;
-        const k = eclair > 0.42 || (eclair < 0.3 && eclair > 0.24) ? 1 : 0;
-        lune.intensity = 1.1 + k * 3.5;
-        scene.background.copy(k ? FLASH : NUIT);
-      } else if (lune.intensity !== 1.1) { lune.intensity = 1.1; scene.background.copy(NUIT); }
+      if (T.effet === 'orage') {
+        // Éclair : deux flashs rapprochés, puis le noir
+        if (prochainEclair <= 0) { eclair = 0.5; prochainEclair = 9000 + Math.random() * 14000; }
+        if (eclair > 0) {
+          eclair -= dt;
+          const k = eclair > 0.42 || (eclair < 0.3 && eclair > 0.24) ? 1 : 0;
+          lune.intensity = LUNE + k * 3.5;
+          scene.background.copy(k ? FLASH : NUIT);
+        } else if (lune.intensity !== LUNE) { lune.intensity = LUNE; scene.background.copy(NUIT); }
+      } else if (T.effet === 'alarme') {
+        // Alarme : les gyrophares pulsent en rouge quelques secondes
+        if (prochainEclair <= 0) { eclair = 2.6; prochainEclair = 14000 + Math.random() * 12000; }
+        if (eclair > 0) {
+          eclair -= dt;
+          const k = Math.max(0, Math.sin(eclair * Math.PI * 2.2));
+          alarmes.forEach((m) => { m.emissiveIntensity = 0.3 + 3.2 * k; });
+          scene.background.copy(NUIT).lerp(FLASH, k * 0.8);
+          if (eclair <= 0) { alarmes.forEach((m) => { m.emissiveIntensity = 0.3; }); scene.background.copy(NUIT); }
+        }
+      } else if (T.effet === 'neon') {
+        // Néons qui grésillent
+        if (prochainEclair <= 0) { eclair = 0.6; prochainEclair = 3500 + Math.random() * 6000; }
+        if (eclair > 0) {
+          eclair -= dt;
+          const k = eclair > 0 && Math.random() < 0.5 ? 0.15 : 1;
+          neons.forEach((m) => { m.opacity = k; });
+          if (eclair <= 0) neons.forEach((m) => { m.opacity = 1; });
+        }
+      }
       if (crime && pieces[crime]) pieces[crime].halo.material.opacity = 0.35 + 0.25 * Math.sin(t / 300);
       if (performance.now() < pingFin) {
         const k = (t % 1400) / 1400;
