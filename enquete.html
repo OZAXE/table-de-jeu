@@ -29,11 +29,14 @@
     --titre: 'Cormorant Garamond', Georgia, serif;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { background: var(--fond); height: 100%; }
-  /* Une seule page, sans défilement : bandeau en haut, contenu, onglets en bas. */
+  html, body { background: var(--fond); height: 100%; overflow: hidden; }
+  /* Une seule page, sans défilement : bandeau en haut, contenu, onglets en bas.
+     Épinglée aux bords de la zone visible (et non 100dvh, que certains
+     Android en appli installée comptent plus haut que l'écran : les onglets
+     du bas passaient sous la barre système). */
   body {
     color: var(--texte); font: 400 16px/1.45 'Outfit', system-ui, sans-serif;
-    height: 100dvh; overflow: hidden; display: flex; flex-direction: column;
+    position: fixed; inset: 0; overflow: hidden; display: flex; flex-direction: column;
     background:
       radial-gradient(120% 60% at 50% -10%, rgba(201, 162, 74, 0.16), transparent 60%),
       radial-gradient(80% 50% at 100% 100%, rgba(179, 38, 30, 0.12), transparent 60%),
@@ -596,6 +599,13 @@
       g.appendChild(b);
     });
     c.appendChild(g);
+    // Étape suivante, sans dépendre de la barre d'onglets du bas
+    if (moi.portrait) {
+      const suite = el('button', { type: 'button', className: 'suite-lobby' }, moi.hote ? 'Continuer : joueurs et lancement →' : 'Voir les joueurs →');
+      suite.style.marginTop = '12px';
+      suite.addEventListener('click', () => { onglet.lobby = 'joueurs'; rendu = ''; afficher(); ecran.scrollTop = 0; });
+      c.appendChild(suite);
+    }
   }
 
   function lobbyJoueurs(pret) {
