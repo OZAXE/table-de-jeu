@@ -50,6 +50,9 @@
     flex: none; display: flex; align-items: center; gap: 8px; padding: 0 14px 8px; max-width: 620px; width: 100%; margin: 0 auto;
   }
   .etat-jeu { flex-wrap: wrap; }
+  .resume-vitesse { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(0, 0, 0, 0.22); display: grid; gap: 4px; }
+  .resume-vitesse p { font-size: 0.84rem; margin: 0 !important; }
+  .etat-jeu .handicap { color: #ff9a8e; font-size: 0.82rem; font-weight: 700; }
   .evenement-bande { flex-basis: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px;
     background: rgba(201, 162, 74, 0.14); border: 1px solid var(--accent); font-size: 0.85rem; animation: arrivee 0.5s ease-out; }
   .evenement-bande .txt { flex: 1; min-width: 0; }
@@ -457,7 +460,10 @@
       case 'enq_texte':
         montrerLettre(msg); return;
       case 'enq_gorgee':
-        toast('🍺 Bois ' + unite(msg.nombre) + ' : ' + msg.raison.toLowerCase() + '.', 'gorgee', 7000); return;
+        if (!msg.nombre) toast('⏳ Plafond atteint : au lieu de boire, ' + Math.round(msg.handicap / 60) + ' min d’attente (archive et accusations) · ' + msg.raison.toLowerCase() + '.', 'gorgee', 8000);
+        else toast('🍺 Bois ' + unite(msg.nombre) + ' : ' + msg.raison.toLowerCase() + '.' +
+          (msg.handicap ? ' Plafond atteint : le reste devient ' + Math.round(msg.handicap / 60) + ' min d’attente.' : ''), 'gorgee', 8000);
+        return;
       case 'enq_pe':
         toast('+' + msg.gain + ' PE (' + msg.raison + ') · total ' + msg.total, '', 4000); return;
       case 'enq_nouvel_indice':
@@ -598,6 +604,25 @@
     j.appendChild(la);
   }
 
+  const NOMS_DOSAGES = { doux: 'Doux', normal: 'Normal', corse: 'Corsé' };
+  function texteDosage(d) { return NOMS_DOSAGES[d] + (etat.dosages[d] !== 1 ? ' ×' + String(etat.dosages[d]).replace('.', ',') : ''); }
+  function textePlafond(p) { return p ? p + ' ' + etat.unite + (p > 1 && !/s$/.test(etat.unite) ? 's' : '') + ' par heure' : 'sans plafond'; }
+  // Ce que la vitesse change, en clair
+  function resumeVitesse(parent) {
+    const v = etat.vitesses[etat.vitesse];
+    const mn = (sec) => sec < 60 ? Math.round(sec) + ' s' : Math.round(sec / 60) + ' min';
+    const lignes = [
+      'Un indice coûte ' + v.pe_par_indice + ' PE ; relecture de l’archive toutes les ' + mn(v.timer_consultation) + '.',
+      'Un témoin anonyme toutes les ' + mn(v.bonus_toutes) + ' environ.',
+      'Accusation : ' + mn(v.delai_accusation) + ' d’attente, doublée à chaque échec ; ' + v.echecs_par_joueur + ' échec' + (v.echecs_par_joueur > 1 ? 's' : '') + ' par joueur et ' + pack.vocabulaire.tueur + ' gagne.',
+      v.evenements + ' événement' + (v.evenements > 1 ? 's' : '') + ' de ' + mn(v.duree_evenement) + ' ; ' + v.lieux_armes + ' lieux et ' + v.lieux_armes + ' armes en jeu.',
+      'Pénalités : ' + texteDosage(etat.dosage).toLowerCase() + (v.mult_gorgees !== 1 ? ', vitesse ×' + String(v.mult_gorgees).replace('.', ',') : '') +
+        ', ' + textePlafond(etat.plafond) + (etat.plafond ? ' (au-delà : du temps d’attente au lieu de boire)' : '') + '.',
+    ];
+    const c = el('div', { className: 'resume-vitesse' });
+    lignes.forEach((t) => c.appendChild(el('p', {}, t)));
+    parent.appendChild(c);
+  }
   function lobbyReglages() {
     const r = carte();
     const v = etat.vitesses[etat.vitesse];
@@ -605,6 +630,7 @@
       r.appendChild(el('p', {}, 'L’hôte (' + etat.hote + ') règle la partie.'));
       r.appendChild(el('p', {}, v.titre + ' · ' + duree(etat.duree) + ' · pénalité : ' + etat.unite));
       r.appendChild(el('p', {}, 'Jeux comptés : ' + etat.jeux.map((j) => (Soiree.JEUX[j] || {}).titre || j).join(', ') + '.'));
+      resumeVitesse(r);
       return;
     }
     if (etat.univers_disponibles.length > 1) {
@@ -625,6 +651,7 @@
       lv.appendChild(b);
     });
     r.appendChild(lv);
+    resumeVitesse(r);
     r.appendChild(el('div', { className: 'etiquette' }, 'Durée de l’enquête'));
     const sel = el('select');
     [1800, 3600, 5400, 7200, 10800, 14400, 18000, 21600].forEach((d) => sel.appendChild(el('option', { value: d, selected: d === etat.duree }, duree(d))));
@@ -641,10 +668,37 @@
       lj.appendChild(lab);
     });
     r.appendChild(lj);
-    r.appendChild(el('div', { className: 'etiquette' }, 'Unité de pénalité (« pompe » sans alcool)'));
-    const u = el('input', { type: 'text', id: 'unite', value: etat.unite, maxLength: 20 });
+    r.appendChild(el('div', { className: 'etiquette' }, 'Unité de pénalité'));
+    const lu2 = el('div', { className: 'ligne' });
+    ['gorgée', 'pompe', 'gage', 'point'].forEach((x) => {
+      const b = el('button', { type: 'button', className: 'discret puce' + (x === etat.unite ? ' choisie' : '') }, x);
+      b.addEventListener('click', () => envoyer({ type: 'enq_config', unite: x }));
+      lu2.appendChild(b);
+    });
+    r.appendChild(lu2);
+    const u = el('input', { type: 'text', id: 'unite', value: etat.unite, maxLength: 20, placeholder: 'ou une autre unité…' });
+    u.style.marginTop = '6px';
     u.addEventListener('change', () => envoyer({ type: 'enq_config', unite: u.value }));
     r.appendChild(u);
+    r.appendChild(el('div', { className: 'etiquette' }, 'Dosage'));
+    const ld = el('div', { className: 'ligne' });
+    Object.keys(etat.dosages).forEach((d) => {
+      const b = el('button', { type: 'button', className: 'discret puce' + (d === etat.dosage ? ' choisie' : '') }, texteDosage(d));
+      b.dataset.dosage = d;
+      b.addEventListener('click', () => envoyer({ type: 'enq_config', dosage: d }));
+      ld.appendChild(b);
+    });
+    r.appendChild(ld);
+    r.appendChild(el('div', { className: 'etiquette' }, 'Plafond par joueur'));
+    const lp = el('div', { className: 'ligne' });
+    etat.plafonds.forEach((x) => {
+      const b = el('button', { type: 'button', className: 'discret puce' + (x === etat.plafond ? ' choisie' : '') }, x ? x + ' / heure' : 'Sans plafond');
+      b.dataset.plafond = x;
+      b.addEventListener('click', () => envoyer({ type: 'enq_config', plafond: x }));
+      lp.appendChild(b);
+    });
+    r.appendChild(lp);
+    r.appendChild(el('p', { className: 'legende', style: 'margin-top:6px' }, 'Au-delà du plafond, chaque ' + etat.unite + ' non bue devient une minute pendant laquelle l’archive et les accusations sont bloquées.'));
   }
 
   // ---------------- Ouverture ----------------
@@ -766,6 +820,7 @@
     const b = bloc(contenu, 'Ton bilan');
     b.appendChild(el('p', {}, archive.length + ' pli' + (archive.length > 1 ? 's' : '') + ' reçu' + (archive.length > 1 ? 's' : '') +
       ' · ' + archive.filter((e) => e.tampon).length + ' expertisé(s) · ' + (moi.accusations || []).length + ' accusation(s).'));
+    b.appendChild(el('p', {}, majusculeInit(etat.unite) + 's cette heure : ' + moi.gorgees_heure + (etat.plafond ? '/' + etat.plafond : '') + '.'));
     b.appendChild(el('p', {}, 'Si ' + (pack.narrateur ? pack.narrateur.nom : 'le narrateur') + ' annonce une interférence, quelqu’un a été saboté : peut-être toi.'));
   }
   function majusculeInit(t) { return t.charAt(0).toUpperCase() + t.slice(1); }
@@ -784,6 +839,7 @@
     const r = bloc(contenu, 'Réserve');
     r.appendChild(el('div', { className: 'charges' }, '🔪'.repeat(k.charges) + '·'.repeat(Math.max(0, k.charges_max - k.charges))));
     r.appendChild(el('p', {}, k.charges + '/' + k.charges_max + ' charges · ' + moi.pe + ' PE. Une charge coûte ' + k.cout_charge + ' PE (autant qu’un indice de couverture).'));
+    r.appendChild(el('p', {}, majusculeInit(etat.unite) + 's cette heure : ' + moi.gorgees_heure + (etat.plafond ? '/' + etat.plafond : '') + '.'));
     const ach = el('button', { type: 'button', disabled: k.charges >= k.charges_max || moi.pe < k.cout_charge }, 'Acheter une charge (' + k.cout_charge + ' PE)');
     ach.style.marginTop = '8px';
     ach.addEventListener('click', () => envoyer({ type: 'enq_charge' }));
@@ -913,7 +969,14 @@
     elEtat.textContent = '';
     const chrono = el('span', { className: 'chrono' });
     const pe = el('span', { className: 'pe' });
-    if (moi.inscrit) { pe.append(el('b', {}, moi.pe + ' PE')); pe.append(' · échecs ' + etat.echecs + '/' + etat.seuil_patience); }
+    if (moi.inscrit) {
+      pe.append(el('b', {}, moi.pe + ' PE')); pe.append(' · échecs ' + etat.echecs + '/' + etat.seuil_patience);
+      if (moi.handicap_jusqua && moi.handicap_jusqua > serveurMaintenant()) {
+        const h = el('span', { className: 'handicap' });
+        h.dataset.handicap = moi.handicap_jusqua;
+        pe.append(' · ', h);
+      }
+    }
     elEtat.append(chrono, pe);
     if (moi.inscrit) {
       const r = el('button', { type: 'button', className: 'discret bouton-role' }, '🎭 Rôle');
@@ -955,6 +1018,7 @@
     const maj = () => {
       chrono.textContent = mmss(etat.fin_a - serveurMaintenant());
       document.querySelectorAll('[data-fin-evt]').forEach((x) => { x.textContent = mmss(Number(x.dataset.finEvt) - serveurMaintenant()); });
+      document.querySelectorAll('[data-handicap]').forEach((x) => { const r = Number(x.dataset.handicap) - serveurMaintenant(); x.textContent = r > 0 ? '⏳ pénalité ' + mmss(r) : ''; });
       const coupe = courantCoupe();
       document.querySelectorAll('[data-relire]').forEach((b) => {
         const reste = (moi.consultation_possible_a || 0) - serveurMaintenant();
@@ -1353,6 +1417,15 @@
         t.appendChild(tr);
       });
       i.appendChild(t);
+      const gb = carte('Les ' + etat.unite + 's de la soirée');
+      const tg = el('table', { className: 'recap' });
+      tg.appendChild(el('tr')).append(el('th', {}, 'Joueur'), el('th', {}, 'Bues'), el('th', {}, 'Changées en attente'));
+      (f.recap.bues || []).slice().sort((a, b) => b.total - a.total).forEach((x) => {
+        const tr = el('tr');
+        tr.append(el('td', {}, joueurAvecIcone(x.nom)), el('td', {}, String(x.total)), el('td', {}, String(x.handicap)));
+        tg.appendChild(tr);
+      });
+      gb.appendChild(tg);
       const sb = carte('Les sabotages de ' + pack.vocabulaire.tueur);
       const liste = f.recap.sabotages || [];
       if (!liste.length) sb.appendChild(el('p', {}, 'Aucun : ' + pack.vocabulaire.tueur + ' a joué sans tricher.'));
