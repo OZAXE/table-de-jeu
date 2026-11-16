@@ -50,6 +50,7 @@
   header h1 { font: 700 1.35rem/1.05 var(--titre); flex: 1; min-width: 0; }
   header .aide { flex: none; width: 38px; height: 38px; padding: 0; border-radius: 50%; font-size: 1.05rem; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--bord); }
   /* Règles : sections dépliables */
+  #regles .bienvenue { padding: 12px 14px; margin-bottom: 8px; border-radius: 14px; background: rgba(201, 162, 74, 0.14); border: 1px solid var(--accent); color: var(--texte); font-size: 0.92rem; }
   .regles details { border: 1px solid var(--bord); border-radius: 14px; background: color-mix(in srgb, var(--surface) 88%, transparent); margin-bottom: 8px; }
   .regles summary { cursor: pointer; padding: 12px 14px; font: 700 1.05rem/1.2 var(--titre); color: var(--accent); list-style: none; display: flex; gap: 8px; align-items: center; }
   .regles summary::-webkit-details-marker { display: none; }
@@ -573,6 +574,7 @@
     else if (pack && moi) ({ lobby: ecranLobby, ouverture: ecranOuverture, enquete: ecranEnquete, fin: ecranFin }[etat.phase] || ecranAucune)();
     ecran.scrollTop = defilement;
     if (dossierOuvert) rendreDossier();
+    reglesPremiereFois();
     if (garde) {
       const e = document.getElementById(garde.id);
       if (e) { e.value = garde.valeur; e.focus(); try { e.setSelectionRange(garde.debut, garde.fin); } catch (x) { /* pas un champ texte */ } }
@@ -937,19 +939,40 @@
     });
     return e;
   }
-  function ouvrirRegles() {
+  function ouvrirRegles(premiere) {
     if (!pack || !etat) return;
     elRegles.textContent = '';
     const h = el('header');
+    const fermerRegles = () => { elRegles.classList.remove('ouvert'); elRegles.textContent = ''; };
     const fermer = el('button', { type: 'button', className: 'discret' }, 'Fermer');
-    fermer.addEventListener('click', () => { elRegles.classList.remove('ouvert'); elRegles.textContent = ''; });
+    fermer.addEventListener('click', fermerRegles);
     h.append(el('h2', {}, 'Règles'), fermer);
     const contenu = el('div', { className: 'contenu' });
+    if (premiere === true) contenu.appendChild(el('p', { className: 'bienvenue' },
+      '👋 Bienvenue ! Voici comment jouer. Tu retrouveras ces règles à tout moment avec le bouton ❓ en haut de l’écran.'));
     contenuRegles(contenu);
+    if (premiere === true) {
+      const go = el('button', { type: 'button' }, 'C’est parti');
+      go.dataset.cestParti = '1';
+      go.addEventListener('click', fermerRegles);
+      contenu.appendChild(go);
+    }
     elRegles.append(h, contenu);
     elRegles.classList.add('ouvert');
   }
-  elAide.addEventListener('click', ouvrirRegles);
+  elAide.addEventListener('click', () => ouvrirRegles(false));
+  // La toute première fois sur ce téléphone : les règles s'ouvrent d'elles-mêmes,
+  // en salle d'attente ou pendant l'enquête (jamais pendant la scène d'ouverture).
+  let reglesMontrees = false;
+  function reglesPremiereFois() {
+    if (reglesMontrees || !pack || !etat || !couches.includes('enq') || !['lobby', 'enquete'].includes(etat.phase)) return;
+    let vues = false;
+    try { vues = !!localStorage.getItem('shield.regles_vues'); } catch (e) { /* stockage bloqué : une fois par visite */ }
+    reglesMontrees = true;
+    if (vues) return;
+    try { localStorage.setItem('shield.regles_vues', '1'); } catch (e) { /* tant pis */ }
+    ouvrirRegles(true);
+  }
 
   // ---------------- Rôle : appui long ----------------
   function contenuRole() {
