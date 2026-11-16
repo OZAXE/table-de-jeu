@@ -168,6 +168,7 @@
     // d'attente vide de sens).
     async verifierJeuEnCours(jeuPage) {
       jeuDeLaPage = jeuPage;
+      Soiree.boutonEnquete();
       const s = Soiree.actuelle();
       if (!s) return;
       try {
@@ -217,6 +218,45 @@
     if (document.hidden) cacheeDepuis = Date.now(); else auReveil();
   });
   window.addEventListener('online', () => { if (jeuDeLaPage) Soiree.verifierJeuEnCours(jeuDeLaPage); });
+
+  // --- L'Enquête par-dessus le jeu ---
+  // Un onglet « 🔍 » sur le bord gauche ouvre la page de l'Enquête dans un
+  // calque plein écran. Elle a sa propre connexion (« soirée ») : la partie
+  // en cours n'est pas dérangée. Fermer le calque le cache sans le détruire,
+  // pour garder la connexion et l'état.
+  let calque = null;
+  Soiree.boutonEnquete = function () {
+    if (document.getElementById('onglet-enquete') || !Soiree.actuelle()) return;
+    const b = document.createElement('button');
+    b.id = 'onglet-enquete';
+    b.type = 'button';
+    b.setAttribute('aria-label', 'Ouvrir l\'enquête');
+    b.textContent = '🔍';
+    b.style.cssText = 'position:fixed;left:0;top:42%;z-index:99990;border:1px solid rgba(201,162,74,.5);' +
+      'border-left:0;border-radius:0 14px 14px 0;padding:10px 9px 10px 7px;font-size:20px;line-height:1;' +
+      'background:rgba(26,11,14,.88);color:#f3e6cf;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.4)';
+    b.addEventListener('click', ouvrirEnquete);
+    document.body.appendChild(b);
+  };
+  function ouvrirEnquete() {
+    if (!calque) {
+      calque = document.createElement('div');
+      calque.style.cssText = 'position:fixed;inset:0;z-index:99995;background:#1a0b0e;display:flex;flex-direction:column';
+      const fermer = document.createElement('button');
+      fermer.type = 'button';
+      fermer.textContent = '✕ Retour au jeu';
+      fermer.style.cssText = 'align-self:flex-end;margin:max(10px, env(safe-area-inset-top)) 12px 0 0;border:1px solid rgba(201,162,74,.4);' +
+        'border-radius:999px;padding:8px 14px;background:rgba(243,230,207,.08);color:#f3e6cf;font:600 14px Outfit, system-ui, sans-serif;cursor:pointer';
+      fermer.addEventListener('click', () => { calque.style.display = 'none'; });
+      const cadre = document.createElement('iframe');
+      cadre.src = 'enquete.html?dans=1';
+      cadre.title = 'Enquête';
+      cadre.style.cssText = 'flex:1;border:0;width:100%';
+      calque.append(fermer, cadre);
+      document.body.appendChild(calque);
+    }
+    calque.style.display = 'flex';
+  }
 
   window.Soiree = Soiree;
 })();
