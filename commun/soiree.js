@@ -81,6 +81,12 @@
     if (bandeau) bandeau.style.display = 'none';
   }
 
+  // Jeu de la page ouverte (connu dès sa première connexion). Sert au réveil
+  // du téléphone : s'il dormait pendant que le groupe changeait de jeu, il a
+  // pu rater l'annonce « salon_jeu » (connexion restée ouverte mais muette),
+  // et la page croirait encore jouer à l'ancien jeu.
+  let jeuDeLaPage = null;
+
   const Soiree = {
     JEUX,
     SERVEURS,
@@ -122,6 +128,7 @@
     // À appeler sur chaque message du serveur, avant le jeu. Renvoie vrai si
     // le message concernait la soirée (le jeu n'a alors rien à en faire).
     traiterMessage(msg, jeuPage) {
+      jeuDeLaPage = jeuPage;
       if (!msg || typeof msg.type !== 'string') return false;
       const s = Soiree.actuelle();
       if (msg.type === 'salon_jeu') {
@@ -144,6 +151,7 @@
     // et on propose de le rejoindre (on arrive sinon dans une salle
     // d'attente vide de sens).
     async verifierJeuEnCours(jeuPage) {
+      jeuDeLaPage = jeuPage;
       const s = Soiree.actuelle();
       if (!s) return;
       try {
@@ -178,6 +186,20 @@
       envoyer();
     },
   };
+
+  // Retour sur la page (téléphone déverrouillé, appli rouverte, réseau
+  // revenu) : on revérifie quel jeu tourne dans la soirée.
+  let cacheeDepuis = 0;
+  function auReveil() {
+    if (!jeuDeLaPage) return;
+    const absence = cacheeDepuis ? Date.now() - cacheeDepuis : 0;
+    cacheeDepuis = 0;
+    if (absence > 2000) Soiree.verifierJeuEnCours(jeuDeLaPage);
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) cacheeDepuis = Date.now(); else auReveil();
+  });
+  window.addEventListener('online', () => { if (jeuDeLaPage) Soiree.verifierJeuEnCours(jeuDeLaPage); });
 
   window.Soiree = Soiree;
 })();
