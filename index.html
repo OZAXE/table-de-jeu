@@ -124,6 +124,15 @@
   .soiree button.discret { background: var(--surface-forte); color: var(--texte); }
   .soiree button:active { transform: scale(0.96); }
   .soiree .etat { color: var(--texte-doux); font-size: 0.9rem; line-height: 1.4; }
+  .soiree .presents { margin-top: 12px; }
+  .soiree .presents-titre { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--texte-doux); margin-bottom: 6px; }
+  .soiree .presents-liste { display: flex; flex-wrap: wrap; gap: 6px; }
+  .soiree .present { display: grid; padding: 6px 11px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); line-height: 1.2; }
+  .soiree .present b { font-weight: 600; font-size: 0.92rem; }
+  .soiree .present small { color: var(--texte-doux); font-size: 0.72rem; }
+  .soiree .present.moi { border-color: rgba(122, 162, 214, 0.55); }
+  .soiree .arrivee { margin-top: 8px; font-size: 0.9rem; color: #9fe6b0; animation: arrivee 0.4s ease-out; }
+  @keyframes arrivee { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
   .soiree .etat b { color: var(--texte); font-weight: 600; }
   .soiree .code-grand { font-size: 1.6rem; font-weight: 800; letter-spacing: 0.25em; }
   #soiree-contenu { margin-top: 10px; }
@@ -481,6 +490,9 @@
       etat.style.flex = '1 1 160px';
       l1.appendChild(etat);
       contenu.appendChild(l1);
+      // Qui est dans la soirée (mis à jour toutes les quelques secondes)
+      const presents = el('div', { className: 'presents' });
+      contenu.appendChild(presents);
       const liste = el('div', { className: 'tables' });
       contenu.appendChild(liste);
 
@@ -533,7 +545,7 @@
 
       let info;
       try {
-        info = await Soiree.infoSoiree(s.code, s.serveur);
+        info = await Soiree.infoSoiree(s.code, s.serveur, Soiree.nom());
       } catch (e) {
         etat.textContent = 'Serveur injoignable pour le moment.';
         return;
@@ -553,6 +565,8 @@
         etat.textContent = 'Serveur injoignable pour le moment.';
         return;
       }
+      majPresents(presents, s.code, info.presents || []);
+      suivrePresents(s, presents);
       const tables = info.tables.slice();
       // Ma table a pu être libérée (tout le monde parti un moment) : elle
       // reste ma table, elle se rouvrira quand j'y retournerai.
@@ -599,6 +613,43 @@
       let n = contenu.querySelector('.note-table');
       if (!n) { n = el('p', { className: 'etat note-table' }); n.style.marginTop = '10px'; contenu.appendChild(n); }
       n.textContent = texte;
+    }
+
+    // --- Dans la soirée : les prénoms de ceux qui sont là, et où ---
+    let connus = null, connusCode = null, suivi = null;
+    function majPresents(bloc, code, liste) {
+      if (connusCode !== code) { connus = null; connusCode = code; }
+      const moi = (Soiree.nom() || '').trim().toLowerCase();
+      const nouveaux = connus ? liste.filter((x) => !connus.has(x.nom.toLowerCase()) && x.nom.toLowerCase() !== moi) : [];
+      connus = new Set(liste.map((x) => x.nom.toLowerCase()));
+      bloc.textContent = '';
+      bloc.appendChild(el('div', { className: 'presents-titre' }, 'Dans la soirée (' + liste.length + ')'));
+      const l = el('div', { className: 'presents-liste' });
+      if (!liste.length) l.appendChild(el('span', { className: 'etat' }, 'Personne pour l’instant.'));
+      liste.forEach((x) => {
+        const c = el('span', { className: 'present' + (x.nom.toLowerCase() === moi ? ' moi' : '') });
+        c.appendChild(el('b', {}, x.nom));
+        c.appendChild(el('small', {}, x.ou));
+        l.appendChild(c);
+      });
+      bloc.appendChild(l);
+      nouveaux.forEach((x) => {
+        const n = el('p', { className: 'arrivee' }, '👋 ' + x.nom + ' a rejoint la soirée');
+        bloc.appendChild(n);
+        setTimeout(() => n.remove(), 7000);
+      });
+    }
+    function suivrePresents(s, bloc) {
+      clearInterval(suivi);
+      suivi = setInterval(async () => {
+        const actuelle = Soiree.actuelle();
+        if (!bloc.isConnected || !actuelle || actuelle.code !== s.code) { clearInterval(suivi); return; }
+        if (document.hidden) return;
+        try {
+          const info = await Soiree.infoSoiree(s.code, s.serveur, Soiree.nom());
+          if (info.existe && bloc.isConnected) majPresents(bloc, s.code, info.presents || []);
+        } catch (e) { /* on réessaiera */ }
+      }, 8000);
     }
 
     function afficher() {
