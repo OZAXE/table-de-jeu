@@ -131,6 +131,10 @@
   .soiree .present b { font-weight: 600; font-size: 0.92rem; }
   .soiree .present small { color: var(--texte-doux); font-size: 0.72rem; }
   .soiree .present.moi { border-color: rgba(122, 162, 214, 0.55); }
+  .soiree button.present { text-align: left; color: var(--texte); font: inherit; cursor: pointer; }
+  .soiree button.present small { color: #9fc4ef; }
+  .soiree .table.cliquable { cursor: pointer; }
+  .soiree .table.cliquable:active { background: rgba(122, 162, 214, 0.08); }
   .soiree .arrivee { margin-top: 8px; font-size: 0.9rem; color: #9fe6b0; animation: arrivee 0.4s ease-out; }
   @keyframes arrivee { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
   .soiree .etat b { color: var(--texte); font-weight: 600; }
@@ -545,7 +549,7 @@
 
       let info;
       try {
-        info = await Soiree.infoSoiree(s.code, s.serveur, Soiree.nom());
+        info = await Soiree.infoSoiree(s.code, s.serveur, Soiree.nom(), s.table);
       } catch (e) {
         etat.textContent = 'Serveur injoignable pour le moment.';
         return;
@@ -565,7 +569,8 @@
         etat.textContent = 'Serveur injoignable pour le moment.';
         return;
       }
-      majPresents(presents, s.code, info.presents || []);
+      majPresents(presents, s, info);
+      signatureTables = signer(info.tables);
       suivrePresents(s, presents);
       const tables = info.tables.slice();
       // Ma table a pu être libérée (tout le monde parti un moment) : elle
@@ -588,6 +593,11 @@
         texte.appendChild(el('span', {}, (j ? j.icone + ' ' + j.titre : 'Salle d\'attente') +
           (t.joueurs.length ? ' · ' + t.joueurs.join(', ') : '')));
         ligne.appendChild(texte);
+        if (!moi && t.joueurs.length < 8) {
+          // Toute la ligne est cliquable (avec confirmation), pas seulement le bouton
+          ligne.classList.add('cliquable');
+          ligne.addEventListener('click', (e) => { if (!e.target.closest('button')) rejoindreTable(s, t); });
+        }
         if (moi && j) {
           const aller = el('button', { type: 'button' }, 'Rejoindre la partie');
           aller.addEventListener('click', () => { if (prenomOk()) location.href = Soiree.lienJeu(t.jeu, t.code); });
@@ -616,8 +626,23 @@
     }
 
     // --- Dans la soirée : les prénoms de ceux qui sont là, et où ---
-    let connus = null, connusCode = null, suivi = null;
-    function majPresents(bloc, code, liste) {
+    let connus = null, connusCode = null, suivi = null, signatureTables = '';
+    const signer = (tables) => JSON.stringify((tables || []).map((t) => [t.code, t.jeu, t.joueurs]));
+    // Rejoindre une table (après confirmation) : sa partie si un jeu tourne, sinon sa salle d'attente
+    async function rejoindreTable(s, t, qui) {
+      if (!prenomOk()) return;
+      if (t.code === s.table) { erreur.textContent = qui ? 'Tu es déjà à la même table que ' + qui + '.' : 'C’est déjà ta table.'; return; }
+      if (t.joueurs && t.joueurs.length >= 8) { erreur.textContent = 'La table ' + t.numero + ' est complète (8 places).'; return; }
+      const j = t.jeu && Soiree.JEUX[t.jeu];
+      const ok = await Soiree.confirmer('Rejoindre la table ' + t.numero + (qui ? ' de ' + qui : '') + ' ?\n' +
+        (j ? j.icone + ' ' + j.titre + ' est en cours : tu rejoins la partie.' : 'Elle est en salle d’attente.'), 'Rejoindre', 'Annuler');
+      if (!ok) return;
+      erreur.textContent = '';
+      Soiree.memoriser(t.code, s.serveur);
+      if (j) location.href = Soiree.lienJeu(t.jeu, t.code); else afficher();
+    }
+    function majPresents(bloc, s, info) {
+      const code = s.code, liste = info.presents || [];
       if (connusCode !== code) { connus = null; connusCode = code; }
       const moi = (Soiree.nom() || '').trim().toLowerCase();
       const nouveaux = connus ? liste.filter((x) => !connus.has(x.nom.toLowerCase()) && x.nom.toLowerCase() !== moi) : [];
@@ -627,9 +652,12 @@
       const l = el('div', { className: 'presents-liste' });
       if (!liste.length) l.appendChild(el('span', { className: 'etat' }, 'Personne pour l’instant.'));
       liste.forEach((x) => {
-        const c = el('span', { className: 'present' + (x.nom.toLowerCase() === moi ? ' moi' : '') });
+        const table = x.table && (info.tables || []).find((t) => t.code === x.table);
+        const cliquable = table && x.nom.toLowerCase() !== moi;
+        const c = el(cliquable ? 'button' : 'span', { className: 'present' + (x.nom.toLowerCase() === moi ? ' moi' : '') + (cliquable ? ' cliquable' : '') });
+        if (cliquable) { c.type = 'button'; c.title = 'Rejoindre sa table'; c.addEventListener('click', () => rejoindreTable(s, table, x.nom)); }
         c.appendChild(el('b', {}, x.nom));
-        c.appendChild(el('small', {}, x.ou));
+        c.appendChild(el('small', {}, x.ou + (cliquable && table.code !== s.table ? ' · rejoindre' : '')));
         l.appendChild(c);
       });
       bloc.appendChild(l);
@@ -646,8 +674,12 @@
         if (!bloc.isConnected || !actuelle || actuelle.code !== s.code) { clearInterval(suivi); return; }
         if (document.hidden) return;
         try {
-          const info = await Soiree.infoSoiree(s.code, s.serveur, Soiree.nom());
-          if (info.existe && bloc.isConnected) majPresents(bloc, s.code, info.presents || []);
+          const info = await Soiree.infoSoiree(s.code, s.serveur, Soiree.nom(), s.table);
+          if (!info.existe || !bloc.isConnected) return;
+          // Les tables ont changé (nouvelle table, jeu lancé, quelqu'un assis) : on redessine,
+          // sauf pendant la saisie du prénom.
+          if (signer(info.tables) !== signatureTables && document.activeElement !== champPrenom) { afficher(); return; }
+          majPresents(bloc, s, info);
         } catch (e) { /* on réessaiera */ }
       }, 8000);
     }
