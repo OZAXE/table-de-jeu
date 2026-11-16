@@ -2144,7 +2144,7 @@ function seConnecter() {
   clearTimeout(minuteurLien);
   minuteurLien = null;
   lienActif = true;
-  let url = SERVEURS[serveurChoisi].ws + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom) + '?bat=1';
+  let url = SERVEURS[serveurChoisi].ws + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom) + '?bat=1&page=casino';
   if (monJeton) url += '&jeton=' + encodeURIComponent(monJeton);
   const socket = new WebSocket(url);
   ws = socket;
