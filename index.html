@@ -100,6 +100,36 @@
   .installer button:hover { filter: brightness(1.08); }
   .installer button:active { transform: scale(0.95); }
 
+  /* --- La soirée : prénom et salon communs à tous les jeux --- */
+  .soiree {
+    background: var(--surface); border: 1px solid var(--bord); border-radius: 22px;
+    padding: 16px; margin-bottom: 26px;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  }
+  .soiree h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 12px; }
+  .soiree .ligne { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .soiree .ligne + .ligne { margin-top: 10px; }
+  .soiree input {
+    flex: 1 1 160px; min-width: 0; border-radius: 12px; border: 1px solid var(--bord);
+    background: rgba(0, 0, 0, 0.25); color: var(--texte); padding: 11px 14px;
+    font: 500 1rem 'Outfit', sans-serif;
+  }
+  .soiree input.code { flex: 0 1 110px; text-transform: uppercase; letter-spacing: 0.2em; text-align: center; }
+  .soiree input:focus { outline: 2px solid var(--acier); outline-offset: 1px; }
+  .soiree button {
+    border: 0; border-radius: 12px; padding: 11px 16px; cursor: pointer; white-space: nowrap;
+    background: var(--or); color: #0a1424; font: 600 0.92rem 'Outfit', sans-serif;
+    transition: transform 0.15s ease, filter 0.15s ease;
+  }
+  .soiree button.discret { background: var(--surface-forte); color: var(--texte); }
+  .soiree button:active { transform: scale(0.96); }
+  .soiree .etat { color: var(--texte-doux); font-size: 0.9rem; line-height: 1.4; }
+  .soiree .etat b { color: var(--texte); font-weight: 600; }
+  .soiree .code-grand { font-size: 1.6rem; font-weight: 800; letter-spacing: 0.25em; }
+  #soiree-contenu { margin-top: 10px; }
+  .soiree .erreur { color: #f2a7a7; font-size: 0.88rem; margin-top: 8px; }
+  .soiree .erreur:empty { display: none; }
+
   /* --- Les jeux --- */
   .titre-section {
     display: flex; align-items: baseline; justify-content: space-between;
@@ -228,6 +258,15 @@
       <button type="button" id="installer-bouton">Installer</button>
     </div>
 
+    <section class="soiree" aria-labelledby="titre-soiree">
+      <h3 id="titre-soiree">Ta soirée</h3>
+      <div class="ligne">
+        <input id="prenom" type="text" maxlength="16" autocomplete="nickname" placeholder="Ton prénom" aria-label="Ton prénom">
+      </div>
+      <div id="soiree-contenu"></div>
+      <div class="erreur" id="soiree-erreur" role="alert"></div>
+    </section>
+
     <div class="titre-section">
       <h3>Les jeux</h3>
       <span>6 jeux · en ligne</span>
@@ -332,7 +371,149 @@
     <footer class="pied">À consommer avec modération · Fait maison entre potes</footer>
   </main>
 
+<script src="commun/soiree.js"></script>
 <script>
+  // --- La soirée : un prénom et un code de salon pour tous les jeux ---
+  (function () {
+    const serveur = /^(localhost|127.0.0.1|\[::1\])$/.test(location.hostname) ? 'local' : 'render';
+    const champPrenom = document.getElementById('prenom');
+    const contenu = document.getElementById('soiree-contenu');
+    const erreur = document.getElementById('soiree-erreur');
+
+    champPrenom.value = Soiree.nom();
+    champPrenom.addEventListener('input', () => Soiree.definirNom(champPrenom.value));
+
+    function prenomOk() {
+      if (Soiree.definirNom(champPrenom.value)) return true;
+      erreur.textContent = 'Entre d\'abord ton prénom.';
+      champPrenom.focus();
+      return false;
+    }
+
+    function el(balise, attrs, texte) {
+      const e = document.createElement(balise);
+      Object.assign(e, attrs || {});
+      if (texte != null) e.textContent = texte;
+      return e;
+    }
+
+    // Les cartes des jeux ouvrent le jeu DANS la soirée (même salon).
+    function majLiens(code) {
+      document.querySelectorAll('.jeux a.jeu').forEach((a) => {
+        const page = a.getAttribute('href').split('?')[0];
+        a.setAttribute('href', code ? page + '?salon=' + code : page);
+      });
+    }
+
+    function sansSoiree() {
+      majLiens(null);
+      contenu.textContent = '';
+      const l1 = el('div', { className: 'ligne' });
+      const creer = el('button', { type: 'button' }, 'Créer une soirée');
+      creer.addEventListener('click', async () => {
+        if (!prenomOk()) return;
+        erreur.textContent = 'Connexion au serveur…';
+        try {
+          const rep = await fetch(Soiree.http(serveur) + '/creer-salon');
+          Soiree.memoriser((await rep.json()).code, serveur);
+          erreur.textContent = '';
+          afficher();
+        } catch (e) {
+          erreur.textContent = 'Serveur injoignable. S\'il dort, réessaie dans 30 s.';
+        }
+      });
+      l1.appendChild(creer);
+      contenu.appendChild(l1);
+
+      const l2 = el('div', { className: 'ligne' });
+      const code = el('input', { className: 'code', type: 'text', maxLength: 4, placeholder: 'CODE', autocapitalize: 'characters' });
+      code.setAttribute('aria-label', 'Code de la soirée');
+      const rejoindre = el('button', { type: 'button', className: 'discret' }, 'Rejoindre');
+      rejoindre.addEventListener('click', async () => {
+        if (!prenomOk()) return;
+        const c = code.value.trim().toUpperCase();
+        if (!/^[A-Z]{4}$/.test(c)) { erreur.textContent = 'Le code fait 4 lettres.'; return; }
+        erreur.textContent = 'Connexion au serveur…';
+        try {
+          const info = await Soiree.info(c, serveur);
+          if (!info.existe) { erreur.textContent = 'Soirée introuvable.'; return; }
+          Soiree.memoriser(c, serveur);
+          erreur.textContent = '';
+          afficher();
+        } catch (e) {
+          erreur.textContent = 'Serveur injoignable.';
+        }
+      });
+      l2.appendChild(code);
+      l2.appendChild(rejoindre);
+      contenu.appendChild(l2);
+      const note = el('p', { className: 'etat' },
+        'Une soirée garde le même code pour tous les jeux : quand quelqu\'un lance le jeu suivant, tout le monde y passe.');
+      note.style.marginTop = '10px';
+      contenu.appendChild(note);
+    }
+
+    async function avecSoiree(s) {
+      majLiens(s.code);
+      contenu.textContent = '';
+      const l1 = el('div', { className: 'ligne' });
+      l1.appendChild(el('span', { className: 'code-grand' }, s.code));
+      const etat = el('span', { className: 'etat' }, 'Vérification…');
+      etat.style.flex = '1 1 160px';
+      l1.appendChild(etat);
+      contenu.appendChild(l1);
+
+      const l2 = el('div', { className: 'ligne' });
+      const partager = el('button', { type: 'button', className: 'discret' }, 'Partager le code');
+      partager.addEventListener('click', async () => {
+        const url = location.origin + location.pathname.replace(/[^/]*$/, '') + 'index.html';
+        const texte = 'Rejoins la soirée ' + s.code + ' sur SHIELD';
+        try {
+          if (navigator.share) await navigator.share({ title: 'SHIELD', text: texte, url });
+          else { await navigator.clipboard.writeText(texte + ' : ' + url); partager.textContent = 'Copié'; }
+        } catch (e) { /* partage annulé */ }
+      });
+      const quitter = el('button', { type: 'button', className: 'discret' }, 'Quitter la soirée');
+      quitter.addEventListener('click', () => { Soiree.oublier(); afficher(); });
+      l2.appendChild(partager);
+      l2.appendChild(quitter);
+      contenu.appendChild(l2);
+
+      try {
+        const info = await Soiree.info(s.code, s.serveur);
+        if (!info.existe) {
+          etat.textContent = 'Cette soirée est terminée.';
+          return;
+        }
+        const n = info.joueurs.length;
+        const j = info.jeu && Soiree.JEUX[info.jeu];
+        etat.textContent = '';
+        if (j) {
+          etat.append(j.icone + ' En cours : ');
+          etat.appendChild(el('b', {}, j.titre));
+          const aller = el('button', { type: 'button' }, 'Rejoindre la partie');
+          aller.addEventListener('click', () => {
+            if (prenomOk()) location.href = Soiree.lienJeu(info.jeu, s.code);
+          });
+          l2.insertBefore(aller, l2.firstChild);
+        } else {
+          etat.append('Salle d\'attente : choisis un jeu ci-dessous.');
+        }
+        if (n) etat.append(' · ' + n + ' joueur' + (n > 1 ? 's' : ''));
+      } catch (e) {
+        etat.textContent = 'Serveur injoignable pour le moment.';
+      }
+    }
+
+    function afficher() {
+      const s = Soiree.actuelle();
+      if (s) avecSoiree(s); else sansSoiree();
+    }
+    afficher();
+    // Retour sur l'accueil (appli rouverte) : l'état de la soirée a pu changer.
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) afficher(); });
+  })();
+
   // --- Appli installable (PWA) : voir manifest.json et service-worker.js ---
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(() => {});
 
