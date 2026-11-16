@@ -1041,6 +1041,19 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
   observateur.observe(conteneur);
   controles.addEventListener('change', demanderImage);
   function demanderImage() { demande = true; if (actif && !raf) raf = requestAnimationFrame(boucle); }
+  // Repère d'une rumeur localisée : un anneau doré qui pulse sur la pièce.
+  const anneauPing = new THREE.Mesh(new THREE.RingGeometry(0.1, 0.13, 40),
+    new THREE.MeshBasicMaterial({ color: 0xffd36b, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
+  anneauPing.rotation.x = -Math.PI / 2;
+  scene.add(anneauPing);
+  let pingFin = 0;
+  function signaler(id, duree = 20000) {
+    const pc = pieces[id];
+    if (!pc) return;
+    anneauPing.position.set(pc.centre.x, pc.centre.y + 0.03, pc.centre.z);
+    pingFin = performance.now() + duree;
+    demanderImage();
+  }
   function boucle(t) {
     raf = null;
     if (!actif) return;
@@ -1058,11 +1071,16 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
         scene.background.copy(k ? FLASH : NUIT);
       } else if (lune.intensity !== 1.1) { lune.intensity = 1.1; scene.background.copy(NUIT); }
       if (crime && pieces[crime]) pieces[crime].halo.material.opacity = 0.35 + 0.25 * Math.sin(t / 300);
+      if (performance.now() < pingFin) {
+        const k = (t % 1400) / 1400;
+        anneauPing.scale.setScalar(1 + k * 3);
+        anneauPing.material.opacity = 0.9 * (1 - k);
+      } else anneauPing.material.opacity = 0;
       controles.update();
       renderer.render(scene, camera);
       demande = false;
     }
-    if (persos.size || demande || crime || eclair > 0) raf = requestAnimationFrame(boucle);
+    if (persos.size || demande || crime || eclair > 0 || performance.now() < pingFin) raf = requestAnimationFrame(boucle);
   }
   function reprendre() { if (actif) return; actif = true; dernier = 0; taille(); demanderImage(); }
   function arreter() { actif = false; if (raf) cancelAnimationFrame(raf); raf = null; }
@@ -1070,7 +1088,7 @@ export function creerManoir3D(conteneur, pack, { surAppui } = {}) {
 
   return {
     element: renderer.domElement,
-    majEtats, majPersonnages, reprendre, arreter,
+    majEtats, majPersonnages, reprendre, arreter, signaler,
     detruire() { arreter(); observateur.disconnect(); controles.dispose(); renderer.dispose(); renderer.domElement.remove(); },
   };
 }
