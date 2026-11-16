@@ -654,6 +654,8 @@
         ', ' + textePlafond(etat.plafond) + (etat.plafond ? ' (au-delà : du temps d’attente au lieu de boire)' : '') +
         (etat.gorgees_publiques ? ', affichées à tous' : ', privées') + '.',
     ];
+    if (v.pe_auto_heure) lignes.unshift('🧪 Mode démo pour tester seul : tout le monde gagne des PE tout seul (environ 1 toutes les ' +
+      Math.round(3600 / v.pe_auto_heure) + ' s). Ajoute des joueurs fictifs 🤖 dans l’onglet Joueurs.');
     const c = el('div', { className: 'resume-vitesse' });
     lignes.forEach((t) => c.appendChild(el('p', {}, t)));
     parent.appendChild(c);
