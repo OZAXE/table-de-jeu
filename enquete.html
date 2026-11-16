@@ -57,6 +57,7 @@
     background: rgba(255, 107, 94, 0.14); border: 1px solid #ff6b5e; animation: arrivee 0.4s ease-out; }
   .a-boire .verre.moi { background: rgba(255, 107, 94, 0.3); font-weight: 700; }
   .a-boire .verre button { padding: 3px 9px; font-size: 0.78rem; }
+  .retirer-bot { margin-left: 4px; padding: 0 6px; font-size: 0.75rem; line-height: 1.4; }
   .etat-jeu .handicap { color: #ff9a8e; font-size: 0.82rem; font-weight: 700; }
   .evenement-bande { flex-basis: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px;
     background: rgba(201, 162, 74, 0.14); border: 1px solid var(--accent); font-size: 0.85rem; animation: arrivee 0.5s ease-out; }
@@ -598,7 +599,15 @@
     const voc = pack.vocabulaire.enqueteurs;   // « les invités » : l'article est dans le pack
     const j = carte(voc.charAt(0).toUpperCase() + voc.slice(1) + ' (' + etat.joueurs.length + '/' + etat.joueurs_max + ')');
     const lj = el('div', { className: 'joueurs' });
-    etat.joueurs.forEach((x) => lj.appendChild(el('span', {}, joueurAvecIcone(x.nom))));
+    etat.joueurs.forEach((x) => {
+      const sp = el('span', {}, joueurAvecIcone(x.nom) + (x.bot ? ' 🤖' : ''));
+      if (x.bot && moi.hote) {
+        const r = el('button', { type: 'button', className: 'discret retirer-bot', title: 'Retirer' }, '✕');
+        r.addEventListener('click', () => envoyer({ type: 'enq_bot_retirer', nom: x.nom }));
+        sp.appendChild(r);
+      }
+      lj.appendChild(sp);
+    });
     if (!etat.joueurs.length) lj.appendChild(el('span', {}, 'Personne pour l’instant'));
     j.appendChild(lj);
     j.appendChild(el('p', { style: 'margin-top:10px' }, 'Hôte : ' + etat.hote + (moi.hote ? ' (toi)' : '') + '. ' +
@@ -610,6 +619,11 @@
       const a = el('button', { type: 'button', className: 'discret' }, 'Annuler');
       a.addEventListener('click', () => demander('Annuler l’enquête pour tout le monde ?', 'Annuler l’enquête').then((ok) => { if (ok) envoyer({ type: 'enq_annuler' }); }));
       la.append(b, a);
+      if (etat.joueurs.length < etat.joueurs_max) {
+        const f = el('button', { type: 'button', className: 'discret' }, '🤖 Ajouter un joueur fictif');
+        f.addEventListener('click', () => envoyer({ type: 'enq_bot_ajouter' }));
+        la.appendChild(f);
+      }
     }
     if (moi.inscrit) {
       const q = el('button', { type: 'button', className: 'discret' }, 'Ne pas participer');
@@ -617,6 +631,8 @@
       la.appendChild(q);
     }
     j.appendChild(la);
+    if (moi.hote) j.appendChild(el('p', { className: 'legende', style: 'margin-top:8px' },
+      'Envie de tester seul ? Les joueurs fictifs 🤖 gagnent des points, lisent leurs plis, accusent… et l’un d’eux peut être le tueur.'));
   }
 
   const NOMS_DOSAGES = { doux: 'Doux', normal: 'Normal', corse: 'Corsé' };
@@ -822,10 +838,11 @@
     const h = el('header');
     const fermer = el('button', { type: 'button', className: 'discret' }, 'Fermer');
     fermer.addEventListener('click', fermerDossier);
-    h.append(el('h2', {}, moi.console ? 'Ta console' : 'Ton dossier'), fermer);
+    const tueur = moi.role === 'tueur' && moi.console;
+    h.append(el('h2', {}, tueur ? 'Ta console' : 'Ton dossier'), fermer);
     const contenu = el('div', { className: 'contenu' });
     elDossier.append(h, contenu);
-    if (moi.console) consoleTueur(contenu); else dossierEnqueteur(contenu);
+    if (tueur) consoleTueur(contenu); else dossierEnqueteur(contenu);
     contenu.scrollTop = defil;
   }
   function bloc(parent, titre) {
