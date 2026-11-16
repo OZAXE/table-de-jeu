@@ -332,6 +332,7 @@
   </div>
 </div>
 
+<script src="commun/soiree.js"></script>
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
@@ -2194,7 +2195,7 @@ const SERVEURS = {
 };
 let serveurChoisi = 'render';
 
-let monNom = '';
+let monNom = Soiree.nom();   // prénom de la soirée, saisi une seule fois
 let codeSalon = '';
 let estCreateur = false;
 let joueursSalon = [];
@@ -2343,6 +2344,7 @@ function majLibelleServeur(b) {
 function lireNom() {
   const champ = document.getElementById('pseudo');
   monNom = champ ? champ.value.trim() : '';
+  if (monNom) monNom = Soiree.definirNom(monNom);
   if (!monNom) { afficherErreur('Entre ton prénom'); return false; }
   return true;
 }
@@ -2393,6 +2395,7 @@ let dernierSignal = 0;
 let cacheeDepuis = 0;
 
 function seConnecter() {
+  Soiree.memoriser(codeSalon, serveurChoisi);
   if (!monJeton) {
     const s = lireSession();
     if (s && s.code === codeSalon && s.jeton) monJeton = s.jeton;
@@ -2416,12 +2419,14 @@ function seConnecter() {
     dernierSignal = Date.now();
     mode = 'ligne';
     if (!enPartie) panneauAttente();
+    Soiree.verifierJeuEnCours('buckshot');
   };
   socket.onmessage = e => {
     if (ws !== socket) return;
     dernierSignal = Date.now();
     const msg = JSON.parse(e.data);
     if (msg.type === 'pong') return;
+    if (Soiree.traiterMessage(msg, 'buckshot')) return;
     if (msg.type === 'remplace') { lienActif = false; panneauRemplace(); return; }
     clientRecevoir(msg);
   };
@@ -2609,7 +2614,7 @@ function panneauAttente() {
   r.style.marginTop = '12px';
   if (estCreateur) {
     const trop = joueursSalon.length > JOUEURS_MAX;
-    const b = bouton('Démarrer la partie', '', () => envoyerIntention(MOI, { type: 'bt_demarrer' }));
+    const b = bouton('Démarrer la partie', '', () => Soiree.lancer('buckshot', () => envoyerIntention(MOI, { type: 'bt_demarrer' })));
     b.disabled = joueursSalon.length < JOUEURS_MIN || trop;
     r.appendChild(b);
     if (joueursSalon.length < JOUEURS_MIN) {
@@ -2739,7 +2744,16 @@ if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) serveurChoisi 
 
 const salonDansUrl = new URLSearchParams(location.search).get('salon');
 if (salonDansUrl && /^[A-Za-z]{4}$/.test(salonDansUrl)) {
-  panneauRejoindreDirect(salonDansUrl.toUpperCase());
+  if (monNom) {
+    // Prénom déjà connu (soirée en cours, lien de l'accueil) : on rejoint
+    // directement le salon, sans repasser par le panneau. Dans une soirée,
+    // chacun peut lancer le jeu suivant.
+    codeSalon = salonDansUrl.toUpperCase();
+    estCreateur = true;
+    seConnecter();
+  } else {
+    panneauRejoindreDirect(salonDansUrl.toUpperCase());
+  }
 } else {
   panneauAccueil();
 }
