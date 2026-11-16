@@ -15,7 +15,7 @@
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
 } }
 </script>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Exo+2:wght@500;700&family=Limelight&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* Les couleurs viennent du pack de l'univers (palette) ; valeurs du Manoir par défaut. */
   :root {
@@ -123,12 +123,12 @@
   .erreur:empty { display: none; }
 
   /* Portraits */
-  .portraits { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .portraits { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
   .portrait { border-radius: 14px; padding: 8px 3px 6px; text-align: center; cursor: pointer; background: rgba(0, 0, 0, 0.25);
     border: 1px solid var(--bord); color: var(--texte); font: inherit; display: grid; justify-items: center; gap: 2px; }
   .portrait .visage { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 1.25rem;
     box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.12), 0 4px 12px rgba(0, 0, 0, 0.35); }
-  .portrait .arch { font: 600 0.82rem/1.05 var(--titre); }
+  .portrait .arch { font: 600 0.82rem/1.05 var(--titre); overflow-wrap: anywhere; hyphens: auto; }
   .portrait .qui { font-size: 0.68rem; color: var(--doux); min-height: 1em; }
   .portrait.pris { opacity: 0.5; cursor: default; }
   .portrait.moi { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; opacity: 1; }
@@ -350,8 +350,9 @@
     elErreur.textContent = texte;
     setTimeout(() => { if (elErreur.textContent === texte) elErreur.textContent = ''; }, 5000);
   }
-  function appliquerPalette(p) {
+  function appliquerPalette(p, police) {
     const r = document.documentElement.style;
+    r.setProperty('--titre', "'" + (police || 'Cormorant Garamond') + "', Georgia, serif");
     ['fond', 'surface', 'accent', 'texte', 'alerte'].forEach((k) => { if (p[k]) r.setProperty('--' + k, p[k]); });
   }
   function portrait(id) { return pack && pack.portraits.find((p) => p.id === id); }
@@ -449,7 +450,8 @@
         if (!couches.includes('enq')) { etat = null; afficher(); }
         return;
       case 'enq_pack':
-        pack = msg; appliquerPalette(msg.palette || {}); afficher(); return;
+        if (pack && pack.id !== msg.id && manoir) { arreterManoir(); manoir.detruire(); manoir = null; manoirEnCours = null; manoirConteneur = null; }
+        pack = msg; appliquerPalette(msg.palette || {}, msg.police); afficher(); return;
       case 'enq_etat': {
         if (!couches.includes('enq')) couches.push('enq');
         const fini = msg.phase === 'fin' && (!etat || etat.phase !== 'fin');
@@ -1174,7 +1176,9 @@
   function preparerManoir() {
     if (manoir) return Promise.resolve(manoir);
     if (manoirEnCours) return manoirEnCours;
-    manoirEnCours = import('./commun/manoir3d.js').then((mod) => {
+    // Les étiquettes 3D sont dessinées une fois : on attend la police de l'univers.
+    const police = document.fonts && pack.police ? document.fonts.load('700 40px "' + pack.police + '"').catch(() => null) : Promise.resolve();
+    manoirEnCours = Promise.all([import('./commun/manoir3d.js'), police]).then(([mod]) => {
       if (!mod.webglDisponible()) throw new Error('webgl');
       manoir = mod.creerManoir3D(manoirConteneur, pack, {
         surAppui: (id) => { basculer('lieu:' + id); majManoir(); },
