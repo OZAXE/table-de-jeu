@@ -721,7 +721,7 @@
       ld.appendChild(b);
     });
     r.appendChild(ld);
-    r.appendChild(el('div', { className: 'etiquette' }, 'Plafond par joueur'));
+    r.appendChild(el('div', { className: 'etiquette' }, 'Plafond par joueur (facultatif)'));
     const lp = el('div', { className: 'ligne' });
     etat.plafonds.forEach((x) => {
       const b = el('button', { type: 'button', className: 'discret puce' + (x === etat.plafond ? ' choisie' : '') }, x ? x + ' / heure' : 'Sans plafond');
@@ -736,7 +736,7 @@
     cb.addEventListener('change', () => envoyer({ type: 'enq_config', gorgees_publiques: cb.checked }));
     lab.append(cb, ' Pénalités visibles par tous (personne n’oublie de boire ; en contrepartie, on sait qui a raté une accusation)');
     r.appendChild(lab);
-    r.appendChild(el('p', { className: 'legende', style: 'margin-top:6px' }, 'Au-delà du plafond, chaque ' + etat.unite + ' non bue devient une minute pendant laquelle l’archive et les accusations sont bloquées.'));
+    if (etat.plafond) r.appendChild(el('p', { className: 'legende', style: 'margin-top:6px' }, 'Au-delà du plafond, chaque ' + etat.unite + ' non bue devient une minute pendant laquelle l’archive et les accusations sont bloquées.'));
   }
 
   // ---------------- Ouverture ----------------
