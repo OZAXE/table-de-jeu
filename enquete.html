@@ -48,6 +48,20 @@
   }
   header .retour { color: var(--doux); text-decoration: none; font-size: 0.85rem; border: 1px solid var(--bord); border-radius: 999px; padding: 5px 11px; white-space: nowrap; }
   header h1 { font: 700 1.35rem/1.05 var(--titre); flex: 1; min-width: 0; }
+  header .aide { flex: none; width: 38px; height: 38px; padding: 0; border-radius: 50%; font-size: 1.05rem; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--bord); }
+  /* Règles : sections dépliables */
+  .regles details { border: 1px solid var(--bord); border-radius: 14px; background: color-mix(in srgb, var(--surface) 88%, transparent); margin-bottom: 8px; }
+  .regles summary { cursor: pointer; padding: 12px 14px; font: 700 1.05rem/1.2 var(--titre); color: var(--accent); list-style: none; display: flex; gap: 8px; align-items: center; }
+  .regles summary::-webkit-details-marker { display: none; }
+  .regles summary::after { content: '＋'; margin-left: auto; color: var(--doux); font-family: 'Outfit', sans-serif; }
+  .regles details[open] summary::after { content: '－'; }
+  .regles .corps-regle { padding: 0 14px 12px; display: grid; gap: 6px; }
+  .regles .corps-regle p, .regles .corps-regle li { color: var(--texte); font-size: 0.9rem; line-height: 1.45; }
+  .regles .corps-regle ul { padding-left: 18px; display: grid; gap: 4px; }
+  .regles .corps-regle b { color: var(--accent); font-weight: 600; }
+  .regles table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  .regles td { padding: 5px 4px; border-top: 1px solid var(--bord); vertical-align: top; color: var(--texte); }
+  .regles td:last-child { text-align: right; white-space: nowrap; color: var(--accent); }
   header h1 small { display: block; font: 500 0.7rem 'Outfit', sans-serif; color: var(--doux); letter-spacing: 0.05em; text-transform: uppercase; }
   .etat-jeu {
     flex: none; display: flex; align-items: center; gap: 8px; padding: 0 14px 8px; max-width: 620px; width: 100%; margin: 0 auto;
@@ -289,6 +303,7 @@
 <header>
   <a class="retour" id="retour" href="index.html">← Soirée</a>
   <h1 id="titre"><small>Enquête</small>Chargement…</h1>
+  <button type="button" class="aide masque" id="aide" aria-label="Règles du jeu" title="Règles">❓</button>
 </header>
 <div class="etat-jeu masque" id="etat-jeu"></div>
 <main id="ecran"></main>
@@ -296,6 +311,7 @@
 <div class="erreur" id="erreur" role="alert"></div>
 <div class="role-voile" id="role-voile" aria-live="polite"></div>
 <div class="dossier-panneau" id="dossier" role="dialog" aria-modal="true"></div>
+<div class="dossier-panneau" id="regles" role="dialog" aria-modal="true" aria-label="Règles"></div>
 
 <script src="commun/soiree.js"></script>
 <script>
@@ -315,6 +331,8 @@
   const elOnglets = document.getElementById('onglets');
   const elRole = document.getElementById('role-voile');
   const elDossier = document.getElementById('dossier');
+  const elRegles = document.getElementById('regles');
+  const elAide = document.getElementById('aide');
   let dossierOuvert = false;
   // Console du tueur : choix en cours (gardés à travers les mises à jour).
   const sab = { sabotage: null, cible: null, categorie: null, mode: null, element: null };
@@ -550,6 +568,7 @@
     arreterManoir();
     cacherCadre();
     document.body.classList.remove('evt-coupure', 'evt-alerte');
+    elAide.classList.toggle('masque', !(couches.includes('enq') && etat && pack));
     if (!couches.includes('enq') || !etat) ecranAucune();
     else if (pack && moi) ({ lobby: ecranLobby, ouverture: ecranOuverture, enquete: ecranEnquete, fin: ecranFin }[etat.phase] || ecranAucune)();
     ecran.scrollTop = defilement;
@@ -580,15 +599,20 @@
       { id: 'perso', ico: '🎭', titre: 'Personnage' },
       { id: 'joueurs', ico: '👥', titre: 'Joueurs', pastille: etat.joueurs.length },
       { id: 'reglages', ico: '⚙️', titre: 'Réglages' },
+      { id: 'regles', ico: '📖', titre: 'Règles' },
     ]);
     if (o === 'perso') lobbyPersonnage();
     else if (o === 'joueurs') lobbyJoueurs(pret);
+    else if (o === 'regles') contenuRegles(ecran);
     else lobbyReglages();
   }
 
   function lobbyPersonnage() {
     const c = carte();
     c.appendChild(el('p', {}, pack.ambiance + ' Victime : ' + pack.victime + '. Ton personnage porte ton prénom ; un portrait par joueur.'));
+    const lire = el('button', { type: 'button', className: 'discret', style: 'margin-top:8px' }, '📖 Première fois ? Lis les règles');
+    lire.addEventListener('click', () => { onglet.lobby = 'regles'; rendu = ''; afficher(); ecran.scrollTop = 0; });
+    c.appendChild(lire);
     const g = el('div', { className: 'portraits' }); g.style.marginTop = '10px';
     pack.portraits.forEach((p) => {
       const qui = etat.joueurs.find((j) => j.portrait === p.id);
@@ -787,6 +811,145 @@
       ecran.appendChild(z);
     }
   }
+
+  // ---------------- Règles du jeu ----------------
+  // Le texte suit l'univers (narrateur, noms des rôles et des événements) et
+  // les réglages de la partie (prix, délais, gorgées).
+  function contenuRegles(parent) {
+    const voc = pack.vocabulaire, nar = pack.narrateur ? pack.narrateur.nom : 'le narrateur';
+    const v = etat.vitesses[etat.vitesse];
+    const mn = (sec) => sec < 60 ? Math.round(sec) + ' s' : Math.round(sec / 60) + ' min';
+    const maj = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+    const u = (n) => unite(n);
+    const nomEvt = (k) => (pack.evenements && pack.evenements[k] && pack.evenements[k].nom) || k;
+    const zone = el('div', { className: 'regles' });
+    const section = (titre, ouvert, lignes) => {
+      const d = el('details', { open: !!ouvert });
+      d.appendChild(el('summary', {}, titre));
+      const c = el('div', { className: 'corps-regle' });
+      lignes.forEach((x) => {
+        if (Array.isArray(x)) { const ul = el('ul'); x.forEach((li) => ul.appendChild(texteRiche('li', li))); c.appendChild(ul); }
+        else if (x instanceof Node) c.appendChild(x);
+        else c.appendChild(texteRiche('p', x));
+      });
+      d.appendChild(c);
+      zone.appendChild(d);
+    };
+    const tableau = (rangs) => {
+      const t = el('table');
+      rangs.forEach(([a, b]) => { const tr = el('tr'); tr.append(el('td', {}, a), el('td', {}, b)); t.appendChild(tr); });
+      return t;
+    };
+    section('🎯 Le principe', true, [
+      'Un meurtre a eu lieu. Victime : ' + pack.victime + '. **' + maj(voc.tueur) + '** est l’un de vous. Tous les autres, ' + voc.enqueteurs + ', doivent trouver **qui**, **où** et **avec quoi** avant la fin du temps (' + duree(etat.duree) + ').',
+      'L’enquête tourne **en parallèle des autres jeux de la soirée** : chaque victoire aux jeux rapporte des points d’enquête (PE), qui servent à obtenir des indices. Tu joues à Kinito, au Menteur… et tu enquêtes entre deux parties.',
+      maj(voc.tueur) + ' gagne s’il n’est pas démasqué à temps, ou si les accusations ratées s’accumulent trop. Les perdants boivent.',
+    ]);
+    section('🎭 Les rôles', false, [
+      'Ton rôle est **secret**. Pour le voir à l’abri des regards : **maintiens le doigt** sur le bouton « 🎭 Rôle ». Lâche, et il se recache.',
+      ['**' + maj(voc.enqueteur || 'enquêteur') + '** (tous sauf un) : tu cherches la solution. Tu t’élimines toi-même d’office : tu sais que ce n’est pas toi.',
+        '**' + maj(voc.tueur) + '** (un seul) : tu connais la solution. Tu dois semer le doute : mentir à l’oral, bluffer, et saboter discrètement l’enquête.'],
+      'Pendant que tu maintiens « Rôle », **glisse le doigt jusqu’au cadre en pointillés en bas** puis lâche : tu ouvres ton dossier (ou ta console si tu es ' + voc.tueur + '). Le geste est le même pour tous : de loin, personne ne peut deviner ton rôle.',
+    ]);
+    section('⏱️ Déroulé d’une partie', false, [
+      ['**Salle d’attente** : chacun choisit un portrait. L’hôte règle l’univers, la vitesse et les pénalités, puis lance.',
+        '**Ouverture** : ' + nar + ' raconte le crime. Regarde ton rôle à ce moment-là.',
+        '**Enquête** (' + duree(etat.duree) + ') : gagne des PE aux jeux, demande des indices, discute, accuse. Des événements surprises pimentent la partie.',
+        '**Fin** : à la première accusation juste, à l’heure butoir, ou quand la patience est épuisée. ' + nar + ' révèle tout.'],
+    ]);
+    section('💰 Gagner des indices', false, [
+      'Les jeux comptés rapportent des **PE** : une victoire au Menteur, 2 à BeerBattle, des paliers de temps à Picopoly et au Casino, quelques manches gagnées à Kinito… (onglet Réglages pour la liste des jeux comptés).',
+      ['Un indice coûte **' + v.pe_par_indice + ' PE** (onglet Indices, « Demander un indice »).',
+        'Pas plus de **2 indices par heure** et par joueur, pour qu’on ne puisse pas tout rafler.',
+        'Pas assez de PE ? Tu peux **acheter** un indice contre ' + u(etat.gorgees_achat) + '.',
+        'De temps en temps (toutes les ' + mn(v.bonus_toutes) + ' environ), un **Témoin anonyme** glisse un indice gratuit à quelqu’un, au hasard.'],
+      'Un indice **écarte un seul élément** : un personnage, un lieu ou une arme qui n’est PAS la solution. Le stock est limité : même en mettant tout en commun, il reste toujours au moins 2 candidats par catégorie. La fin se joue aux accusations.',
+    ]);
+    section('📜 Lire, relire et prouver', false, [
+      ['Un nouveau pli se lit **gratuitement une seule fois**, puis il est rangé dans ton **archive**.',
+        '**Relire** un indice de l’archive coûte ' + u(etat.gorgees_consultation) + ', et il faut attendre ' + mn(etat.timer_consultation) + ' entre deux relectures.',
+        'L’archive est **la seule preuve** : pour prouver un indice, relis-le devant les autres (ça coûte pareil).',
+        'Un indice peut être **faux** (fabriqué par ' + voc.tueur + '). La **contre-expertise** (bouton « Expertiser ») tamponne un indice « Authentique » ou « Falsifié », pour le prix d’un indice en PE ou ' + u(etat.gorgees_expertise || 1) + '. Personne d’autre ne voit le résultat : à toi de voir ce que tu en dis.'],
+    ]);
+    section('🗺️ Le carnet', false, [
+      'Sur le plan et sous le plan, **touche** un lieu, un personnage ou une arme pour le noter : **éliminé** (barré), puis **suspect** (rouge), puis inconnu.',
+      'Le carnet reste **sur ton téléphone** : personne ne le voit et il ne prouve rien. Note aussi ce que les autres disent (onglet Notes), mais méfie-toi : ' + voc.tueur + ' peut mentir.',
+    ]);
+    section('⚖️ Accuser', false, [
+      ['Onglet Accuser : touche **un lieu**, **une arme** et **un personnage**, puis « Accuser ».',
+        'Tu apprends **combien d’éléments sont justes** (0, 1 ou 2), sans savoir lesquels. 3 sur 3 : tu as gagné, tu deviens **' + voc.detective + '**.',
+        'Une erreur coûte des gorgées, de plus en plus (2, puis 4, puis 6 en dosage normal), et ton délai avant la prochaine accusation (' + mn(v.delai_accusation) + ') **double** à chaque échec.',
+        'Tout le monde voit « une accusation a échoué », mais pas son contenu.',
+        '**Patience** : au bout de ' + (etat.seuil_patience || '?') + ' accusations ratées au total, ' + voc.tueur + ' gagne.',
+        maj(voc.tueur) + ' peut aussi accuser, pour bluffer.'],
+    ]);
+    section('🔪 ' + maj(voc.tueur), false, [
+      'Avec ses PE, ' + voc.tueur + ' achète des **charges** (3 au plus) et sabote depuis sa console :',
+      ['**Fausse piste** : un faux indice, au même format que les vrais, qui écarte un élément de la vraie solution. Il remplace le prochain pli d’une cible, ou détourne le prochain Témoin anonyme.',
+        '**Interception** : le prochain pli d’une cible arrive avec 10 minutes de retard.',
+        '**Écoute** : lire en secret le dernier pli reçu par quelqu’un.',
+        '**Fausse rumeur** : une rumeur anonyme contre un innocent, une seule fois par partie.'],
+      'Chaque sabotage peut être **repéré** (moins souvent à mesure que l’heure tourne) : ' + nar + ' annonce alors une « interférence », sans dire qui, quoi ni sur qui. ' + maj(voc.tueur) + ' ne boit jamais à cause d’un sabotage : rien ne le trahit.',
+      'Les **rumeurs** (' + (voc.rumeurs || 'rumeurs') + ') circulent aussi toutes seules : vraies ou fausses, impossible de savoir. Elles ne valent rien comme preuve.',
+    ]);
+    section('⚡ Les événements', false, [
+      v.evenements + ' événement' + (v.evenements > 1 ? 's' : '') + ' de ' + mn(v.duree_evenement) + ' tombent au hasard pendant la partie. Un bandeau rappelle la règle et le temps restant.',
+      tableau([
+        [nomEvt('coupure'), 'Archive verrouillée, plis illisibles, sabotages moins repérables'],
+        [nomEvt('decouverte'), 'Un indice vrai publié à tous'],
+        [nomEvt('alerte'), 'Accusations deux fois plus rapides, erreurs payées double'],
+        [nomEvt('brouhaha'), 'Rumeurs deux fois plus fréquentes'],
+        [nomEvt('interrogatoire'), '2 joueurs livrent un indice à voix haute (vrai ou faux) puis tapent « J’ai répondu », ou refusent et boivent ' + u(etat.gorgees_refus)],
+        [nomEvt('maree'), 'PE doublés pour chaque victoire'],
+      ]),
+    ]);
+    section('🍺 Les ' + etat.unite + 's', false, [
+      tableau([
+        ['Relire un indice de l’archive', u(etat.gorgees_consultation)],
+        ['Acheter un indice', u(etat.gorgees_achat)],
+        ['Acheter une contre-expertise', u(etat.gorgees_expertise || 1)],
+        ['Refuser l’interrogatoire (ou se taire)', u(etat.gorgees_refus)],
+        ['Accusation ratée', '2, puis 4, puis 6'],
+      ]),
+      (etat.gorgees_publiques ? 'Chaque pénalité **s’affiche chez tout le monde** jusqu’à ce que le joueur tape « C’est bu ✓ ». ' : '') +
+        'Dosage : ' + (etat.dosage === 'doux' ? 'doux (÷2)' : etat.dosage === 'corse' ? 'corsé (×1,5)' : 'normal') + (v.mult_gorgees !== 1 ? ', vitesse ×' + String(v.mult_gorgees).replace('.', ',') : '') +
+        (etat.plafond ? '. Plafond : ' + etat.plafond + ' par heure, au-delà la pénalité devient du temps d’attente.' : '.'),
+    ]);
+    section('🏁 Fin de partie', false, [
+      ['**Accusation juste** : ' + voc.detective + ' distribue 6 ' + etat.unite + 's, ' + voc.tueur + ' en boit 6.',
+        '**Temps écoulé ou patience épuisée** : ' + voc.tueur + ' distribue 6 ' + etat.unite + 's aux autres.'],
+      'L’écran de fin révèle la solution, les faux indices envoyés, les sabotages repérés ou non, les accusations et les ' + etat.unite + 's de chacun.',
+    ]);
+    section('💡 Astuces', false, [
+      ['**Parlez entre vous** : mettre les indices en commun est la meilleure arme contre ' + voc.tueur + '.',
+        'Un indice qui contredit les autres ? **Fais-le expertiser.**',
+        'Utilise le retour de tes accusations : « 2 justes sur 3 » écarte beaucoup de combinaisons.',
+        'Pour tester seul : vitesse **Démo** et joueurs fictifs 🤖 dans l’onglet Joueurs.'],
+    ]);
+    parent.appendChild(zone);
+  }
+  // **gras** dans les textes des règles
+  function texteRiche(balise, texte) {
+    const e = el(balise);
+    String(texte).split(/(\*\*[^*]+\*\*)/).forEach((morceau) => {
+      if (/^\*\*[^*]+\*\*$/.test(morceau)) e.appendChild(el('b', {}, morceau.slice(2, -2)));
+      else if (morceau) e.appendChild(document.createTextNode(morceau));
+    });
+    return e;
+  }
+  function ouvrirRegles() {
+    if (!pack || !etat) return;
+    elRegles.textContent = '';
+    const h = el('header');
+    const fermer = el('button', { type: 'button', className: 'discret' }, 'Fermer');
+    fermer.addEventListener('click', () => { elRegles.classList.remove('ouvert'); elRegles.textContent = ''; });
+    h.append(el('h2', {}, 'Règles'), fermer);
+    const contenu = el('div', { className: 'contenu' });
+    contenuRegles(contenu);
+    elRegles.append(h, contenu);
+    elRegles.classList.add('ouvert');
+  }
+  elAide.addEventListener('click', ouvrirRegles);
 
   // ---------------- Rôle : appui long ----------------
   function contenuRole() {
