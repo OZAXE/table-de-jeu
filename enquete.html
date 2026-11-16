@@ -52,6 +52,11 @@
   .etat-jeu { flex-wrap: wrap; }
   .resume-vitesse { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(0, 0, 0, 0.22); display: grid; gap: 4px; }
   .resume-vitesse p { font-size: 0.84rem; margin: 0 !important; }
+  .a-boire { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; }
+  .a-boire .verre { display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; font-size: 0.8rem;
+    background: rgba(255, 107, 94, 0.14); border: 1px solid #ff6b5e; animation: arrivee 0.4s ease-out; }
+  .a-boire .verre.moi { background: rgba(255, 107, 94, 0.3); font-weight: 700; }
+  .a-boire .verre button { padding: 3px 9px; font-size: 0.78rem; }
   .etat-jeu .handicap { color: #ff9a8e; font-size: 0.82rem; font-weight: 700; }
   .evenement-bande { flex-basis: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px;
     background: rgba(201, 162, 74, 0.14); border: 1px solid var(--accent); font-size: 0.85rem; animation: arrivee 0.5s ease-out; }
@@ -308,6 +313,8 @@
   const sab = { sabotage: null, cible: null, categorie: null, mode: null, element: null };
   // Repères des rumeurs localisées sur le plan : lieu -> heure de fin.
   const pings = {};
+  // Pénalités déjà signalées (pour ne pas refaire le toast à chaque mise à jour).
+  const penalitesVues = new Set();
 
   const s = Soiree.actuelle();
   let monNom = Soiree.nom();
@@ -446,6 +453,12 @@
       case 'enq_etat': {
         if (!couches.includes('enq')) couches.push('enq');
         const fini = msg.phase === 'fin' && (!etat || etat.phase !== 'fin');
+        // Pénalités des autres : un toast pour chaque nouvelle (la sienne a déjà son toast privé).
+        (msg.penalites || []).forEach((x) => {
+          if (penalitesVues.has(x.id)) return;
+          penalitesVues.add(x.id);
+          if (etat && x.nom !== monNom && !x.bu) toast('🍺 ' + x.nom + ' boit ' + unite(x.nombre) + ' · ' + x.raison.toLowerCase(), '', 5000);
+        });
         etat = msg;
         ecartHorloge = Date.now() / 1000 - msg.maintenant;
         if (fini) onglet.fin = 'recit';
@@ -617,7 +630,8 @@
       'Accusation : ' + mn(v.delai_accusation) + ' d’attente, doublée à chaque échec ; ' + v.echecs_par_joueur + ' échec' + (v.echecs_par_joueur > 1 ? 's' : '') + ' par joueur et ' + pack.vocabulaire.tueur + ' gagne.',
       v.evenements + ' événement' + (v.evenements > 1 ? 's' : '') + ' de ' + mn(v.duree_evenement) + ' ; ' + v.lieux_armes + ' lieux et ' + v.lieux_armes + ' armes en jeu.',
       'Pénalités : ' + texteDosage(etat.dosage).toLowerCase() + (v.mult_gorgees !== 1 ? ', vitesse ×' + String(v.mult_gorgees).replace('.', ',') : '') +
-        ', ' + textePlafond(etat.plafond) + (etat.plafond ? ' (au-delà : du temps d’attente au lieu de boire)' : '') + '.',
+        ', ' + textePlafond(etat.plafond) + (etat.plafond ? ' (au-delà : du temps d’attente au lieu de boire)' : '') +
+        (etat.gorgees_publiques ? ', affichées à tous' : ', privées') + '.',
     ];
     const c = el('div', { className: 'resume-vitesse' });
     lignes.forEach((t) => c.appendChild(el('p', {}, t)));
@@ -698,6 +712,12 @@
       lp.appendChild(b);
     });
     r.appendChild(lp);
+    const lab = el('label', { className: 'case', style: 'margin-top:10px' });
+    const cb = el('input', { type: 'checkbox', checked: etat.gorgees_publiques });
+    cb.dataset.publiques = '1';
+    cb.addEventListener('change', () => envoyer({ type: 'enq_config', gorgees_publiques: cb.checked }));
+    lab.append(cb, ' Pénalités visibles par tous (personne n’oublie de boire ; en contrepartie, on sait qui a raté une accusation)');
+    r.appendChild(lab);
     r.appendChild(el('p', { className: 'legende', style: 'margin-top:6px' }, 'Au-delà du plafond, chaque ' + etat.unite + ' non bue devient une minute pendant laquelle l’archive et les accusations sont bloquées.'));
   }
 
@@ -1001,6 +1021,23 @@
         bande.appendChild(r);
       }
       elEtat.appendChild(bande);
+    }
+    // Pénalités à boire, visibles par tous jusqu'à « C'est bu »
+    const aBoire = (etat.penalites || []).filter((x) => !x.bu);
+    if (aBoire.length) {
+      const l = el('div', { className: 'a-boire' });
+      aBoire.forEach((x) => {
+        const v = el('div', { className: 'verre' + (x.nom === monNom ? ' moi' : '') }, '🍺 ' + x.nom + ' · ' + unite(x.nombre));
+        v.title = x.raison;
+        if (x.nom === monNom) {
+          const b = el('button', { type: 'button' }, 'C’est bu ✓');
+          b.dataset.bu = x.id;
+          b.addEventListener('click', () => envoyer({ type: 'enq_bu', id: x.id }));
+          v.appendChild(b);
+        }
+        l.appendChild(v);
+      });
+      elEtat.appendChild(l);
     }
     const nonLus = (moi.archive || []).filter((e) => !e.lu).length;
     const o = onglets('enquete', [
@@ -1369,6 +1406,7 @@
     c.classList.add('fil');
     const j = (etat.journal || []).map((x) => Object.assign({ rumeur: false }, x))
       .concat((etat.rumeurs || []).map((x) => Object.assign({ rumeur: true }, x)))
+      .concat((etat.penalites || []).map((x) => ({ t: x.t, texte: '🍺 ' + x.nom + ' boit ' + unite(x.nombre) + ' (' + x.raison.toLowerCase() + ')' + (x.bu ? ' ✓' : ' ⏳') })))
       .sort((a, b) => b.t - a.t);
     if (!j.length) c.appendChild(el('p', {}, 'Rien à signaler pour l’instant.'));
     j.forEach((x) => {
