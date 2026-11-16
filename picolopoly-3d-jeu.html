@@ -4176,7 +4176,7 @@ function seConnecter() {
   minuteurLien = null;
   lienActif = true;
   // bat=1 : cette page envoie des battements de cœur (voir plus bas).
-  let url = SERVEURS[serveurChoisi].ws + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom) + '?bat=1';
+  let url = SERVEURS[serveurChoisi].ws + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom) + '?bat=1&page=picolopoly';
   if (monJeton) url += '&jeton=' + encodeURIComponent(monJeton);
   const socket = new WebSocket(url);
   // L'ancienne connexion (morte ou muette) n'est pas fermée ici : le serveur
@@ -4325,36 +4325,12 @@ function majQRModale() {
 }
 
 function panneauAttente() {
-  const p = ouvrirPanneau('Salon');
-  const code = document.createElement('div');
-  code.className = 'code-salon';
-  code.textContent = codeSalon;
-  p.appendChild(code);
-  p.appendChild(aide('Donne ce code aux autres pour qu’ils rejoignent. De 2 à 8 joueurs.'));
-  const lien = lienSalon(codeSalon);
-  if (typeof QRious !== 'undefined') {
-    const cv = document.createElement('canvas');
-    cv.className = 'qr';
-    try {
-      dessinerQR(cv, lien.url);
-      p.appendChild(cv);
-      p.appendChild(aide(lien.repli
-        ? 'Ce QR mène au site en ligne : la page est ouverte en fichier local, il n’y a pas d’adresse à partager.'
-        : 'Ou fais scanner ce code : ils n’auront que leur prénom à entrer.'));
-      if (lien.repli && serveurChoisi === 'local') {
-        const garde = document.createElement('div');
-        garde.className = 'alerte';
-        garde.textContent = 'Attention : tu joues sur le serveur local, mais ceux qui scannent arriveront sur le serveur en ligne.';
-        p.appendChild(garde);
-      }
-      const rl = rangee();
-      rl.appendChild(bouton('Copier le lien', 'clair petit', async () => {
-        try { await navigator.clipboard.writeText(lien.url); rappel('Lien copié'); }
-        catch (e) { rappel(lien.url); }
-      }));
-      p.appendChild(rl);
-    } catch (e) { /* le code à 4 lettres suffit */ }
-  }
+  const p = ouvrirPanneau('Salle d’attente');
+  // Le code et le QR de la soirée sont sur l'accueil : inutile de les répéter ici.
+  const invite = document.createElement('p');
+  invite.className = 'invitation-soiree';
+  invite.textContent = 'De 2 à 8 joueurs. Pour inviter du monde : le QR de la soirée est sur l’accueil.';
+  p.appendChild(invite);
   const liste = document.createElement('div');
   liste.className = 'liste-attente';
   liste.textContent = joueursSalon.length

@@ -571,6 +571,7 @@
       }
       majPresents(presents, s, info);
       signatureTables = signer(info.tables);
+      proposerJeuTable(s, info.tables);
       suivrePresents(s, presents);
       const tables = info.tables.slice();
       // Ma table a pu être libérée (tout le monde parti un moment) : elle
@@ -590,7 +591,8 @@
         const texte = el('div', { className: 'texte' });
         const titre = el('b', {}, 'Table ' + t.numero + (moi ? ' · ta table' : ''));
         texte.appendChild(titre);
-        texte.appendChild(el('span', {}, (j ? j.icone + ' ' + j.titre : 'Salle d\'attente') +
+        const ja = !j && t.attente && Soiree.JEUX[t.attente];
+        texte.appendChild(el('span', {}, (j ? j.icone + ' ' + j.titre : ja ? 'Salle d\'attente · ' + ja.icone + ' ' + ja.titre : 'Salle d\'attente') +
           (t.joueurs.length ? ' · ' + t.joueurs.join(', ') : '')));
         ligne.appendChild(texte);
         if (!moi && t.joueurs.length < 8) {
@@ -598,9 +600,9 @@
           ligne.classList.add('cliquable');
           ligne.addEventListener('click', (e) => { if (!e.target.closest('button')) rejoindreTable(s, t); });
         }
-        if (moi && j) {
-          const aller = el('button', { type: 'button' }, 'Rejoindre la partie');
-          aller.addEventListener('click', () => { if (prenomOk()) location.href = Soiree.lienJeu(t.jeu, t.code); });
+        if (moi && (j || ja)) {
+          const aller = el('button', { type: 'button' }, j ? 'Rejoindre la partie' : 'Rejoindre');
+          aller.addEventListener('click', () => { if (prenomOk()) location.href = Soiree.lienJeu(t.jeu || t.attente, t.code); });
           ligne.appendChild(aller);
         } else if (!moi && t.joueurs.length >= 8) {
           // 8 places par table : au-delà, on ouvre une nouvelle table.
@@ -627,7 +629,20 @@
 
     // --- Dans la soirée : les prénoms de ceux qui sont là, et où ---
     let connus = null, connusCode = null, suivi = null, signatureTables = '';
-    const signer = (tables) => JSON.stringify((tables || []).map((t) => [t.code, t.jeu, t.joueurs]));
+    const signer = (tables) => JSON.stringify((tables || []).map((t) => [t.code, t.jeu, t.attente, t.joueurs]));
+    // Quand ma table change de jeu pendant que je suis sur l'accueil, on me propose de suivre.
+    const jeuVu = {};
+    async function proposerJeuTable(s, tables) {
+      const t = (tables || []).find((x) => x.code === s.table);
+      const cible = t && (t.jeu || t.attente);
+      const avant = jeuVu[s.table];
+      jeuVu[s.table] = cible || null;
+      if (avant === undefined || !cible || cible === avant || !Soiree.JEUX[cible]) return;
+      const j = Soiree.JEUX[cible];
+      const ok = await Soiree.confirmer(j.icone + ' Ta table passe à ' + j.titre + (t.joueurs.length ? ' (' + t.joueurs.join(', ') + ')' : '') + '.\nTu la rejoins ?', 'Rejoindre', 'Plus tard');
+      const encore = Soiree.actuelle();
+      if (ok && encore && encore.table === s.table && prenomOk()) location.href = Soiree.lienJeu(cible, s.table);
+    }
     // Rejoindre une table (après confirmation) : sa partie si un jeu tourne, sinon sa salle d'attente
     async function rejoindreTable(s, t, qui) {
       if (!prenomOk()) return;

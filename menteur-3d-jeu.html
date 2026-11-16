@@ -176,6 +176,24 @@
     #joueurs { top: 80px; }
     #panneau { max-height: 78vh; padding: 8px 10px; }
   }
+
+  /* Grande annonce pour toute la table (MENTEUR !, VRAI / MENSONGE, BANG !), au-dessus de la 3D et des panneaux */
+  .annonce-mt { position: fixed; left: 12px; right: 12px; top: calc(14vh + env(safe-area-inset-top)); z-index: 60; text-align: center; pointer-events: none; }
+  .annonce-mt .gros { font: 900 clamp(46px, 14vw, 88px)/1 'Outfit', system-ui, sans-serif; letter-spacing: 0.03em; color: var(--c);
+    text-shadow: 0 0 26px var(--c), 0 6px 22px rgba(0, 0, 0, 0.85); animation: mt-pop 0.45s cubic-bezier(.2, 1.6, .4, 1) both; }
+  .annonce-mt .petit { display: inline-block; margin-top: 12px; padding: 7px 16px; border-radius: 999px; background: rgba(0, 0, 0, 0.6);
+    border: 1px solid var(--c); color: #fff; font: 700 clamp(17px, 5vw, 22px)/1.25 'Outfit', system-ui, sans-serif; animation: mt-monte 0.4s 0.15s both; }
+  .annonce-mt .cartes-mt { margin-top: 10px; display: flex; justify-content: center; gap: 8px; animation: mt-monte 0.4s 0.25s both; }
+  .annonce-mt .carte-mt { min-width: 46px; padding: 8px 6px; border-radius: 10px; background: #f6efe0; color: #1d2430; font: 800 24px/1 'Outfit', sans-serif;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6); }
+  .annonce-mt .carte-mt small { display: block; margin-top: 3px; font-size: 11px; font-weight: 700; }
+  .annonce-mt.sort { animation: mt-sort 0.35s ease-in forwards; }
+  .flash-mt { position: fixed; inset: 0; z-index: 59; pointer-events: none; background: var(--c); animation: mt-flash 0.7s ease-out forwards; }
+  @keyframes mt-pop { from { opacity: 0; transform: scale(2.2) rotate(-6deg); } to { opacity: 1; transform: none; } }
+  @keyframes mt-monte { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes mt-sort { to { opacity: 0; transform: translateY(-16px) scale(0.92); } }
+  @keyframes mt-flash { 0% { opacity: 0.55; } 100% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .annonce-mt .gros, .annonce-mt .petit, .annonce-mt .cartes-mt { animation: none; } .flash-mt { display: none; } }
 </style>
 <!-- Direction artistique commune « bar moderne » ; accent bleu néon pour Menteur. -->
 <link rel="stylesheet" href="da/bar-moderne.css">
@@ -656,8 +674,43 @@ function texteFlottant(position, gros, petit, couleur, echelle) {
   textesFlottants.push({ sprite: sp, t: 0, duree: 1.6, depart: sp.position.clone() });
 }
 const messageSprite = { courant: null };
-function messageCentral(gros, petit, couleur, duree) {
-  if (messageSprite.courant) scene.remove(messageSprite.courant.sprite);
+// Grande annonce HTML, la même pour tous les joueurs (la 3D seule était cachée
+// par le panneau du bas et trop petite sur téléphone).
+let annonceMt = null, minuteurAnnonce = null;
+function annoncer(gros, petit, couleur, duree, opts = {}) {
+  if (annonceMt) annonceMt.remove();
+  clearTimeout(minuteurAnnonce);
+  const a = document.createElement('div');
+  a.className = 'annonce-mt';
+  a.style.setProperty('--c', couleur || '#f4f1ea');
+  const g = document.createElement('div'); g.className = 'gros'; g.textContent = gros; a.appendChild(g);
+  if (petit) { const p = document.createElement('div'); p.className = 'petit'; p.textContent = petit; a.appendChild(p); }
+  if (opts.cartes && opts.cartes.length) {
+    const l = document.createElement('div'); l.className = 'cartes-mt';
+    opts.cartes.forEach((c) => {
+      const info = infoCarte(c);
+      const k = document.createElement('div'); k.className = 'carte-mt';
+      k.textContent = info.sym || c;
+      const n = document.createElement('small'); n.textContent = info.nom; k.appendChild(n);
+      l.appendChild(k);
+    });
+    a.appendChild(l);
+  }
+  if (opts.flash) {
+    const f = document.createElement('div'); f.className = 'flash-mt'; f.style.setProperty('--c', couleur);
+    document.body.appendChild(f); setTimeout(() => f.remove(), 800);
+  }
+  if (opts.vibrer) { try { if (navigator.vibrate) navigator.vibrate(opts.vibrer); } catch (e) { /* pas de vibreur */ } }
+  document.body.appendChild(a);
+  annonceMt = a;
+  minuteurAnnonce = setTimeout(() => { a.classList.add('sort'); setTimeout(() => { a.remove(); if (annonceMt === a) annonceMt = null; }, 380); }, (duree || 1.8) * 1000);
+}
+function messageCentral(gros, petit, couleur, duree, opts) {
+  annoncer(gros, petit, couleur, duree, opts);
+  // L'annonce HTML suffit : le texte 3D au-dessus de la table ferait doublon.
+  if (messageSprite.courant) { scene.remove(messageSprite.courant.sprite); messageSprite.courant = null; }
+  return;
+  // eslint-disable-next-line no-unreachable
   const sp = creerSpriteTexte(String(gros), petit || '', couleur || '#f4f1ea');
   sp.position.set(0, 1.1, 0);
   scene.add(sp);
@@ -1094,7 +1147,8 @@ function animerRevelation(rev) {
   if (!rev || rev.num <= derniereRevelation) return;
   derniereRevelation = rev.num;
   const nomA = nomDe(rev.appelant, true), nomP = nomDe(rev.poseur, true);
-  messageCentral('MENTEUR !', (rev.appelant === MOI ? 'Tu cries' : nomA + ' crie') + ' sur ' + (rev.poseur === MOI ? 'toi' : nomP), '#ff6b8a', 1.4);
+  messageCentral('🗣️ MENTEUR !', rev.appelant === MOI ? 'Tu accuses ' + nomP : rev.poseur === MOI ? nomA + ' t’accuse' : nomA + ' accuse ' + nomP, '#ff6b8a', 1.8,
+    { flash: true, vibrer: (rev.appelant === MOI || rev.poseur === MOI) ? [60, 40, 60] : null });
   viderRevelees();
   const n = rev.cartes.length;
   const cartes = pileCartes.splice(Math.max(0, pileCartes.length - n), n);
@@ -1110,9 +1164,10 @@ function animerRevelation(rev) {
     if (rev.special === 'diable') { gros = '😈 DIABLE'; petit = 'tout le monde tire, sauf ' + nomDe(rev.poseur); couleur = '#ff4d5e'; }
     else if (rev.special === 'chaos') { gros = '🌀 CHAOS'; petit = 'chacun choisit sur qui tirer'; couleur = '#c4a5ff'; }
     else if (rev.special === 'maitre') { gros = '🎩 MAÎTRE'; petit = nomDe(rev.poseur, true) + ' choisit qui tire'; couleur = '#ffd98a'; }
-    else if (rev.menteur) { gros = 'MENSONGE'; petit = (rev.poseur === MOI ? 'tu tires' : nomP + ' tire'); couleur = '#ff6b8a'; }
-    else { gros = 'VRAI'; petit = (rev.appelant === MOI ? 'tu tires' : nomA + ' tire'); couleur = '#7dffb0'; }
-    messageCentral(gros, petit, couleur, 1.6);
+    else if (rev.menteur) { gros = '❌ MENSONGE'; petit = (rev.poseur === MOI ? 'Tu mentais : tu tires' : nomP + ' mentait : ' + nomP + ' tire'); couleur = '#ff4d6a'; }
+    else { gros = '✅ VRAI'; petit = (rev.poseur === MOI ? 'Tu disais vrai : ' : nomP + ' disait vrai : ') + (rev.appelant === MOI ? 'tu tires' : nomA + ' tire'); couleur = '#5dffa0'; }
+    const visePar = rev.menteur ? rev.poseur : rev.appelant;
+    messageCentral(gros, petit, couleur, 2.2, { flash: true, cartes: rev.cartes, vibrer: visePar === MOI && !rev.special ? [120, 60, 120] : null });
     dernierEvenement = texteVerdict(rev);
     elRappel.textContent = dernierEvenement;
     if (rev.tirs && rev.tirs.length) attendre(1.5, () => animerTirs(rev, false));
@@ -1144,7 +1199,7 @@ function animerTirs(rev, annoncerVotes) {
     if (!t) return;
     const s = sieges[t.joueur];
     const nom = nomDe(t.joueur, true);
-    messageCentral('…', (t.joueur === MOI ? 'tu tires' : nom + ' tire') + ' (coup ' + t.numero + '/6)', '#f4f1ea', 1.0);
+    messageCentral('🔫 …', (t.joueur === MOI ? 'Tu tires' : nom + ' tire') + ' (coup ' + t.numero + '/6)', '#f4f1ea', 1.0);
     if (s) {
       animer(0.9, an => {
         s.tourne = lisser(an.t / an.duree) * Math.PI * 4;
@@ -1155,11 +1210,12 @@ function animerTirs(rev, annoncerVotes) {
       if (s) majBarillet(s, t.numero, 6, t.resultat === 'balle');
       if (t.resultat === 'balle') {
         eclair();
-        messageCentral('BANG !', (t.joueur === MOI ? 'cul sec, tu es éliminé' : nom + ' : cul sec, éliminé'), '#ff3b4e', 1.5);
+        messageCentral('💥 BANG !', (t.joueur === MOI ? 'Cul sec, tu es éliminé' : nom + ' : cul sec, éliminé'), '#ff3b4e', 1.8,
+          { flash: true, vibrer: t.joueur === MOI ? [200, 80, 300] : null });
         if (s) { majMort(s, true); s.objectif = 1; }
         dernierEvenement = nom + (t.joueur === MOI ? ' prends' : ' prend') + ' la balle : cul sec !';
       } else {
-        messageCentral('clic', (t.joueur === MOI ? 'tu bois ' : nom + ' boit ') + (t.gorgees || 1) + ' gorgée', '#cfe8ff', 1.2);
+        messageCentral('😮‍💨 clic…', (t.joueur === MOI ? 'Ouf ! Tu bois ' : 'Ouf ! ' + nom + ' boit ') + (t.gorgees || 1) + ' gorgée', '#cfe8ff', 1.4);
         if (s) {
           encaisser(t.joueur);
           texteFlottant(s.chope.position, '+' + (t.gorgees || 1), 'gorgée', '#ffb44c', 0.36);
@@ -1674,7 +1730,7 @@ function seConnecter() {
   minuteurLien = null;
   lienActif = true;
   // bat=1 : cette page envoie des battements de cœur (voir plus bas).
-  let url = SERVEURS[serveurChoisi].ws + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom) + '?bat=1';
+  let url = SERVEURS[serveurChoisi].ws + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom) + '?bat=1&page=menteur';
   if (monJeton) url += '&jeton=' + encodeURIComponent(monJeton);
   const socket = new WebSocket(url);
   // L'ancienne connexion (morte ou muette) n'est pas fermée ici : le serveur
@@ -1839,31 +1895,12 @@ function majQRModale() {
 
 
 function panneauAttente() {
-  const p = ouvrirPanneau('Salon');
-  const code = document.createElement('div');
-  code.className = 'code-salon';
-  code.textContent = codeSalon;
-  p.appendChild(code);
-  p.appendChild(aide('Donne ce code aux autres pour qu’ils rejoignent. De 2 à 8 joueurs.'));
-
-  const lien = lienSalon(codeSalon);
-  if (typeof QRious !== 'undefined') {
-    const cv = document.createElement('canvas');
-    cv.className = 'qr';
-    try {
-      new QRious({ element: cv, value: lien.url, size: 340, level: 'M', background: '#f4ebe0', foreground: '#10233f' });
-      p.appendChild(cv);
-      p.appendChild(aide(lien.repli
-        ? 'Ce QR mène au site en ligne : la page est ouverte en fichier local, il n’y a pas d’adresse à partager.'
-        : 'Ou fais scanner ce code : ils n’auront que leur prénom à entrer.'));
-      const rl = rangee();
-      rl.appendChild(bouton('Copier le lien', 'sombre petit', async () => {
-        try { await navigator.clipboard.writeText(lien.url); afficherErreur('Lien copié'); }
-        catch (e) { afficherErreur(lien.url); }
-      }));
-      p.appendChild(rl);
-    } catch (e) { /* pas de QR : le code à 4 lettres suffit */ }
-  }
+  const p = ouvrirPanneau('Salle d’attente');
+  // Le code et le QR de la soirée sont sur l'accueil : inutile de les répéter ici.
+  const invite = document.createElement('p');
+  invite.className = 'invitation-soiree';
+  invite.textContent = 'De 2 à 8 joueurs. Pour inviter du monde : le QR de la soirée est sur l’accueil.';
+  p.appendChild(invite);
 
   const liste = document.createElement('div');
   liste.className = 'liste-attente';

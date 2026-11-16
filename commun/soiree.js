@@ -85,6 +85,107 @@
   // native fige toute la page (battement de cœur compris) ; un joueur qui
   // met plus de 25 s à répondre était alors déclaré parti par le serveur,
   // sa connexion coupée, et son « oui » partait dans le vide.
+  // ---------------- Animation de défaite (et petite victoire) ----------------
+  // Le serveur annonce « table_resultat » à toute la table quand quelqu'un
+  // perd (manche de Kinito, manche de Buckshot, fin de partie). Le perdant a
+  // droit au grand jeu, les autres à un bandeau.
+  const hasard = (l) => l[Math.floor(Math.random() * l.length)];
+  function stylesResultat() {
+    if (document.getElementById('styles-resultat')) return;
+    const st = document.createElement('style');
+    st.id = 'styles-resultat';
+    st.textContent = `
+      .res-voile { position: fixed; inset: 0; z-index: 99980; pointer-events: none; display: grid; place-items: center; overflow: hidden;
+        animation: res-voile 2.9s ease-out forwards; font-family: Outfit, system-ui, sans-serif; }
+      .res-voile.perdu { background: radial-gradient(circle at 50% 45%, rgba(200, 20, 30, 0.55), rgba(40, 0, 6, 0.85) 70%); }
+      .res-voile.gagne { background: radial-gradient(circle at 50% 45%, rgba(255, 200, 80, 0.4), rgba(20, 12, 0, 0.85) 70%); }
+      .res-carte { text-align: center; color: #fff; padding: 0 24px; animation: res-secousse 0.5s 0.45s both; }
+      .res-emoji { font-size: 120px; line-height: 1; display: inline-block; animation: res-chute 0.9s cubic-bezier(.3, 1.6, .5, 1) both; filter: drop-shadow(0 10px 18px rgba(0,0,0,.5)); }
+      .res-titre { margin-top: 10px; font: 800 44px/1.05 Outfit, system-ui, sans-serif; letter-spacing: 0.02em; text-shadow: 0 4px 18px rgba(0,0,0,.6);
+        animation: res-titre 0.5s 0.35s both; }
+      .res-sous { margin-top: 10px; font: 600 20px/1.3 Outfit, system-ui, sans-serif; color: #ffe2c2; animation: res-titre 0.5s 0.6s both; }
+      .res-pluie { position: absolute; top: -60px; font-size: 34px; animation: res-pluie linear forwards; }
+      .res-bandeau { position: fixed; left: 12px; right: 12px; top: max(12px, env(safe-area-inset-top)); z-index: 99985; max-width: 560px; margin: 0 auto;
+        padding: 11px 14px; border-radius: 16px; background: rgba(60, 6, 12, 0.94); border: 1px solid rgba(255, 120, 110, 0.5); color: #fff;
+        font: 600 15px/1.35 Outfit, system-ui, sans-serif; box-shadow: 0 10px 30px rgba(0,0,0,.45); pointer-events: none; animation: res-bandeau 3s ease-out forwards; }
+      @keyframes res-voile { 0% { opacity: 0; } 8% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+      @keyframes res-chute { 0% { transform: translateY(-120vh) rotate(-30deg) scale(.6); } 70% { transform: translateY(0) rotate(8deg) scale(1.1); } 100% { transform: none; } }
+      @keyframes res-titre { from { opacity: 0; transform: scale(1.8); } to { opacity: 1; transform: none; } }
+      @keyframes res-secousse { 0%, 100% { transform: none; } 20% { transform: translateX(-14px) rotate(-2deg); } 40% { transform: translateX(12px) rotate(2deg); }
+        60% { transform: translateX(-8px); } 80% { transform: translateX(5px); } }
+      @keyframes res-pluie { to { transform: translateY(115vh) rotate(var(--tour, 200deg)); } }
+      @keyframes res-bandeau { 0% { opacity: 0; transform: translateY(-20px); } 10% { opacity: 1; transform: none; } 85% { opacity: 1; } 100% { opacity: 0; } }
+      @media (prefers-reduced-motion: reduce) { .res-carte, .res-emoji, .res-titre, .res-sous { animation: none; } .res-pluie { display: none; } }
+    `;
+    document.head.appendChild(st);
+  }
+  function texteGorgees(n) {
+    if (n === null) return 'Cul sec ! 🍺';
+    if (typeof n === 'number' && n > 0) return 'Bois ' + n + ' gorgée' + (n > 1 ? 's' : '') + ' 🍺';
+    return '';
+  }
+  function animerResultat(msg) {
+    const moi = (Soiree.nom() || '').trim().toLowerCase();
+    if (!moi || !Array.isArray(msg.perdants)) return;
+    const estMoi = (n) => (n || '').trim().toLowerCase() === moi;
+    const gorgees = msg.gorgees || {};
+    stylesResultat();
+    // Laisse le jeu afficher son propre résultat d'abord
+    setTimeout(() => {
+      const perdu = msg.perdants.some(estMoi);
+      const gagne = !perdu && msg.evt === 'victoire' && (msg.gagnants || []).some(estMoi);
+      if (perdu || gagne) {
+        try { if (navigator.vibrate) navigator.vibrate(perdu ? [90, 60, 220] : [40, 40, 40]); } catch (e) { /* pas de vibreur */ }
+        const voile = document.createElement('div');
+        voile.className = 'res-voile ' + (perdu ? 'perdu' : 'gagne');
+        voile.setAttribute('aria-live', 'assertive');
+        const carte = document.createElement('div');
+        carte.className = 'res-carte';
+        const emoji = document.createElement('div');
+        emoji.className = 'res-emoji';
+        emoji.textContent = perdu ? hasard(['💀', '🥴', '🤡', '🐔', '😵', '🫠', '🙈']) : hasard(['🏆', '👑', '🥇']);
+        const titre = document.createElement('div');
+        titre.className = 'res-titre';
+        titre.textContent = perdu ? hasard(['Perdu !', 'Aïe aïe aïe…', 'Raté !', 'La honte !', 'Pas de chance…', 'Oups…'])
+          : hasard(['Bien joué !', 'Victoire !', 'Le patron !']);
+        const sous = document.createElement('div');
+        sous.className = 'res-sous';
+        const moiG = Object.keys(gorgees).find(estMoi);
+        sous.textContent = perdu
+          ? (moiG !== undefined && texteGorgees(gorgees[moiG])) || (msg.evt === 'victoire' && msg.gagnants && msg.gagnants.length
+            ? msg.gagnants.join(', ') + ' l’emporte. ' + hasard(['Ça se boit !', 'Revanche ?', 'On trinque à ta défaite.'])
+            : hasard(['Ça se boit !', 'Allez, cul sec.', 'Tout le monde a vu.']))
+          : hasard(['Les autres boivent à ta santé.', 'Distribue sans pitié.', 'Personne ne t’arrête.']);
+        carte.append(emoji, titre, sous);
+        voile.appendChild(carte);
+        // Pluie d'emojis
+        const pluie = perdu ? ['🍺', '💀', '🤡', '🍺', '🥴'] : ['🎉', '✨', '🏆', '🎊'];
+        for (let i = 0; i < 16; i++) {
+          const g = document.createElement('span');
+          g.className = 'res-pluie';
+          g.textContent = hasard(pluie);
+          g.style.left = Math.round(Math.random() * 96) + 'vw';
+          g.style.animationDuration = (1.4 + Math.random() * 1.2).toFixed(2) + 's';
+          g.style.animationDelay = (0.2 + Math.random() * 0.9).toFixed(2) + 's';
+          g.style.setProperty('--tour', Math.round(Math.random() * 360 - 180) + 'deg');
+          voile.appendChild(g);
+        }
+        document.body.appendChild(voile);
+        setTimeout(() => voile.remove(), 3000);
+      } else {
+        // Les autres : un bandeau qui annonce la défaite
+        const b = document.createElement('div');
+        b.className = 'res-bandeau';
+        b.setAttribute('role', 'status');
+        const qui = msg.perdants.length > 2 ? msg.perdants.length + ' joueurs ont' : msg.perdants.join(' et ') + (msg.perdants.length > 1 ? ' ont' : ' a');
+        const n = msg.perdants.length === 1 ? texteGorgees(gorgees[msg.perdants[0]]) : '';
+        b.textContent = '💀 ' + qui + ' perdu' + (msg.evt === 'victoire' ? ' la partie' : ' la manche') + (n ? ' · ' + n.replace('Bois ', '') : '');
+        document.body.appendChild(b);
+        setTimeout(() => b.remove(), 3100);
+      }
+    }, 700);
+  }
+
   function confirmer(texte, oui, non) {
     return new Promise((resolve) => {
       const voile = document.createElement('div');
@@ -183,6 +284,7 @@
       jeuDeLaPage = jeuPage;
       if (!msg || typeof msg.type !== 'string') return false;
       const s = Soiree.actuelle();
+      if (msg.type === 'table_resultat') { animerResultat(msg); return true; }
       if (msg.type === 'salon_jeu') {
         if (msg.jeu === jeuPage) { cacherBandeau(); return true; }
         const titre = msg.titre || (JEUX[msg.jeu] || {}).titre || 'un autre jeu';
@@ -301,5 +403,6 @@
   }
 
   Soiree.confirmer = confirmer;
+  Soiree.animerResultat = animerResultat;
   window.Soiree = Soiree;
 })();
