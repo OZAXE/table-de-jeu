@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Enquête</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=2">
+<meta name="theme-color" content="#1a0b0e">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Les couleurs viennent du pack de l'univers (palette) ; valeurs du Manoir par défaut. */
+  :root {
+    --fond: #1a0b0e;
+    --surface: #2a1216;
+    --accent: #c9a24a;
+    --texte: #f3e6cf;
+    --alerte: #b3261e;
+    --doux: rgba(243, 230, 207, 0.66);
+    --bord: rgba(201, 162, 74, 0.28);
+    --titre: 'Cormorant Garamond', Georgia, serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { background: var(--fond); }
+  body {
+    color: var(--texte); font: 400 16px/1.45 'Outfit', system-ui, sans-serif;
+    min-height: 100dvh; padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+    background:
+      radial-gradient(120% 60% at 50% -10%, rgba(201, 162, 74, 0.16), transparent 60%),
+      radial-gradient(80% 50% at 100% 100%, rgba(179, 38, 30, 0.12), transparent 60%),
+      var(--fond);
+  }
+  .page { max-width: 560px; margin: 0 auto; }
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  header .retour { color: var(--doux); text-decoration: none; font-size: 0.9rem; border: 1px solid var(--bord); border-radius: 999px; padding: 6px 12px; }
+  header h1 { font: 700 1.9rem/1.05 var(--titre); letter-spacing: 0.01em; flex: 1; }
+  header h1 small { display: block; font: 500 0.82rem 'Outfit', sans-serif; color: var(--doux); letter-spacing: 0.04em; text-transform: uppercase; }
+  .carte {
+    background: color-mix(in srgb, var(--surface) 88%, transparent); border: 1px solid var(--bord);
+    border-radius: 20px; padding: 16px; margin-bottom: 14px;
+  }
+  .carte h2 { font: 700 1.35rem/1.2 var(--titre); margin-bottom: 8px; color: var(--accent); }
+  .carte p { color: var(--doux); }
+  .carte p + p { margin-top: 8px; }
+  .ligne { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .ligne + .ligne { margin-top: 10px; }
+  button, .bouton {
+    border: 0; border-radius: 14px; padding: 12px 16px; cursor: pointer; text-decoration: none; display: inline-block;
+    background: var(--accent); color: #1a0f05; font: 600 0.95rem 'Outfit', sans-serif;
+    transition: transform 0.12s ease, filter 0.12s ease;
+  }
+  button:active { transform: scale(0.97); }
+  button.discret { background: rgba(243, 230, 207, 0.08); color: var(--texte); border: 1px solid var(--bord); }
+  button.puce { padding: 8px 12px; border-radius: 999px; font-size: 0.85rem; }
+  button.puce.choisie { background: var(--accent); color: #1a0f05; border-color: transparent; }
+  button:disabled { opacity: 0.45; cursor: default; transform: none; }
+  input[type=text], select {
+    border-radius: 12px; border: 1px solid var(--bord); background: rgba(0, 0, 0, 0.3); color: var(--texte);
+    padding: 10px 12px; font: 500 0.95rem 'Outfit', sans-serif; min-width: 0;
+  }
+  label.case { display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--texte); padding: 6px 10px; border: 1px solid var(--bord); border-radius: 999px; }
+  .etiquette { color: var(--doux); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; margin: 12px 0 6px; }
+  .erreur { color: #ffb4a8; font-size: 0.9rem; margin-top: 8px; }
+  .erreur:empty { display: none; }
+
+  /* Portraits : grille 3 colonnes sur téléphone */
+  .portraits { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .portrait {
+    position: relative; border-radius: 16px; padding: 12px 6px 10px; text-align: center; cursor: pointer;
+    background: rgba(0, 0, 0, 0.25); border: 1px solid var(--bord); color: var(--texte); font: inherit;
+    display: grid; justify-items: center; gap: 4px; min-height: 108px;
+  }
+  .portrait .visage {
+    width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; font-size: 1.6rem;
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.12), 0 4px 14px rgba(0, 0, 0, 0.35);
+  }
+  .portrait .arch { font: 600 0.95rem/1.1 var(--titre); }
+  .portrait .qui { font-size: 0.75rem; color: var(--doux); min-height: 1em; }
+  .portrait.pris { opacity: 0.55; cursor: default; }
+  .portrait.moi { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; opacity: 1; }
+
+  .joueurs { display: flex; flex-wrap: wrap; gap: 6px; }
+  .joueurs span { background: rgba(243, 230, 207, 0.08); border-radius: 999px; padding: 5px 10px; font-size: 0.85rem; }
+
+  /* Ouverture : le narrateur parle, une phrase après l'autre */
+  .narration p { font: 500 1.35rem/1.35 var(--titre); color: var(--texte); opacity: 0; transform: translateY(6px); transition: opacity 0.9s ease, transform 0.9s ease; }
+  .narration p.vue { opacity: 1; transform: none; }
+  .narration p + p { margin-top: 14px; }
+  .narrateur { display: flex; align-items: center; gap: 10px; color: var(--accent); font: 700 1.1rem var(--titre); margin-bottom: 14px; }
+  .narrateur span { font-size: 1.6rem; }
+  .eclair { position: fixed; inset: 0; pointer-events: none; background: #fff; opacity: 0; }
+  .eclair.flash { animation: eclair 1.6s ease-out; }
+  @keyframes eclair { 0% { opacity: 0; } 4% { opacity: 0.55; } 8% { opacity: 0.05; } 12% { opacity: 0.35; } 100% { opacity: 0; } }
+
+  /* Rôle : appui long, rien ne s'affiche par-dessus l'épaule */
+  .role {
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none;
+    border-radius: 20px; padding: 22px 16px; text-align: center; cursor: pointer;
+    background: repeating-linear-gradient(45deg, rgba(201, 162, 74, 0.08) 0 12px, rgba(201, 162, 74, 0.02) 12px 24px);
+    border: 1px dashed var(--bord);
+  }
+  .role .cache { color: var(--doux); }
+  .role .revele { display: none; }
+  .role.ouvert .cache { display: none; }
+  .role.ouvert .revele { display: block; }
+  .role .titre-role { font: 700 1.8rem/1.1 var(--titre); color: var(--accent); }
+  .role.tueur .titre-role { color: #ff6b5e; }
+  .compte { font: 700 2.2rem/1 var(--titre); color: var(--accent); }
+  .liste-elements { display: flex; flex-wrap: wrap; gap: 6px; }
+  .liste-elements span { border: 1px solid var(--bord); border-radius: 10px; padding: 5px 9px; font-size: 0.88rem; }
+  .recit { font: 500 1.3rem/1.4 var(--titre); }
+  .masque { display: none !important; }
+</style>
+</head>
+<body>
+<div class="eclair" id="eclair"></div>
+<main class="page">
+  <header>
+    <a class="retour" id="retour" href="index.html">← Soirée</a>
+    <h1 id="titre"><small>Enquête</small>Chargement…</h1>
+  </header>
+  <div id="ecran"></div>
+  <div class="erreur" id="erreur" role="alert"></div>
+</main>
+
+<script src="commun/soiree.js"></script>
+<script>
+// Enquête : jeu fil conducteur de la soirée. La page parle au serveur par la
+// connexion « soirée » (/ws-soiree), distincte de la place à une table : on
+// peut l'ouvrir par-dessus un jeu sans quitter sa partie.
+(function () {
+  const dansJeu = new URLSearchParams(location.search).get('dans') === '1';
+  if (dansJeu) document.getElementById('retour').classList.add('masque');
+
+  const ecran = document.getElementById('ecran');
+  const elErreur = document.getElementById('erreur');
+  const elTitre = document.getElementById('titre');
+
+  const s = Soiree.actuelle();
+  let monNom = Soiree.nom();
+  let pack = null, etat = null, moi = null, couches = [];
+  let ws = null, tentatives = 0, minuteur = null, dernierSignal = 0;
+  let ouvertureLancee = false;
+
+  function el(balise, attrs, texte) {
+    const e = document.createElement(balise);
+    Object.assign(e, attrs || {});
+    if (texte != null) e.textContent = texte;
+    return e;
+  }
+  function carte(titre) {
+    const c = el('section', { className: 'carte' });
+    if (titre) c.appendChild(el('h2', {}, titre));
+    ecran.appendChild(c);
+    return c;
+  }
+  function envoyer(msg) {
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+  }
+  function titre(principal, sous) {
+    elTitre.textContent = '';
+    elTitre.appendChild(el('small', {}, sous || 'Enquête'));
+    elTitre.append(principal);
+  }
+  function appliquerPalette(p) {
+    const r = document.documentElement.style;
+    if (p.fond) r.setProperty('--fond', p.fond);
+    if (p.surface) r.setProperty('--surface', p.surface);
+    if (p.accent) r.setProperty('--accent', p.accent);
+    if (p.texte) r.setProperty('--texte', p.texte);
+    if (p.alerte) r.setProperty('--alerte', p.alerte);
+  }
+  function portrait(id) { return pack && pack.portraits.find((p) => p.id === id); }
+  function element(cle, id) { const e = pack && pack[cle].find((x) => x.id === id); return e ? e.nom : id; }
+  // Avec l'article (« la Cuisine », « le Tisonnier »), pour les phrases.
+  function elementLe(cle, id) { const e = pack && pack[cle].find((x) => x.id === id); return e ? (e.le || e.nom) : id; }
+  function duree(sec) {
+    const h = Math.floor(sec / 3600), mn = Math.round((sec % 3600) / 60);
+    return h ? h + ' h' + (mn ? ' ' + String(mn).padStart(2, '0') : '') : mn + ' min';
+  }
+
+  // ---------------- Préalables : soirée et prénom ----------------
+  if (!s) {
+    titre('Pas de soirée');
+    const c = carte('Rejoins d’abord une soirée');
+    c.appendChild(el('p', {}, 'L’enquête se joue pendant une soirée : crée-la ou rejoins-la sur l’accueil, puis reviens ici.'));
+    const l = el('div', { className: 'ligne' }); l.style.marginTop = '12px';
+    l.appendChild(el('a', { className: 'bouton', href: 'index.html', target: dansJeu ? '_top' : '_self' }, 'Aller à l’accueil'));
+    c.appendChild(l);
+    return;
+  }
+  if (!monNom) {
+    titre('Ton prénom');
+    const c = carte('Comment t’appelles-tu ?');
+    const l = el('div', { className: 'ligne' });
+    const champ = el('input', { type: 'text', maxLength: 16, placeholder: 'Ton prénom' });
+    const ok = el('button', { type: 'button' }, 'Entrer');
+    ok.addEventListener('click', () => { if (Soiree.definirNom(champ.value)) location.reload(); });
+    l.append(champ, ok);
+    c.appendChild(l);
+    return;
+  }
+
+  // ---------------- Connexion « soirée » ----------------
+  function seConnecter() {
+    clearTimeout(minuteur); minuteur = null;
+    const url = Soiree.SERVEURS[s.serveur].ws + '/ws-soiree/' + s.code + '/' + encodeURIComponent(monNom);
+    const socket = new WebSocket(url);
+    ws = socket;
+    dernierSignal = Date.now();
+    socket.onopen = () => { if (ws !== socket) return; tentatives = 0; elErreur.textContent = ''; };
+    socket.onmessage = (e) => {
+      if (ws !== socket) return;
+      dernierSignal = Date.now();
+      const msg = JSON.parse(e.data);
+      recevoir(msg, socket);
+    };
+    socket.onclose = () => { if (ws === socket) reconnecter(); };
+  }
+  function reconnecter() {
+    if (minuteur) return;
+    tentatives++;
+    elErreur.textContent = tentatives > 1 ? 'Connexion perdue, reconnexion…' : '';
+    minuteur = setTimeout(() => { minuteur = null; seConnecter(); }, Math.min(1000 * tentatives, 5000));
+  }
+  setInterval(() => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    try { ws.send('{"type":"ping"}'); } catch (e) { /* elle se fermera */ }
+    if (!document.hidden && Date.now() - dernierSignal > 15000) seConnecter();
+  }, 5000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    if (!ws || ws.readyState > 1) seConnecter();
+    else envoyer({ type: 'soiree_etat' });
+  });
+
+  function recevoir(msg, socket) {
+    switch (msg.type) {
+      case 'pong': return;
+      case 'remplace':
+        ws = null; try { socket.close(); } catch (e) {}
+        ecran.textContent = '';
+        titre('Ouverte ailleurs');
+        carte('Ton enquête est ouverte sur un autre écran')
+          .appendChild(el('p', {}, 'Ferme cet onglet, ou recharge la page pour la reprendre ici.'));
+        return;
+      case 'soiree_couches':
+        couches = msg.couches || [];
+        if (!couches.includes('enq')) { etat = null; afficher(); }
+        return;
+      case 'enq_pack':
+        pack = msg; appliquerPalette(msg.palette || {}); afficher(); return;
+      case 'enq_etat':
+        if (!couches.includes('enq')) couches.push('enq');
+        etat = msg; afficher(); return;
+      case 'enq_moi':
+        moi = msg; afficher(); return;
+      case 'enq_erreur':
+        elErreur.textContent = msg.message; setTimeout(() => { if (elErreur.textContent === msg.message) elErreur.textContent = ''; }, 5000);
+        return;
+      case 'enq_annulee':
+        etat = null; couches = couches.filter((c) => c !== 'enq'); afficher(); return;
+    }
+  }
+
+  // ---------------- Écrans ----------------
+  let rendu = '';
+  function afficher() {
+    // On ne redessine pas un écran identique : un appui long en cours ne
+    // doit pas être interrompu par un message sans changement.
+    const cle = JSON.stringify([couches.includes('enq'), etat, moi, pack && pack.id]);
+    if (cle === rendu) return;
+    rendu = cle;
+    ecran.textContent = '';
+    if (!couches.includes('enq') || !etat) return ecranAucune();
+    if (!pack || !moi) return;
+    ({ lobby: ecranLobby, ouverture: ecranOuverture, enquete: ecranEnquete, fin: ecranFin }[etat.phase] || ecranAucune)();
+  }
+
+  function ecranAucune() {
+    titre('Enquête', 'Soirée ' + s.code);
+    const c = carte('Un meurtre cette nuit ?');
+    c.appendChild(el('p', {}, 'L’enquête tourne pendant toute la soirée, en parallèle des autres jeux. Chaque victoire rapporte des indices ; l’un de vous est le tueur.'));
+    c.appendChild(el('p', {}, 'De 4 à 12 joueurs. Celui qui la lance devient l’hôte et règle la partie.'));
+    const l = el('div', { className: 'ligne' }); l.style.marginTop = '14px';
+    const b = el('button', { type: 'button' }, 'Ouvrir une enquête');
+    b.addEventListener('click', () => envoyer({ type: 'enq_creer' }));
+    l.appendChild(b);
+    c.appendChild(l);
+  }
+
+  function ecranLobby() {
+    titre(pack.nom, 'Enquête · ' + (pack.epoque || ''));
+    const hote = moi.hote;
+    const intro = carte();
+    intro.appendChild(el('p', {}, pack.ambiance + ' La victime : ' + pack.victime + '. ' +
+      'Narrateur : ' + pack.narrateur.nom + ', ' + pack.narrateur.role + '.'));
+    intro.appendChild(el('p', {}, 'Hôte : ' + etat.hote + (hote ? ' (toi)' : '') + '.'));
+
+    // Réglages (l'hôte modifie, les autres voient)
+    const r = carte('Réglages');
+    const v = etat.vitesses[etat.vitesse];
+    if (hote) {
+      if (etat.univers_disponibles.length > 1) {
+        r.appendChild(el('div', { className: 'etiquette' }, 'Univers'));
+        const lu = el('div', { className: 'ligne' });
+        etat.univers_disponibles.forEach((u) => {
+          const b = el('button', { type: 'button', className: 'discret puce' + (u.id === etat.univers ? ' choisie' : '') }, u.nom);
+          b.addEventListener('click', () => envoyer({ type: 'enq_config', univers: u.id }));
+          lu.appendChild(b);
+        });
+        r.appendChild(lu);
+      }
+      r.appendChild(el('div', { className: 'etiquette' }, 'Vitesse'));
+      const lv = el('div', { className: 'ligne' });
+      Object.entries(etat.vitesses).forEach(([id, x]) => {
+        const b = el('button', { type: 'button', className: 'discret puce' + (id === etat.vitesse ? ' choisie' : '') },
+          x.titre + ' · ' + duree(x.duree));
+        b.addEventListener('click', () => envoyer({ type: 'enq_config', vitesse: id }));
+        lv.appendChild(b);
+      });
+      r.appendChild(lv);
+      r.appendChild(el('div', { className: 'etiquette' }, 'Durée de l’enquête'));
+      const ld = el('div', { className: 'ligne' });
+      const sel = el('select');
+      [1800, 3600, 5400, 7200, 10800, 14400, 18000, 21600].forEach((d) => {
+        const o = el('option', { value: d, selected: d === etat.duree }, duree(d));
+        sel.appendChild(o);
+      });
+      if (![...sel.options].some((o) => o.selected)) sel.appendChild(el('option', { value: etat.duree, selected: true }, duree(etat.duree)));
+      sel.addEventListener('change', () => envoyer({ type: 'enq_config', duree: Number(sel.value) }));
+      ld.appendChild(sel);
+      r.appendChild(ld);
+      r.appendChild(el('div', { className: 'etiquette' }, 'Jeux qui rapportent des indices'));
+      const lj = el('div', { className: 'ligne' });
+      v.jeux.forEach((j) => {
+        const lab = el('label', { className: 'case' });
+        const cb = el('input', { type: 'checkbox', checked: etat.jeux.includes(j) });
+        cb.addEventListener('change', () => {
+          const jeux = v.jeux.filter((x) => x === j ? cb.checked : etat.jeux.includes(x));
+          envoyer({ type: 'enq_config', jeux });
+        });
+        lab.append(cb, ((Soiree.JEUX[j] || {}).icone || '') + ' ' + ((Soiree.JEUX[j] || {}).titre || j));
+        lj.appendChild(lab);
+      });
+      r.appendChild(lj);
+      r.appendChild(el('div', { className: 'etiquette' }, 'Unité de pénalité'));
+      const lu2 = el('div', { className: 'ligne' });
+      const unite = el('input', { type: 'text', value: etat.unite, maxLength: 20 });
+      unite.addEventListener('change', () => envoyer({ type: 'enq_config', unite: unite.value }));
+      lu2.appendChild(unite);
+      lu2.appendChild(el('span', { className: 'etiquette', style: 'margin:0' }, '« pompe » pour un mode sans alcool'));
+      r.appendChild(lu2);
+    } else {
+      r.appendChild(el('p', {}, v.titre + ' · ' + duree(etat.duree) + ' · pénalité : ' + etat.unite));
+      r.appendChild(el('p', {}, 'Jeux comptés : ' + etat.jeux.map((j) => (Soiree.JEUX[j] || {}).titre || j).join(', ') + '.'));
+    }
+
+    // Portraits
+    const c = carte('Choisis ton personnage');
+    c.appendChild(el('p', {}, 'Ton personnage porte ton prénom. Un portrait par joueur, premier arrivé, premier servi.'));
+    const g = el('div', { className: 'portraits' }); g.style.marginTop = '12px';
+    pack.portraits.forEach((p) => {
+      const qui = etat.joueurs.find((j) => j.portrait === p.id);
+      const mien = qui && Soiree.nom().toLowerCase() === qui.nom.toLowerCase();
+      const b = el('button', { type: 'button', className: 'portrait' + (qui ? ' pris' : '') + (mien ? ' moi' : '') });
+      const visage = el('div', { className: 'visage' }, p.icone);
+      visage.style.background = p.couleur;
+      b.append(visage, el('div', { className: 'arch' }, p.archetype), el('div', { className: 'qui' }, qui ? qui.nom : ''));
+      b.disabled = !!qui && !mien;
+      b.addEventListener('click', () => { if (!qui) envoyer({ type: 'enq_portrait', portrait: p.id }); });
+      g.appendChild(b);
+    });
+    c.appendChild(g);
+
+    // Joueurs et lancement
+    const voc = pack.vocabulaire.enqueteurs;   // « les invités » : l'article est dans le pack
+    const j = carte(voc.charAt(0).toUpperCase() + voc.slice(1) + ' (' + etat.joueurs.length + '/' + etat.joueurs_max + ')');
+    const lj = el('div', { className: 'joueurs' });
+    etat.joueurs.forEach((x) => { const p = portrait(x.portrait); lj.appendChild(el('span', {}, (p ? p.icone + ' ' : '') + x.nom)); });
+    if (!etat.joueurs.length) lj.appendChild(el('span', {}, 'Personne pour l’instant'));
+    j.appendChild(lj);
+    const la = el('div', { className: 'ligne' }); la.style.marginTop = '14px';
+    if (hote) {
+      const pret = etat.joueurs.length >= etat.joueurs_min && etat.joueurs.every((x) => x.portrait);
+      const b = el('button', { type: 'button', disabled: !pret }, 'Lancer l’enquête');
+      b.addEventListener('click', () => envoyer({ type: 'enq_lancer' }));
+      la.appendChild(b);
+      const a = el('button', { type: 'button', className: 'discret' }, 'Annuler');
+      a.addEventListener('click', () => { if (confirm('Annuler l’enquête pour tout le monde ?')) envoyer({ type: 'enq_annuler' }); });
+      la.appendChild(a);
+      if (!pret) j.appendChild(el('p', {}, 'Il faut au moins ' + etat.joueurs_min + ' joueurs, chacun avec son portrait.'));
+    } else {
+      la.appendChild(el('p', {}, 'L’hôte lancera l’enquête quand tout le monde sera prêt.'));
+    }
+    if (moi.inscrit) {
+      const q = el('button', { type: 'button', className: 'discret' }, 'Ne pas participer');
+      q.addEventListener('click', () => envoyer({ type: 'enq_quitter' }));
+      la.appendChild(q);
+    }
+    j.appendChild(la);
+  }
+
+  function ecranOuverture() {
+    titre(pack.nom, 'Enquête');
+    const c = carte();
+    const n = el('div', { className: 'narrateur' });
+    n.append(el('span', {}, pack.narrateur.icone), pack.narrateur.nom + ', ' + pack.narrateur.role);
+    c.appendChild(n);
+    const texte = el('div', { className: 'narration' });
+    const lignes = pack.ouverture.map((t) => el('p', {}, t));
+    lignes.forEach((p) => texte.appendChild(p));
+    c.appendChild(texte);
+    // Les phrases apparaissent au rythme de l'ouverture, recalé sur l'horloge
+    // du serveur (un joueur qui arrive en retard voit déjà le début).
+    const duree = 25;   // duree_ouverture de enquete_config.json
+    const ecart = Date.now() / 1000 - etat.maintenant;
+    const debut = etat.ouverture_fin_a - duree;
+    lignes.forEach((p, i) => {
+      const quand = debut + (i * duree * 0.85) / lignes.length;
+      const attente = Math.max(0, (quand - (Date.now() / 1000 - ecart)) * 1000);
+      setTimeout(() => p.classList.add('vue'), attente + 60);
+    });
+    if (!ouvertureLancee) {
+      ouvertureLancee = true;
+      const eclair = document.getElementById('eclair');
+      eclair.classList.remove('flash'); void eclair.offsetWidth; eclair.classList.add('flash');
+    }
+    carteRole();
+  }
+
+  function carteRole() {
+    if (!moi.inscrit) {
+      carte().appendChild(el('p', {}, 'Tu n’es pas inscrit à cette enquête : tu peux suivre, mais pas jouer.'));
+      return;
+    }
+    const c = carte('Ton rôle');
+    const r = el('div', { className: 'role' + (moi.role === 'tueur' ? ' tueur' : '') });
+    r.appendChild(el('div', { className: 'cache' }, 'Maintiens le doigt appuyé pour voir ton rôle, à l’abri des regards.'));
+    const rev = el('div', { className: 'revele' });
+    const voc = pack.vocabulaire;
+    if (moi.role === 'tueur') {
+      rev.appendChild(el('div', { className: 'titre-role' }, 'Tu es ' + voc.tueur));
+      const sol = moi.solution;
+      rev.appendChild(el('p', {}, 'Tu as tué ' + pack.victime + ' dans ' + elementLe('lieux', sol.lieu) + ', avec ' + elementLe('armes', sol.arme) + '.'));
+      rev.appendChild(el('p', {}, 'Personne ne doit le découvrir avant la fin.'));
+    } else {
+      rev.appendChild(el('div', { className: 'titre-role' }, 'Tu es ' + (voc.enqueteur ? 'un ' + voc.enqueteur : 'enquêteur')));
+      rev.appendChild(el('p', {}, 'Trouve qui, où et avec quoi. Méfie-toi : ' + voc.tueur + ' est parmi vous.'));
+    }
+    r.appendChild(rev);
+    let minuteurAppui = null;
+    const ouvrir = (e) => { e.preventDefault(); minuteurAppui = setTimeout(() => r.classList.add('ouvert'), 350); };
+    const fermer = () => { clearTimeout(minuteurAppui); r.classList.remove('ouvert'); };
+    r.addEventListener('pointerdown', ouvrir);
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach((t) => r.addEventListener(t, fermer));
+    r.addEventListener('contextmenu', (e) => e.preventDefault());
+    c.appendChild(r);
+  }
+
+  let minuteurCompte = null;
+  function ecranEnquete() {
+    titre(pack.nom, 'Enquête en cours');
+    const t = carte('Temps restant');
+    const compte = el('div', { className: 'compte' });
+    t.appendChild(compte);
+    const ecart = Date.now() / 1000 - etat.maintenant;
+    clearInterval(minuteurCompte);
+    const maj = () => {
+      const reste = Math.max(0, etat.fin_a - (Date.now() / 1000 - ecart));
+      const h = Math.floor(reste / 3600), m = Math.floor((reste % 3600) / 60), sec = Math.floor(reste % 60);
+      compte.textContent = (h ? h + ':' : '') + String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+    };
+    maj();
+    minuteurCompte = setInterval(maj, 1000);
+    carteRole();
+    const d = carte('Le dossier');
+    d.appendChild(el('div', { className: 'etiquette' }, 'Suspects'));
+    const ls = el('div', { className: 'liste-elements' });
+    etat.joueurs.forEach((x) => { const p = portrait(x.portrait); ls.appendChild(el('span', {}, (p ? p.icone + ' ' : '') + x.nom)); });
+    d.appendChild(ls);
+    d.appendChild(el('div', { className: 'etiquette' }, 'Lieux possibles'));
+    const ll = el('div', { className: 'liste-elements' });
+    etat.lieux.forEach((id) => ll.appendChild(el('span', {}, element('lieux', id))));
+    d.appendChild(ll);
+    d.appendChild(el('div', { className: 'etiquette' }, 'Armes possibles'));
+    const la = el('div', { className: 'liste-elements' });
+    etat.armes.forEach((id) => { const a = pack.armes.find((x) => x.id === id); la.appendChild(el('span', {}, (a ? a.icone + ' ' : '') + element('armes', id))); });
+    d.appendChild(la);
+    const p = carte();
+    p.appendChild(el('p', {}, 'Bientôt ici : le plan illustré du manoir, les indices gagnés aux jeux, l’archive et les accusations.'));
+  }
+
+  function ecranFin() {
+    clearInterval(minuteurCompte);
+    titre(pack.nom, 'Enquête close');
+    const f = etat.fin;
+    const c = carte(f.vainqueur === 'tueur' ? pack.vocabulaire.tueur + ' l’emporte' : pack.vocabulaire.detective + ' : ' + f.detective);
+    c.appendChild(el('p', { className: 'recit' }, f.recit));
+  }
+
+  seConnecter();
+})();
+</script>
+</body>
+</html>

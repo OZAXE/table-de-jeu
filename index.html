@@ -137,6 +137,10 @@
   .soiree .table .texte span { color: var(--texte-doux); overflow-wrap: anywhere; }
   .soiree .table button { padding: 9px 12px; font-size: 0.85rem; }
   .soiree .table button:disabled { opacity: 0.5; cursor: default; }
+  .soiree .bouton-enquete {
+    border-radius: 12px; padding: 11px 16px; text-decoration: none; white-space: nowrap;
+    background: #2a1216; color: #f3e6cf; border: 1px solid rgba(201, 162, 74, 0.45); font: 600 0.92rem 'Outfit', sans-serif;
+  }
   .soiree .erreur { color: #f2a7a7; font-size: 0.88rem; margin-top: 8px; }
   .soiree .erreur:empty { display: none; }
 
@@ -499,6 +503,8 @@
       });
       const quitter = el('button', { type: 'button', className: 'discret' }, 'Quitter la soirée');
       quitter.addEventListener('click', () => { Soiree.oublier(); afficher(); });
+      const enquete = el('a', { className: 'bouton-enquete', href: 'enquete.html' }, '🔍 Enquête');
+      l2.appendChild(enquete);
       l2.appendChild(partager);
       l2.appendChild(nouvelle);
       l2.appendChild(quitter);
