@@ -11,10 +11,19 @@
 //   // dans la boucle, après camera.lookAt : zone.appliquer(camera);
 //   // une fois la page prête : zone.mesurer();
 // =====================================================================
+// Mesure brute de la zone libre (pour une page qui garde son propre cadrage).
+export function mesurerZone(options) {
+  let z = null;
+  suivreZoneLibre(() => {}, Object.assign({ observer: false, sortie: (x) => { z = x; } }, options)).recalculer();
+  return z;
+}
+
 export function suivreZoneLibre(apresChangement, {
   hauts = ['bandeau', 'joueurs', 'btn-regles', 'boutons-haut', 'onglet-enquete'],
   panneaux = ['panneau'],
   vitesse = 0.12,
+  observer = true,
+  sortie = null,
 } = {}) {
   const c = { fracH: 1, fracL: 1, dx: 0, dy: 0 };
   const actuel = { x: 0, y: 0 };
@@ -52,7 +61,9 @@ export function suivreZoneLibre(apresChangement, {
     // Garde-fous : jamais moins d'un tiers de l'écran pour la table.
     if (bas - haut < H * 0.34) bas = Math.min(H, haut + H * 0.34);
     if (droite - gauche < L * 0.4) droite = Math.min(L, gauche + L * 0.4);
-    return { haut, bas, gauche, droite, L, H };
+    const res = { haut, bas, gauche, droite, L, H };
+    if (sortie) sortie(res);
+    return res;
   }
 
   function calculer() {
@@ -84,7 +95,9 @@ export function suivreZoneLibre(apresChangement, {
       if (el) new MutationObserver(() => mesurer()).observe(el, { attributes: true, attributeFilter: ['class'] });
     });
   };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', surveiller); else surveiller();
+  if (observer) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', surveiller); else surveiller();
+  }
 
   // Recentre l'image sur la zone libre, sans à-coup.
   function appliquer(camera) {
