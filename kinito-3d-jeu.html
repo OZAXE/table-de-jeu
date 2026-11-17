@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Nunito:wght@400;700;800&family=Caveat+Brush&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 <style>
   html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; background: #140d08; }
@@ -247,7 +247,8 @@
 </style>
 <!-- Direction artistique commune « bar moderne » ; accent orange pour le Kinito. -->
 <link rel="stylesheet" href="da/bar-moderne.css">
-<style>:root { --accent: #f59e2e; --accent-2: #c2410c; }</style>
+<link rel="stylesheet" href="da/themes/bistrot.css">
+<link rel="stylesheet" href="da/mise-en-page.css">
 </head>
 <body>
 
@@ -333,6 +334,15 @@ import {
   preparerAmbiance, lisser, creerDecorBar, dessinerEtiquette as dessinerPastille,
   quandPoliceChargee, creerSousVerre, creerTableRonde, POLICE,
 } from './da/bar-moderne.js';
+import { modeLeger, optionsRendu, reglerRendu, surveillerFluidite } from './da/qualite.js';
+import { suivreZoneLibre } from './da/cadrage.js';
+import {
+  FOND as FOND_BISTROT, preparerAmbianceBistrot, creerTableBistrot, creerDecorBistrot,
+  creerChaiseBistrot, dessinerEtiquetteBistrot, quandPolicesBistrot,
+} from './da/themes/bistrot.js';
+
+// Version légère (interrupteur de l'accueil) : même bistrot, moins de détails.
+const LEGER = modeLeger();
 
 const ACCENT = 0xf59e2e;   // orange du Kinito, comme sur l'accueil
 
@@ -381,10 +391,13 @@ const CAM_VITESSE = 0.12;
 // SCÈNE / CAMÉRA / RENDU
 // =====================================================================
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x140d08);
+scene.background = new THREE.Color(FOND_BISTROT);
 // Assez léger pour que le décor du fond reste lisible, assez dense pour
 // garder la table isolée dans son halo de lumière.
-scene.fog = new THREE.FogExp2(0x140d08, 0.075);
+scene.fog = new THREE.FogExp2(FOND_BISTROT, 0.075);
+
+// La table tient dans la zone libre de l'écran (da/cadrage.js).
+const zone = suivreZoneLibre(() => { majCadrageTable(camera); if (!regardeDedans) camObjectifPos = CAM_TABLE_POS.clone(); });
 
 // Distance calculee pour que la table tienne dans le champ quel que soit le
 // format : en portrait le champ horizontal est etroit, il faut reculer.
@@ -396,7 +409,7 @@ const CAM_TABLE_POS = new THREE.Vector3(0, 2.9, 5.0);
 function distanceCadrage(cam) {
   const vHalf = THREE.MathUtils.degToRad(cam.fov) / 2;
   const hHalf = Math.atan(Math.tan(vHalf) * cam.aspect);
-  return Math.max(LARGEUR_VUE / Math.tan(hHalf), HAUTEUR_VUE / Math.tan(vHalf), 4.2);
+  return Math.max(LARGEUR_VUE / (Math.tan(hHalf) * zone.c.fracL), HAUTEUR_VUE / (Math.tan(vHalf) * zone.c.fracH), 4.2);
 }
 
 const FOG_DENSITE_MAX = 0.075;   // reglage d'origine, pour un ecran large
@@ -423,10 +436,9 @@ camObjectifPos = CAM_TABLE_POS.clone();
 camera.position.copy(CAM_TABLE_POS);
 camera.lookAt(camCibleActuelle);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer(optionsRendu());
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
+reglerRendu(renderer);
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -437,6 +449,7 @@ function redimensionner() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  zone.recalculer();
   majCadrageTable(camera);
   // Si on regarde la table, on suit le nouveau cadrage tout de suite.
   if (!regardeDedans) {
@@ -453,8 +466,8 @@ scene.add(new THREE.AmbientLight(0x3a2818, 1.0));
 const keyLight = new THREE.DirectionalLight(0xffd6a8, 3.0);
 keyLight.position.set(0.8, 3.4, 1.2);
 keyLight.target.position.set(0, 0.3, 0);
-keyLight.castShadow = true;
-keyLight.shadow.mapSize.set(2048, 2048);
+keyLight.castShadow = !LEGER;
+keyLight.shadow.mapSize.set(1024, 1024);
 keyLight.shadow.camera.left = -3.4;
 keyLight.shadow.camera.right = 3.4;
 keyLight.shadow.camera.top = 3.4;
@@ -462,13 +475,13 @@ keyLight.shadow.camera.bottom = -3.4;
 keyLight.shadow.camera.near = 0.5;
 keyLight.shadow.camera.far = 9;
 scene.add(keyLight, keyLight.target);
-preparerAmbiance(renderer, scene, { accent: ACCENT });
+preparerAmbianceBistrot(renderer, scene, { leger: LEGER });
 
 // =====================================================================
 // TABLE
 // =====================================================================
 // Noyer foncé, feutre vert profond au centre, cerclage laiton.
-const { groupe: table } = creerTableRonde(R_TABLE);
+const { groupe: table } = creerTableBistrot(R_TABLE, { leger: LEGER });
 scene.add(table);
 
 // =====================================================================
@@ -478,10 +491,7 @@ scene.add(table);
 // =====================================================================
 const SOL_Y = -1.2;
 
-function creerDecor() {
-  creerDecorBar(scene, { accent: ACCENT, nom: 'KINITO', solY: SOL_Y });
-}
-creerDecor();
+const decor = creerDecorBistrot(scene, { nom: 'Kinito', solY: SOL_Y, leger: LEGER });
 
 // =====================================================================
 // ANNONCE FLOTTANTE — au-dessus du centre de la table, vue par tous.
@@ -521,11 +531,11 @@ function dessinerAnnonce(gros, petit, couleur) {
   annonceTexture.needsUpdate = true;
 }
 
+// Les annonces passent par la grande annonce commune (commun/soiree.js) :
+// lisible de tous, dans la zone libre, aux couleurs du bistrot. (L'ancien
+// texte 3D au-dessus de la table était trop petit sur téléphone.)
 function afficherAnnonce3D(gros, petit, couleur, duree) {
-  dessinerAnnonce(String(gros), petit || '', couleur || '#ffdca0');
-  annonceSprite.visible = true;
-  annonceSprite.material.opacity = 0;
-  annonceAnim = { t: 0, duree: duree || 1.4 };
+  if (window.Soiree && Soiree.annonce) Soiree.annonce(String(gros), petit || '', { couleur: couleur || '#ffdca0', duree: (duree || 1.4) + 0.4 });
 }
 
 // =====================================================================
@@ -548,10 +558,13 @@ function creerEtiquette(texte) {
 function majEtiquette(sprite, texte, actif) {
   sprite.userData.texte = texte;
   sprite.userData.actif = actif;
-  dessinerPastille(sprite.material.map.image.getContext('2d'), texte,
-    { actif, absent: / \(parti\)$/.test(texte), accent: ACCENT });
+  dessinerEtiquetteBistrot(sprite.material.map.image.getContext('2d'), texte,
+    { actif, absent: / \(parti\)$/.test(texte) });
   sprite.material.map.needsUpdate = true;
 }
+quandPolicesBistrot(() => etiquettes.forEach(sp => {
+  if (sp.parent) majEtiquette(sp, sp.userData.texte, sp.userData.actif);
+}));
 quandPoliceChargee(() => etiquettes.forEach(sp => {
   if (sp.parent) majEtiquette(sp, sp.userData.texte, sp.userData.actif); else etiquettes.delete(sp);
 }));
@@ -618,7 +631,8 @@ function creerSieges(noms) {
     const etiquette = creerEtiquette(noms[i]);
     etiquette.position.set(chope.position.x, 0.58, chope.position.z);
 
-    groupe.add(avatar, etiquette, chope);
+    // Une chaise bistrot derrière chaque place : c'est elle qui fait lire « table ».
+    groupe.add(avatar, etiquette, chope, creerChaiseBistrot(dir, 2.42, SOL_Y));
     scene.add(groupe);
 
     lisser(groupe);
@@ -2212,7 +2226,12 @@ function animer() {
   // --- caméra ---
   camera.position.lerp(camObjectifPos, CAM_VITESSE);
   camCibleActuelle.lerp(camObjectifCible, CAM_VITESSE);
+  decor.animer(clock.elapsedTime);
+  // Plus la caméra recule, plus les prénoms grossissent (lisibles sans se toucher).
+  const recul = THREE.MathUtils.clamp(camera.position.distanceTo(camCibleActuelle) / 6.2, 1, 1.4);
+  sieges.forEach(st => { if (st.etiquette) st.etiquette.scale.set(1.0 * recul, 0.25 * recul, 1); });
   camera.lookAt(camCibleActuelle);
+  zone.appliquer(camera);
 
   renderer.render(scene, camera);
 }
@@ -2242,7 +2261,9 @@ if (salonDansUrl && /^[A-Za-z]{4}(-[2-9])?$/.test(salonDansUrl)) {
 }
 // Plus aucune facette dans la scène (gobelet, dés, table...).
 lisser(scene);
+zone.mesurer();
 animer();
+surveillerFluidite();
 </script>
 <script>
   // Appli installable (PWA) : voir service-worker.js
