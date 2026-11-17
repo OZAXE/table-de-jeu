@@ -1,0 +1,70 @@
+/* =====================================================================
+   Thème « Grand casino des années 60 » (Casino) : vert profond et or,
+   dorures et lettres Art déco. Titres : Limelight. Texte : Josefin Sans.
+   ===================================================================== */
+:root {
+  --accent: #d4af37;
+  --accent-2: #8a6a12;
+  --fond: #0d0806;
+  --verre: rgba(12, 32, 24, 0.9);
+  --verre-fort: rgba(10, 28, 21, 0.96);
+  --bord: rgba(212, 175, 55, 0.35);
+  --texte: #f6ead0;
+  --texte-doux: #cdbf9c;
+  --texte-pale: #8a7f62;
+  --police: 'Josefin Sans', 'Segoe UI', system-ui, sans-serif;
+  --police-titre: Limelight, Georgia, serif;
+}
+html, body { background: var(--fond) !important; }
+#overlay, button, input, .modale, #panneau { font-family: var(--police) !important; }
+#message, #panneau h2, .modale h2, .code-salon { font-family: var(--police-titre) !important; font-weight: 400 !important; letter-spacing: 0.04em !important; }
+#message { color: #f3d98a !important; text-shadow: 0 0 14px rgba(212, 175, 55, 0.35), 0 2px 8px rgba(0, 0, 0, 0.9) !important; }
+#rappel { color: var(--texte-doux) !important; }
+#compteur { background: rgba(10, 28, 21, 0.92) !important; border: 1px solid var(--bord) !important; color: var(--texte) !important; }
+#compteur b { color: #f3d98a !important; }
+
+.joueur {
+  background: linear-gradient(180deg, rgba(20, 50, 38, 0.95), rgba(8, 24, 18, 0.95)) !important;
+  border: 1px solid var(--bord) !important; color: var(--texte) !important;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45) !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+.joueur.actif { background: linear-gradient(180deg, #e6c45a, #a8841f) !important; color: #1a1206 !important; border-color: #fff3c4 !important; }
+.joueur.actif .info { color: #3a2a06 !important; }
+
+/* Panneau : feutre vert profond, double filet d'or aux coins coupés. */
+#panneau {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(212, 175, 55, 0.12), transparent 60%),
+    linear-gradient(180deg, #123a2a, #0a2219) !important;
+  border: 2px solid #d4af37 !important; border-radius: 14px !important;
+  box-shadow: inset 0 0 0 4px #0a2219, inset 0 0 0 5px rgba(212, 175, 55, 0.5), 0 18px 40px rgba(0, 0, 0, 0.65) !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+#panneau h2 { color: #f3d98a !important; }
+#panneau p, .aide { color: var(--texte-doux) !important; }
+
+button {
+  font-family: var(--police) !important; font-weight: 700 !important; letter-spacing: 0.06em; text-transform: uppercase;
+  color: #1a1206 !important; background: linear-gradient(180deg, #f3d98a, #b8902a) !important;
+  border: 1px solid #6a4e0a !important; border-radius: 999px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 3px 0 #4a3606, 0 6px 14px rgba(0, 0, 0, 0.5) !important;
+}
+button:active { transform: translateY(2px) !important; box-shadow: 0 1px 0 #4a3606 !important; }
+button.danger { color: #fff !important; background: linear-gradient(180deg, #c4283a, #7a1020) !important; border-color: #4a0810 !important; box-shadow: inset 0 1px 0 rgba(255, 200, 200, 0.3), 0 3px 0 #2a0408, 0 6px 14px rgba(0, 0, 0, 0.5) !important; }
+button.sombre, button.clair { color: var(--texte) !important; background: linear-gradient(180deg, #1a4634, #0c271c) !important; border: 1px solid var(--bord) !important; box-shadow: 0 2px 0 #04100b !important; }
+button:disabled { filter: grayscale(0.6) brightness(0.6) !important; }
+#btn-regles { text-transform: none; background: linear-gradient(180deg, #1a4634, #0c271c) !important; border: 1px solid var(--bord) !important; color: var(--texte) !important; }
+
+input[type="text"] { background: rgba(4, 14, 10, 0.6) !important; border: 1px solid var(--bord) !important; color: var(--texte) !important; }
+.code-salon { background: none !important; color: #f3d98a !important; -webkit-background-clip: initial !important; background-clip: initial !important; }
+
+#modale-regles { background: rgba(4, 3, 2, 0.82) !important; }
+.modale { background: linear-gradient(180deg, #123a2a, #0a2219) !important; color: var(--texte-doux) !important; border: 2px solid #d4af37 !important; }
+.modale h2 { color: #f3d98a !important; }
+.modale h3 { color: #f3d98a !important; }
+.modale .accent, .modale td:first-child { color: var(--texte) !important; }
+
+@media (max-width: 760px), (pointer: coarse) {
+  #panneau { border-radius: 14px 14px 0 0 !important; border-width: 2px 0 0 0 !important; }
+}

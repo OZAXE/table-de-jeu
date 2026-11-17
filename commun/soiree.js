@@ -169,6 +169,8 @@
   //   gorgees: { nom: n | null (cul sec) }  -> à boire MAINTENANT,
   //   bues:    { nom: n }                   -> déjà bues (bilan, ex. Buckshot),
   //   joueurs: [noms] (facultatif : pour lister aussi ceux qui ne boivent pas),
+  //   notes:   { nom: texte } (facultatif : ce qu'on écrit à droite quand il ne boit pas,
+  //            ex. « distribue 2 🍺 » au casino),
   //   titre, sous (facultatifs : remplacent les textes par défaut),
   //   duree (s, défaut 5.5)
   // }
@@ -237,7 +239,10 @@
         const k = Object.keys(gorgees).find(x => egal(x, n));
         if (k !== undefined && (gorgees[k] === null || gorgees[k] > 0)) b.textContent = '🍺 ' + texteDose(gorgees[k], false);
         else if (bues) { const kb = Object.keys(bues).find(x => egal(x, n)); b.textContent = '🍺 ' + texteDose(kb !== undefined ? bues[kb] : 0, true); }
-        else b.textContent = estGagnant ? 'ne boit pas' : '';
+        else {
+          const kn = d.notes ? Object.keys(d.notes).find(x => egal(x, n)) : undefined;
+          b.textContent = kn !== undefined ? d.notes[kn] : estGagnant ? 'ne boit pas' : '';
+        }
         ligne.append(a, b);
         l.appendChild(ligne);
       });

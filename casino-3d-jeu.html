@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Josefin+Sans:wght@400;600;700&family=Limelight&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 <style>
   html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; background: #07110d; }
@@ -259,13 +259,8 @@
 </style>
 <!-- Direction artistique commune « bar moderne » ; accent or pour le Casino. -->
 <link rel="stylesheet" href="da/bar-moderne.css">
-<style>
-  :root { --accent: #facc15; --accent-2: #a16207; }
-  /* Le blanc ne se lit pas sur l'or : texte foncé sur les boutons dorés
-     (les boutons sombres, rouges et verts gardent leur texte clair). */
-  button:not(.sombre):not(.clair):not(.danger):not(.vert) { color: #2a1c02 !important; text-shadow: none; }
-  .joueur.actif { color: #fff !important; background: color-mix(in srgb, #a16207 55%, var(--verre)) !important; }
-</style>
+<link rel="stylesheet" href="da/themes/casino60.css">
+<link rel="stylesheet" href="da/mise-en-page.css">
 </head>
 <body>
 
@@ -363,8 +358,17 @@ import {
   preparerAmbiance, lisser as lisserScene, creerDecorBar, dessinerEtiquette as dessinerPastille,
   quandPoliceChargee, creerSousVerre, creerTableRonde, POLICE,
 } from './da/bar-moderne.js';
+import { modeLeger, optionsRendu, reglerRendu, surveillerFluidite } from './da/qualite.js';
+import { mesurerZone } from './da/cadrage.js';
+import {
+  FOND as FOND_CASINO, POLICE_TEXTE, POLICE_TITRE, preparerAmbianceCasino, creerTableCasino, creerDecorCasino,
+  creerFauteuilCasino, dessinerEtiquetteCasino, quandPolicesCasino,
+} from './da/themes/casino60.js';
 
-const ACCENT = 0xfacc15;   // or du Casino, comme sur l'accueil
+// Version légère (interrupteur de l'accueil) : même casino, moins de détails.
+const LEGER = modeLeger();
+
+const ACCENT = 0xd4af37;   // or du grand casino
 // Étiquette de celui qui joue : un or plus sombre, sinon son prénom (en
 // blanc) ne se lit pas.
 const ACCENT_ETIQUETTE = 0xa16207;
@@ -409,8 +413,8 @@ let vueDessus = false;
 // SCÈNE / CAMÉRA / RENDU (même cadrage que Menteur)
 // =====================================================================
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x07110d);
-scene.fog = new THREE.FogExp2(0x07110d, 0.075);
+scene.background = new THREE.Color(FOND_CASINO);
+scene.fog = new THREE.FogExp2(FOND_CASINO, 0.075);
 
 const CAM_CIBLE = new THREE.Vector3(0, 0.3, 0);
 const LARGEUR_VUE = 2.3;
@@ -421,23 +425,20 @@ const CAM_POS = new THREE.Vector3(0, 3.0, 5.0);
 // haut et le panneau du bas (qui prend la moitié d'un téléphone pendant
 // les mises). Le centre de la vue est décalé (setViewOffset) au milieu de
 // cette zone, et la distance est calculée pour qu'elle y tienne.
-const zoneVue = { hauteur: window.innerHeight, decalage: 0, decalageCourant: 0 };
+// La zone est mesurée sur l'interface réelle (da/cadrage.js) : titre,
+// joueurs et onglet de l'Enquête en haut et à gauche, panneau en bas ou en
+// colonne à droite (paysage).
+const zoneVue = { hauteur: window.innerHeight, largeur: window.innerWidth, decalage: 0, decalageX: 0, decalageCourant: 0, decalageXCourant: 0 };
 function mesurerZoneVue() {
-  const H = window.innerHeight;
-  const tel = matchMedia('(max-width: 760px), (pointer: coarse)').matches;
-  const haut = tel ? 118 : 64;
-  let bas = 0;
-  const panneau = document.getElementById('panneau');
-  if (panneau && !panneau.classList.contains('cache')) bas = panneau.getBoundingClientRect().height + (tel ? 0 : 24);
-  bas = Math.min(bas, H * 0.64);
-  const hv = Math.max(H * 0.3, H - haut - bas);
-  const centre = Math.min(haut + hv / 2, H / 2);
-  zoneVue.hauteur = hv;
-  zoneVue.decalage = H / 2 - centre;
+  const z = mesurerZone();
+  zoneVue.hauteur = z.bas - z.haut;
+  zoneVue.largeur = z.droite - z.gauche;
+  zoneVue.decalage = z.H / 2 - (z.haut + z.bas) / 2;
+  zoneVue.decalageX = z.L / 2 - (z.gauche + z.droite) / 2;
 }
 function distanceCadrage(cam) {
   const vHalf = THREE.MathUtils.degToRad(cam.fov) / 2;
-  const hHalf = Math.atan(Math.tan(vHalf) * cam.aspect);
+  const hHalf = Math.atan(Math.tan(vHalf) * cam.aspect * zoneVue.largeur / window.innerWidth);
   const vUtile = Math.atan(Math.tan(vHalf) * zoneVue.hauteur / window.innerHeight);
   // Au blackjack on serre le cadre sur la zone des cartes (le bord de la
   // table peut sortir de l'écran).
@@ -458,7 +459,7 @@ const CIBLE_ROUE = new THREE.Vector3(0, 0.05, 0);
 function positionZoomRoue(cam) {
   mesurerZoneVue();
   const vHalf = THREE.MathUtils.degToRad(cam.fov) / 2;
-  const hHalf = Math.atan(Math.tan(vHalf) * cam.aspect);
+  const hHalf = Math.atan(Math.tan(vHalf) * cam.aspect * zoneVue.largeur / window.innerWidth);
   const vUtile = Math.atan(Math.tan(vHalf) * zoneVue.hauteur / window.innerHeight);
   // La roue (cuve comprise, 0.7 de rayon) et un peu de tapis autour.
   const d = 0.85 / Math.tan(Math.min(hHalf, vUtile));
@@ -489,10 +490,9 @@ camObjectifPos = CAM_POS.clone();
 camera.position.copy(CAM_POS);
 camera.lookAt(camCibleActuelle);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer(optionsRendu());
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
+reglerRendu(renderer);
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -512,22 +512,17 @@ scene.add(new THREE.AmbientLight(0x2a2a30, 1.0));
 const keyLight = new THREE.DirectionalLight(0xffd6a8, 3.0);
 keyLight.position.set(0.8, 3.4, 1.2);
 keyLight.target.position.set(0, 0.3, 0);
-keyLight.castShadow = true;
-keyLight.shadow.mapSize.set(2048, 2048);
+keyLight.castShadow = !LEGER;
+keyLight.shadow.mapSize.set(1024, 1024);
 Object.assign(keyLight.shadow.camera, { left: -3.4, right: 3.4, top: 3.4, bottom: -3.4, near: 0.5, far: 9 });
 scene.add(keyLight, keyLight.target);
-preparerAmbiance(renderer, scene, { accent: ACCENT });
+preparerAmbianceCasino(renderer, scene, { leger: LEGER });
 
 // Noyer, tapis vert de casino, cerclage laiton.
-const { groupe: table } = creerTableRonde(R_TABLE, { rayonFeutre: R_FEUTRE, feutreCouleur: 0x0e4a2c });
+const { groupe: table } = creerTableCasino(R_TABLE, { rayonFeutre: R_FEUTRE, leger: LEGER });
 scene.add(table);
 
-const decor = creerDecorBar(scene, { accent: ACCENT, nom: 'CASINO', solY: -1.2 });
-// La suspension au-dessus de la table masquait la roue vue de haut et de
-// loin (téléphone en portrait) : on la retire, la lumière reste.
-decor.traverse(o => {
-  if (o.isMesh && Math.abs(o.position.x) < 0.01 && Math.abs(o.position.z) < 0.01 && o.position.y > 2) o.visible = false;
-});
+const decor = creerDecorCasino(scene, { nom: 'CASINO', solY: -1.2, leger: LEGER });
 
 // =====================================================================
 // OUTILS DE DESSIN
@@ -880,7 +875,7 @@ function majPileJetons(g, montant, maxParPile) {
 function creerEtiquette(texte) {
   const c = document.createElement('canvas');
   c.width = 512; c.height = 128;
-  dessinerPastille(c.getContext('2d'), texte, { accent: ACCENT });
+  dessinerEtiquetteCasino(c.getContext('2d'), texte, {});
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture(c), transparent: true, depthTest: false }));
   sprite.renderOrder = 10;
   sprite.scale.set(0.9, 0.225, 1);
@@ -891,7 +886,7 @@ function majEtiquette(sprite, texte, actif, absent) {
   if (sprite.userData.cle === cle) return;
   sprite.userData.cle = cle;
   sprite.userData.dernier = [texte, actif, absent];
-  dessinerPastille(sprite.material.map.image.getContext('2d'), texte, { actif, absent, accent: ACCENT_ETIQUETTE });
+  dessinerEtiquetteCasino(sprite.material.map.image.getContext('2d'), texte, { actif, absent });
   sprite.material.map.needsUpdate = true;
 }
 
@@ -931,12 +926,10 @@ function texteFlottant(position, gros, petit, couleur, echelle) {
   textesFlottants.push({ sprite: sp, t: 0, duree: 1.8, depart: sp.position.clone() });
 }
 const messageSprite = { courant: null };
+// Les annonces passent par la grande annonce commune (commun/soiree.js) :
+// lisible de tous, placée dans la zone libre, aux couleurs du casino.
 function messageCentral(gros, petit, couleur, duree) {
-  if (messageSprite.courant) scene.remove(messageSprite.courant.sprite);
-  const sp = creerSpriteTexte(String(gros), petit || '', couleur || '#f4f1ea');
-  sp.position.set(0, 1.1, 0);
-  scene.add(sp);
-  messageSprite.courant = { sprite: sp, t: 0, duree: duree || 1.8 };
+  if (window.Soiree && Soiree.annonce) Soiree.annonce(String(gros), petit || '', { couleur: couleur || '#f3d98a', duree: duree || 1.8 });
 }
 
 // Étiquettes du centre : le croupier (blackjack) ou le pot (poker).
@@ -1013,7 +1006,8 @@ function creerSieges(noms) {
     chope.position.set(base.x, 0.014, base.z);
     const etiquette = creerEtiquette(noms[i]);
     etiquette.position.set(base.x, 0.58, base.z);
-    groupe.add(avatar, chope, etiquette);
+    // Un fauteuil de velours derrière chaque place : c'est lui qui fait lire « table ».
+    groupe.add(avatar, chope, etiquette, creerFauteuilCasino(dir, 2.45, -1.2));
     scene.add(groupe);
     lisserScene(groupe);
 
@@ -1358,15 +1352,37 @@ function annoncerBilan(etat) {
       texteFlottant(s.chope.position, '+' + l.delta, l.distribue ? 'distribue ' + l.distribue + ' 🍺' : 'jetons', '#7dffb0', 0.36);
     }
   });
-  if (moi) {
-    if (moi.cul_sec) messageCentral('CUL SEC', 'fauché : la banque te recharge 1000 jetons', '#ff4d5e', 3);
-    else if (moi.distribue) messageCentral('+' + moi.delta, 'distribue ' + moi.distribue + ' gorgée' + (moi.distribue > 1 ? 's' : ''), '#7dffb0', 2.6);
-    else if (moi.gorgees) messageCentral(moi.delta + ' jetons', 'tu bois ' + moi.gorgees + ' gorgée' + (moi.gorgees > 1 ? 's' : ''), '#ffb44c', 2.6);
-    else if (moi.delta > 0) messageCentral('+' + moi.delta, 'jetons gagnés', '#7dffb0', 2.2);
-    else messageCentral('Égalité', 'mise rendue', '#f4f1ea', 1.8);
+  // Le bilan du coup, le même sur tous les écrans : qui boit, qui
+  // distribue, qui encaisse (commun/soiree.js). Un coup sans perte ni gain
+  // notable (mises rendues) ne mérite pas d'écran : une simple annonce.
+  const noms = etat.joueurs;
+  const gorgees = {}, notes = {}, perdants = [], gagnants = [];
+  b.lignes.forEach(l => {
+    const nom = noms[l.joueur];
+    if (!nom) return;
+    if (l.cul_sec) { gorgees[nom] = null; perdants.push(nom); notes[nom] = 'cul sec'; }
+    else if (l.gorgees > 0) { gorgees[nom] = l.gorgees; perdants.push(nom); }
+    if (l.distribue) { gagnants.push(nom); notes[nom] = '+' + l.delta + ' 🪙 · distribue ' + l.distribue + ' 🍺'; }
+    else if (l.delta > 0 && !l.gorgees) notes[nom] = '+' + l.delta + ' 🪙';
+    else if (l.delta < 0 && !l.gorgees && !l.cul_sec) notes[nom] = l.delta + ' 🪙';
+    else if (!l.delta && !l.gorgees) notes[nom] = 'mise rendue';
+  });
+  let titre = 'Fin du coup';
+  if (etat.jeu === 'roulette' && etat.table) titre = 'Le ' + etat.table.numero + ' ' + couleurNumero(etat.table.numero);
+  if (perdants.length || gagnants.length) {
+    if (window.Soiree && Soiree.ecranResultat) {
+      setTimeout(() => Soiree.ecranResultat({
+        evt: 'manche', perdants, gagnants, gorgees, notes, joueurs: b.lignes.map(l => noms[l.joueur]).filter(Boolean),
+        titre: moi && moi.cul_sec ? 'Cul sec !' : moi && moi.gorgees ? 'Perdu, ça se boit' : moi && moi.distribue ? 'Jackpot !' : titre,
+        sous: titre + (moi ? ' · ' + (moi.delta > 0 ? '+' : '') + moi.delta + ' jetons pour toi' : ''),
+        duree: 4.5,
+      }), 900);
+    }
   } else if (etat.jeu === 'roulette' && etat.table) {
     const n = etat.table.numero;
     messageCentral(String(n), couleurNumero(n), TEINTES[couleurNumero(n)] === '#161b22' ? '#f4f1ea' : '#ff8a8a', 2.2);
+  } else {
+    messageCentral('Égalité', 'mises rendues', '#f4f1ea', 1.8);
   }
 }
 
@@ -2325,6 +2341,11 @@ function demarrerScene(noms) {
   camObjectifCible = CAM_CIBLE.clone();
 }
 
+quandPolicesCasino(() => sieges.forEach(st => {
+  const d = st.etiquette.userData.dernier;
+  st.etiquette.userData.cle = null;
+  if (d) majEtiquette(st.etiquette, ...d); else majEtiquette(st.etiquette, st.nom, false, false);
+}));
 quandPoliceChargee(() => sieges.forEach(st => {
   const d = st.etiquette.userData.dernier;
   st.etiquette.userData.cle = null;
@@ -2389,10 +2410,12 @@ function boucle() {
   }
 
   zoneVue.decalageCourant += (zoneVue.decalage - zoneVue.decalageCourant) * CAM_VITESSE;
+  zoneVue.decalageXCourant += (zoneVue.decalageX - zoneVue.decalageXCourant) * CAM_VITESSE;
   const W = window.innerWidth, H = window.innerHeight;
-  camera.setViewOffset(W, H, 0, Math.round(zoneVue.decalageCourant), W, H);
+  camera.setViewOffset(W, H, Math.round(zoneVue.decalageXCourant), Math.round(zoneVue.decalageCourant), W, H);
   camera.position.lerp(camObjectifPos, CAM_VITESSE);
   camCibleActuelle.lerp(camObjectifCible, CAM_VITESSE);
+  decor.animer(clock.elapsedTime);
   camera.lookAt(camCibleActuelle);
   renderer.render(scene, camera);
 }
@@ -2422,7 +2445,13 @@ if (salonDansUrl && /^[A-Za-z]{4}(-[2-9])?$/.test(salonDansUrl)) {
   panneauAccueil();
 }
 lisserScene(scene);
+// Le panneau, le titre et la liste changent de taille au fil des coups : on recadre.
+if (window.ResizeObserver) {
+  const obs = new ResizeObserver(() => recadrer());
+  ['panneau', 'joueurs', 'bandeau'].forEach(id => { const el = document.getElementById(id); if (el) obs.observe(el); });
+}
 boucle();
+surveillerFluidite();
 </script>
 <script>
   // Appli installable (PWA) : voir service-worker.js
