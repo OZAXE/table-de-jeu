@@ -132,19 +132,55 @@ export function lisserSaloon(objet, reflets = 0.3) {
 }
 
 // ---------------------------------------------------------------------
-// Table de poker du saloon : plateau de bois, cuir rouge sang au centre,
-// cerclage de fer clouté.
+// Table de poker du saloon : ce qui la fait lire comme une table, c'est son
+// rebord rembourré en cuir, son plateau d'un seul tenant (veinage continu,
+// pas de planches : sinon on croit voir un fond de tonneau), sa ceinture
+// moulurée, son ombre au sol et les chaises autour (creerChaiseSaloon).
 // ---------------------------------------------------------------------
+function veinage(base, graine) {
+  return (ctx, L, H) => {
+    const r = aleatoire(graine);
+    ctx.fillStyle = base; ctx.fillRect(0, 0, L, H);
+    for (let k = 0; k < 140; k++) {
+      const y0 = r() * H, ampl = 3 + r() * 10, f = 2 + r() * 4;
+      ctx.strokeStyle = `rgba(${r() < 0.6 ? '30,14,6' : '255,220,170'},${0.05 + r() * 0.1})`;
+      ctx.lineWidth = 0.6 + r() * 1.8;
+      ctx.beginPath();
+      for (let x = 0; x <= L; x += 8) ctx.lineTo(x, y0 + Math.sin(x / L * Math.PI * f + k) * ampl);
+      ctx.stroke();
+    }
+  };
+}
+
 export function creerTableSaloon(rayon, { rayonFeutre = rayon - 0.28, leger = false } = {}) {
   const groupe = new THREE.Group();
-  const bois = mat(0xffffff, { map: texture(planches('#6b4528', { nb: 8, graine: 11, usure: 0.4 }), 512, 512), roughness: 0.62 });
-  const plateau = new THREE.Mesh(new THREE.CylinderGeometry(rayon, rayon * 0.97, 0.24, 96), bois);
-  plateau.position.y = -0.12;
+  const boisClair = mat(0xffffff, { map: texture(veinage('#7a4e2c', 11), 512, 512), roughness: 0.45 });
+  const boisFonce = mat(0xffffff, { map: texture(veinage('#4a2c16', 12), 512, 128, [6, 1]), roughness: 0.55 });
+
+  // Plateau d'un seul tenant, un peu épais.
+  const plateau = new THREE.Mesh(new THREE.CylinderGeometry(rayon, rayon, 0.09, 96), [boisFonce, boisClair, boisClair]);
+  plateau.position.y = -0.045;
   plateau.receiveShadow = true;
-  // Pied central massif
-  const pied = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.6, 1.0, 32), mat(0x3a2414, { roughness: 0.7 }));
-  pied.position.y = -0.74;
-  // Cuir rouge sang, usé au centre
+  // Ceinture sous le plateau, en retrait, avec une moulure de laiton.
+  const ceinture = new THREE.Mesh(new THREE.CylinderGeometry(rayon - 0.12, rayon - 0.2, 0.22, 96, 1, true), boisFonce);
+  ceinture.position.y = -0.2;
+  const moulure = new THREE.Mesh(new THREE.TorusGeometry(rayon - 0.12, 0.018, 8, 128), mat(0xb08a4a, { metalness: 0.8, roughness: 0.35 }));
+  moulure.rotation.x = Math.PI / 2;
+  moulure.position.y = -0.1;
+  // Pied central tourné et quatre griffes au sol.
+  const pied = new THREE.Mesh(new THREE.LatheGeometry([
+    new THREE.Vector2(0.0, 0), new THREE.Vector2(0.42, 0), new THREE.Vector2(0.36, 0.08), new THREE.Vector2(0.2, 0.2),
+    new THREE.Vector2(0.24, 0.45), new THREE.Vector2(0.16, 0.7), new THREE.Vector2(0.2, 0.85), new THREE.Vector2(0.3, 0.9), new THREE.Vector2(0, 0.9),
+  ], 24), mat(0x3a2414, { roughness: 0.6 }));
+  pied.position.y = -1.2;
+  for (let k = 0; k < 4; k++) {
+    const griffe = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, 0.9), mat(0x3a2414, { roughness: 0.6 }));
+    griffe.rotation.y = k * Math.PI / 2 + Math.PI / 4;
+    griffe.position.set(Math.sin(griffe.rotation.y) * 0.55, -1.14, Math.cos(griffe.rotation.y) * 0.55);
+    groupe.add(griffe);
+  }
+
+  // Cuir rouge sang au centre, cousu.
   const cuirTex = texture((ctx, L) => {
     const g = ctx.createRadialGradient(L / 2, L / 2, L * 0.05, L / 2, L / 2, L / 2);
     g.addColorStop(0, '#7a2216'); g.addColorStop(0.7, '#5a1810'); g.addColorStop(1, '#3a0e08');
@@ -154,30 +190,88 @@ export function creerTableSaloon(rayon, { rayonFeutre = rayon - 0.28, leger = fa
       ctx.fillStyle = `rgba(${r() < 0.5 ? '255,200,160' : '0,0,0'},${0.03 + r() * 0.05})`;
       ctx.fillRect(r() * L, r() * L, 2, 2);
     }
-    // Couture
     ctx.strokeStyle = 'rgba(217,179,130,0.55)'; ctx.setLineDash([10, 9]); ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(L / 2, L / 2, L / 2 - 14, 0, Math.PI * 2); ctx.stroke();
   }, 512);
   const feutre = new THREE.Mesh(new THREE.CylinderGeometry(rayonFeutre, rayonFeutre, 0.012, 96),
     mat(0xffffff, { map: cuirTex, roughness: 0.85 }));
-  feutre.position.y = 0.003;
+  feutre.position.y = 0.006;
   feutre.receiveShadow = true;
-  // Cerclage de fer et clous
-  const fer = mat(0x2b2724, { metalness: 0.7, roughness: 0.45 });
-  const cerclage = new THREE.Mesh(new THREE.TorusGeometry(rayon, 0.04, 14, 128), fer);
-  cerclage.rotation.x = Math.PI / 2;
-  cerclage.position.y = 0.0;
-  groupe.add(plateau, pied, feutre, cerclage);
-  const nbClous = leger ? 24 : 56;
-  const clous = new THREE.InstancedMesh(new THREE.SphereGeometry(0.018, 8, 6), mat(0x8a7a62, { metalness: 0.8, roughness: 0.35 }), nbClous);
-  const m = new THREE.Matrix4();
-  for (let k = 0; k < nbClous; k++) {
-    const a = k / nbClous * Math.PI * 2;
-    m.makeTranslation(Math.cos(a) * (rayonFeutre + 0.02), 0.012, Math.sin(a) * (rayonFeutre + 0.02));
-    clous.setMatrixAt(k, m);
-  }
-  groupe.add(clous);
+  // Filet de laiton autour du cuir.
+  const filet = new THREE.Mesh(new THREE.TorusGeometry(rayonFeutre, 0.012, 8, 128), mat(0xb08a4a, { metalness: 0.8, roughness: 0.35 }));
+  filet.rotation.x = Math.PI / 2;
+  filet.position.y = 0.01;
+
+  // Le rebord rembourré, en cuir brun capitonné : la signature d'une table de poker.
+  const rebordTex = texture((ctx, L, H) => {
+    ctx.fillStyle = '#3a1d0c'; ctx.fillRect(0, 0, L, H);
+    const r = aleatoire(9);
+    for (let k = 0; k < 900; k++) { ctx.fillStyle = `rgba(${r() < 0.5 ? '255,210,170' : '0,0,0'},${0.04 + r() * 0.05})`; ctx.fillRect(r() * L, r() * H, 2, 2); }
+    // Clous de capiton
+    ctx.fillStyle = 'rgba(200,160,90,0.9)';
+    for (let x = 8; x < L; x += 32) { ctx.beginPath(); ctx.arc(x, H * 0.5, 3, 0, Math.PI * 2); ctx.fill(); }
+  }, 512, 32, [12, 1]);
+  const rebord = new THREE.Mesh(new THREE.TorusGeometry(rayon - 0.06, 0.075, 14, 128),
+    mat(0xffffff, { map: rebordTex, roughness: 0.5 }));
+  rebord.rotation.x = Math.PI / 2;
+  rebord.position.y = 0.05;
+  rebord.castShadow = !leger;
+
+  // Ombre douce au sol : la table se pose sur le plancher au lieu de flotter.
+  const ombre = new THREE.Mesh(new THREE.CircleGeometry(rayon * 1.35, 48), new THREE.MeshBasicMaterial({
+    transparent: true, depthWrite: false,
+    map: texture((ctx, L) => {
+      const g = ctx.createRadialGradient(L / 2, L / 2, 0, L / 2, L / 2, L / 2);
+      g.addColorStop(0, 'rgba(0,0,0,0.7)'); g.addColorStop(0.6, 'rgba(0,0,0,0.45)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, L, L);
+    }, 128),
+  }));
+  ombre.rotation.x = -Math.PI / 2;
+  ombre.position.y = -1.195;
+
+  groupe.add(plateau, ceinture, moulure, pied, feutre, filet, rebord, ombre);
   return { groupe, feutre };
+}
+
+// Chaise western à barreaux, tournée vers la table. `dir` : direction du
+// joueur depuis le centre ; la chaise se place derrière sa place.
+const GEO_CHAISE = {
+  assise: new THREE.BoxGeometry(0.56, 0.06, 0.5),
+  pied: new THREE.CylinderGeometry(0.025, 0.03, 0.72, 8),
+  montant: new THREE.CylinderGeometry(0.025, 0.025, 0.72, 8),
+  barreau: new THREE.CylinderGeometry(0.014, 0.014, 0.5, 6),
+  traverse: new THREE.BoxGeometry(0.58, 0.07, 0.05),
+};
+let MAT_CHAISE = null;
+export function creerChaiseSaloon(dir, rayon = 2.45, solY = -1.2) {
+  if (!MAT_CHAISE) MAT_CHAISE = mat(0xffffff, { map: texture(veinage('#6b4528', 21), 256, 256), roughness: 0.6 });
+  const c = new THREE.Group();
+  const hAssise = 0.74;
+  const assise = new THREE.Mesh(GEO_CHAISE.assise, MAT_CHAISE);
+  assise.position.y = hAssise;
+  c.add(assise);
+  for (const [x, z] of [[-0.24, -0.21], [0.24, -0.21], [-0.24, 0.21], [0.24, 0.21]]) {
+    const p = new THREE.Mesh(GEO_CHAISE.pied, MAT_CHAISE);
+    p.position.set(x, hAssise / 2, z);
+    c.add(p);
+  }
+  // Dossier côté extérieur (+z local) : deux montants, barreaux, traverse.
+  for (const x of [-0.25, 0.25]) {
+    const m = new THREE.Mesh(GEO_CHAISE.montant, MAT_CHAISE);
+    m.position.set(x, hAssise + 0.36, 0.23);
+    c.add(m);
+  }
+  for (const x of [-0.12, 0, 0.12]) {
+    const b = new THREE.Mesh(GEO_CHAISE.barreau, MAT_CHAISE);
+    b.position.set(x, hAssise + 0.3, 0.23);
+    c.add(b);
+  }
+  const t = new THREE.Mesh(GEO_CHAISE.traverse, MAT_CHAISE);
+  t.position.set(0, hAssise + 0.68, 0.23);
+  c.add(t);
+  c.position.set(dir.x * rayon, solY, dir.z * rayon);
+  c.rotation.y = Math.atan2(dir.x, dir.z);
+  return c;
 }
 
 // ---------------------------------------------------------------------
