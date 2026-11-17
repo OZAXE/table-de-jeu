@@ -1555,8 +1555,9 @@ function clientRecevoir(msg) {
       break;
 
     case 'bt_manche_fin':
-      // L'état qui suit porte tout ce qu'il faut ; la fin de manche se lit
-      // dans son passage de « objets » à « composition ».
+      // Le tir qui vide le paquet s'anime d'abord, puis le bilan de la
+      // manche s'affiche chez tout le monde (voir ecranFinManche).
+      quandLibre(() => ecranFinManche(msg), 400);
       break;
 
     case 'erreur':
@@ -1766,13 +1767,16 @@ function animerTir(msg) {
       if (s && etatCourant) s.objectif = niveauGorgees((etatCourant.gorgees[msg.cible] || 0) + msg.gorgees);
       encaisser(msg.cible);
       texteFlottant(pos, '+' + msg.gorgees, msg.gorgees > 1 ? 'gorgées' : 'gorgée', '#ff8a5c', 0.42);
-      messageCentral('♠', (msg.cible === MOI ? 'Tu bois ' : nomCible + ' boit ') + msg.gorgees
-        + (msg.gorgees > 1 ? ' gorgées' : ''), '#ff6a4c', 1.6);
+      Soiree.annonce('💥 RÉELLE !', (msg.cible === MOI ? 'Tu bois ' : nomCible + ' boit ') + msg.gorgees
+        + (msg.gorgees > 1 ? ' gorgées' : ' gorgée') + (msg.gorgees > 1 ? ' (scie)' : ''), {
+        couleur: '#ff6a4c', duree: 2.2, flash: true, vibrer: msg.cible === MOI ? [120, 60, 160] : null });
       dernierEvenement += 'réelle ! ' + (msg.cible === MOI ? 'Tu bois ' : nomCible + ' boit ') + msg.gorgees + '.';
     } else {
       texteFlottant(pos, '♥', 'à blanc', '#cfe2ea', 0.42);
+      Soiree.annonce('♥ À BLANC', msg.soi
+        ? (msg.tireur === MOI ? 'Rien : tu rejoues' : 'Rien : ' + nomTireur + ' rejoue')
+        : 'Rien pour ' + (msg.cible === MOI ? 'toi' : nomCible), { couleur: '#e9d3a5', duree: 1.7 });
       if (msg.soi) {
-        messageCentral('♥', (msg.tireur === MOI ? 'à blanc : tu rejoues' : 'à blanc : ' + nomTireur + ' rejoue'), '#cfe2ea', 1.5);
         dernierEvenement += 'à blanc, ' + (msg.tireur === MOI ? 'tu rejoues.' : 'il rejoue.');
       } else {
         dernierEvenement += 'à blanc, rien.';
@@ -1784,6 +1788,28 @@ function animerTir(msg) {
       defausse.push(carte);
       deplacerCarte(carte, posDefausse(k), Math.PI, 0.45, 0.2);
     });
+  });
+}
+
+// Bilan de la manche, le même sur tous les écrans : ce que chacun a bu
+// pendant la manche (les gorgées se boivent au fil des tirs, l'écran ne
+// redemande donc rien), qui a le plus bu, qui s'en sort le mieux.
+function ecranFinManche(msg) {
+  if (!gorgeesDebutManche || !msg.joueurs || !window.Soiree || !Soiree.ecranResultat) return;
+  const bues = {};
+  msg.joueurs.forEach((nom, i) => { bues[nom] = Math.max(0, (msg.gorgees[i] || 0) - (gorgeesDebutManche[i] || 0)); });
+  const valeurs = Object.values(bues);
+  const max = Math.max(...valeurs), min = Math.min(...valeurs);
+  const perdants = max > 0 ? msg.joueurs.filter(n => bues[n] === max) : [];
+  const gagnants = max > min ? msg.joueurs.filter(n => bues[n] === min) : [];
+  const moi = MOI < msg.joueurs.length ? msg.joueurs[MOI] : null;
+  const total = valeurs.reduce((a, b) => a + b, 0);
+  Soiree.ecranResultat({
+    evt: 'manche', perdants, gagnants, bues, joueurs: msg.joueurs,
+    titre: moi && perdants.includes(moi) ? 'Tournée pour toi !' : moi && gagnants.includes(moi) ? 'Tu t’en sors bien !' : 'Fin de la manche',
+    sous: (perdants.length ? perdants.join(' et ') + (perdants.length > 1 ? ' ont' : ' a') + ' le plus bu (' + max + ')' : 'Personne n’a bu')
+      + ' · ' + total + ' gorgée' + (total > 1 ? 's' : '') + ' servie' + (total > 1 ? 's' : '') + ' cette manche',
+    duree: 6,
   });
 }
 
@@ -2541,6 +2567,9 @@ function seConnecter() {
     dernierSignal = Date.now();
     const msg = JSON.parse(e.data);
     if (msg.type === 'pong') return;
+    // Buckshot affiche son propre bilan de manche (ecranFinManche), plus
+    // complet : l'annonce générique de la soirée ferait doublon.
+    if (msg.type === 'table_resultat' && msg.jeu === 'buckshot') return;
     if (Soiree.traiterMessage(msg, 'buckshot')) return;
     if (msg.type === 'remplace') { lienActif = false; panneauRemplace(); return; }
     clientRecevoir(msg);
