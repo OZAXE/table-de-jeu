@@ -7,14 +7,14 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=2">
 <link rel="apple-touch-icon" href="icons/icon-180.png?v=2">
-<meta name="theme-color" content="#0a2017">
+<meta name="theme-color" content="#0f0b1a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="SHIELD">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Permanent+Marker&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 <style>
   /* Palette claire et lumineuse : volontairement à l'opposé du bar sombre
@@ -236,6 +236,8 @@
     #panneau { max-height: 72vh; padding: 8px 10px; }
   }
 </style>
+<link rel="stylesheet" href="da/themes/salon.css">
+<link rel="stylesheet" href="da/mise-en-page.css">
 </head>
 <body>
 
@@ -330,10 +332,17 @@
 
 <script src="commun/soiree.js"></script>
 <script type="importmap">
-{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
 </script>
 <script type="module">
 import * as THREE from 'three';
+import { modeLeger, optionsRendu, reglerRendu, surveillerFluidite } from './da/qualite.js';
+import { suivreZoneLibre } from './da/cadrage.js';
+import { FOND, preparerAmbianceSalon, creerSalon as creerDecorSalon } from './da/themes/salon.js';
+const LEGER = modeLeger();
 
 // =====================================================================
 // MOTEUR DE RÈGLES — miroir de table-de-jeu-serveur/serveur/picolopoly.py
@@ -1793,7 +1802,6 @@ function pomper() {
 // =====================================================================
 // SCÈNE / CAMÉRA / RENDU
 // =====================================================================
-const COULEUR_CIEL = 0xbfe3f5;
 const COULEURS_JOUEURS = ['#e8543f', '#2f7fd8', '#23a35a', '#e0b000', '#9b4dca', '#f07f2c', '#e0569b', '#17a5a5'];
 const COULEURS_GROUPES = {
   marron: '#8b5a2b', bleu_clair: '#7ec8e3', rose: '#d6479b', orange: '#f28c28',
@@ -1802,16 +1810,15 @@ const COULEURS_GROUPES = {
 };
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(COULEUR_CIEL);
-scene.fog = new THREE.Fog(COULEUR_CIEL, 30, 80);
+scene.fog = new THREE.Fog(FOND, 30, 80);
 
 // Le plateau fait 11 de côté. La distance de la caméra vient du format de
-// l'écran (comme les autres jeux) : en portrait il faut reculer beaucoup
-// plus, et le brouillard recule avec, sinon la ville mangerait le plateau.
+// l'écran et de la zone libre entre l'interface du haut et le panneau
+// (da/cadrage.js, comme les autres jeux) ; le brouillard recule avec.
 const DEMI = 5.5;
 const CAM_CIBLE = new THREE.Vector3(0, 0, 0.35);
 const CAM_POS = new THREE.Vector3(0, 12, 8);
-const CAM_DIR = new THREE.Vector3(0, 1.0, 0.62).normalize();
+let CAM_DIR = new THREE.Vector3(0, 1.0, 0.62).normalize();
 const LARGEUR_VUE = 6.2;
 const HAUTEUR_VUE = 5.4;
 const CAM_VITESSE = 0.08;
@@ -1819,13 +1826,18 @@ const CAM_VITESSE = 0.08;
 function distanceCadrage(cam) {
   const vHalf = THREE.MathUtils.degToRad(cam.fov) / 2;
   const hHalf = Math.atan(Math.tan(vHalf) * cam.aspect);
-  return Math.max(LARGEUR_VUE / Math.tan(hHalf), HAUTEUR_VUE / Math.tan(vHalf), 9);
+  return Math.max(LARGEUR_VUE / (Math.tan(hHalf) * zone.c.fracL), HAUTEUR_VUE / (Math.tan(vHalf) * zone.c.fracH), 9) * zone.c.zoom;
 }
+// Les coins du socle et le haut des pions : ce que la caméra doit cadrer.
+const S_SOCLE = DEMI + 0.45;
+const POINTS_PLATEAU = [[-S_SOCLE, 0, S_SOCLE], [S_SOCLE, 0, S_SOCLE], [-S_SOCLE, 0.45, -S_SOCLE], [S_SOCLE, 0.45, -S_SOCLE], [0, -0.55, S_SOCLE]];
 
 let vueSuivi = false;       // false : tout le plateau ; true : gros plan sur le pion actif
 let distanceVue = 14;
 
+const zone = suivreZoneLibre(() => { majCadrageTable(camera); if (!spectacle && !vueSuivi) camObjectifPos.copy(CAM_POS); });
 function majCadrageTable(cam) {
+  CAM_DIR = zone.direction(0.85, 0.93);
   distanceVue = distanceCadrage(cam);
   CAM_POS.copy(CAM_CIBLE).addScaledVector(CAM_DIR, distanceVue);
   scene.fog.near = distanceVue + 8;
@@ -1840,10 +1852,9 @@ const camCibleActuelle = CAM_CIBLE.clone();
 camera.position.copy(CAM_POS);
 camera.lookAt(camCibleActuelle);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer(optionsRendu());
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
+reglerRendu(renderer);
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -1854,22 +1865,24 @@ function redimensionner() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  zone.recalculer();
   majCadrageTable(camera);
 }
 window.addEventListener('resize', redimensionner);
 window.addEventListener('orientationchange', redimensionner);
 
-scene.add(new THREE.HemisphereLight(0xffffff, 0xb9d9a0, 1.6));
-const soleil = new THREE.DirectionalLight(0xfff1d6, 2.4);
-soleil.position.set(-6, 14, 8);
+// La nuit dans le salon : lumière d'ambiance violette, et le plafonnier
+// (chaud) qui éclaire le plateau pour que les cases restent lisibles.
+preparerAmbianceSalon(renderer, scene, { leger: LEGER });
+scene.add(new THREE.AmbientLight(0xc8b8ff, LEGER ? 0.5 : 0.18));
+// Le plafonnier : un cône de lumière sur la table basse. Le plateau est
+// bien éclairé, le reste de la pièce tombe dans la pénombre.
+const soleil = new THREE.SpotLight(0xffe2bc, LEGER ? 3.4 : 3.0, 0, 0.5, 0.55, 0);
+soleil.position.set(-2, 24, 5);
 soleil.target.position.set(0, 0, 0);
-soleil.castShadow = true;
-soleil.shadow.mapSize.set(2048, 2048);
-soleil.shadow.camera.left = -8;
-soleil.shadow.camera.right = 8;
-soleil.shadow.camera.top = 8;
-soleil.shadow.camera.bottom = -8;
-soleil.shadow.camera.near = 1;
+soleil.castShadow = !LEGER;
+soleil.shadow.mapSize.set(1024, 1024);
+soleil.shadow.camera.near = 8;
 soleil.shadow.camera.far = 40;
 soleil.shadow.bias = -0.0005;
 scene.add(soleil, soleil.target);
@@ -1879,129 +1892,10 @@ function matiere(couleur, rugosite) {
 }
 
 // =====================================================================
-// LA VILLE MINIATURE — purement décorative, générée avec une graine fixe
-// pour être la même sur tous les écrans. Aucune ombre : elle est loin, et
-// les téléphones n'aiment pas les ombres.
+// LE SALON DE COLOC (da/themes/salon.js) : le plateau est posé sur la
+// table basse. Purement décoratif, le même sur tous les écrans.
 // =====================================================================
-function hasardDecor(graine) {
-  let a = graine;
-  return () => {
-    a |= 0; a = a + 0x6D2B79F5 | 0;
-    let t = Math.imul(a ^ a >>> 15, 1 | a);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
-}
-
-const voitures = [];
-const R_ROUTE = 11.2;       // milieu de la route qui fait le tour de la place
-
-function creerVille() {
-  const ville = new THREE.Group();
-  const alea = hasardDecor(42);
-
-  const gazon = new THREE.Mesh(new THREE.PlaneGeometry(220, 220), matiere(0xa9d98b, 1));
-  gazon.rotation.x = -Math.PI / 2;
-  gazon.position.y = -0.62;
-  ville.add(gazon);
-
-  const place = new THREE.Mesh(new THREE.BoxGeometry(19.6, 0.1, 19.6), matiere(0xf1e8d6, 0.95));
-  place.position.y = -0.57;
-  ville.add(place);
-
-  // Route en carré autour de la place, avec ses pointillés.
-  const matRoute = matiere(0x9aa3aa, 0.95);
-  const matTrait = matiere(0xffffff, 0.6);
-  const L = 2 * R_ROUTE + 2.4;
-  [[0, -R_ROUTE, L, 2.4], [0, R_ROUTE, L, 2.4], [-R_ROUTE, 0, 2.4, L], [R_ROUTE, 0, 2.4, L]].forEach(([x, z, lx, lz]) => {
-    const r = new THREE.Mesh(new THREE.BoxGeometry(lx, 0.08, lz), matRoute);
-    r.position.set(x, -0.56, z);
-    ville.add(r);
-  });
-  for (let k = -R_ROUTE + 0.8; k < R_ROUTE; k += 1.6) {
-    [[k, -R_ROUTE, 0.7, 0.1], [k, R_ROUTE, 0.7, 0.1], [-R_ROUTE, k, 0.1, 0.7], [R_ROUTE, k, 0.1, 0.7]].forEach(([x, z, lx, lz]) => {
-      const t = new THREE.Mesh(new THREE.BoxGeometry(lx, 0.02, lz), matTrait);
-      t.position.set(x, -0.51, z);
-      ville.add(t);
-    });
-  }
-
-  // Arbres sur la place, aux quatre coins du plateau.
-  function arbre(x, z, echelle) {
-    const g = new THREE.Group();
-    const tronc = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.14, 0.7, 6), matiere(0x8b5a2b));
-    tronc.position.y = 0.35;
-    const vert = [0x5fb85a, 0x4ca34d, 0x74c267, 0x3f9a4a][Math.floor(alea() * 4)];
-    const houppe = new THREE.Mesh(new THREE.IcosahedronGeometry(0.55, 0), matiere(vert));
-    houppe.position.y = 1.05;
-    g.add(tronc, houppe);
-    g.position.set(x, -0.52, z);
-    g.scale.setScalar(echelle);
-    ville.add(g);
-  }
-  [[-8, -8], [8, -8], [-8, 8], [8, 8], [0, -8.4], [-8.4, 0], [8.4, 0]].forEach(([x, z]) => arbre(x, z, 1.1 + alea() * 0.3));
-
-  // Pâtés de maisons autour de la route : pastels, toits plats ou à pans.
-  const PASTELS = [0xf6c9a8, 0xf9e0a2, 0xcde6f5, 0xf5b7c4, 0xd8f0c6, 0xe9d5f7, 0xfdfdfd, 0xf2d0b5, 0xbfe0d8];
-  const TOITS = [0xd8664f, 0x8a6a5a, 0x5c7a99, 0xc98f4a];
-  const matsFacade = PASTELS.map(c => matiere(c, 0.9));
-  const matsToit = TOITS.map(c => matiere(c, 0.9));
-  const matFenetre = new THREE.MeshStandardMaterial({ color: 0x7fb7d9, roughness: 0.3, metalness: 0.1 });
-  for (let x = -40; x <= 40; x += 4.2) {
-    for (let z = -40; z <= 40; z += 4.2) {
-      if (Math.abs(x) < 14 && Math.abs(z) < 14) continue;
-      if (alea() < 0.18) { arbre(x + alea() * 2 - 1, z + alea() * 2 - 1, 1 + alea() * 0.6); continue; }
-      const loin = Math.max(Math.abs(x), Math.abs(z));
-      const l = 1.8 + alea() * 1.6, p = 1.8 + alea() * 1.6;
-      const h = 0.9 + alea() * (loin > 22 ? 5 : 2.4);
-      const b = new THREE.Mesh(new THREE.BoxGeometry(l, h, p), matsFacade[Math.floor(alea() * matsFacade.length)]);
-      b.position.set(x + alea() - 0.5, -0.57 + h / 2, z + alea() - 0.5);
-      ville.add(b);
-      // Une rangée de fenêtres sur la face qui regarde le plateau.
-      const vers = new THREE.Vector3(-x, 0, -z).normalize();
-      const face = Math.abs(vers.x) > Math.abs(vers.z) ? new THREE.Vector3(Math.sign(vers.x), 0, 0) : new THREE.Vector3(0, 0, Math.sign(vers.z));
-      for (let etage = 0.55; etage < h - 0.2; etage += 0.8) {
-        const f = new THREE.Mesh(new THREE.BoxGeometry(face.x ? 0.04 : l * 0.7, 0.28, face.z ? 0.04 : p * 0.7), matFenetre);
-        f.position.set(b.position.x + face.x * (l / 2 + 0.01), -0.57 + etage, b.position.z + face.z * (p / 2 + 0.01));
-        ville.add(f);
-      }
-      if (h < 2.2 && alea() < 0.7) {
-        const toit = new THREE.Mesh(new THREE.ConeGeometry(Math.max(l, p) * 0.75, 0.9, 4), matsToit[Math.floor(alea() * matsToit.length)]);
-        toit.rotation.y = Math.PI / 4;
-        toit.scale.set(l / Math.max(l, p), 1, p / Math.max(l, p));
-        toit.position.set(b.position.x, -0.57 + h + 0.45, b.position.z);
-        ville.add(toit);
-      }
-    }
-  }
-
-  // Quelques voitures qui tournent sur la route.
-  const COULEURS_VOITURES = [0xe8543f, 0x2f7fd8, 0xf2c200, 0xffffff, 0x23a35a];
-  for (let k = 0; k < 5; k++) {
-    const v = new THREE.Group();
-    const caisse = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.3, 0.5), matiere(COULEURS_VOITURES[k], 0.5));
-    caisse.position.y = 0.25;
-    const habitacle = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.24, 0.44), matiere(0xdfe9f0, 0.3));
-    habitacle.position.set(-0.05, 0.5, 0);
-    v.add(caisse, habitacle);
-    ville.add(v);
-    voitures.push({ groupe: v, t: k / 5, vitesse: 0.012 + alea() * 0.01, voie: k % 2 ? 0.55 : -0.55 });
-  }
-
-  scene.add(ville);
-}
-creerVille();
-
-// Position sur le carré de la route, t de 0 à 1 (un tour).
-function placerVoiture(v) {
-  const s = ((v.t % 1) + 1) % 1 * 4;
-  const cote = Math.floor(s), f = s - cote;
-  const a = R_ROUTE + v.voie;
-  const P = [[-a, -a], [a, -a], [a, a], [-a, a]];
-  const [x0, z0] = P[cote], [x1, z1] = P[(cote + 1) % 4];
-  v.groupe.position.set(x0 + (x1 - x0) * f, -0.52, z0 + (z1 - z0) * f);
-  v.groupe.rotation.y = -Math.atan2(z1 - z0, x1 - x0);
-}
+const decorSalon = creerDecorSalon(scene, { demi: DEMI + 0.45, dessous: -0.55, leger: LEGER });
 
 // =====================================================================
 // LE PLATEAU
@@ -2772,7 +2666,10 @@ function texteFlottant(position, gros, petit, couleur) {
 
 const messageSprite = { courant: null };
 
+// Les grandes annonces passent par l'annonce commune (commun/soiree.js) :
+// en haut de la zone libre, jamais sur la liste des joueurs ni le panneau.
 function messageCentral(gros, petit, couleur, duree) {
+  if (window.Soiree && Soiree.annonce) { Soiree.annonce(String(gros), petit || '', { couleur: couleur || '#e8543f', duree: duree || 1.8 }); return; }
   if (messageSprite.courant) scene.remove(messageSprite.courant.sprite);
   const sp = creerSpriteTexte(String(gros), petit || '', couleur || '#e8543f');
   scene.add(sp);
@@ -2878,8 +2775,15 @@ function jouerEvenement(msg) {
       animerDeplacement(msg);
       break;
     case 'pp_gorgees': {
-      if (TOASTS[msg.raison]) messageCentral('🥂 Santé !', RAISONS[msg.raison], '#e8921a', 1.6);
-      if (msg.raison === 'faillite') messageCentral('CUL SEC !', nomJoueur(msg.boivent[0].joueur) + ' fait faillite', '#d8453b', 2.4);
+      // Tout le monde voit qui boit et combien, en grand.
+      if (TOASTS[msg.raison]) messageCentral('🥂 Santé !', RAISONS[msg.raison] + ' : tout le monde boit', '#fde047', 1.8);
+      else if (msg.raison === 'faillite') messageCentral('CUL SEC !', nomJoueur(msg.boivent[0].joueur) + ' fait faillite', '#ff6b5e', 2.6);
+      else {
+        const qui = msg.boivent.filter(b => !b.immunise).map(b => nomJoueur(b.joueur) + (b.cul_sec ? ' cul sec' : ' ' + b.nombre));
+        const proteges = msg.boivent.filter(b => b.immunise).map(b => nomJoueur(b.joueur));
+        if (qui.length) messageCentral('🍺 ' + (qui.length === 1 ? qui[0].replace(/ (\d+)$/, ' boit $1') : qui.join(' · ')), (RAISONS[msg.raison] || msg.raison) + (proteges.length ? ' · 🛡️ ' + proteges.join(', ') : ''), '#fde047', 2.0);
+        else if (proteges.length) messageCentral('🛡️ Immunité', proteges.join(', ') + ' ne boit pas', '#9be8ff', 1.8);
+      }
       for (const b of msg.boivent) {
         const t = b.cul_sec ? 'CUL SEC' : b.immunise ? '🛡️' : '🍺 ' + b.nombre;
         texteFlottant(positionTete(b.joueur), t, TOASTS[msg.raison] ? '' : RAISONS[msg.raison] || '', b.immunise ? '#2f7fd8' : '#e8921a');
@@ -4476,7 +4380,7 @@ function boucle() {
   const pouls = 0.28 + (Math.sin(temps * 4) + 1) * 0.14;
   surbrillances.forEach(s => { if (s.visible) s.material.opacity = pouls; });
 
-  voitures.forEach(v => { v.t += v.vitesse * dt; placerVoiture(v); });
+  decorSalon.animer(temps);
 
   // Caméra : un duel ou la roulette, sinon tout le plateau, ou gros plan sur le pion actif.
   if (spectacle) {
@@ -4493,6 +4397,9 @@ function boucle() {
   camera.position.lerp(camObjectifPos, CAM_VITESSE);
   camCibleActuelle.lerp(camObjectifCible, CAM_VITESSE);
   camera.lookAt(camCibleActuelle);
+  // Le plateau entier reste centré dans la zone libre ; en gros plan
+  // (duel, roulette, suivi du pion), on centre seulement la zone libre.
+  zone.appliquer(camera, spectacle || vueSuivi ? null : { points: POINTS_PLATEAU }, { pos: camObjectifPos, cible: camObjectifCible });
 
   if (temps - dernierChrono > 0.25) { dernierChrono = temps; majChrono(); }
 
@@ -4521,7 +4428,9 @@ if (salonDansUrl && /^[A-Za-z]{4}(-[2-9])?$/.test(salonDansUrl)) {
 } else {
   panneauAccueil();
 }
+zone.mesurer();
 boucle();
+surveillerFluidite();
 </script>
 <script>
   // Appli installable (PWA) : voir service-worker.js

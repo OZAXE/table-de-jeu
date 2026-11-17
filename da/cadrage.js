@@ -12,7 +12,8 @@ import * as THREE from 'three';
 //   // dans redimensionner, avant majCadrageTable : zone.recalculer();
 //   // dans la boucle, après camera.lookAt :
 //   //   zone.appliquer(camera, { rayon, places }, { pos: camObjectifPos, cible: camObjectifCible });
-//   // (rayon : bord de la table ; places : rayon des verres et des prénoms)
+//   // (rayon : bord de la table ; places : rayon des verres et des prénoms ;
+//   //  ou points : [[x, y, z], ...] pour une table qui n'est pas ronde)
 //   // La TABLE elle-même (ses bords projetés à l'écran) est centrée dans la
 //   // zone libre, et le recul ajusté (zone.c.zoom, à multiplier dans
 //   // distanceCadrage) pour qu'elle la remplisse. Centrer le point visé par
@@ -127,9 +128,11 @@ export function suivreZoneLibre(apresChangement, {
       essai.position.copy(objectif ? objectif.pos : camera.position);
       essai.lookAt(objectif ? objectif.cible : new THREE.Vector3(0, 0.3, 0));
       essai.updateMatrixWorld();
+      // Table ronde : son bord et ses places. Autre forme (plateau carré) :
+      // la page donne directement les points à cadrer (table.points).
       const R = table.rayon, P = table.places || R * 0.82, h = table.hauteur ?? 0.72;
       let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-      [[0, h, -P], [0, 0.02, R + 0.05], [-(R + 0.05), 0, 0], [R + 0.05, 0, 0], [-(P + 0.45), h, 0], [P + 0.45, h, 0]].forEach(([x, y, zz]) => {
+      (table.points || [[0, h, -P], [0, 0.02, R + 0.05], [-(R + 0.05), 0, 0], [R + 0.05, 0, 0], [-(P + 0.45), h, 0], [P + 0.45, h, 0]]).forEach(([x, y, zz]) => {
         v.set(x, y, zz).project(essai);
         const px = (v.x + 1) / 2 * L, py = (1 - v.y) / 2 * H;
         x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); y1 = Math.max(y1, py);

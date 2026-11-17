@@ -27,7 +27,7 @@
     kinito:     { titre: 'Kinito',     page: 'kinito-3d-jeu.html',     icone: '🎲' },
     beerbattle: { titre: 'BeerBattle', page: 'beerbattle-3d-jeu.html', icone: '🃏' },
     buckshot:   { titre: 'Buckshot',   page: 'buckshot-3d-jeu.html',   icone: '💥' },
-    picolopoly: { titre: 'Picopoly',   page: 'picolopoly-3d-jeu.html', icone: '🍻' },
+    picolopoly: { titre: 'Picopoly',   page: 'picolopoly-3d-jeu.html', icone: '🍕' },
     menteur:    { titre: 'Cal 12',     page: 'menteur-3d-jeu.html',    icone: '⚓' },
     casino:     { titre: 'Casino',     page: 'casino-3d-jeu.html',     icone: '🎰' },
     undercover: { titre: 'Undercover', page: 'undercover-3d-jeu.html', icone: '🕵️' },
