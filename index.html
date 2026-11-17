@@ -165,6 +165,27 @@
     margin: 6px 2px 14px;
   }
   .titre-section h3 { font-size: 1.05rem; font-weight: 600; }
+
+  /* Interrupteur de la version légère (lu par chaque jeu : shield.leger) */
+  .leger {
+    display: flex; align-items: center; gap: 14px; margin: -4px 0 16px; padding: 12px 14px;
+    background: var(--surface); border: 1px solid var(--bord); border-radius: 18px; cursor: pointer;
+  }
+  .leger .texte { flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px; }
+  .leger b { font-size: 0.95rem; font-weight: 600; }
+  .leger small { color: var(--texte-doux); font-size: 0.8rem; line-height: 1.35; }
+  .leger input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .leger .interrupteur {
+    flex: 0 0 auto; width: 48px; height: 28px; border-radius: 999px; position: relative;
+    background: rgba(255, 255, 255, 0.14); transition: background 0.2s ease;
+  }
+  .leger .interrupteur::after {
+    content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%;
+    background: #f4f1ea; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35); transition: transform 0.2s ease;
+  }
+  .leger input:checked + .interrupteur { background: linear-gradient(135deg, #facc15, #f59e2e); }
+  .leger input:checked + .interrupteur::after { transform: translateX(20px); }
+  .leger input:focus-visible + .interrupteur { outline: 2px solid var(--acier); outline-offset: 2px; }
   .titre-section span { color: var(--texte-pale); font-size: 0.85rem; }
 
   .jeux { display: grid; grid-template-columns: 1fr; gap: 16px; }
@@ -241,7 +262,7 @@
 
   .kinito     { --c1: #f59e2e; --c2: #c2410c; }
   .beerbattle { --c1: #22c3a6; --c2: #0f766e; }
-  .buckshot   { --c1: #f04462; --c2: #9f1239; }
+  .buckshot   { --c1: #c2541f; --c2: #7c2d12; }
   .picopoly   { --c1: #a855f7; --c2: #6d28d9; }
   .menteur    { --c1: #38bdf8; --c2: #1d4ed8; }
   .casino     { --c1: #facc15; --c2: #a16207; }
@@ -299,8 +320,17 @@
 
     <div class="titre-section">
       <h3>Les jeux</h3>
-      <span>6 jeux · en ligne</span>
+      <span>7 jeux · en ligne</span>
     </div>
+
+    <label class="leger" for="mode-leger">
+      <span class="texte">
+        <b>⚡ Version légère</b>
+        <small>Même décor, moins de détails 3D : pour les téléphones qui rament ou chauffent.</small>
+      </span>
+      <input type="checkbox" id="mode-leger" role="switch">
+      <span class="interrupteur" aria-hidden="true"></span>
+    </label>
 
     <div class="jeux">
       <a class="jeu kinito" href="kinito-3d-jeu.html">
@@ -336,16 +366,16 @@
       </a>
 
       <a class="jeu buckshot" href="buckshot-3d-jeu.html">
-        <div class="deco" aria-hidden="true">💥</div>
+        <div class="deco" aria-hidden="true">🤠</div>
         <div class="haut">
           <span class="etiquette"><span class="point"></span>En ligne</span>
           <span class="etiquette">👥 2 à 8</span>
         </div>
         <div class="bas">
           <h4>Buckshot</h4>
-          <p>Roulette russe version soirée. Réelle ou à blanc&nbsp;? Sers-toi ou sers un adversaire.</p>
+          <p>Duel au saloon. Réelle ou à blanc&nbsp;? Sers-toi ou sers un adversaire&nbsp;: la réelle fait boire.</p>
           <div class="action">
-            <span class="infos">Hasard · Objets</span>
+            <span class="infos">Saloon · Hasard · Objets</span>
             <span class="jouer">Jouer <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
           </div>
         </div>
@@ -419,6 +449,16 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 <script src="commun/soiree.js"></script>
 <script>
+  // --- Version légère : mémorisée sur l'appareil, lue par chaque jeu 3D ---
+  (function () {
+    const c = document.getElementById('mode-leger');
+    if (!c) return;
+    try { c.checked = JSON.parse(localStorage.getItem('shield.leger')) === true; } catch (e) { /* tant pis */ }
+    c.addEventListener('change', () => {
+      try { localStorage.setItem('shield.leger', JSON.stringify(c.checked)); } catch (e) { /* tant pis */ }
+    });
+  })();
+
   // --- La soirée : un prénom et un code de salon pour tous les jeux ---
   (function () {
     const serveur = /^(localhost|127.0.0.1|\[::1\])$/.test(location.hostname) ? 'local' : 'render';
