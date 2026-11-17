@@ -30,6 +30,7 @@
     picolopoly: { titre: 'Picopoly',   page: 'picolopoly-3d-jeu.html', icone: '🍻' },
     menteur:    { titre: 'Menteur',    page: 'menteur-3d-jeu.html',    icone: '🎭' },
     casino:     { titre: 'Casino',     page: 'casino-3d-jeu.html',     icone: '🎰' },
+    undercover: { titre: 'Undercover', page: 'undercover-3d-jeu.html', icone: '🕵️' },
   };
 
   function lire(cle) {
