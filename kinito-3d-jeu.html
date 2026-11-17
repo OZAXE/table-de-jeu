@@ -363,14 +363,14 @@ elModaleRegles.addEventListener('click', e => {
 // =====================================================================
 // CONSTANTES DE LA SCÈNE
 // =====================================================================
-const GLASS_OUTER_R = 0.30;
+const GLASS_OUTER_R = 0.21;
 const GLASS_WALL = 0.02;
 const GLASS_INNER_R = GLASS_OUTER_R - GLASS_WALL;
-const GLASS_HEIGHT = 0.75;
+const GLASS_HEIGHT = 0.42;   // reste sous les prénoms (0.58)
 const GLASS_BOTTOM_Y = 0;
 const FLOOR_Y = GLASS_BOTTOM_Y + 0.015;
 
-const DICE_EDGE = 0.14;
+const DICE_EDGE = 0.1;
 const DICE_RADIUS = DICE_EDGE * 0.72;
 
 const GRAVITY = -16;
@@ -549,7 +549,9 @@ function creerEtiquette(texte) {
   c.width = 512; c.height = 128;
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
-  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+  // Toujours dessinée par-dessus : un prénom ne passe jamais derrière le gobelet.
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+  sprite.renderOrder = 10;
   sprite.scale.set(1.0, 0.25, 1);
   majEtiquette(sprite, texte, false);
   etiquettes.add(sprite);
@@ -652,26 +654,47 @@ function creerSieges(noms) {
 const gobelet = new THREE.Group();
 scene.add(gobelet);
 
-// Dépoli et opaque à dessein : le contenu doit rester caché aux autres joueurs.
-const matVerre = new THREE.MeshPhysicalMaterial({
-  color: 0xdcefff, roughness: 0.45, metalness: 0,
-  side: THREE.DoubleSide, clearcoat: 0.5, clearcoatRoughness: 0.3,
-});
-const paroi = new THREE.Mesh(
-  new THREE.CylinderGeometry(GLASS_OUTER_R, GLASS_OUTER_R, GLASS_HEIGHT, 24, 1, true),
-  matVerre
-);
+// Cornet en cuir, opaque : le contenu doit rester caché aux autres joueurs.
+// Extérieur et intérieur sont deux faces distinctes (intérieur plus sombre),
+// sinon on croit voir à travers la paroi.
+const matCuir = new THREE.MeshStandardMaterial({ color: 0x4a2616, roughness: 0.7, metalness: 0 });
+const matCuirDedans = new THREE.MeshStandardMaterial({ color: 0x24130b, roughness: 0.9, side: THREE.BackSide });
+const geoParoi = new THREE.CylinderGeometry(GLASS_OUTER_R, GLASS_OUTER_R * 0.92, GLASS_HEIGHT, 32, 1, true);
+const paroi = new THREE.Mesh(geoParoi, matCuir);
 paroi.position.y = GLASS_BOTTOM_Y + GLASS_HEIGHT / 2;
 paroi.castShadow = true;
 gobelet.add(paroi);
+const paroiDedans = new THREE.Mesh(geoParoi, matCuirDedans);
+paroiDedans.position.copy(paroi.position);
+paroiDedans.scale.set(0.97, 1, 0.97);
+gobelet.add(paroiDedans);
+
+// Liserés dorés en haut et en bas, comme un vrai cornet à dés.
+const matLisere = new THREE.MeshStandardMaterial({ color: 0xc9a25a, roughness: 0.35, metalness: 0.6 });
+[[GLASS_BOTTOM_Y + GLASS_HEIGHT, GLASS_OUTER_R], [GLASS_BOTTOM_Y + 0.01, GLASS_OUTER_R * 0.92]].forEach(([y, rr]) => {
+  const l = new THREE.Mesh(new THREE.TorusGeometry(rr, 0.012, 10, 40), matLisere);
+  l.rotation.x = Math.PI / 2;
+  l.position.y = y;
+  gobelet.add(l);
+});
 
 const fond = new THREE.Mesh(
-  new THREE.CircleGeometry(GLASS_INNER_R, 24),
-  new THREE.MeshPhysicalMaterial({ color: 0xdff3ff, roughness: 0.3 })
+  new THREE.CircleGeometry(GLASS_INNER_R, 32),
+  new THREE.MeshStandardMaterial({ color: 0x1f4a32, roughness: 0.95 })   // feutre vert
 );
 fond.rotation.x = -Math.PI / 2;
 fond.position.y = FLOOR_Y - 0.005;
 gobelet.add(fond);
+
+// Couvercle : posé tant que les dés sont cachés, retiré quand on les montre.
+const couvercle = new THREE.Group();
+const disque = new THREE.Mesh(new THREE.CylinderGeometry(GLASS_OUTER_R + 0.012, GLASS_OUTER_R + 0.012, 0.025, 32), matCuir);
+const bouton3d = new THREE.Mesh(new THREE.SphereGeometry(0.035, 16, 12), matLisere);
+bouton3d.position.y = 0.025;
+couvercle.add(disque, bouton3d);
+couvercle.position.y = GLASS_BOTTOM_Y + GLASS_HEIGHT + 0.012;
+couvercle.castShadow = true;
+gobelet.add(couvercle);
 
 const PIP_LAYOUTS = {
   1: [[0.5, 0.5]],
@@ -742,7 +765,10 @@ function creerDeObjet(x, z) {
 }
 
 const des = [creerDeObjet(-0.09, 0.03), creerDeObjet(0.09, -0.03)];
-function montrerDes(visible) { des.forEach(d => { d.mesh.visible = visible; }); }
+function montrerDes(visible) {
+  des.forEach(d => { d.mesh.visible = visible; });
+  couvercle.visible = !visible;
+}
 montrerDes(false);
 
 // =====================================================================
@@ -1569,7 +1595,7 @@ function panneauResultat(msg) {
 function regarderLesDes() {
   regardeDedans = true;
   const c = sieges[MOI].posGobelet;
-  camObjectifPos = new THREE.Vector3(c.x, GLASS_BOTTOM_Y + GLASS_HEIGHT + 0.55, c.z + 0.22);
+  camObjectifPos = new THREE.Vector3(c.x, GLASS_BOTTOM_Y + GLASS_HEIGHT + 0.42, c.z + 0.16);
   camObjectifCible = new THREE.Vector3(c.x, FLOOR_Y, c.z);
 
   const p = ouvrirPanneau(null);
