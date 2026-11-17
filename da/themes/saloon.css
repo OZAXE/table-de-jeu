@@ -1,0 +1,163 @@
+/* =====================================================================
+   Thème « Saloon » (Buckshot) : interface en papier kraft et bois.
+   Chargé APRÈS da/bar-moderne.css : il remplace son habillage (verre, vert,
+   pastilles arrondies) en gardant la même organisation des écrans.
+   Titres : Rye (lettres d'affiche western). Texte : Bitter (lisible).
+   ===================================================================== */
+:root {
+  --accent: #c2541f;
+  --accent-2: #7c2d12;
+  --fond: #140b07;
+  --verre: rgba(34, 19, 10, 0.88);
+  --verre-fort: rgba(30, 17, 9, 0.95);
+  --bord: rgba(217, 179, 130, 0.32);
+  --texte: #f3e3c3;
+  --texte-doux: #d2b48a;
+  --texte-pale: #9a7f5e;
+  --sang: #a3201c;
+  --police: 'Bitter', Georgia, 'Times New Roman', serif;
+  --police-titre: 'Rye', Georgia, serif;
+}
+
+html, body { background: var(--fond) !important; }
+#overlay, button, input, .modale, #panneau { font-family: var(--police) !important; }
+
+#vignette {
+  background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 48%, rgba(10, 5, 2, 0.78) 100%) !important;
+}
+/* Voile sombre derrière le haut de l'écran : titre, compteur et joueurs
+   restent lisibles quel que soit le décor qui passe derrière. */
+#overlay::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 170px; pointer-events: none;
+  background: linear-gradient(180deg, rgba(14, 7, 3, 0.92) 0%, rgba(14, 7, 3, 0.6) 55%, rgba(14, 7, 3, 0) 100%);
+}
+@media (max-width: 760px), (pointer: coarse) { #overlay::before { height: 190px; } }
+
+/* --- Titre et compteur --- */
+#message {
+  font-family: var(--police-titre) !important; font-weight: 400 !important;
+  color: var(--texte) !important; letter-spacing: 0.02em !important;
+  text-shadow: 0 2px 0 #2a170d, 0 3px 12px rgba(0, 0, 0, 0.8) !important;
+}
+#rappel { color: var(--texte-doux) !important; }
+#compteur {
+  color: var(--texte) !important;
+  background: rgba(42, 23, 13, 0.92) !important;
+  border: 1px solid var(--bord) !important; border-radius: 6px !important;
+}
+#compteur .reel { color: #ff8f73 !important; }
+#compteur .scie { color: #ffc45c !important; }
+
+/* --- Joueurs : étiquettes de cuir --- */
+.joueur {
+  background: linear-gradient(180deg, rgba(59, 34, 19, 0.95), rgba(34, 19, 10, 0.95)) !important;
+  border: 1px solid var(--bord) !important;
+  border-radius: 7px !important;
+  color: var(--texte) !important;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4) !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+.joueur.actif {
+  background: linear-gradient(180deg, #c2541f, #7c2d12) !important;
+  border-color: #ffd9a0 !important; color: #fff6e6 !important;
+  box-shadow: 0 0 0 1px rgba(255, 217, 160, 0.4), 0 4px 16px rgba(194, 84, 31, 0.45) !important;
+}
+.joueur .jauge { background: rgba(0, 0, 0, 0.45) !important; }
+.joueur .jauge span { background: linear-gradient(90deg, #e0a23b, #c2541f) !important; }
+
+/* --- Panneau du bas : affiche en papier kraft --- */
+#panneau {
+  background:
+    radial-gradient(ellipse at 30% 0%, rgba(255, 240, 210, 0.06), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.035) 0 2px, transparent 2px 5px),
+    linear-gradient(180deg, #3b2213, #24140a) !important;
+  border: 2px solid #6b4423 !important;
+  border-radius: 10px !important;
+  box-shadow: inset 0 0 0 4px rgba(20, 10, 4, 0.55), inset 0 0 0 5px rgba(217, 179, 130, 0.25), 0 18px 40px rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+  color: var(--texte);
+}
+#panneau h2 {
+  font-family: var(--police-titre) !important; font-weight: 400 !important;
+  color: var(--texte) !important; letter-spacing: 0.03em !important;
+  text-shadow: 0 2px 0 #1a0e07;
+}
+#panneau p, .aide { color: var(--texte-doux) !important; }
+
+/* --- Boutons : planchettes de bois peint --- */
+button {
+  font-family: var(--police) !important; font-weight: 700 !important;
+  color: #fff3dc !important;
+  background: linear-gradient(180deg, #a8582a, #6b2f15) !important;
+  border: 2px solid #2a170d !important;
+  border-radius: 8px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 220, 170, 0.35), 0 3px 0 #1a0e07, 0 6px 14px rgba(0, 0, 0, 0.45) !important;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+}
+button:active { transform: translateY(2px) !important; box-shadow: inset 0 1px 0 rgba(255, 220, 170, 0.25), 0 1px 0 #1a0e07 !important; }
+button.danger {
+  background: linear-gradient(180deg, #b8281f, #6e1410) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 180, 160, 0.35), 0 3px 0 #2a0806, 0 6px 14px rgba(0, 0, 0, 0.45) !important;
+}
+button.sombre, button.clair {
+  color: var(--texte) !important;
+  background: linear-gradient(180deg, rgba(74, 46, 26, 0.95), rgba(42, 23, 13, 0.95)) !important;
+  border: 1px solid var(--bord) !important;
+  box-shadow: 0 2px 0 #1a0e07 !important;
+}
+button:disabled { filter: grayscale(0.6) brightness(0.6) !important; }
+
+/* --- Composition, savoir, objets --- */
+.stepper .valeur { color: var(--texte) !important; font-family: var(--police-titre); font-weight: 400 !important; }
+.stepper .valeur.reel { color: #ff8f73 !important; }
+.etiquette-stepper { color: var(--texte-doux) !important; }
+.mini-carte.reel { background: #3a0e08 !important; color: #ff8f73 !important; border-color: #c2541f !important; }
+.mini-carte.blanc { background: #e9d3a5 !important; color: #5a3a22 !important; border-color: #a8834e !important; }
+.objet-bloc { border-top: 1px dashed var(--bord) !important; }
+.objet-bloc .titre { color: var(--texte) !important; font-weight: 700; }
+.objet-bloc .desc { color: var(--texte-doux) !important; }
+.savoir {
+  background: #e9d3a5 !important; color: #2a170d !important;
+  border: 2px dashed #7c2d12 !important; border-radius: 6px !important;
+}
+.savoir .reel { color: #9b1c1c !important; }
+.savoir .blanc { color: #2f4a6a !important; }
+.bilan td { color: var(--texte) !important; border-bottom-color: var(--bord) !important; }
+.bilan td.n { color: #ffc45c !important; }
+
+/* --- Champs, salon --- */
+input[type="text"] {
+  color: var(--texte) !important; background: rgba(20, 10, 4, 0.6) !important;
+  border: 1px solid var(--bord) !important; border-radius: 6px !important;
+}
+input[type="text"]:focus { border-color: #ffd9a0 !important; box-shadow: 0 0 0 3px rgba(194, 84, 31, 0.35); }
+.code-salon {
+  font-family: var(--police-titre) !important; font-weight: 400 !important;
+  background: none !important; color: var(--texte) !important; -webkit-background-clip: initial !important; background-clip: initial !important;
+}
+
+/* --- Règles --- */
+#btn-regles {
+  color: var(--texte) !important;
+  background: linear-gradient(180deg, rgba(74, 46, 26, 0.95), rgba(42, 23, 13, 0.95)) !important;
+  border: 1px solid var(--bord) !important; border-radius: 7px !important;
+}
+#modale-regles { background: rgba(10, 5, 2, 0.8) !important; }
+.modale {
+  background: linear-gradient(180deg, #e9d3a5, #d6b27a) !important;
+  color: #3a2414 !important;
+  border: 3px solid #5a3a22 !important; border-radius: 6px !important;
+  box-shadow: inset 0 0 40px rgba(90, 58, 34, 0.35), 0 30px 80px rgba(0, 0, 0, 0.6) !important;
+}
+.modale h2 { font-family: var(--police-titre) !important; font-weight: 400 !important; color: #2a170d !important; }
+.modale h3 { color: #7c2d12 !important; font-weight: 700 !important; }
+.modale td, .modale th { border-bottom-color: rgba(90, 58, 34, 0.3) !important; }
+.modale td:first-child, .modale th, .modale .accent { color: #2a170d !important; }
+.modale .note { color: #6b4423 !important; }
+.modale button.sombre { color: #f3e3c3 !important; }
+
+#panneau::-webkit-scrollbar-thumb, #modale-regles::-webkit-scrollbar-thumb { background: rgba(217, 179, 130, 0.3); }
+
+@media (max-width: 760px), (pointer: coarse) {
+  #panneau { border-radius: 12px 12px 0 0 !important; border-width: 2px 0 0 0 !important; }
+}

@@ -13,6 +13,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { modeLeger } from './qualite.js';
 
 export const POLICE = "Outfit, system-ui, -apple-system, 'Segoe UI', sans-serif";
 export const FOND = 0x07110d;
@@ -26,11 +27,19 @@ export function preparerAmbiance(renderer, scene, { accent }) {
   scene.background = new THREE.Color(FOND);
   if (scene.fog) scene.fog.color = new THREE.Color(FOND);
 
-  // Une pièce virtuelle très douce pour les reflets : c'est elle qui donne
-  // l'aspect lisse et satiné aux matériaux (sans elle, tout paraît mat).
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-  pmrem.dispose();
+  // Version légère (interrupteur de l'accueil, da/qualite.js) : un pixel par
+  // point, pas d'ombres portées, pas de reflets calculés.
+  const leger = modeLeger();
+  if (leger) {
+    renderer.setPixelRatio(1);
+    renderer.shadowMap.enabled = false;
+  } else {
+    // Une pièce virtuelle très douce pour les reflets : c'est elle qui donne
+    // l'aspect lisse et satiné aux matériaux (sans elle, tout paraît mat).
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    pmrem.dispose();
+  }
 
   // Remplissage doux du ciel (froid) et du sol (chaud).
   scene.add(new THREE.HemisphereLight(0x2c4a3e, 0x1a120b, 0.55));

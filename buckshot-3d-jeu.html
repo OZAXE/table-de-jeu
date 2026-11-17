@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Bitter:wght@400;600;700&family=Rye&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 <style>
   html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; background: #170d0c; }
@@ -222,7 +222,12 @@
     .joueur .val { font-size: 11px; min-width: 16px; }
     .joueur .objet { font-size: 12px; min-width: 14px; }
 
-    #bandeau { top: 12px; max-width: calc(100vw - 130px); left: 8px; transform: none; text-align: left; }
+    /* Titre, compteur puis joueurs, empilés dans le flux : leur hauteur
+       varie (rappel sur deux lignes, compteur, 8 joueurs) et des positions
+       fixes les faisaient se chevaucher. */
+    #overlay { display: flex; flex-direction: column; align-items: flex-start; }
+    #bandeau { order: 1; position: relative; top: auto; margin: 12px 0 0 8px; max-width: calc(100vw - 130px); left: auto; transform: none; text-align: left; }
+    #joueurs { order: 2; position: relative; top: auto; left: auto; right: auto; margin: 6px 8px 0; align-self: stretch; }
     #message { font-size: 17px; }
     #rappel { font-size: 12px; }
     #compteur { font-size: 12px; padding: 2px 8px; margin-top: 3px; }
@@ -257,15 +262,22 @@
     .modale p, .modale ul { font-size: 14px; }
   }
 
-  /* Écrans très bas (paysage sur téléphone) */
-  @media (max-height: 460px) {
-    #joueurs { top: 44px; }
-    #panneau { max-height: 76vh; padding: 8px 10px; }
+  /* Écrans très bas (paysage sur téléphone) : le panneau passe en colonne à
+     droite, la table occupe la gauche. Titre et joueurs restent à gauche. */
+  @media (max-height: 460px) and (orientation: landscape) {
+    #panneau {
+      top: 52px; bottom: 0; right: 0; left: auto; transform: none;
+      width: min(44vw, 400px); max-width: none; min-width: 0; max-height: none;
+      overflow-y: auto; padding: 8px 10px;
+      border-radius: 12px 0 0 0 !important; border-width: 2px 0 0 2px !important;
+    }
+    #bandeau, #joueurs { max-width: calc(56vw - 24px) !important; }
+    #panneau .rangee { gap: 6px; }
   }
 </style>
-<!-- Direction artistique commune « bar moderne » ; accent rouge pour Buckshot. -->
+<!-- Socle commun des jeux 3D, puis l'identité propre de Buckshot : le saloon. -->
 <link rel="stylesheet" href="da/bar-moderne.css">
-<style>:root { --accent: #f04462; --accent-2: #9f1239; }</style>
+<link rel="stylesheet" href="da/themes/saloon.css">
 </head>
 <body>
 
@@ -345,8 +357,16 @@ import {
   preparerAmbiance, lisser as lisserScene, creerDecorBar, dessinerEtiquette as dessinerPastille,
   quandPoliceChargee, creerSousVerre, creerTableRonde, POLICE,
 } from './da/bar-moderne.js';
+import { modeLeger, optionsRendu, reglerRendu, surveillerFluidite } from './da/qualite.js';
+import {
+  FOND as FOND_SALOON, POLICE_TEXTE, POLICE_TITRE, preparerAmbianceSaloon, creerTableSaloon,
+  creerDecorSaloon, dessinerEtiquetteSaloon, quandPolicesSaloon,
+} from './da/themes/saloon.js';
 
-const ACCENT = 0xf04462;   // rouge de Buckshot, comme sur l'accueil
+// Version légère (interrupteur de l'accueil) : même saloon, moins de détails.
+const LEGER = modeLeger();
+
+const ACCENT = 0xc2541f;   // rouille du saloon
 
 const elModaleRegles = document.getElementById('modale-regles');
 document.getElementById('btn-regles').addEventListener('click', () => {
@@ -393,8 +413,8 @@ const CAM_VITESSE = 0.12;
 // SCÈNE / CAMÉRA / RENDU
 // =====================================================================
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x170d0c);
-scene.fog = new THREE.FogExp2(0x170d0c, 0.075);
+scene.background = new THREE.Color(FOND_SALOON);
+scene.fog = new THREE.FogExp2(FOND_SALOON, 0.075);
 
 // Même cadrage que le Kinito 3D : la distance vient du format de l'écran.
 // En portrait le champ horizontal est étroit, il faut beaucoup reculer, et
@@ -404,10 +424,66 @@ const LARGEUR_VUE = 2.3;   // demi-largeur à cadrer : table + chopes + marge
 const HAUTEUR_VUE = 2.1;
 const CAM_POS = new THREE.Vector3(0, 3.0, 5.0);
 
+// Zone libre de l'écran : sous le titre et la liste des joueurs, au-dessus
+// du panneau du bas. La table y est cadrée en entier, pour que rien de
+// l'interface ne cache une place, une étiquette ou la pile. Seuls comptent
+// les éléments qui couvrent le milieu de l'écran (sur ordinateur, la liste
+// des joueurs est dans la marge de gauche et ne gêne pas).
+function zoneLibre() {
+  const L = window.innerWidth, H = window.innerHeight;
+  const visible = (r) => r.width > 0 && r.height > 0;
+  const milieu = (r) => r.right > L * 0.25 && r.left < L * 0.75;
+  let haut = 0, bas = H, gauche = 0, droite = L;
+  ['bandeau', 'joueurs', 'btn-regles'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    if (!visible(r)) return;
+    if (milieu(r) && r.top < H * 0.5) haut = Math.max(haut, r.bottom);
+    // Liste des joueurs en colonne dans la marge de gauche (ordinateur) :
+    // elle ne gêne que si elle descend dans la hauteur de la table.
+    else if (r.right < L * 0.5 && r.bottom > H * 0.3) gauche = Math.max(gauche, r.right);
+  });
+  const p = document.getElementById('panneau');
+  if (p && !p.classList.contains('cache')) {
+    const r = p.getBoundingClientRect();
+    if (visible(r)) {
+      if (r.top > H * 0.3) bas = Math.min(bas, r.top);            // panneau en bas
+      else if (r.left > L * 0.35) droite = Math.min(droite, r.left); // panneau en colonne à droite
+    }
+  }
+  haut += 4; bas -= 4; gauche += 4; droite -= 4;
+  // Garde-fous : jamais moins d'un tiers de l'écran pour la table.
+  if (bas - haut < H * 0.34) bas = Math.min(H, haut + H * 0.34);
+  if (droite - gauche < L * 0.4) droite = Math.min(L, gauche + L * 0.4);
+  return { haut, bas, gauche, droite, L, H };
+}
+
+// Part de l'écran laissée libre, et décalage de son centre (en pixels).
+let cadrage = { fracH: 1, fracL: 1, dx: 0, dy: 0 };
+let decalageActuel = { x: 0, y: 0 };
+
 function distanceCadrage(cam) {
   const vHalf = THREE.MathUtils.degToRad(cam.fov) / 2;
   const hHalf = Math.atan(Math.tan(vHalf) * cam.aspect);
-  return Math.max(LARGEUR_VUE / Math.tan(hHalf), HAUTEUR_VUE / Math.tan(vHalf), 4.2);
+  return Math.max(LARGEUR_VUE / (Math.tan(hHalf) * cadrage.fracL), HAUTEUR_VUE / (Math.tan(vHalf) * cadrage.fracH), 4.2);
+}
+
+function calculerCadrage() {
+  const z = zoneLibre();
+  return {
+    fracH: (z.bas - z.haut) / z.H, fracL: (z.droite - z.gauche) / z.L,
+    dx: (z.gauche + z.droite) / 2 - z.L / 2, dy: (z.haut + z.bas) / 2 - z.H / 2,
+  };
+}
+
+function mesurerZoneLibre() {
+  const c = calculerCadrage();
+  if (Math.abs(c.fracH - cadrage.fracH) < 0.01 && Math.abs(c.fracL - cadrage.fracL) < 0.01
+      && Math.abs(c.dx - cadrage.dx) < 2 && Math.abs(c.dy - cadrage.dy) < 2) return;
+  cadrage = c;
+  majCadrageTable(camera);
+  camObjectifPos = CAM_POS.clone();
 }
 
 const FOG_DENSITE_MAX = 0.075;
@@ -416,7 +492,7 @@ function majCadrageTable(cam) {
   const d = distanceCadrage(cam);
   // Plongée plus marquée qu'au Kinito : la pile au centre et les cartes
   // posées devant chacun doivent se lire du dessus.
-  const dir = new THREE.Vector3(0, 0.6, 0.8).normalize();
+  const dir = new THREE.Vector3(0, 0.52, 0.85).normalize();
   CAM_POS.copy(CAM_CIBLE).addScaledVector(dir, d);
   if (scene.fog) scene.fog.density = Math.min(FOG_DENSITE_MAX, 0.536 / d);
 }
@@ -431,10 +507,9 @@ camObjectifPos = CAM_POS.clone();
 camera.position.copy(CAM_POS);
 camera.lookAt(camCibleActuelle);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer(optionsRendu());
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
+reglerRendu(renderer);
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -445,19 +520,27 @@ function redimensionner() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  cadrage = calculerCadrage();
   majCadrageTable(camera);
   camObjectifPos = CAM_POS.clone();
   camObjectifCible = CAM_CIBLE.clone();
 }
 window.addEventListener('resize', redimensionner);
 window.addEventListener('orientationchange', redimensionner);
+// Le panneau du bas, le titre et la liste des joueurs changent de taille au
+// fil de la partie : la table suit, en douceur (voir la boucle de rendu).
+if (window.ResizeObserver) {
+  const obs = new ResizeObserver(() => mesurerZoneLibre());
+  ['panneau', 'joueurs', 'bandeau'].forEach(id => { const el = document.getElementById(id); if (el) obs.observe(el); });
+}
+new MutationObserver(() => mesurerZoneLibre()).observe(document.getElementById('panneau'), { attributes: true, attributeFilter: ['class'] });
 
 scene.add(new THREE.AmbientLight(0x3a2018, 1.0));
 const keyLight = new THREE.DirectionalLight(0xffd6a8, 3.0);
 keyLight.position.set(0.8, 3.4, 1.2);
 keyLight.target.position.set(0, 0.3, 0);
-keyLight.castShadow = true;
-keyLight.shadow.mapSize.set(2048, 2048);
+keyLight.castShadow = !LEGER;
+keyLight.shadow.mapSize.set(1024, 1024);
 keyLight.shadow.camera.left = -3.4;
 keyLight.shadow.camera.right = 3.4;
 keyLight.shadow.camera.top = 3.4;
@@ -465,13 +548,13 @@ keyLight.shadow.camera.bottom = -3.4;
 keyLight.shadow.camera.near = 0.5;
 keyLight.shadow.camera.far = 9;
 scene.add(keyLight, keyLight.target);
-preparerAmbiance(renderer, scene, { accent: ACCENT });
+preparerAmbianceSaloon(renderer, scene, { leger: LEGER });
 
 // =====================================================================
 // TABLE ET TAPIS
 // =====================================================================
 // Noyer foncé, tapis bordeaux au centre, cerclage laiton.
-const { groupe: table } = creerTableRonde(R_TABLE, { rayonFeutre: R_FEUTRE, feutreCouleur: 0x4f1220 });
+const { groupe: table } = creerTableSaloon(R_TABLE, { rayonFeutre: R_FEUTRE, leger: LEGER });
 scene.add(table);
 
 // Emplacement de la défausse : un simple liseré au sol, pour qu'on sache
@@ -491,10 +574,7 @@ scene.add(cadreDefausse);
 // =====================================================================
 const SOL_Y = -1.2;
 
-function creerDecor() {
-  creerDecorBar(scene, { accent: ACCENT, nom: 'BUCKSHOT', solY: SOL_Y });
-}
-creerDecor();
+const decor = creerDecorSaloon(scene, { nom: 'BUCKSHOT', solY: SOL_Y, leger: LEGER });
 
 // =====================================================================
 // CARTOUCHES (cartes)
@@ -513,46 +593,69 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+// Le dos : cuir de selle, étoile de shérif en laiton. Les faces : une
+// cartouche rouge (RÉELLE ♠) ou une bourre couleur sable (À BLANC ♥).
 function creerTextureDos() {
   const c = document.createElement('canvas');
   c.width = 256; c.height = 360;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#f0e6da';
-  roundRect(ctx, 0, 0, 256, 360, 26); ctx.fill();
-  ctx.fillStyle = '#5a1a14';
-  roundRect(ctx, 12, 12, 232, 336, 18); ctx.fill();
-  ctx.strokeStyle = 'rgba(212,175,104,0.35)';
-  ctx.lineWidth = 3;
-  for (let i = -360; i < 360; i += 26) {
-    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + 360, 360); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(i + 360, 0); ctx.lineTo(i, 360); ctx.stroke();
+  ctx.fillStyle = '#e9d3a5';
+  roundRect(ctx, 0, 0, 256, 360, 22); ctx.fill();
+  const g = ctx.createRadialGradient(128, 180, 20, 128, 180, 220);
+  g.addColorStop(0, '#6b3a1e'); g.addColorStop(1, '#3a1d0c');
+  ctx.fillStyle = g;
+  roundRect(ctx, 10, 10, 236, 340, 16); ctx.fill();
+  ctx.strokeStyle = 'rgba(233,211,165,0.6)'; ctx.setLineDash([8, 7]); ctx.lineWidth = 3;
+  roundRect(ctx, 22, 22, 212, 316, 12); ctx.stroke();
+  ctx.setLineDash([]);
+  // Étoile à cinq branches
+  ctx.save(); ctx.translate(128, 180);
+  ctx.beginPath();
+  for (let k = 0; k < 10; k++) {
+    const r = k % 2 ? 30 : 74, a = -Math.PI / 2 + k * Math.PI / 5;
+    ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
   }
-  ctx.fillStyle = '#d4af68';
-  ctx.font = 'bold 120px Georgia, serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('◆', 128, 184);
+  ctx.closePath();
+  ctx.fillStyle = '#d4a24a'; ctx.fill();
+  ctx.lineWidth = 5; ctx.strokeStyle = '#7a5418'; ctx.stroke();
+  ctx.fillStyle = '#7a5418'; ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
 
-function creerTextureFace(nature) {
+function dessinerFaceCarte(ctx, nature) {
   const reel = nature === 'reel';
-  const c = document.createElement('canvas');
-  c.width = 256; c.height = 360;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = reel ? '#c73a28' : '#8fb0c0';
-  roundRect(ctx, 0, 0, 256, 360, 26); ctx.fill();
-  ctx.fillStyle = reel ? '#3a100b' : '#12242c';
-  roundRect(ctx, 10, 10, 236, 340, 18); ctx.fill();
+  ctx.clearRect(0, 0, 256, 360);
+  ctx.fillStyle = reel ? '#7c2d12' : '#a8834e';
+  roundRect(ctx, 0, 0, 256, 360, 22); ctx.fill();
+  ctx.fillStyle = reel ? '#2a0a06' : '#efdcb2';
+  roundRect(ctx, 10, 10, 236, 340, 16); ctx.fill();
+  // La cartouche dessinée : douille de laiton, corps rouge ou sable.
+  ctx.save(); ctx.translate(128, 140);
+  ctx.fillStyle = reel ? '#b8281f' : '#d9c39a';
+  roundRect(ctx, -34, -86, 68, 120, 12); ctx.fill();
+  ctx.fillStyle = '#c9a052';
+  ctx.fillRect(-38, 30, 76, 36);
+  ctx.fillStyle = '#8a6a2a';
+  ctx.fillRect(-42, 60, 84, 10);
+  ctx.fillStyle = reel ? 'rgba(255,255,255,0.18)' : 'rgba(90,58,34,0.25)';
+  ctx.fillRect(-24, -76, 10, 96);
+  ctx.restore();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = reel ? '#ff9b8a' : '#cfe2ea';
-  ctx.font = 'bold 190px Georgia, serif';
-  ctx.fillText(reel ? '♠' : '♥', 128, 160);
-  ctx.font = `700 40px ${POLICE}`;
-  ctx.fillText(reel ? 'RÉELLE' : 'À BLANC', 128, 300);
+  ctx.fillStyle = reel ? '#ff8f73' : '#5a3a22';
+  ctx.font = `bold 54px Georgia, serif`;
+  ctx.fillText(reel ? '♠' : '♥', 210, 50);
+  ctx.font = `44px ${POLICE_TITRE}`;
+  ctx.fillText(reel ? 'RÉELLE' : 'À BLANC', 128, 300, 220);
+}
+
+function creerTextureFace(nature) {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 360;
+  dessinerFaceCarte(c.getContext('2d'), nature);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   // La face est dessous et la carte se retourne autour de z : sans ce
@@ -564,13 +667,18 @@ function creerTextureFace(nature) {
 
 const GEO_TRANCHE = new THREE.BoxGeometry(CARTE_L, CARTE_E, CARTE_P);
 const GEO_FACE = new THREE.PlaneGeometry(CARTE_L * 0.98, CARTE_P * 0.98);
-const MAT_TRANCHE = new THREE.MeshStandardMaterial({ color: 0xe8dccb, roughness: 0.8 });
+const MAT_TRANCHE = new THREE.MeshStandardMaterial({ color: 0xd9c39a, roughness: 0.8 });
 const MAT_DOS = new THREE.MeshStandardMaterial({ map: creerTextureDos(), roughness: 0.7 });
 const MAT_FACE = {
   reel: new THREE.MeshStandardMaterial({ map: creerTextureFace('reel'), roughness: 0.7 }),
   blanc: new THREE.MeshStandardMaterial({ map: creerTextureFace('blanc'), roughness: 0.7 }),
 };
-const MAT_FACE_VIDE = new THREE.MeshStandardMaterial({ color: 0x5a1a14, roughness: 0.8 });
+const MAT_FACE_VIDE = new THREE.MeshStandardMaterial({ color: 0x3a1d0c, roughness: 0.8 });
+// La police d'affiche arrive après coup : on redessine les faces.
+quandPolicesSaloon(() => ['reel', 'blanc'].forEach(n => {
+  dessinerFaceCarte(MAT_FACE[n].map.image.getContext('2d'), n);
+  MAT_FACE[n].map.needsUpdate = true;
+}));
 
 function creerCarte() {
   const g = new THREE.Group();
@@ -633,7 +741,7 @@ function viderDefausse() {
 // ÉTIQUETTES (sprites) — toujours face caméra
 // =====================================================================
 function dessinerEtiquette(ctx, texte, actif, absent) {
-  dessinerPastille(ctx, texte, { actif, absent, accent: ACCENT });
+  dessinerEtiquetteSaloon(ctx, texte, { actif, absent });
 }
 
 function creerEtiquette(texte) {
@@ -655,11 +763,13 @@ function majEtiquette(sprite, texte, actif, absent) {
   sprite.material.map.needsUpdate = true;
 }
 // Redessine les étiquettes une fois la police de l'accueil chargée.
-quandPoliceChargee(() => sieges.forEach(st => {
+const redessinerEtiquettes = () => sieges.forEach(st => {
   const d = st.etiquette && st.etiquette.userData.dernier;
   if (d) majEtiquette(st.etiquette, ...d);
   else if (st.etiquette) majEtiquette(st.etiquette, st.nom, false, false);
-}));
+});
+quandPoliceChargee(redessinerEtiquettes);
+quandPolicesSaloon(redessinerEtiquettes);
 
 // Petit sprite d'icône (objet, menottes, scie).
 function creerIcone(dessiner, taille) {
@@ -678,10 +788,10 @@ function dessinerObjet(ctx, objet, utilise) {
   ctx.clearRect(0, 0, 256, 256);
   if (!objet) return;
   ctx.globalAlpha = utilise ? 0.35 : 1;
-  ctx.fillStyle = utilise ? '#3a2a26' : '#f0e6da';
-  roundRect(ctx, 38, 18, 180, 220, 22); ctx.fill();
+  ctx.fillStyle = utilise ? '#3a2a1e' : '#e9d3a5';
+  roundRect(ctx, 38, 18, 180, 220, 14); ctx.fill();
   ctx.lineWidth = 8;
-  ctx.strokeStyle = utilise ? '#5a4a44' : '#d4af68';
+  ctx.strokeStyle = utilise ? '#5a4a3a' : '#7c2d12';
   roundRect(ctx, 38, 18, 180, 220, 22); ctx.stroke();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -689,8 +799,8 @@ function dessinerObjet(ctx, objet, utilise) {
   if (utilise) ctx.filter = 'grayscale(1)';
   ctx.fillText(objet.icone, 128, 104);
   ctx.filter = 'none';
-  ctx.fillStyle = utilise ? '#8a7a74' : '#3a100b';
-  ctx.font = `700 36px ${POLICE}`;
+  ctx.fillStyle = utilise ? '#8a7a64' : '#2a170d';
+  ctx.font = `700 34px ${POLICE_TEXTE}`;
   ctx.fillText(infoObjet(objet.id).nom, 128, 200);
   ctx.globalAlpha = 1;
 }
@@ -710,11 +820,13 @@ function creerSpriteTexte(gros, petit, couleur) {
   ctx.shadowBlur = 24;
   ctx.shadowOffsetY = 6;
   ctx.fillStyle = couleur;
-  ctx.font = `800 230px ${POLICE}`;
+  let taille = 200;
+  ctx.font = `${taille}px ${POLICE_TITRE}`;
+  while (ctx.measureText(gros).width > 980 && taille > 80) { taille -= 10; ctx.font = `${taille}px ${POLICE_TITRE}`; }
   ctx.fillText(gros, 512, petit ? 200 : 256);
   if (petit) {
     ctx.fillStyle = '#f4ebe0';
-    ctx.font = `600 74px ${POLICE}`;
+    ctx.font = `700 70px ${POLICE_TEXTE}`;
     ctx.fillText(petit, 512, 400);
   }
   const tex = new THREE.CanvasTexture(c);
@@ -752,7 +864,7 @@ const spriteScie = creerIcone(ctx => {
   ctx.font = '120px serif';
   ctx.fillText('🪚', 100, 128);
   ctx.fillStyle = '#ffb44c';
-  ctx.font = `700 84px ${POLICE}`;
+  ctx.font = `700 84px ${POLICE_TEXTE}`;
   ctx.fillText('×2', 196, 140);
 }, 0.42);
 spriteScie.position.set(PILE_POS.x, 0.42, PILE_POS.z);
@@ -2693,14 +2805,27 @@ function boucle() {
     // Taille indexée sur le recul de la caméra : en portrait elle est loin,
     // sans ça le texte deviendrait illisible sur téléphone.
     const dist = camera.position.distanceTo(camCibleActuelle);
-    m.sprite.scale.set(dist * 0.30, dist * 0.15, 1);
-    m.sprite.position.set(0, 1.0 + Math.min(k, 0.5) * 0.25, 0);
+    // Au-dessus du bord du fond de la table : l'annonce ne cache aucune place.
+    m.sprite.scale.set(dist * 0.24, dist * 0.12, 1);
+    m.sprite.position.set(0, 1.55 + Math.min(k, 0.5) * 0.2, -0.9);
     if (k >= D) { scene.remove(m.sprite); messageSprite.courant = null; }
   }
+
+  decor.animer(clock.elapsedTime);
+
+  // Plus la caméra recule (beaucoup de joueurs, grand panneau), plus les
+  // prénoms grossissent : ils restent lisibles sans jamais se toucher.
+  const recul = THREE.MathUtils.clamp(camera.position.distanceTo(camCibleActuelle) / 6.2, 1, 1.4);
+  sieges.forEach(s => s.etiquette.scale.set(0.9 * recul, 0.225 * recul, 1));
 
   camera.position.lerp(camObjectifPos, CAM_VITESSE);
   camCibleActuelle.lerp(camObjectifCible, CAM_VITESSE);
   camera.lookAt(camCibleActuelle);
+  // Recentre l'image sur la zone libre (au-dessus du panneau), sans à-coup.
+  decalageActuel.x += (cadrage.dx - decalageActuel.x) * CAM_VITESSE;
+  decalageActuel.y += (cadrage.dy - decalageActuel.y) * CAM_VITESSE;
+  const L = window.innerWidth, H = window.innerHeight;
+  camera.setViewOffset(L, H, -decalageActuel.x, -decalageActuel.y, L, H);
 
   renderer.render(scene, camera);
 }
@@ -2715,9 +2840,15 @@ synchroniserPile(6);
 // d'avoir à basculer le réglage à chaque essai.
 if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) serveurChoisi = 'local';
 
+// ?demo=4 : partie locale contre des bots, sans serveur (tests et captures de la DA).
+const demoDansUrl = parseInt(new URLSearchParams(location.search).get('demo'), 10);
 const salonDansUrl = new URLSearchParams(location.search).get('salon');
 // Code de table : ABCD (table 1 de la soirée) ou ABCD-2 ... ABCD-9.
-if (salonDansUrl && /^[A-Za-z]{4}(-[2-9])?$/.test(salonDansUrl)) {
+if (demoDansUrl >= 2 && demoDansUrl <= 8) {
+  mode = 'local';
+  const nomsDemo = ['Toi', 'Bruno', 'Chloé', 'Dylan', 'Emma', 'Farid', 'Gaëlle', 'Hugo'].slice(0, demoDansUrl);
+  serveur.demarrer(nomsDemo);
+} else if (salonDansUrl && /^[A-Za-z]{4}(-[2-9])?$/.test(salonDansUrl)) {
   if (monNom) {
     // Prénom déjà connu (soirée en cours, lien de l'accueil) : on rejoint
     // directement le salon, sans repasser par le panneau. Dans une soirée,
@@ -2733,7 +2864,9 @@ if (salonDansUrl && /^[A-Za-z]{4}(-[2-9])?$/.test(salonDansUrl)) {
 }
 // Plus aucune facette dans la scène.
 lisserScene(scene);
+redimensionner();
 boucle();
+surveillerFluidite();
 </script>
 <script>
   // Appli installable (PWA) : voir service-worker.js
