@@ -360,7 +360,7 @@ import {
 import { modeLeger, optionsRendu, reglerRendu, surveillerFluidite } from './da/qualite.js';
 import {
   FOND as FOND_SALOON, POLICE_TEXTE, POLICE_TITRE, preparerAmbianceSaloon, creerTableSaloon,
-  creerDecorSaloon, dessinerEtiquetteSaloon, quandPolicesSaloon,
+  creerDecorSaloon, dessinerEtiquetteSaloon, quandPolicesSaloon, creerChaiseSaloon,
 } from './da/themes/saloon.js';
 
 // Version légère (interrupteur de l'accueil) : même saloon, moins de détails.
@@ -955,7 +955,10 @@ function creerSieges(noms) {
     menottes.position.set(chope.position.x, 0.9, chope.position.z);
     menottes.visible = false;
 
-    groupe.add(avatar, etiquette, chope, objet, menottes);
+    // Une chaise derrière chaque place : c'est elle qui fait lire « table ».
+    const chaise = creerChaiseSaloon(dir, 2.42, SOL_Y);
+
+    groupe.add(avatar, etiquette, chope, objet, menottes, chaise);
     scene.add(groupe);
     lisserScene(groupe);
 
