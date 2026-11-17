@@ -2006,17 +2006,17 @@ function textureCase(k) {
   if (icone && !enLargeur) {
     ctx.font = Math.round(Math.min(zw, zh) * 0.34) + 'px serif';
     ctx.fillText(icone, cx, zy + zh * 0.26);
-    ecrireLignes(ctx, c.nom, cx, zy + zh * 0.6, zw - marge * 2, zh * 0.28, 26);
+    ecrireLignes(ctx, c.nom, cx, zy + zh * 0.6, zw - marge * 2, zh * 0.28, 28, 700);
   } else if (icone) {
     ctx.font = Math.round(zh * 0.42) + 'px serif';
     ctx.fillText(icone, zx + zh * 0.4, zy + zh * 0.5);
-    ecrireLignes(ctx, c.nom, zx + zh * 0.8 + (zw - zh * 0.8) / 2, zy + zh * 0.4, zw - zh * 0.8 - marge, zh * 0.55, 26);
+    ecrireLignes(ctx, c.nom, zx + zh * 0.8 + (zw - zh * 0.8) / 2, zy + zh * 0.4, zw - zh * 0.8 - marge, zh * 0.55, 28, 700);
   } else {
-    ecrireLignes(ctx, c.nom, cx, zy + zh * (enLargeur ? 0.4 : 0.42), zw - marge * 2, zh * (enLargeur ? 0.6 : 0.6), 28);
+    ecrireLignes(ctx, c.nom, cx, zy + zh * (enLargeur ? 0.4 : 0.42), zw - marge * 2, zh * 0.6, 34, 700);
   }
   if (prix) {
-    ctx.fillStyle = c.type === 'taxe' ? '#d8453b' : '#5a524a';
-    ctx.font = '600 24px Fredoka, sans-serif';
+    ctx.fillStyle = c.type === 'taxe' ? '#c4362c' : '#2b2622';
+    ctx.font = '700 28px Fredoka, sans-serif';
     ctx.fillText(prix, enLargeur && icone ? zx + zh * 0.8 + (zw - zh * 0.8) / 2 : cx, zy + zh * (enLargeur ? 0.82 : 0.88));
   }
   return cv;
