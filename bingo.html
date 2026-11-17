@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Bingo de soirée</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=2">
+<meta name="theme-color" content="#050a14">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Style sombre du site, sans univers thématique (v1). Mobile d'abord, portrait. */
+  :root {
+    --fond: #050a14;
+    --surface: rgba(255, 255, 255, 0.05);
+    --surface-forte: rgba(255, 255, 255, 0.09);
+    --bord: rgba(255, 255, 255, 0.1);
+    --texte: #f4f1ea;
+    --doux: #a9b4c4;
+    --pale: #6c7a8f;
+    --vert: #34d399;
+    --vert-fonce: #0f766e;
+    --or: #f5c451;
+    --rouge: #f87171;
+    --acier: #7aa2d6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { background: var(--fond); }
+  body {
+    font: 400 16px/1.45 'Outfit', system-ui, -apple-system, sans-serif; color: var(--texte); min-height: 100dvh;
+    background: radial-gradient(110% 50% at 50% -10%, rgba(52, 211, 153, 0.12), transparent 60%), var(--fond);
+    padding: max(12px, env(safe-area-inset-top)) 16px calc(120px + env(safe-area-inset-bottom));
+  }
+  .page { max-width: 560px; margin: 0 auto; }
+  header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  header h1 { flex: 1; font-size: 1.3rem; font-weight: 700; letter-spacing: -0.02em; }
+  header .retour { color: var(--doux); text-decoration: none; font-size: 0.85rem; border: 1px solid var(--bord); border-radius: 999px; padding: 6px 12px; white-space: nowrap; }
+  header .score { font-size: 0.9rem; color: var(--doux); white-space: nowrap; }
+  header .score b { color: var(--texte); }
+  .masque { display: none !important; }
+
+  .carte { background: var(--surface); border: 1px solid var(--bord); border-radius: 20px; padding: 16px; margin-bottom: 14px; }
+  .carte h2 { font-size: 1.05rem; font-weight: 600; margin-bottom: 8px; }
+  .carte p { color: var(--doux); font-size: 0.92rem; }
+  .carte p + p { margin-top: 6px; }
+  .ligne { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+  button, .bouton {
+    border: 0; border-radius: 12px; padding: 11px 16px; cursor: pointer; white-space: nowrap; text-decoration: none; display: inline-block;
+    background: #dfe6ef; color: #0a1424; font: 600 0.92rem 'Outfit', sans-serif;
+  }
+  button.discret { background: var(--surface-forte); color: var(--texte); }
+  button.danger { background: rgba(248, 113, 113, 0.16); color: #fecaca; }
+  button.vert { background: linear-gradient(135deg, var(--vert), var(--vert-fonce)); color: #fff; }
+  button:disabled { opacity: 0.45; cursor: default; }
+  button:active:not(:disabled) { transform: scale(0.97); }
+  input, select, textarea {
+    width: 100%; border-radius: 12px; border: 1px solid var(--bord); background: rgba(0, 0, 0, 0.3); color: var(--texte);
+    padding: 10px 12px; font: 500 0.95rem 'Outfit', sans-serif;
+  }
+  textarea { min-height: 120px; resize: vertical; line-height: 1.4; }
+  label.champ { display: grid; gap: 6px; margin-top: 12px; font-size: 0.85rem; color: var(--doux); }
+  .puces { display: flex; flex-wrap: wrap; gap: 6px; }
+  .puces button { padding: 8px 12px; font-size: 0.85rem; background: var(--surface-forte); color: var(--texte); }
+  .puces button.choisi { background: var(--vert); color: #04221a; }
+  .joueurs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .joueurs span { padding: 6px 11px; border-radius: 12px; background: var(--surface-forte); font-size: 0.9rem; }
+  .note { font-size: 0.82rem; color: var(--pale); margin-top: 8px; }
+
+  /* --- La grille : grandes cases faciles à toucher --- */
+  .grille { display: grid; gap: 6px; margin: 4px 0 12px; }
+  .case {
+    position: relative; aspect-ratio: 1; border-radius: 14px; padding: 6px; cursor: pointer; overflow: hidden;
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    background: var(--surface); border: 1px solid var(--bord); color: var(--texte);
+    font: 500 0.78rem/1.18 'Outfit', sans-serif; white-space: normal; hyphens: auto; overflow-wrap: break-word; user-select: none;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.12s ease;
+  }
+  .t3 .case { font-size: 0.92rem; }
+  .t5 .case { font-size: 0.66rem; border-radius: 11px; padding: 4px; }
+  .case:active { transform: scale(0.96); }
+  .case.rare::after { content: '★'; position: absolute; top: 3px; right: 6px; font-size: 0.62rem; color: var(--or); opacity: 0.8; }
+  .case.perso { border-color: rgba(122, 162, 214, 0.45); }
+  .case.provisoire { background: rgba(52, 211, 153, 0.14); border: 1.5px dashed var(--vert); }
+  .case.definitive, .case.figee { background: rgba(52, 211, 153, 0.26); border-color: rgba(52, 211, 153, 0.6); }
+  .case.figee { animation: pulse 1.6s ease-in-out infinite; }
+  .case.validee { background: linear-gradient(150deg, rgba(52, 211, 153, 0.55), rgba(15, 118, 110, 0.6)); border-color: var(--vert); }
+  .case.validee::before { content: '✓'; position: absolute; top: 2px; left: 6px; font-size: 0.8rem; font-weight: 800; color: #d1fae5; }
+  .case.dans-ligne { box-shadow: 0 0 0 2px var(--or) inset; }
+  .case .annuler { position: absolute; bottom: 3px; left: 0; right: 0; font-size: 0.6rem; color: var(--vert); }
+  @keyframes pulse { 50% { border-color: var(--or); } }
+
+  .etat-audit { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 16px; margin-bottom: 12px;
+    background: rgba(245, 196, 81, 0.1); border: 1px solid rgba(245, 196, 81, 0.35); font-size: 0.9rem; }
+  .discret-info { color: var(--pale); font-size: 0.82rem; text-align: center; margin: 4px 0 10px; }
+
+  /* Bouton BINGO : visible seulement quand une ligne est complète */
+  .bingo-bouton {
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: max(18px, env(safe-area-inset-bottom)); z-index: 20;
+    width: min(420px, calc(100% - 32px)); padding: 18px; border-radius: 999px; font: 800 1.35rem 'Outfit', sans-serif; letter-spacing: 0.04em;
+    background: linear-gradient(135deg, #fde68a, var(--or) 45%, #f59e0b); color: #2a1a02;
+    box-shadow: 0 12px 34px rgba(245, 196, 81, 0.45); animation: monte 0.35s cubic-bezier(.2, .8, .2, 1) both;
+  }
+  /* Garder le centrage quand on appuie (la règle générique écraserait translateX). */
+  .bingo-bouton:active:not(:disabled) { transform: translateX(-50%) scale(0.97); }
+  .bingo-bouton:disabled { background: var(--surface-forte); color: var(--doux); box-shadow: none; font-size: 0.95rem; letter-spacing: 0; }
+  @keyframes monte { from { transform: translate(-50%, 30px); opacity: 0; } }
+
+  .classement { display: grid; gap: 6px; }
+  .classement div { display: flex; gap: 10px; align-items: center; padding: 8px 12px; border-radius: 12px; background: rgba(0, 0, 0, 0.22); font-size: 0.92rem; }
+  .classement .rang { width: 22px; color: var(--pale); font-weight: 700; }
+  .classement .nom { flex: 1; }
+  .classement .moi { outline: 1px solid rgba(52, 211, 153, 0.5); }
+  details.pli { margin-bottom: 12px; }
+  details.pli summary { cursor: pointer; list-style: none; color: var(--doux); font-size: 0.9rem; padding: 8px 2px; }
+  details.pli summary::-webkit-details-marker { display: none; }
+  details.pli summary::before { content: '▸ '; }
+  details.pli[open] summary::before { content: '▾ '; }
+  .regles li { color: var(--doux); font-size: 0.88rem; margin: 4px 0 0 18px; }
+
+  /* --- Jury : seul écran qui sollicite l'attention --- */
+  .voile { position: fixed; inset: 0; z-index: 50; background: rgba(2, 6, 14, 0.82); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    display: flex; align-items: flex-end; justify-content: center; padding: 16px; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+  .jury { width: min(520px, 100%); max-height: 88dvh; overflow: auto; background: #0c1424; border: 1px solid rgba(245, 196, 81, 0.4);
+    border-radius: 22px; padding: 18px; animation: monte2 0.3s ease both; }
+  @keyframes monte2 { from { transform: translateY(40px); opacity: 0; } }
+  .jury h2 { font-size: 1.15rem; }
+  .jury .chrono { color: var(--or); font-weight: 700; }
+  .vote { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 10px 0; border-top: 1px solid var(--bord); }
+  .vote span { font-size: 0.92rem; }
+  .vote button { padding: 9px 12px; font-size: 0.85rem; background: var(--surface-forte); color: var(--texte); }
+  .vote button.vu.choisi { background: var(--vert); color: #04221a; }
+  .vote button.pasvu.choisi { background: var(--rouge); color: #2a0606; }
+
+  .toast { position: fixed; left: 50%; transform: translateX(-50%); top: max(14px, env(safe-area-inset-top)); z-index: 60;
+    width: min(460px, calc(100% - 32px)); padding: 12px 16px; border-radius: 16px; background: rgba(12, 20, 36, 0.96);
+    border: 1px solid var(--bord); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5); font-size: 0.92rem; animation: tombe 0.3s ease both; }
+  .toast.ok { border-color: rgba(52, 211, 153, 0.6); }
+  .toast.ko { border-color: rgba(248, 113, 113, 0.6); }
+  @keyframes tombe { from { transform: translate(-50%, -16px); opacity: 0; } }
+  .erreur { color: #fca5a5; font-size: 0.88rem; min-height: 1.2em; margin-bottom: 6px; }
+  .mini { display: grid; gap: 3px; margin-top: 10px; }
+  .mini div { aspect-ratio: 1; border-radius: 6px; background: var(--surface); font-size: 0.5rem; padding: 2px; overflow: hidden; color: var(--doux); }
+  .mini div.c { background: rgba(52, 211, 153, 0.35); color: var(--texte); }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <a class="retour" id="retour" href="index.html#parallele">← Accueil</a>
+      <h1>🎯 Bingo</h1>
+      <span class="score" id="score"></span>
+    </header>
+    <div class="erreur" id="erreur" role="alert"></div>
+    <div id="ecran"></div>
+  </main>
+  <div id="flottants"></div>
+
+<script src="commun/soiree.js"></script>
+<script>
+// Bingo de soirée : jeu en parallèle de toute la soirée, presque sans
+// concentration. Il parle au serveur par la connexion « soirée »
+// (/ws-soiree, page « bingo ») : il s'ouvre par-dessus n'importe quel jeu, et
+// à côté de l'Enquête, sans prendre la place de personne.
+(function () {
+  const dansJeu = new URLSearchParams(location.search).get('dans') === '1';
+  if (dansJeu) document.getElementById('retour').classList.add('masque');
+  const ecran = document.getElementById('ecran');
+  const elErreur = document.getElementById('erreur');
+  const elScore = document.getElementById('score');
+  const flottants = document.getElementById('flottants');
+
+  const s = Soiree.actuelle();
+  const monNom = Soiree.nom();
+  let etat = null, moi = null, couches = [], ecart = 0;
+  let ws = null, tentatives = 0, minuteur = null, dernierSignal = 0, dernierJournal = null;
+  const votesLocaux = {};        // vote en cours (affichage immédiat avant le retour du serveur)
+
+  function el(balise, attrs, texte) {
+    const e = document.createElement(balise);
+    Object.assign(e, attrs || {});
+    if (texte != null) e.textContent = texte;
+    return e;
+  }
+  function carte(titre) {
+    const c = el('section', { className: 'carte' });
+    if (titre) c.appendChild(el('h2', {}, titre));
+    ecran.appendChild(c);
+    return c;
+  }
+  function bouton(texte, action, classe) {
+    const b = el('button', { type: 'button', className: classe || '' }, texte);
+    b.addEventListener('click', action);
+    return b;
+  }
+  const maintenant = () => Date.now() / 1000 - ecart;
+  const pluriel = (n, mot) => n + ' ' + mot + (n > 1 && !/s$/.test(mot) ? 's' : '');
+  function heure(t) { const d = new Date((t + ecart) * 1000); return d.getHours() + 'h' + String(d.getMinutes()).padStart(2, '0'); }
+  function duree(sec) { sec = Math.max(0, Math.ceil(sec)); return sec >= 60 ? Math.floor(sec / 60) + ' min ' + String(sec % 60).padStart(2, '0') + ' s' : sec + ' s'; }
+  function envoyer(m) { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(m)); }
+
+  let toastMinuteur = null;
+  function toast(texte, genre, ms) {
+    flottants.querySelectorAll('.toast').forEach((t) => t.remove());
+    const t = el('div', { className: 'toast ' + (genre || '') }, texte);
+    t.setAttribute('role', 'status');
+    flottants.appendChild(t);
+    clearTimeout(toastMinuteur);
+    toastMinuteur = setTimeout(() => t.remove(), ms || 4500);
+  }
+  function vibrer(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* tant pis */ } }
+
+  // ---------------- Préalables ----------------
+  if (!s) {
+    const c = carte('Rejoins d’abord une soirée');
+    c.appendChild(el('p', {}, 'Le bingo se joue pendant une soirée : crée-la ou rejoins-la sur l’accueil, puis reviens ici.'));
+    const l = el('div', { className: 'ligne' });
+    l.appendChild(el('a', { className: 'bouton', href: 'index.html#soiree', target: dansJeu ? '_top' : '_self' }, 'Aller à l’accueil'));
+    c.appendChild(l);
+    return;
+  }
+  if (!monNom) {
+    const c = carte('Comment t’appelles-tu ?');
+    const champ = el('input', { type: 'text', maxLength: 16, placeholder: 'Ton prénom' });
+    const l = el('div', { className: 'ligne' });
+    l.append(champ, bouton('Entrer', () => { if (Soiree.definirNom(champ.value)) location.reload(); }));
+    c.appendChild(l);
+    return;
+  }
+
+  // ---------------- Connexion « soirée » ----------------
+  function seConnecter() {
+    clearTimeout(minuteur); minuteur = null;
+    const url = Soiree.SERVEURS[s.serveur].ws + '/ws-soiree/' + s.code + '/' + encodeURIComponent(monNom) + '?page=bingo';
+    const socket = new WebSocket(url);
+    ws = socket;
+    dernierSignal = Date.now();
+    socket.onopen = () => { if (ws !== socket) return; tentatives = 0; elErreur.textContent = ''; };
+    socket.onmessage = (e) => { if (ws !== socket) return; dernierSignal = Date.now(); recevoir(JSON.parse(e.data), socket); };
+    socket.onclose = () => { if (ws === socket) reconnecter(); };
+  }
+  function reconnecter() {
+    if (minuteur) return;
+    tentatives++;
+    if (tentatives > 1) elErreur.textContent = 'Connexion perdue, reconnexion…';
+    minuteur = setTimeout(() => { minuteur = null; seConnecter(); }, Math.min(1000 * tentatives, 5000));
+  }
+  setInterval(() => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    try { ws.send('{"type":"ping"}'); } catch (e) { /* elle se fermera */ }
+    if (!document.hidden && Date.now() - dernierSignal > 15000) seConnecter();
+  }, 5000);
+  // L'écran peut s'éteindre : à la réouverture, l'état se resynchronise.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    if (!ws || ws.readyState > 1) seConnecter(); else envoyer({ type: 'soiree_etat' });
+  });
+
+  function recevoir(msg, socket) {
+    switch (msg.type) {
+      case 'pong': return;
+      case 'remplace':
+        ws = null; try { socket.close(); } catch (e) { /* déjà fermée */ }
+        ecran.textContent = '';
+        carte('Ton bingo est ouvert sur un autre écran').appendChild(el('p', {}, 'Ferme cet onglet, ou recharge la page pour le reprendre ici.'));
+        return;
+      case 'soiree_couches':
+        couches = msg.couches || [];
+        if (!couches.includes('bng')) { etat = null; moi = null; }
+        afficher();
+        return;
+      case 'bng_etat':
+        ecart = Date.now() / 1000 - msg.maintenant;
+        signalerJournal(msg.journal || []);
+        etat = msg;
+        if (moi && moi.inscrit === false && etat.phase !== 'fin') envoyer({ type: 'bng_rejoindre' });
+        afficher();
+        return;
+      case 'bng_moi':
+        if (!moi && !msg.inscrit && etat && (etat.phase === 'lobby' || etat.phase === 'jeu')) envoyer({ type: 'bng_rejoindre' });
+        if (msg.jury && (!moi || !moi.jury || moi.jury.id !== msg.jury.id)) vibrer([60, 60, 60]);
+        moi = msg;
+        afficher();
+        return;
+      case 'bng_erreur': toast(msg.message, 'ko'); if (boutonBingo) { delete boutonBingo.dataset.envoye; afficher(); } return;
+      case 'bng_jury': return;           // la vue privée suit
+      case 'bng_annonce': toast('🎯 BINGO annoncé : le jury vérifie…', 'ok'); return;
+      case 'bng_resultat':
+        if (msg.ok) {
+          vibrer([40, 40, 120]);
+          toast((msg.grille ? '🏆 GRILLE PLEINE validée ! ' : '🎉 BINGO validé ! ') + '+' + pluriel(msg.points, 'point') +
+            ' · tu distribues ' + pluriel(msg.distribue, msg.unite) + '.', 'ok', 7000);
+        } else {
+          vibrer(200);
+          toast('❌ BINGO refusé par le jury (' + (msg.refusees || []).join(', ') + '). ' +
+            (msg.boit ? 'Bois ' + pluriel(msg.boit, msg.unite) + '. ' : '') +
+            (msg.handicap ? 'Plafond atteint : ' + duree(msg.handicap) + ' de délai en plus. ' : '') +
+            'Pas de BINGO avant ' + heure(msg.jusqua) + '.', 'ko', 9000);
+        }
+        return;
+      case 'bng_distribue': toast('🏆 ' + msg.raison + ' : distribue ' + pluriel(msg.nombre, msg.unite) + ' !', 'ok', 9000); return;
+      case 'bng_lance': vibrer(30); return;
+      case 'bng_fin': case 'bng_ferme': return;
+    }
+  }
+
+  // Notification discrète aux autres (BINGO validé ou refusé chez quelqu'un).
+  function signalerJournal(journal) {
+    const dernier = journal.length ? journal[journal.length - 1].id : 0;
+    if (dernierJournal !== null && dernier > dernierJournal) {
+      const nouveau = journal[journal.length - 1];
+      if (!nouveau.texte.includes(monNom)) toast(nouveau.texte, '', 3500);
+    }
+    dernierJournal = dernier;
+  }
+
+  // ---------------- Affichage ----------------
+  let tic = null;
+  function afficher() {
+    ecran.textContent = '';
+    besoinBouton = besoinJury = false;
+    elScore.textContent = '';
+    try { dessiner(); } finally {
+      // Le bouton BINGO et la fenêtre du jury restent les mêmes d'un rafraîchissement
+      // à l'autre (pas d'animation rejouée, pas de bouton qui saute sous le doigt).
+      if (!besoinBouton && boutonBingo) { boutonBingo.remove(); boutonBingo = null; }
+      if (!besoinJury && voileJury) { voileJury.remove(); voileJury = null; }
+    }
+  }
+  let besoinBouton = false, besoinJury = false, boutonBingo = null, voileJury = null;
+  function dessiner() {
+    if (!couches.includes('bng') || !etat) return sansBingo();
+    if (etat.phase === 'lobby') return salleAttente();
+    if (etat.phase === 'jeu') return enJeu();
+    if (etat.phase === 'fin') return finPartie();
+    sansBingo();
+  }
+  // Rafraîchissement d'une seconde seulement quand c'est utile (case encore
+  // annulable, vote du jury en cours, délai de BINGO) : pas de minuteur permanent.
+  function programmerTic() {
+    clearTimeout(tic);
+    const t = maintenant();
+    const utile = moi && etat && etat.phase === 'jeu' && (moi.jury ||
+      moi.coches.some((c) => c.statut === 'provisoire' && t - c.t < moi.annulation + 1) ||
+      (moi.annonce && moi.refus_jusqua && moi.refus_jusqua > t));
+    if (utile) tic = setTimeout(() => { if (!document.hidden) afficher(); else programmerTic(); }, 1000);
+  }
+
+  function regles(c) {
+    const d = el('details', { className: 'pli' });
+    d.appendChild(el('summary', {}, 'Comment on joue'));
+    const ul = el('ul', { className: 'regles' });
+    ['Chacun a sa grille secrète de petits événements de soirée.',
+     'Tu vois ou entends l’événement ? Touche la case. Un 2e appui dans les 10 s l’annule ; ensuite elle est enregistrée.',
+     'L’événement doit venir de quelqu’un d’autre que toi. Le provoquer exprès, c’est tricher.',
+     'Une ligne complète (horizontale, verticale ou diagonale) : appuie sur BINGO.',
+     'Un petit jury vérifie (« Vu » ou « Pas vu », votes anonymes). Sans vote, c’est « Vu ».',
+     'Ligne validée : 1 point et tu distribues. BINGO refusé : tu bois et tu attends avant d’en annoncer un autre.',
+     'Grille pleine : gros bonus. Aucune gorgée juste pour avoir coché.'].forEach((x) => ul.appendChild(el('li', {}, x)));
+    d.appendChild(ul);
+    (c || ecran).appendChild(d);
+  }
+
+  function sansBingo() {
+    const c = carte('Pas encore de bingo dans la soirée');
+    c.appendChild(el('p', {}, 'Une grille de petits événements à cocher pendant que vous jouez aux autres jeux. Un coup d’œil de temps en temps suffit.'));
+    c.appendChild(el('p', {}, 'Celui qui le crée devient l’hôte : il règle la vitesse et peut ajouter des cases à vous.'));
+    const l = el('div', { className: 'ligne' });
+    l.appendChild(bouton('🎯 Créer le bingo', () => envoyer({ type: 'bng_creer' }), 'vert'));
+    c.appendChild(l);
+    regles();
+  }
+
+  function salleAttente() {
+    const hote = moi && moi.hote;
+    const c = carte('Salle d’attente');
+    c.appendChild(el('p', {}, 'Hôte : ' + etat.hote + ' · ' + (etat.vitesses[etat.vitesse] || {}).titre + ' · grille ' + etat.taille + '×' + etat.taille));
+    const js = el('div', { className: 'joueurs' });
+    etat.joueurs.forEach((n) => js.appendChild(el('span', {}, n)));
+    c.appendChild(js);
+    if (moi && !moi.inscrit) {
+      const l = el('div', { className: 'ligne' });
+      l.appendChild(bouton('Je joue', () => envoyer({ type: 'bng_rejoindre' }), 'vert'));
+      c.appendChild(l);
+    } else if (moi) {
+      const l = el('div', { className: 'ligne' });
+      l.appendChild(bouton('Je ne joue pas', () => envoyer({ type: 'bng_quitter' }), 'discret'));
+      c.appendChild(l);
+    }
+    if (!hote) {
+      c.appendChild(el('p', { className: 'note' }, 'En attente du lancement par ' + etat.hote + '.'));
+      regles();
+      return;
+    }
+    // --- Réglages de l'hôte ---
+    const r = carte('Réglages');
+    r.appendChild(el('p', {}, 'La vitesse règle la taille de la grille et les délais.'));
+    const pv = el('div', { className: 'puces' }); pv.style.marginTop = '8px';
+    Object.entries(etat.vitesses).forEach(([k, v]) => {
+      const b = bouton(v.titre + ' · ' + v.taille + '×' + v.taille, () => envoyer({ type: 'bng_config', vitesse: k }));
+      if (k === etat.vitesse) b.classList.add('choisi');
+      pv.appendChild(b);
+    });
+    r.appendChild(pv);
+
+    const lf = el('label', { className: 'champ' }, 'Fin de la partie');
+    if (etat.commun_enquete && etat.enquete_fin_a) {
+      lf.appendChild(el('p', {}, 'Calée sur l’Enquête : ' + heure(etat.enquete_fin_a) + '.'));
+    } else {
+      const sel = el('select');
+      const durees = etat.durees.includes(etat.duree) ? etat.durees : etat.durees.concat([etat.duree]).sort((a, b) => a - b);
+      durees.forEach((d) => sel.appendChild(el('option', { value: d, selected: d === etat.duree },
+        (d >= 3600 ? Math.floor(d / 3600) + ' h' + (d % 3600 ? ' ' + (d % 3600) / 60 : '') : d / 60 + ' min') + ' après le lancement')));
+      sel.addEventListener('change', () => envoyer({ type: 'bng_config', duree: Number(sel.value) }));
+      lf.appendChild(sel);
+    }
+    r.appendChild(lf);
+
+    const lp = el('label', { className: 'champ' }, 'Plafond de ' + etat.unite + 's par heure et par joueur');
+    if (etat.commun_enquete) {
+      lp.appendChild(el('p', {}, (etat.plafond ? etat.plafond : 'Sans plafond') + ' : réglage commun repris de l’Enquête (les deux jeux comptent ensemble).'));
+    } else {
+      const sel = el('select');
+      etat.plafonds.forEach((p) => sel.appendChild(el('option', { value: p, selected: p === etat.plafond }, p ? p + ' max' : 'Sans plafond')));
+      sel.addEventListener('change', () => envoyer({ type: 'bng_config', plafond: Number(sel.value) }));
+      lp.appendChild(sel);
+      const lu = el('label', { className: 'champ' }, 'Unité de pénalité');
+      const u = el('input', { type: 'text', maxLength: 20, value: etat.unite });
+      u.addEventListener('change', () => envoyer({ type: 'bng_config', unite: u.value }));
+      lu.appendChild(u);
+      r.appendChild(lp);
+      r.appendChild(lu);
+    }
+    if (etat.commun_enquete) r.appendChild(lp);
+
+    const lc = el('label', { className: 'champ' }, 'Cases à vous (une par ligne, ' + etat.perso_max + ' max, ' + etat.perso_longueur + ' caractères)');
+    const ta = el('textarea', { placeholder: 'Paul parle de son chat\nQuelqu’un dit « wesh »' });
+    ta.value = (moi.perso || []).join('\n');
+    lc.appendChild(ta);
+    r.appendChild(lc);
+    r.appendChild(el('p', { className: 'note' }, 'Jusqu’à 3 par grille, tirées en priorité. Restez bienveillants : pas de case qui vise quelqu’un ou pousse à boire.'));
+    const lr = el('div', { className: 'ligne' });
+    lr.appendChild(bouton('Enregistrer les cases', () => { envoyer({ type: 'bng_config', perso: ta.value.split('\n') }); toast('Cases enregistrées.', 'ok', 2000); }, 'discret'));
+    r.appendChild(lr);
+
+    const l = el('div', { className: 'ligne' });
+    const lancer = bouton('🎯 Lancer le bingo', () => envoyer({ type: 'bng_lancer' }), 'vert');
+    lancer.disabled = etat.joueurs.length < etat.joueurs_min;
+    l.appendChild(lancer);
+    l.appendChild(bouton('Annuler', () => Soiree.confirmer('Annuler le bingo pour tout le monde ?', 'Annuler le bingo', 'Non')
+      .then((ok) => { if (ok) envoyer({ type: 'bng_annuler' }); }), 'danger'));
+    c.appendChild(l);
+    if (lancer.disabled) c.appendChild(el('p', { className: 'note' }, 'Il faut au moins ' + etat.joueurs_min + ' joueurs.'));
+    regles();
+  }
+
+  function lignesDe(n) {
+    const out = [];
+    for (let r = 0; r < n; r++) out.push([...Array(n).keys()].map((c) => r * n + c));
+    for (let c = 0; c < n; c++) out.push([...Array(n).keys()].map((r) => r * n + c));
+    out.push([...Array(n).keys()].map((i) => i * n + i));
+    out.push([...Array(n).keys()].map((i) => i * n + n - 1 - i));
+    return out;
+  }
+
+  function enJeu() {
+    if (!moi) return;
+    const t = maintenant();
+    const rang = etat.classement.findIndex((x) => x.nom.toLowerCase() === monNom.toLowerCase());
+    if (moi.inscrit) elScore.innerHTML = '<b>' + moi.points + '</b> pt' + (moi.points > 1 ? 's' : '') + (rang >= 0 ? ' · ' + (rang + 1) + '<sup>e</sup>' : '');
+    if (!moi.inscrit || !moi.grille.length) {
+      const c = carte('Le bingo est en cours');
+      c.appendChild(el('p', {}, 'Rejoins la partie : tu reçois ta grille tout de suite.'));
+      const l = el('div', { className: 'ligne' });
+      l.appendChild(bouton('Je joue', () => envoyer({ type: 'bng_rejoindre' }), 'vert'));
+      c.appendChild(l);
+      return classement();
+    }
+    if (moi.mon_audit) {
+      const b = el('div', { className: 'etat-audit' });
+      b.textContent = moi.mon_audit.etat === 'en_cours' ? '⏳ Ton BINGO est vérifié par le jury…'
+        : '⏳ BINGO annoncé : ' + (moi.mon_audit.position === 1 ? 'prochain à passer devant le jury.' : moi.mon_audit.position + 'e dans la file du jury.');
+      ecran.appendChild(b);
+    } else if (etat.audit) {
+      ecran.appendChild(el('p', { className: 'discret-info' }, 'Le jury vérifie le BINGO de ' + etat.audit.joueur + '.'));
+    }
+    const n = moi.taille;
+    const statut = {};
+    moi.coches.forEach((c) => { statut[c.index] = c; });
+    const valides = new Set();
+    moi.lignes.forEach((i) => (lignesDe(n)[i] || []).forEach((x) => valides.add(x)));
+    const g = el('div', { className: 'grille t' + n });
+    g.style.gridTemplateColumns = 'repeat(' + n + ', 1fr)';
+    moi.grille.forEach((c, i) => {
+      const st = statut[i];
+      const etatCase = st ? (st.statut === 'provisoire' && t - st.t >= moi.annulation ? 'definitive' : st.statut) : '';
+      const d = el('button', { type: 'button', className: 'case ' + etatCase + (c.rare ? ' rare' : '') + (c.categorie === 'perso' ? ' perso' : '') + (valides.has(i) ? ' dans-ligne' : '') });
+      d.appendChild(document.createTextNode(c.texte));
+      if (etatCase === 'provisoire') d.appendChild(el('span', { className: 'annuler' }, 'annuler · ' + Math.ceil(moi.annulation - (t - st.t)) + ' s'));
+      d.setAttribute('aria-label', c.texte + (st ? ' (cochée)' : ''));
+      d.addEventListener('click', () => {
+        if (st && etatCase !== 'provisoire') { toast(etatCase === 'validee' ? 'Case validée par le jury.' : 'Case enregistrée : elle ne se décoche plus.', '', 2200); return; }
+        if (!st) vibrer(15);
+        envoyer({ type: 'bng_cocher', index: i });
+      });
+      g.appendChild(d);
+    });
+    ecran.appendChild(g);
+    ecran.appendChild(el('p', { className: 'discret-info' }, 'Fin à ' + heure(etat.fin_a) + (etat.fin_calee ? ' (comme l’Enquête)' : '') + ' · ★ case rare'));
+
+    if (moi.annonce) {
+      const attente = moi.refus_jusqua && moi.refus_jusqua > t ? moi.refus_jusqua - t : 0;
+      besoinBouton = true;
+      if (!boutonBingo) {
+        boutonBingo = el('button', { type: 'button', className: 'bingo-bouton' });
+        boutonBingo.addEventListener('click', () => { boutonBingo.disabled = true; boutonBingo.dataset.envoye = '1'; envoyer({ type: 'bng_bingo' }); });
+        flottants.appendChild(boutonBingo);
+      }
+      const texte = attente ? 'BINGO possible dans ' + duree(attente) : (moi.annonce === 'grille' ? '🏆 GRILLE PLEINE !' : '🎯 BINGO !');
+      if (boutonBingo.textContent !== texte) boutonBingo.textContent = texte;
+      boutonBingo.disabled = attente > 0 || boutonBingo.dataset.envoye === '1';
+    } else if (boutonBingo) {
+      delete boutonBingo.dataset.envoye;
+    }
+    classement();
+    if (moi.hote) {
+      const l = el('div', { className: 'ligne' }); l.style.justifyContent = 'center';
+      l.appendChild(bouton('Terminer la partie', () => Soiree.confirmer('Terminer le bingo maintenant pour tout le monde ?', 'Terminer', 'Non')
+        .then((ok) => { if (ok) envoyer({ type: 'bng_terminer' }); }), 'discret'));
+      ecran.appendChild(l);
+    }
+    regles();
+    if (moi.jury) jury();
+    programmerTic();
+  }
+
+  function classement(ouvert) {
+    const d = el('details', { className: 'pli', open: !!ouvert });
+    d.appendChild(el('summary', {}, 'Classement'));
+    const c = el('div', { className: 'classement' });
+    etat.classement.forEach((x, i) => {
+      const l = el('div', { className: x.nom.toLowerCase() === monNom.toLowerCase() ? 'moi' : '' });
+      l.append(el('span', { className: 'rang' }, String(i + 1)), el('span', { className: 'nom' }, x.nom + (x.grille ? ' 🏆' : '')),
+        el('span', {}, pluriel(x.points, 'pt') + ' · ' + pluriel(x.lignes, 'ligne')));
+      c.appendChild(l);
+    });
+    d.appendChild(c);
+    ecran.appendChild(d);
+  }
+
+  function jury() {
+    const j = moi.jury;
+    const mes = Object.assign({}, j.votes, votesLocaux[j.id] || {});
+    besoinJury = true;
+    if (!voileJury || voileJury.dataset.id !== String(j.id)) {
+      if (voileJury) voileJury.remove();
+      voileJury = el('div', { className: 'voile' });
+      voileJury.dataset.id = j.id;
+      const b = el('div', { className: 'jury' });
+      b.setAttribute('role', 'dialog');
+      voileJury.appendChild(b);
+      flottants.appendChild(voileJury);
+    }
+    const box = voileJury.firstChild;
+    box.textContent = '';
+    box.appendChild(el('h2', {}, '⚖️ Jury : BINGO de ' + j.joueur));
+    const reste = j.echeance - maintenant();
+    const p = el('p', { className: 'note' });
+    p.append('As-tu vu ces événements ? Vote anonyme, sans vote c’est « Vu ». ', el('span', { className: 'chrono' }, Math.max(0, Math.ceil(reste)) + ' s'));
+    box.appendChild(p);
+    j.cases.forEach((c) => {
+      const l = el('div', { className: 'vote' });
+      l.appendChild(el('span', {}, c.texte));
+      ['vu', 'pas_vu'].forEach((choix) => {
+        const b = bouton(choix === 'vu' ? 'Vu' : 'Pas vu', () => {
+          (votesLocaux[j.id] = votesLocaux[j.id] || {})[c.index] = choix;
+          envoyer({ type: 'bng_voter', id: j.id, votes: { [c.index]: choix } });
+          afficher();
+        }, choix === 'vu' ? 'vu' : 'pasvu');
+        if (mes[c.index] === choix) b.classList.add('choisi');
+        l.appendChild(b);
+      });
+      box.appendChild(l);
+    });
+    const l = el('div', { className: 'ligne' });
+    l.appendChild(bouton('Tout « Vu »', () => {
+      const tous = {};
+      j.cases.forEach((c) => { tous[c.index] = mes[c.index] || 'vu'; });
+      votesLocaux[j.id] = tous;
+      envoyer({ type: 'bng_voter', id: j.id, votes: tous });
+      afficher();
+    }, 'vert'));
+    box.appendChild(l);
+  }
+
+  function finPartie() {
+    const r = etat.resultat || {};
+    const c = carte(r.vainqueur ? '🏆 ' + r.vainqueur + ' gagne le bingo !' : 'Bingo terminé');
+    if (r.vainqueur) c.appendChild(el('p', {}, r.vainqueur + ' distribue ' + pluriel(r.distribue, etat.unite) + '.'));
+    c.appendChild(el('p', {}, pluriel(r.cases || 0, 'case') + ' cochée' + ((r.cases || 0) > 1 ? 's' : '') + ', ' +
+      pluriel(r.lignes || 0, 'ligne') + ' validée' + ((r.lignes || 0) > 1 ? 's' : '') + ', ' + pluriel(r.refus || 0, 'BINGO') + ' refusé' + ((r.refus || 0) > 1 ? 's' : '') + '.'));
+    const gv = r.grille_vainqueur;
+    if (gv) {
+      c.appendChild(el('p', { className: 'note' }, 'La grille de ' + r.vainqueur + ' :'));
+      const m = el('div', { className: 'mini' });
+      m.style.gridTemplateColumns = 'repeat(' + gv.taille + ', 1fr)';
+      gv.cases.forEach((texte, i) => m.appendChild(el('div', { className: gv.coches.includes(i) ? 'c' : '' }, texte)));
+      c.appendChild(m);
+    }
+    classement(true);
+    const l = el('div', { className: 'ligne' });
+    if (moi && moi.hote) l.appendChild(bouton('Fermer le bingo', () => envoyer({ type: 'bng_fermer' }), 'discret'));
+    if (!dansJeu) l.appendChild(el('a', { className: 'bouton', href: 'index.html#parallele' }, 'Retour à l’accueil'));
+    ecran.appendChild(l);
+  }
+
+  seConnecter();
+})();
+</script>
+</body>
+</html>
