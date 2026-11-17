@@ -28,7 +28,9 @@ export function mesurerZone(options) {
 }
 
 export function suivreZoneLibre(apresChangement, {
-  hauts = ['bandeau', 'joueurs', 'btn-regles', 'boutons-haut', 'onglet-enquete'],
+  // L'onglet « 🔍 » de l'Enquête (bord gauche) n'est PAS compté : il ne fait
+  // que 30 px et le compter décalait toute la table vers la droite.
+  hauts = ['bandeau', 'joueurs', 'btn-regles', 'boutons-haut'],
   panneaux = ['panneau'],
   vitesse = 0.12,
   observer = true,
@@ -152,10 +154,10 @@ export function suivreZoneLibre(apresChangement, {
   // large ; quand la zone libre est haute et étroite (téléphone en
   // portrait), on plonge un peu plus pour que la table paraisse ronde et
   // remplisse l'espace au lieu de laisser du plancher vide en dessous.
-  function direction(base, max = 0.82) {
+  function direction(base, max = 0.88) {
     const z = c.z || zone();
     const rapport = (z.bas - z.haut) / Math.max(1, z.droite - z.gauche);
-    const y = Math.min(max, base + Math.max(0, Math.min(0.2, (rapport - 0.9) * 0.22)));
+    const y = Math.min(max, base + Math.max(0, Math.min(0.3, (rapport - 0.9) * 0.5)));
     return new THREE.Vector3(0, y, Math.sqrt(1 - y * y));
   }
 

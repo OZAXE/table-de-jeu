@@ -807,6 +807,7 @@ function placerCarte(cle, code, pos, rotY, visible, delaiMin, echelle) {
       mesh.visible = true;
       deplacerCarte(mesh, pos, rotZ, rotY, 0.42, 0.18);
     });
+    return delai;
   } else {
     c.touche = true;
     const mesh = c.mesh;
@@ -817,8 +818,10 @@ function placerCarte(cle, code, pos, rotY, visible, delaiMin, echelle) {
     if (bouge) {
       if (delaiMin) attendre(delaiMin, () => deplacerCarte(mesh, pos, rotZ, rotY, 0.45, 0.16));
       else deplacerCarte(mesh, pos, rotZ, rotY, 0.45, 0.16);
+      return delaiMin || 0;
     }
   }
+  return -1;   // déjà en place
 }
 function debutReconciliation() { ordreDonne = 0; cartes3D.forEach(c => { c.touche = false; }); }
 function finReconciliation() {
@@ -1282,6 +1285,53 @@ function miseVisible(etat, i) {
   return 0;
 }
 
+// Révélation du croupier au blackjack : le serveur envoie le résultat d'un
+// coup, mais la carte cachée se retourne puis le croupier tire carte par
+// carte (près de 3 s avec trois cartes tirées). Tant que la dernière carte
+// n'est pas posée, rien ne doit trahir le résultat : ni l'écran de bilan,
+// ni le panneau, ni le total du croupier, ni le message du bandeau.
+let arriveesCroupier = [];   // heure (performance.now) où chaque carte du croupier est posée
+let mancheRevelee = null;
+const DUREE_POSE = 0.45;
+function noterRevelation(etat, departs) {
+  if (etat.phase !== 'resultat') { arriveesCroupier = []; mancheRevelee = null; return; }
+  if (mancheRevelee === etat.manche) return;
+  mancheRevelee = etat.manche;
+  const maintenant = performance.now();
+  arriveesCroupier = departs.map(d => d < 0 ? maintenant : maintenant + (d + DUREE_POSE) * 1000);
+  // À chaque carte posée, le panneau et le total suivent.
+  arriveesCroupier.forEach(a => setTimeout(() => {
+    if (!etatCourant || etatCourant.jeu !== 'blackjack') return;
+    majCentre(etatCourant); majBandeau(etatCourant); rafraichirPanneau();
+  }, a - maintenant + 30));
+}
+function resteRevelation() {
+  if (!arriveesCroupier.length) return 0;
+  return Math.max(0, Math.max(...arriveesCroupier) - performance.now()) / 1000;
+}
+const revelationEnCours = () => resteRevelation() > 0;
+// Les cartes du croupier déjà posées sur la table (la cachée reste « ?? »).
+function croupierVisible(t) {
+  if (!revelationEnCours()) return t.croupier;
+  const maintenant = performance.now();
+  return t.croupier.map((c, k) => (arriveesCroupier[k] ?? 0) <= maintenant ? c : (k < 2 ? '??' : null)).filter(c => c !== null);
+}
+function valeurBJ(cartes) {
+  let total = 0, as = 0;
+  cartes.forEach(c => {
+    if (!c || c === '??') return;
+    if (c[0] === 'A') { total += 11; as++; } else if ('TJQK'.includes(c[0])) total += 10; else total += parseInt(c[0], 10);
+  });
+  while (total > 21 && as) { total -= 10; as--; }
+  return total;
+}
+function texteCroupier(t) {
+  const cartes = croupierVisible(t);
+  const enCours = revelationEnCours();
+  const v = enCours ? valeurBJ(cartes) : t.valeur_croupier;
+  return v + (cartes.includes('??') ? ' + ?' : enCours ? ' …' : '');
+}
+
 // Les cartes 3D de la table, d'après l'état.
 function reconcilierCartes(etat) {
   debutReconciliation();
@@ -1298,11 +1348,13 @@ function reconcilierCartes(etat) {
     });
     // Le croupier : la carte cachée se retourne, puis il tire, carte par carte.
     const nb = t.croupier.length;
+    const departs = [];
     t.croupier.forEach((c, k) => {
       const delai = etat.phase === 'resultat' && k >= 2 ? 0.7 + (k - 2) * 0.8 : 0;
       const pos = new THREE.Vector3((k - (Math.max(nb, 2) - 1) / 2) * 0.235 * E_CROUPIER, 0.012 + CARTE_E + k * 0.001, CENTRE_Z);
-      placerCarte('cr-' + m + k, c, pos, 0, c !== '??', delai, E_CROUPIER);
+      departs.push(placerCarte('cr-' + m + k, c, pos, 0, c !== '??', delai, E_CROUPIER));
     });
+    noterRevelation(etat, departs);
   } else if (t && etat.jeu === 'poker') {
     sieges.forEach((s, i) => {
       if (!t.dans_coup[i] || t.couches[i] && etat.phase === 'jeu') return;
@@ -1324,7 +1376,7 @@ function majCentre(etat) {
   boutonDonneur.visible = false;
   if (t && etat.jeu === 'blackjack' && t.croupier.length) {
     etiquetteCentre.visible = true;
-    majEtiquette(etiquetteCentre, 'Croupier · ' + t.valeur_croupier + (t.croupier.includes('??') ? ' + ?' : ''), false, false);
+    majEtiquette(etiquetteCentre, 'Croupier · ' + texteCroupier(t), false, false);
     majPileJetons(pileCentre, 0);
   } else if (t && etat.jeu === 'poker') {
     etiquetteCentre.visible = true;
@@ -1343,6 +1395,12 @@ function majCentre(etat) {
 }
 
 function annoncerBilan(etat) {
+  // Au blackjack, on attend que la dernière carte du croupier soit posée.
+  const attente = etat.jeu === 'blackjack' ? resteRevelation() : 0;
+  if (attente > 0) { setTimeout(() => annoncerBilanMaintenant(etat), attente * 1000 + 250); return; }
+  annoncerBilanMaintenant(etat);
+}
+function annoncerBilanMaintenant(etat) {
   const b = etat.bilan;
   const moi = b.lignes.find(l => l.joueur === MOI);
   b.lignes.forEach(l => {
@@ -1379,7 +1437,7 @@ function annoncerBilan(etat) {
         titre: moi && moi.cul_sec ? 'Cul sec !' : moi && moi.gorgees ? 'Perdu, ça se boit' : moi && moi.distribue ? 'Jackpot !' : titre,
         sous: titre + (moi ? ' · ' + (moi.delta > 0 ? '+' : '') + moi.delta + ' jetons pour toi' : ''),
         duree: 4.5,
-      }), 900);
+      }), etat.jeu === 'blackjack' ? 500 : 900);
     }
   } else if (etat.jeu === 'roulette' && etat.table) {
     const n = etat.table.numero;
@@ -1406,7 +1464,8 @@ function majBandeau(etat) {
     if (etat.phase === 'jeu') elMessage.textContent = t.courant === MOI ? 'À toi de parler' : 'Au tour de ' + etat.joueurs[t.courant];
     else elMessage.textContent = 'Fin du coup';
   }
-  elRappel.textContent = etat.message || dernierEvenement || '';
+  // « Le croupier fait 19 » attend que ses cartes soient posées.
+  elRappel.textContent = etat.jeu === 'blackjack' && revelationEnCours() ? '' : etat.message || dernierEvenement || '';
 }
 
 function majCompteur() {
@@ -1786,8 +1845,9 @@ function tableBJ(etat) {
   const t = etat.table;
   const d = el('div', 'table-bj');
   d.appendChild(ligneBJ('Croupier', '', [{
-    cartes: t.croupier, valeur: t.valeur_croupier + (t.croupier.includes('??') ? ' + ?' : ''),
+    cartes: croupierVisible(t), valeur: texteCroupier(t),
   }], etat.phase === 'resultat', false));
+  const cache = revelationEnCours();
   etat.joueurs.forEach((nom, j) => {
     const mains = t.mains[j] || [];
     if (!mains.length) return;
@@ -1796,7 +1856,7 @@ function tableBJ(etat) {
       cartes: m.cartes,
       valeur: m.valeur,
       active: etat.phase === 'jeu' && t.courant === j && t.main_courante === h,
-      texte: (m.resultat ? RESULTATS_BJ[m.resultat] || m.resultat : STATUTS_BJ[m.statut] || '') + (m.double ? ' ×2' : ''),
+      texte: (m.resultat && !cache ? RESULTATS_BJ[m.resultat] || m.resultat : STATUTS_BJ[m.statut] || '') + (m.double ? ' ×2' : ''),
     })), etat.phase === 'jeu' && t.courant === j, j === MOI));
   });
   return d;
@@ -1831,7 +1891,9 @@ function panneauBlackjack(etat) {
   const aMoi = etat.phase === 'jeu' && t.courant === MOI;
   const main = aMoi ? mesMains[t.main_courante] : null;
   let titre;
-  if (etat.phase === 'resultat') {
+  if (etat.phase === 'resultat' && revelationEnCours()) {
+    titre = '🃏 Le croupier abat…';
+  } else if (etat.phase === 'resultat') {
     const bilanMoi = etat.bilan && etat.bilan.lignes.find(l => l.joueur === MOI);
     titre = !mesMains.length ? '🃏 Fin du coup' : !bilanMoi ? '🃏 Fin du coup'
       : bilanMoi.delta > 0 ? '🎉 Gagné : +' + bilanMoi.delta : bilanMoi.delta < 0 ? '😬 Perdu : ' + bilanMoi.delta : '🤝 Égalité';
@@ -1855,7 +1917,7 @@ function panneauBlackjack(etat) {
     }
     p.appendChild(r);
   } else if (etat.phase === 'resultat') {
-    if (etat.bilan) p.appendChild(tableauBilan(etat));
+    if (etat.bilan && !revelationEnCours()) p.appendChild(tableauBilan(etat));
     const r = rangee();
     r.appendChild(boutonHall());
     p.appendChild(r);
