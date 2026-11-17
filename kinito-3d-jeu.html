@@ -1591,6 +1591,7 @@ function panneauResultat(msg) {
   resultatCompte = cle;
   if (!dejaCompte && sieges[iPerdant] && typeof msg.gorgees === 'number') {
     sieges[iPerdant].gorgees += msg.gorgees;
+    sauverCompteurs();
     if (etatCourant) majListeJoueurs(etatCourant);
   }
   montrerDes(false);
@@ -2008,6 +2009,9 @@ function seConnecter() {
     dernierSignal = Date.now();
     const msg = JSON.parse(e.data);
     if (msg.type === 'pong') return;
+    // salon_jeu suit partie_demarree au LANCEMENT d'une partie, jamais à une
+    // reconnexion : c'est le seul moment où les compteurs repartent de zéro.
+    if (msg.type === 'salon_jeu' && msg.jeu === 'kinito') remettreCompteursAZero();
     if (Soiree.traiterMessage(msg, 'kinito')) return;
     if (msg.type === 'remplace') { lienActif = false; panneauRemplace(); return; }
     clientRecevoir(msg);
@@ -2193,11 +2197,36 @@ function panneauAttente() {
   p.appendChild(r);
 }
 
+// Compteurs de gorgées de la partie en cours, gardés pour un rechargement de
+// page (le serveur ne les tient pas). Rattachés au salon.
+const CLE_COMPTEURS = 'kinito3d.gorgees';
+function sauverCompteurs() {
+  try {
+    localStorage.setItem(CLE_COMPTEURS, JSON.stringify({
+      code: codeSalon, g: Object.fromEntries(sieges.map(s => [s.nom, s.gorgees])),
+    }));
+  } catch (e) { /* tant pis */ }
+}
+function lireCompteurs() {
+  try {
+    const m = JSON.parse(localStorage.getItem(CLE_COMPTEURS) || 'null');
+    if (m && m.code === codeSalon && m.g) return new Map(Object.entries(m.g));
+  } catch (e) { /* tant pis */ }
+  return new Map();
+}
+function remettreCompteursAZero() {
+  sieges.forEach(s => { s.gorgees = 0; });
+  resultatCompte = null;
+  sauverCompteurs();
+  if (etatCourant) majListeJoueurs(etatCourant);
+}
+
 function demarrerScene(noms) {
   // Le serveur renvoie partie_demarree à CHAQUE reconnexion (téléphone
   // verrouillé, réseau changé...) : on garde alors les compteurs de la
   // partie en cours au lieu de les remettre à zéro.
-  const anciens = enPartie ? new Map(sieges.map(s => [s.nom, s.gorgees])) : new Map();
+  // Page rechargée en pleine partie : on reprend les compteurs gardés en mémoire.
+  const anciens = enPartie ? new Map(sieges.map(s => [s.nom, s.gorgees])) : lireCompteurs();
   enPartie = true;
   cacherPanneau();
   creerSieges(noms);
