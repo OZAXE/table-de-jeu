@@ -1720,7 +1720,16 @@ function clientRecevoir(msg) {
 
     case 'joueur_rejoint':
       joueursSalon = msg.joueurs;
-      if (enPartie && msg.retour) elRappel.textContent = msg.nom + ' est revenu.';
+      if (enPartie && msg.retour) {
+        elRappel.textContent = msg.nom + ' est revenu.';
+        // Le serveur ne rediffuse pas l'état à un retour : sans ça le
+        // revenant resterait marqué « parti » chez les autres.
+        quandLibre(() => {
+          if (!etatCourant || !etatCourant.partis) return;
+          const i = etatCourant.joueurs.indexOf(msg.nom);
+          if (i >= 0 && etatCourant.partis[i]) { etatCourant.partis[i] = false; majListeJoueurs(etatCourant); }
+        });
+      }
       if (!enPartie) panneauAttente();
       break;
 
@@ -1749,6 +1758,11 @@ function clientRecevoir(msg) {
       break;
 
     case 'bb_carte_case':
+      // Retenue tout de suite, hors de la file : la file attend la fin de la
+      // glissade du pion, et pendant ce temps le panneau de ramassage ne
+      // proposait que « Laisser et finir » (pas de « Prendre »). Elle suit
+      // toujours l'état qui ouvre MON ramassage : elle ne s'affiche qu'avec lui.
+      carteDeMaCase = msg.carte;
       quandLibre(() => {
         carteDeMaCase = msg.carte;
         const moi = etatCourant && etatCourant.positions[MOI];
@@ -1909,7 +1923,10 @@ function majListeJoueurs(etat) {
 
     const n = document.createElement('span');
     n.className = 'nom';
-    n.textContent = nom + (i === MOI ? ' (toi)' : '');
+    const parti = !!(etat.partis && etat.partis[i]);
+    n.textContent = nom + (i === MOI ? ' (toi)' : '') + (parti ? ' (parti)' : '');
+    // Place laissée vide : son tour passe, mais elle reste à la table.
+    if (parti && !etat.elimine[i]) d.style.opacity = '0.5';
 
     const a = document.createElement('span');
     a.className = 'armes';
@@ -1933,7 +1950,8 @@ function majListeJoueurs(etat) {
 
   // Les étiquettes 3D suivent le même état que la liste HTML.
   etat.joueurs.forEach((nom, i) => {
-    if (pions[i]) majEtiquette(pions[i].etiquette, nom,
+    const affiche = (etat.partis && etat.partis[i]) ? nom + ' (parti)' : nom;
+    if (pions[i]) majEtiquette(pions[i].etiquette, affiche,
       i === etat.joueur_courant && etat.phase === 'jeu', etat.elimine[i]);
     if (verres[i]) majEtiquette(verres[i].etiquette,
       nom + ' · ' + etat.verres[i], i === etat.joueur_courant && etat.phase === 'jeu', etat.elimine[i]);
@@ -2724,7 +2742,7 @@ function panneauEnLigne() {
   const l3 = document.createElement('div');
   l3.className = 'rangee';
   l3.style.marginTop = '10px';
-  l3.appendChild(champTexte('code-salon', 'CODE', 4));
+  l3.appendChild(champTexte('code-salon', 'CODE', 6));
   l3.appendChild(bouton('Rejoindre', 'sombre', rejoindreSalon));
   p.appendChild(l3);
 
@@ -2777,7 +2795,7 @@ async function rejoindreSalon() {
   if (!lireNom()) return;
   const champ = document.getElementById('code-salon');
   codeSalon = (champ ? champ.value : '').trim().toUpperCase();
-  if (codeSalon.length !== 4) { afficherErreur('Le code fait 4 lettres'); return; }
+  if (!/^[A-Z]{4}(-[2-9])?$/.test(codeSalon)) { afficherErreur('Le code fait 4 lettres'); return; }
   afficherErreur('Connexion au serveur...');
   try {
     const rep = await fetch(SERVEURS[serveurChoisi].http + '/salon/' + codeSalon);
