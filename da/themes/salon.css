@@ -1,0 +1,87 @@
+/* =====================================================================
+   Thème « Salon de coloc » (Picopoly) : post-its et carnet à spirale,
+   couleurs pop violettes. Titres : Permanent Marker (le feutre sur le
+   post-it). Texte : Fredoka. Le texte posé directement sur la 3D est
+   clair (la scène est de nuit) ; dans les post-its et le carnet, il reste
+   foncé sur papier.
+   ===================================================================== */
+:root {
+  --ciel: #0f0b1a;
+  --accent: #a855f7;
+  --accent-fonce: #6d28d9;
+  --encre: #2a2140;
+  --doux: #6b5f80;
+  --trait: #ddd2ee;
+  --biere: #fff4b8;
+  --police-titre: 'Permanent Marker', 'Comic Sans MS', cursive;
+  --police: Fredoka, system-ui, sans-serif;
+}
+html, body { background: #0f0b1a !important; }
+
+/* Texte sur la scène : clair, bien détaché. */
+#message { font-family: var(--police-titre); font-weight: 400; font-size: 22px; color: #fff; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.95); letter-spacing: 0.02em; }
+#rappel { color: #e6dcff; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.95); }
+#rappel.erreur { color: #ff9b94; }
+#chrono, #difficulte-hud, #cagnotte-hud {
+  background: #fef08a; color: var(--encre); box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45); border-radius: 3px;
+}
+#cagnotte-hud { color: #166534; }
+#chrono.presse { color: #c0262d; }
+
+/* Joueurs : un post-it chacun. */
+.joueur {
+  background: #fef3a0; color: var(--encre); border-radius: 2px; border: 2px solid transparent;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+.joueur:nth-child(4n+2) { background: #ffd1e8; }
+.joueur:nth-child(4n+3) { background: #c9f2ff; }
+.joueur:nth-child(4n+4) { background: #d9f99d; }
+.joueur.actif { border-color: var(--accent); box-shadow: 0 0 0 2px #fff, 0 4px 16px rgba(168, 85, 247, 0.75); }
+.joueur .ligne2 { color: #5a4f6e; }
+.joueur .biere { color: #9a3412; }
+
+/* Boutons du haut : post-it violet. */
+.btn-haut { background: #ede4ff; color: var(--encre); border: 2px solid #c4b0f0; border-radius: 4px; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45); }
+.btn-haut.actif { border-color: var(--accent); background: #fff; }
+
+/* Panneau : une page de carnet à spirale (lignes bleues, marge rouge). */
+#panneau {
+  background:
+    radial-gradient(circle at 12px 9px, #2a2140 0 4px, transparent 5px) 0 0 / 28px 18px repeat-x,
+    linear-gradient(90deg, transparent 30px, rgba(232, 84, 63, 0.45) 30px 32px, transparent 32px),
+    repeating-linear-gradient(180deg, transparent 0 25px, rgba(96, 140, 220, 0.22) 25px 26px),
+    #fffdf6;
+  color: var(--encre); border-radius: 6px; padding-top: 22px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.6);
+}
+#panneau h2 { font-family: var(--police-titre); font-weight: 400; color: #4c1d95; letter-spacing: 0.02em; }
+
+button { background: linear-gradient(180deg, #c084fc, #9333ea); box-shadow: 0 4px 0 #6d28d9, 0 6px 14px rgba(0, 0, 0, 0.25); }
+button:active { box-shadow: 0 1px 0 #6d28d9; }
+button.clair { background: #fff; color: var(--encre); border: 1px solid #d8ccef; box-shadow: 0 4px 0 #cfc2ea, 0 6px 14px rgba(0, 0, 0, 0.1); }
+button.clair.choisi { background: #f3e8ff; border-color: var(--accent); }
+.code-salon { color: #6d28d9; font-family: var(--police-titre); font-weight: 400; }
+
+/* Gorgées (à moi) : un post-it rose. */
+#toast { background: #ffd1e8; border: 0; border-radius: 3px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55); transform: translateX(-50%) rotate(-2deg); }
+
+/* Cartes Chance / Caisse et fiche : papier, liseré violet. */
+#carte { border-top-color: var(--accent); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6); }
+#fiche { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); }
+
+/* Règles : le carnet aussi. */
+#modale-regles { background: rgba(10, 6, 20, 0.78); }
+.modale {
+  background:
+    linear-gradient(90deg, transparent 26px, rgba(232, 84, 63, 0.4) 26px 28px, transparent 28px),
+    repeating-linear-gradient(180deg, transparent 0 25px, rgba(96, 140, 220, 0.18) 25px 26px),
+    #fffdf6;
+  border-radius: 6px;
+}
+.modale h2 { font-family: var(--police-titre); font-weight: 400; color: #4c1d95; }
+.modale h3 { color: #6d28d9; }
+
+@media (max-width: 760px), (pointer: coarse) {
+  #message { font-size: 18px; }
+  #panneau { border-radius: 8px 8px 0 0; padding-top: 20px; }
+}
