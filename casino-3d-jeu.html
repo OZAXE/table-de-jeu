@@ -1225,7 +1225,10 @@ function clientRecevoir(msg) {
       break;
     case 'erreur':
       elRappel.textContent = msg.message;
-      if (enPartie) rafraichirPanneau();
+      // Un état plus récent attend dans la file (refus d'un double appui) :
+      // c'est lui qui reconstruira le panneau. Le reconstruire ici, d'après
+      // l'ancien état, rendait la main à un joueur dont ce n'était plus le tour.
+      if (enPartie && !fileActions.length) rafraichirPanneau();
       break;
   }
 }
@@ -1611,7 +1614,9 @@ function tableauClassement(etat) {
   const tete = el('tr');
   ['Joueur', '🪙', 'Bilan', '🍺 bues', '🎯 données', 'Recharges'].forEach(h => tete.appendChild(el('th', '', h)));
   t.appendChild(tete);
-  const net = i => etat.jetons[i] - 1000 - etat.recharges[i] * r.recharge;
+  // Jetons de départ : annoncés par le serveur (regles.depart), 1000 sinon.
+  const depart = r.depart || 1000;
+  const net = i => etat.jetons[i] - depart - etat.recharges[i] * r.recharge;
   etat.joueurs.map((nom, i) => i).sort((a, b) => net(b) - net(a)).forEach((i, rang) => {
     const tr = el('tr', i === MOI ? 'moi' : '');
     tr.appendChild(el('td', '', (rang === 0 ? '👑 ' : '') + etat.joueurs[i] + (i === MOI ? ' (toi)' : '')));
