@@ -28,7 +28,7 @@
     beerbattle: { titre: 'BeerBattle', page: 'beerbattle-3d-jeu.html', icone: '🃏' },
     buckshot:   { titre: 'Buckshot',   page: 'buckshot-3d-jeu.html',   icone: '💥' },
     picolopoly: { titre: 'Picopoly',   page: 'picolopoly-3d-jeu.html', icone: '🍻' },
-    menteur:    { titre: 'Cal 12',     page: 'menteur-3d-jeu.html',    icone: '🎭' },
+    menteur:    { titre: 'Cal 12',     page: 'menteur-3d-jeu.html',    icone: '⚓' },
     casino:     { titre: 'Casino',     page: 'casino-3d-jeu.html',     icone: '🎰' },
     undercover: { titre: 'Undercover', page: 'undercover-3d-jeu.html', icone: '🕵️' },
   };
@@ -134,8 +134,8 @@
       .res-ligne.moi { outline: 2px solid #fff; outline-offset: 1px; }
       .res-fermer { margin-top: 14px; font-size: 13px; color: rgba(255, 255, 255, 0.55); animation: res-monte 0.4s 1s both; }
       .res-pluie { position: absolute; z-index: 1; top: -60px; font-size: 32px; pointer-events: none; animation: res-pluie linear forwards; }
-      .res-annonce { position: fixed; left: 12px; right: 12px; top: calc(16vh + env(safe-area-inset-top)); z-index: 99970; text-align: center; pointer-events: none; }
-      .res-annonce .gros { font: 400 clamp(42px, 13vw, 86px)/1.05 var(--police-titre, var(--police, Outfit)), system-ui, sans-serif; font-weight: 900;
+      .res-annonce { position: fixed; left: calc(var(--zone-gauche, 0px) + 8px); right: calc(var(--zone-droite, 0px) + 8px); top: calc(var(--haut-libre, 16vh) + 6px); z-index: 99970; text-align: center; pointer-events: none; }
+      .res-annonce .gros { font: 400 clamp(34px, 12vmin, 86px)/1.05 var(--police-titre, var(--police, Outfit)), system-ui, sans-serif; font-weight: 900;
         letter-spacing: 0.03em; color: var(--c); text-shadow: 0 0 24px var(--c), 0 6px 22px rgba(0, 0, 0, 0.9); animation: res-pop 0.45s cubic-bezier(.2, 1.6, .4, 1) both; }
       .res-annonce .petit { display: inline-block; margin-top: 10px; padding: 8px 18px; border-radius: 999px; background: rgba(0, 0, 0, 0.7);
         border: 1px solid var(--c); color: #fff; font: 700 clamp(17px, 5vw, 23px)/1.25 var(--police, Outfit), system-ui, sans-serif; animation: res-monte 0.4s 0.12s both; }
