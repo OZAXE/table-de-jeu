@@ -409,7 +409,7 @@ const CAM_TABLE_POS = new THREE.Vector3(0, 2.9, 5.0);
 function distanceCadrage(cam) {
   const vHalf = THREE.MathUtils.degToRad(cam.fov) / 2;
   const hHalf = Math.atan(Math.tan(vHalf) * cam.aspect);
-  return Math.max(LARGEUR_VUE / (Math.tan(hHalf) * zone.c.fracL), HAUTEUR_VUE / (Math.tan(vHalf) * zone.c.fracH), 4.2);
+  return Math.max(LARGEUR_VUE / (Math.tan(hHalf) * zone.c.fracL), HAUTEUR_VUE / (Math.tan(vHalf) * zone.c.fracH), 4.2) * zone.c.zoom;
 }
 
 const FOG_DENSITE_MAX = 0.075;   // reglage d'origine, pour un ecran large
@@ -417,7 +417,8 @@ const FOG_DENSITE_MAX = 0.075;   // reglage d'origine, pour un ecran large
 function majCadrageTable(cam) {
   const d = distanceCadrage(cam);
   // On garde la meme inclinaison (legere plongee) en s'eloignant.
-  const dir = new THREE.Vector3(0, 0.46, 0.89).normalize();
+  // Même hauteur de caméra que les autres jeux.
+  const dir = zone.direction(0.56);
   CAM_TABLE_POS.copy(CAM_TABLE_CIBLE).addScaledVector(dir, d);
 
   // En portrait la camera doit beaucoup reculer : a densite constante, le
@@ -2231,7 +2232,7 @@ function animer() {
   const recul = THREE.MathUtils.clamp(camera.position.distanceTo(camCibleActuelle) / 6.2, 1, 1.4);
   sieges.forEach(st => { if (st.etiquette) st.etiquette.scale.set(1.0 * recul, 0.25 * recul, 1); });
   camera.lookAt(camCibleActuelle);
-  zone.appliquer(camera);
+  zone.appliquer(camera, regardeDedans ? null : { rayon: R_TABLE, places: R_CHOPE }, { pos: camObjectifPos, cible: camObjectifCible });
 
   renderer.render(scene, camera);
 }

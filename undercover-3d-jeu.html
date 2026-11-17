@@ -367,12 +367,12 @@ const CAM_POS = new THREE.Vector3(0, 3.0, 5.0);
 function distanceCadrage(cam) {
   const vHalf = THREE.MathUtils.degToRad(cam.fov) / 2;
   const hHalf = Math.atan(Math.tan(vHalf) * cam.aspect);
-  return Math.max(LARGEUR_VUE / (Math.tan(hHalf) * zone.c.fracL), HAUTEUR_VUE / (Math.tan(vHalf) * zone.c.fracH), 4.2);
+  return Math.max(LARGEUR_VUE / (Math.tan(hHalf) * zone.c.fracL), HAUTEUR_VUE / (Math.tan(vHalf) * zone.c.fracH), 4.2) * zone.c.zoom;
 }
 const FOG_DENSITE_MAX = 0.075;
 function majCadrageTable(cam) {
   const d = distanceCadrage(cam);
-  const dir = new THREE.Vector3(0, 0.56, 0.83).normalize();
+  const dir = zone.direction(0.56);
   CAM_POS.copy(CAM_CIBLE).addScaledVector(dir, d);
   if (scene.fog) scene.fog.density = Math.min(FOG_DENSITE_MAX, 0.536 / d);
 }
@@ -724,6 +724,9 @@ function creerSieges(noms) {
       index: i, nom: noms[i], groupe, avatar, chope, carte, etiquette, icone, dir, base,
       niveau: 0, objectif: 0, mort: false, role: null, retournee: false,
     });
+    // La bière est un cylindre d'une unité étiré par le bas : sans ce premier
+    // dessin, les chopes de la salle d'attente montraient une colonne orange.
+    dessinerChope(sieges[sieges.length - 1]);
   }
 }
 
@@ -1952,7 +1955,7 @@ function boucle() {
     st.etiquette.scale.set(0.9 * e * recul, 0.225 * e * recul, 1);
   });
   camera.lookAt(camCibleActuelle);
-  zone.appliquer(camera);
+  zone.appliquer(camera, { rayon: R_TABLE, places: R_SIEGE }, { pos: camObjectifPos, cible: camObjectifCible });
   renderer.render(scene, camera);
 }
 

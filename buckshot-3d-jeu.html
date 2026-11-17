@@ -358,6 +358,7 @@ import {
   quandPoliceChargee, creerSousVerre, creerTableRonde, POLICE,
 } from './da/bar-moderne.js';
 import { modeLeger, optionsRendu, reglerRendu, surveillerFluidite } from './da/qualite.js';
+import { suivreZoneLibre } from './da/cadrage.js';
 import {
   FOND as FOND_SALOON, POLICE_TEXTE, POLICE_TITRE, preparerAmbianceSaloon, creerTableSaloon,
   creerDecorSaloon, dessinerEtiquetteSaloon, quandPolicesSaloon, creerChaiseSaloon,
@@ -424,71 +425,14 @@ const LARGEUR_VUE = 2.3;   // demi-largeur à cadrer : table + chopes + marge
 const HAUTEUR_VUE = 2.1;
 const CAM_POS = new THREE.Vector3(0, 3.0, 5.0);
 
-// Zone libre de l'écran : sous le titre et la liste des joueurs, au-dessus
-// du panneau du bas. La table y est cadrée en entier, pour que rien de
-// l'interface ne cache une place, une étiquette ou la pile. Seuls comptent
-// les éléments qui couvrent le milieu de l'écran (sur ordinateur, la liste
-// des joueurs est dans la marge de gauche et ne gêne pas).
-function zoneLibre() {
-  const L = window.innerWidth, H = window.innerHeight;
-  const visible = (r) => r.width > 0 && r.height > 0;
-  const milieu = (r) => r.right > L * 0.25 && r.left < L * 0.75;
-  let haut = 0, bas = H, gauche = 0, droite = L;
-  ['bandeau', 'joueurs', 'btn-regles', 'onglet-enquete'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    if (!visible(r)) return;
-    if (milieu(r) && r.top < H * 0.5) haut = Math.max(haut, r.bottom);
-    // Liste des joueurs en colonne dans la marge de gauche (ordinateur) :
-    // elle ne gêne que si elle descend dans la hauteur de la table.
-    else if (r.right < L * 0.5 && r.bottom > H * 0.3) gauche = Math.max(gauche, r.right);
-  });
-  const p = document.getElementById('panneau');
-  if (p && !p.classList.contains('cache')) {
-    const r = p.getBoundingClientRect();
-    if (visible(r)) {
-      if (r.top > H * 0.3) bas = Math.min(bas, r.top);            // panneau en bas
-      else if (r.left > L * 0.35) droite = Math.min(droite, r.left); // panneau en colonne à droite
-    }
-  }
-  haut += 4; bas -= 4; gauche += 4; droite -= 4;
-  // Les grandes annonces se placent juste sous le haut de l'écran.
-  const racine = document.documentElement.style;
-  racine.setProperty('--haut-libre', Math.round(haut) + 'px');
-  racine.setProperty('--zone-gauche', Math.round(gauche) + 'px');
-  racine.setProperty('--zone-droite', Math.round(L - droite) + 'px');
-  // Garde-fous : jamais moins d'un tiers de l'écran pour la table.
-  if (bas - haut < H * 0.34) bas = Math.min(H, haut + H * 0.34);
-  if (droite - gauche < L * 0.4) droite = Math.min(L, gauche + L * 0.4);
-  return { haut, bas, gauche, droite, L, H };
-}
-
-// Part de l'écran laissée libre, et décalage de son centre (en pixels).
-let cadrage = { fracH: 1, fracL: 1, dx: 0, dy: 0 };
-let decalageActuel = { x: 0, y: 0 };
+// La table tient dans la zone libre de l'écran, et c'est elle (ses bords
+// projetés) qui y est centrée : voir da/cadrage.js.
+const zone = suivreZoneLibre(() => { majCadrageTable(camera); camObjectifPos = CAM_POS.clone(); });
 
 function distanceCadrage(cam) {
   const vHalf = THREE.MathUtils.degToRad(cam.fov) / 2;
   const hHalf = Math.atan(Math.tan(vHalf) * cam.aspect);
-  return Math.max(LARGEUR_VUE / (Math.tan(hHalf) * cadrage.fracL), HAUTEUR_VUE / (Math.tan(vHalf) * cadrage.fracH), 4.2);
-}
-
-function calculerCadrage() {
-  const z = zoneLibre();
-  return {
-    fracH: (z.bas - z.haut) / z.H, fracL: (z.droite - z.gauche) / z.L,
-    dx: (z.gauche + z.droite) / 2 - z.L / 2, dy: (z.haut + z.bas) / 2 - z.H / 2,
-  };
-}
-
-function mesurerZoneLibre() {
-  const c = calculerCadrage();
-  if (Math.abs(c.fracH - cadrage.fracH) < 0.01 && Math.abs(c.fracL - cadrage.fracL) < 0.01
-      && Math.abs(c.dx - cadrage.dx) < 2 && Math.abs(c.dy - cadrage.dy) < 2) return;
-  cadrage = c;
-  majCadrageTable(camera);
-  camObjectifPos = CAM_POS.clone();
+  return Math.max(LARGEUR_VUE / (Math.tan(hHalf) * zone.c.fracL), HAUTEUR_VUE / (Math.tan(vHalf) * zone.c.fracH), 4.2) * zone.c.zoom;
 }
 
 const FOG_DENSITE_MAX = 0.075;
@@ -497,7 +441,7 @@ function majCadrageTable(cam) {
   const d = distanceCadrage(cam);
   // Plongée plus marquée qu'au Kinito : la pile au centre et les cartes
   // posées devant chacun doivent se lire du dessus.
-  const dir = new THREE.Vector3(0, 0.52, 0.85).normalize();
+  const dir = zone.direction(0.56);
   CAM_POS.copy(CAM_CIBLE).addScaledVector(dir, d);
   if (scene.fog) scene.fog.density = Math.min(FOG_DENSITE_MAX, 0.536 / d);
 }
@@ -525,20 +469,13 @@ function redimensionner() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-  cadrage = calculerCadrage();
+  zone.recalculer();
   majCadrageTable(camera);
   camObjectifPos = CAM_POS.clone();
   camObjectifCible = CAM_CIBLE.clone();
 }
 window.addEventListener('resize', redimensionner);
 window.addEventListener('orientationchange', redimensionner);
-// Le panneau du bas, le titre et la liste des joueurs changent de taille au
-// fil de la partie : la table suit, en douceur (voir la boucle de rendu).
-if (window.ResizeObserver) {
-  const obs = new ResizeObserver(() => mesurerZoneLibre());
-  ['panneau', 'joueurs', 'bandeau'].forEach(id => { const el = document.getElementById(id); if (el) obs.observe(el); });
-}
-new MutationObserver(() => mesurerZoneLibre()).observe(document.getElementById('panneau'), { attributes: true, attributeFilter: ['class'] });
 
 scene.add(new THREE.AmbientLight(0x3a2018, 1.0));
 const keyLight = new THREE.DirectionalLight(0xffd6a8, 3.0);
@@ -2859,10 +2796,7 @@ function boucle() {
   camCibleActuelle.lerp(camObjectifCible, CAM_VITESSE);
   camera.lookAt(camCibleActuelle);
   // Recentre l'image sur la zone libre (au-dessus du panneau), sans à-coup.
-  decalageActuel.x += (cadrage.dx - decalageActuel.x) * CAM_VITESSE;
-  decalageActuel.y += (cadrage.dy - decalageActuel.y) * CAM_VITESSE;
-  const L = window.innerWidth, H = window.innerHeight;
-  camera.setViewOffset(L, H, -decalageActuel.x, -decalageActuel.y, L, H);
+  zone.appliquer(camera, { rayon: R_TABLE, places: R_CHOPE }, { pos: camObjectifPos, cible: camObjectifCible });
 
   renderer.render(scene, camera);
 }
@@ -2901,6 +2835,7 @@ if (demoDansUrl >= 2 && demoDansUrl <= 8) {
 }
 // Plus aucune facette dans la scène.
 lisserScene(scene);
+zone.mesurer();
 redimensionner();
 boucle();
 surveillerFluidite();
