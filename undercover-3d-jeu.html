@@ -931,7 +931,10 @@ function clientRecevoir(msg) {
       break;
     case 'erreur':
       elRappel.textContent = msg.message;
-      if (enPartie) rafraichirPanneau();
+      // Un état plus récent attend dans la file (refus d'un double appui) :
+      // c'est lui qui reconstruira le panneau. Le reconstruire ici, d'après
+      // l'ancien état, rendait la main à un joueur dont ce n'était plus le tour.
+      if (enPartie && !fileActions.length) rafraichirPanneau();
       break;
   }
 }

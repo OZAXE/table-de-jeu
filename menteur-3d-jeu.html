@@ -1056,7 +1056,10 @@ function clientRecevoir(msg) {
       break;
     case 'erreur':
       elRappel.textContent = msg.message;
-      if (enPartie) rafraichirPanneau();
+      // Un état plus récent attend dans la file (refus d'un double appui) :
+      // c'est lui qui reconstruira le panneau. Le reconstruire ici, d'après
+      // l'ancien état, rendait la main à un joueur dont ce n'était plus le tour.
+      if (enPartie && !fileActions.length) rafraichirPanneau();
       break;
   }
 }
@@ -1268,7 +1271,8 @@ function majBandeau(etat) {
   else if (etat.phase === 'jeu') elMessage.textContent = etat.courant === MOI ? 'À toi de jouer' : 'Au tour de ' + etat.joueurs[etat.courant];
   else if (etat.phase === 'cible') elMessage.textContent = etat.cibles && etat.cibles.raison === 'chaos' ? 'Chaos : chacun vise' : 'Le Maître choisit';
   else elMessage.textContent = 'Menteur !';
-  elRappel.textContent = dernierEvenement || etat.message || '';
+  // Le serveur écrit encore « 2 Ass » dans ses messages : on l'affiche juste.
+  elRappel.textContent = dernierEvenement || (etat.message || '').replace(/\bAss\b/g, 'As');
 }
 
 function majCompteur() {

@@ -2755,7 +2755,10 @@ function clientRecevoir(msg) {
       // Un refus ne produit pas d'état : on rouvre le panneau, sinon ses
       // boutons resteraient gelés.
       rappel(msg.message, true);
-      if (etatCourant) majPanneau();
+      // Un état plus récent attend dans la file (refus d'un double appui) :
+      // c'est lui qui reconstruira le panneau. Le reconstruire ici, d'après
+      // l'ancien état, rendait la main à un joueur dont ce n'était plus le tour.
+      if (etatCourant && !fileActions.length) majPanneau();
       break;
     default:
       if (msg.type && msg.type.indexOf('pp_') === 0) quandLibre(() => jouerEvenement(msg));
