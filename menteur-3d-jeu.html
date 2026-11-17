@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<title>Menteur 3D</title>
+<title>Cal 12</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=2">
 <link rel="apple-touch-icon" href="icons/icon-180.png?v=2">
@@ -195,7 +195,7 @@
   @keyframes mt-flash { 0% { opacity: 0.55; } 100% { opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { .annonce-mt .gros, .annonce-mt .petit, .annonce-mt .cartes-mt { animation: none; } .flash-mt { display: none; } }
 </style>
-<!-- Direction artistique commune « bar moderne » ; accent bleu néon pour Menteur. -->
+<!-- Direction artistique commune « bar moderne » ; accent bleu néon pour Cal 12. -->
 <link rel="stylesheet" href="da/bar-moderne.css">
 <style>:root { --accent: #38bdf8; --accent-2: #1d4ed8; }</style>
 </head>
@@ -205,7 +205,7 @@
   <button id="btn-regles">Règles &#9432;</button>
   <div id="joueurs"></div>
   <div id="bandeau">
-    <div id="message">Menteur 3D</div>
+    <div id="message">Cal 12</div>
     <div id="rappel"></div>
     <div id="compteur"></div>
   </div>
@@ -215,7 +215,7 @@
 
 <div id="modale-regles" class="cache">
   <div class="modale">
-    <h2>Règles du Menteur</h2>
+    <h2>Règles de Cal 12</h2>
     <p>Le jeu de cartes du bluff, version roulette. Chacun a devant lui un <span class="accent">barillet de 6 coups</span> avec une seule balle, placée au hasard. Le dernier encore en vie gagne.</p>
 
     <h3>Une manche</h3>
@@ -288,7 +288,7 @@ import {
   quandPoliceChargee, creerSousVerre, creerTableRonde, POLICE,
 } from './da/bar-moderne.js';
 
-const ACCENT = 0x38bdf8;   // bleu néon de Menteur, comme sur l'accueil
+const ACCENT = 0x38bdf8;   // bleu néon de Cal 12, comme sur l'accueil
 
 const elModaleRegles = document.getElementById('modale-regles');
 document.getElementById('btn-regles').addEventListener('click', () => {
@@ -405,7 +405,7 @@ cadreTable.scale.set(1, 1.42, 1);
 cadreTable.position.set(TABLE_POS.x, 0.012, TABLE_POS.z);
 scene.add(cadreTable);
 
-creerDecorBar(scene, { accent: ACCENT, nom: 'MENTEUR', solY: -1.2 });
+creerDecorBar(scene, { accent: ACCENT, nom: 'CAL 12', solY: -1.2 });
 
 // =====================================================================
 // CARTES
@@ -1559,7 +1559,7 @@ function champTexte(id, placeholder, longueurMax) {
 function afficherErreur(texte) { elRappel.textContent = texte; }
 
 function panneauAccueil() {
-  elMessage.textContent = 'Menteur 3D';
+  elMessage.textContent = 'Cal 12';
   elRappel.textContent = 'Pose tes cartes, bluffe, et prie pour que le barillet fasse clic';
   elCompteur.innerHTML = '';
   // Plus de mode solo : on arrive directement sur le jeu en ligne.
@@ -1592,7 +1592,7 @@ function boutonServeur() {
 
 function panneauRejoindreDirect(code) {
   codeSalon = code;
-  elMessage.textContent = 'Menteur 3D';
+  elMessage.textContent = 'Cal 12';
   elRappel.textContent = 'Salon ' + code;
   const p = ouvrirPanneau('Rejoindre le salon');
 
@@ -1924,7 +1924,7 @@ function panneauAttente() {
     } else if (trop) {
       const al = document.createElement('div');
       al.className = 'alerte';
-      al.textContent = 'Vous êtes ' + joueursSalon.length + ' : Menteur se joue à ' + JOUEURS_MAX + ' au plus. Qu’un joueur quitte le salon.';
+      al.textContent = 'Vous êtes ' + joueursSalon.length + ' : Cal 12 se joue à ' + JOUEURS_MAX + ' au plus. Qu’un joueur quitte le salon.';
       p.appendChild(al);
     }
   } else {
