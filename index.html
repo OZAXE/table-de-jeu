@@ -37,7 +37,7 @@
     min-height: 100vh;
     min-height: 100dvh;
     overflow-x: hidden;
-    padding: max(20px, env(safe-area-inset-top)) 16px max(28px, env(safe-area-inset-bottom));
+    padding: max(20px, env(safe-area-inset-top)) 16px calc(110px + env(safe-area-inset-bottom));
   }
 
   /* Halos de couleur en fond, qui dérivent lentement */
@@ -154,7 +154,7 @@
   .soiree .qr-soiree canvas { width: min(220px, 70vw); height: auto; border-radius: 14px; background: #f4f1ea; padding: 8px; }
   .soiree .bouton-enquete {
     border-radius: 12px; padding: 11px 16px; text-decoration: none; white-space: nowrap;
-    background: #2a1216; color: #f3e6cf; border: 1px solid rgba(201, 162, 74, 0.45); font: 600 0.92rem 'Outfit', sans-serif;
+    background: #2a1216; color: #f3e6cf; border: 1px solid rgba(201, 162, 74, 0.45); font: 600 0.92rem 'Outfit', sans-serif; cursor: pointer;
   }
   .soiree .erreur { color: #f2a7a7; font-size: 0.88rem; margin-top: 8px; }
   .soiree .erreur:empty { display: none; }
@@ -268,6 +268,53 @@
   .casino     { --c1: #d4af37; --c2: #8a6a12; }
   .undercover { --c1: #f472b6; --c2: #be185d; }
 
+  /* --- Onglets : une section visible à la fois, barre flottante en bas --- */
+  .onglet[hidden] { display: none; }
+  .onglet { animation: apparait 0.35s ease both; }
+  .barre-onglets {
+    position: fixed; z-index: 50; left: 50%; transform: translateX(-50%);
+    bottom: max(14px, env(safe-area-inset-bottom));
+    width: min(440px, calc(100% - 32px));
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 6px;
+    background: rgba(16, 22, 34, 0.86); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 999px;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  }
+  .barre-onglets button {
+    position: relative; display: grid; justify-items: center; gap: 3px; padding: 9px 4px 8px;
+    border: 0; border-radius: 999px; background: transparent; cursor: pointer;
+    color: var(--texte-doux); font: 600 0.78rem 'Outfit', sans-serif;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+  .barre-onglets button svg { width: 24px; height: 24px; }
+  .barre-onglets button[aria-selected="true"] { background: rgba(255, 255, 255, 0.11); color: var(--texte); }
+  .barre-onglets button:active { transform: scale(0.96); }
+  .barre-onglets button:focus-visible { outline: 2px solid var(--acier); outline-offset: 2px; }
+  .barre-onglets .pastille {
+    position: absolute; top: 6px; left: calc(50% + 10px); width: 8px; height: 8px; border-radius: 50%;
+    background: #5df2a0; box-shadow: 0 0 8px #5df2a0;
+  }
+  .barre-onglets .pastille[hidden] { display: none; }
+
+  .intro-section { color: var(--texte-doux); font-size: 0.93rem; line-height: 1.5; margin: -4px 2px 16px; max-width: 52ch; }
+  .note-soiree {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding: 12px 14px;
+    background: var(--surface); border: 1px solid var(--bord); border-radius: 18px;
+    color: var(--texte-doux); font-size: 0.88rem; line-height: 1.4;
+  }
+  .note-soiree[hidden] { display: none; }
+  .note-soiree span { flex: 1; }
+  .note-soiree button, .bouton-onglet {
+    border: 0; border-radius: 12px; padding: 10px 14px; cursor: pointer; white-space: nowrap;
+    background: var(--or); color: #0a1424; font: 600 0.88rem 'Outfit', sans-serif;
+  }
+  .bouton-onglet { margin-top: 10px; }
+  .jeu.bientot { cursor: default; opacity: 0.78; }
+  .jeu.bientot:hover { transform: none; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35); }
+  .jeu.bientot .jouer { background: rgba(255, 255, 255, 0.1); box-shadow: none; color: var(--texte-doux); }
+  .enquete-jeu { --c1: #c9a24a; --c2: #7a1f2b; }
+  .bingo       { --c1: #34d399; --c2: #0f766e; }
+
   .pied {
     margin-top: 34px; text-align: center; color: var(--texte-pale); font-size: 0.8rem; line-height: 1.6;
   }
@@ -298,6 +345,7 @@
       </div>
     </header>
 
+    <section class="onglet" id="onglet-soiree" data-onglet="soiree" role="tabpanel" aria-labelledby="tab-soiree">
     <section class="accroche">
       <h2>Choisis ton poison, <em>que le meilleur gagne.</em></h2>
       <p>Chacun sur son téléphone, tout le monde à la même table.</p>
@@ -317,6 +365,9 @@
       <div id="soiree-contenu"></div>
       <div class="erreur" id="soiree-erreur" role="alert"></div>
     </section>
+    </section>
+
+    <section class="onglet" id="onglet-jeux" data-onglet="jeux" role="tabpanel" aria-labelledby="tab-jeux" hidden>
 
     <div class="titre-section">
       <h3>Les jeux</h3>
@@ -442,13 +493,112 @@
         </div>
       </a>
     </div>
+    </section>
+
+    <section class="onglet" id="onglet-parallele" data-onglet="parallele" role="tabpanel" aria-labelledby="tab-parallele" hidden>
+      <div class="titre-section">
+        <h3>En parallèle</h3>
+        <span>Toute la soirée</span>
+      </div>
+      <p class="intro-section">Ces jeux tournent en fond pendant toute la soirée, en même temps que les jeux de table. Un coup d'œil de temps en temps suffit, sans jamais quitter ta partie.</p>
+
+      <div class="note-soiree" id="parallele-sans-soiree" hidden>
+        <span>Ces jeux se jouent dans une soirée&nbsp;: crée-la ou rejoins-la d'abord.</span>
+        <button type="button" data-aller="soiree">Ma soirée</button>
+      </div>
+
+      <div class="jeux">
+        <a class="jeu enquete-jeu" href="enquete.html">
+          <div class="deco" aria-hidden="true">🔍</div>
+          <div class="haut">
+            <span class="etiquette"><span class="point"></span>En ligne</span>
+            <span class="etiquette">👥 Toute la soirée</span>
+          </div>
+          <div class="bas">
+            <h4>Enquête</h4>
+            <p>Un meurtre au manoir pendant que vous jouez. Récolte des indices, interroge, accuse avant la fin de la soirée. Accessible aussi par l'onglet 🔍 dans chaque jeu.</p>
+            <div class="action">
+              <span class="infos">Manoir · Indices · Accusation</span>
+              <span class="jouer">Ouvrir <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+            </div>
+          </div>
+        </a>
+
+        <div class="jeu bingo bientot" aria-disabled="true">
+          <div class="deco" aria-hidden="true">🎯</div>
+          <div class="haut">
+            <span class="etiquette">Bientôt</span>
+            <span class="etiquette">👥 3 et plus</span>
+          </div>
+          <div class="bas">
+            <h4>Bingo de soirée</h4>
+            <p>Une grille privée de petits événements de soirée&nbsp;: quelqu'un dit «&nbsp;bref&nbsp;», un verre se renverse, un fou rire… Coche, aligne, crie BINGO, et un jury vérifie.</p>
+            <div class="action">
+              <span class="infos">Grille · Jury · Zéro concentration</span>
+              <span class="jouer">En préparation</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <footer class="pied">À consommer avec modération · Fait maison entre potes</footer>
   </main>
 
+  <nav class="barre-onglets" role="tablist" aria-label="Sections">
+    <button type="button" role="tab" id="tab-soiree" aria-controls="onglet-soiree" data-aller="soiree">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.8 14.2c2.3-.2 4.2 1.3 4.7 4.3"/></svg>
+      Soirée
+      <span class="pastille" id="pastille-soiree" hidden></span>
+    </button>
+    <button type="button" role="tab" id="tab-jeux" aria-controls="onglet-jeux" data-aller="jeux">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1.1" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.1" fill="currentColor"/><circle cx="12" cy="12" r="1.1" fill="currentColor"/></svg>
+      Jeux
+    </button>
+    <button type="button" role="tab" id="tab-parallele" aria-controls="onglet-parallele" data-aller="parallele">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="7.5" width="12" height="13" rx="3"/><path d="M8.5 7.5V6.5a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-2"/></svg>
+      En parallèle
+    </button>
+  </nav>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 <script src="commun/soiree.js"></script>
 <script>
+  // --- Onglets de l'accueil : Soirée, Jeux, En parallèle ---
+  // L'onglet choisi est gardé sur l'appareil et dans l'adresse (#jeux), pour
+  // revenir au même endroit en rentrant d'une partie.
+  const Onglets = (function () {
+    const NOMS = ['soiree', 'jeux', 'parallele'];
+    function aller(nom, sansDefilement) {
+      if (!NOMS.includes(nom)) nom = 'soiree';
+      document.querySelectorAll('.onglet').forEach((o) => { o.hidden = o.dataset.onglet !== nom; });
+      document.querySelectorAll('.barre-onglets [role="tab"]').forEach((b) => {
+        const actif = b.dataset.aller === nom;
+        b.setAttribute('aria-selected', actif ? 'true' : 'false');
+        b.tabIndex = actif ? 0 : -1;
+      });
+      try { localStorage.setItem('shield.onglet', nom); } catch (e) { /* tant pis */ }
+      history.replaceState(null, '', location.pathname + location.search + '#' + nom);
+      if (!sansDefilement) window.scrollTo({ top: 0 });
+    }
+    document.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-aller]');
+      if (b) aller(b.dataset.aller);
+    });
+    // Flèches gauche/droite dans la barre (clavier)
+    document.querySelector('.barre-onglets').addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      const actuel = NOMS.indexOf(document.querySelector('.barre-onglets [aria-selected="true"]').dataset.aller);
+      const suivant = NOMS[(actuel + (e.key === 'ArrowRight' ? 1 : NOMS.length - 1)) % NOMS.length];
+      aller(suivant);
+      document.getElementById('tab-' + suivant).focus();
+    });
+    let depart = location.hash.slice(1);
+    if (!NOMS.includes(depart)) { try { depart = localStorage.getItem('shield.onglet'); } catch (e) { depart = null; } }
+    aller(depart || 'soiree', true);
+    return { aller };
+  })();
+
   // --- Version légère : mémorisée sur l'appareil, lue par chaque jeu 3D ---
   (function () {
     const c = document.getElementById('mode-leger');
@@ -591,12 +741,13 @@
           Soiree.memoriser(r.code, s.serveur);
           erreur.textContent = '';
           await afficher();
-          etatTable('Table ' + Soiree.numeroTable(r.code) + ' ouverte : choisis son jeu ci-dessous.');
+          etatTable('Table ' + Soiree.numeroTable(r.code) + ' ouverte : choisis son jeu dans l’onglet Jeux.', true);
         } catch (e) { erreur.textContent = 'Serveur injoignable.'; }
       });
       const quitter = el('button', { type: 'button', className: 'discret' }, 'Quitter la soirée');
       quitter.addEventListener('click', () => { Soiree.oublier(); afficher(); });
-      const enquete = el('a', { className: 'bouton-enquete', href: 'enquete.html' }, '🔍 Enquête');
+      const enquete = el('button', { type: 'button', className: 'bouton-enquete' }, '🔍 En parallèle');
+      enquete.addEventListener('click', () => Onglets.aller('parallele'));
       l2.appendChild(enquete);
       l2.appendChild(partager);
       l2.appendChild(nouvelle);
@@ -674,13 +825,19 @@
         }
         liste.appendChild(ligne);
       });
-      if (!tables.find((t) => t.code === s.table).jeu) etatTable('Ta table est en salle d\'attente : choisis un jeu ci-dessous.');
+      if (!tables.find((t) => t.code === s.table).jeu) etatTable('Ta table est en salle d\'attente : choisis un jeu dans l’onglet Jeux.', true);
     }
 
-    function etatTable(texte) {
+    function etatTable(texte, versJeux) {
       let n = contenu.querySelector('.note-table');
-      if (!n) { n = el('p', { className: 'etat note-table' }); n.style.marginTop = '10px'; contenu.appendChild(n); }
-      n.textContent = texte;
+      if (!n) { n = el('div', { className: 'note-table' }); n.style.marginTop = '10px'; contenu.appendChild(n); }
+      n.textContent = '';
+      n.appendChild(el('p', { className: 'etat' }, texte));
+      if (versJeux) {
+        const b = el('button', { type: 'button', className: 'bouton-onglet' }, '🎲 Choisir un jeu');
+        b.addEventListener('click', () => Onglets.aller('jeux'));
+        n.appendChild(b);
+      }
     }
 
     // --- Dans la soirée : les prénoms de ceux qui sont là, et où ---
@@ -757,6 +914,8 @@
 
     function afficher() {
       const s = Soiree.actuelle();
+      document.getElementById('parallele-sans-soiree').hidden = !!s;
+      document.getElementById('pastille-soiree').hidden = !s;
       return s ? avecSoiree(s) : sansSoiree();
     }
 
@@ -773,6 +932,7 @@
     async function rejoindreParLien() {
       const code = (new URLSearchParams(location.search).get('soiree') || '').toUpperCase();
       if (!/^[A-Z]{4}$/.test(code)) return;
+      Onglets.aller('soiree');
       history.replaceState(null, '', location.pathname);
       const actuelle = Soiree.actuelle();
       if (actuelle && actuelle.code === code) return;
