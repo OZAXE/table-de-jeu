@@ -1209,6 +1209,13 @@ function btLePlusVide(etat, absents) {
   return idx;
 }
 
+// Miroir de bt_bornes_cartouches : une à deux cartouches par joueur, 4 à 8
+// jusqu'à 4 joueurs, 8 à 16 à huit.
+function btBornes(etat) {
+  const n = etat.nb_joueurs;
+  return [Math.max(4, n), Math.max(8, 2 * n)];
+}
+
 function btProchain(etat, absents) {
   const n = etat.nb_joueurs;
   for (let k = 0; k < n + 1; k++) {
@@ -1259,6 +1266,8 @@ const serveur = {
       scie_active: e.scie_active,
       annonce_reel: e.annonce_reel,
       annonce_total: e.annonce_total,
+      cartouches_min: btBornes(e)[0],
+      cartouches_max: btBornes(e)[1],
       partis: e.gorgees.map((_, i) => this.absents.has(i)),
       message: e.message || '',
     };
@@ -1283,7 +1292,8 @@ const serveur = {
     total = entier(total);
     reel = entier(reel);
     if (total === null || reel === null) return;
-    total = Math.max(4, Math.min(8, total));
+    const [mini, maxi] = btBornes(e);
+    total = Math.max(mini, Math.min(maxi, total));
     reel = Math.max(0, Math.min(total, reel));
 
     const pile = [];
@@ -1509,7 +1519,7 @@ function clientRecevoir(msg) {
 }
 
 // Le serveur construit `joueurs` à partir de tous les connectés, mais les
-// tableaux de jeu à partir de nb_joueurs. Au-delà de six présents, un
+// tableaux de jeu à partir de nb_joueurs. Au-delà de huit présents, un
 // arrivant n'a pas de place : il regarde. On fait foi des tableaux de jeu.
 function normaliserEtat(etat) {
   const n = etat.gorgees ? etat.gorgees.length : 0;
@@ -1697,8 +1707,9 @@ function animerTir(msg) {
   if (msg.soi) {
     dernierEvenement = (msg.tireur === MOI ? 'Tu te sers' : nomTireur + ' se sert') + ' : ';
   } else {
-    dernierEvenement = (msg.tireur === MOI ? 'Tu sers ' : nomTireur + ' sert ')
-      + (msg.cible === MOI ? 'toi' : nomCible) + ' : ';
+    dernierEvenement = msg.tireur === MOI ? 'Tu sers ' + nomCible + ' : '
+      : msg.cible === MOI ? nomTireur + ' te sert : '
+      : nomTireur + ' sert ' + nomCible + ' : ';
   }
   elRappel.textContent = dernierEvenement + '…';
 
@@ -1738,16 +1749,24 @@ function animerTir(msg) {
 // redemande donc rien), qui a le plus bu, qui s'en sort le mieux.
 function ecranFinManche(msg) {
   if (!gorgeesDebutManche || !msg.joueurs || !window.Soiree || !Soiree.ecranResultat) return;
+  // msg.joueurs liste tous les connectés : les spectateurs (au-delà des
+  // tableaux de jeu) et les places laissées vides, à 0 gorgée, sortaient
+  // « gagnants » de la manche. On ne garde que les joueurs assis et présents.
+  const partis = (etatCourant && etatCourant.partis) || [];
+  const assis = msg.joueurs.filter((nom, i) => i < msg.gorgees.length && !partis[i]);
   const bues = {};
-  msg.joueurs.forEach((nom, i) => { bues[nom] = Math.max(0, (msg.gorgees[i] || 0) - (gorgeesDebutManche[i] || 0)); });
+  assis.forEach(nom => {
+    const i = msg.joueurs.indexOf(nom);
+    bues[nom] = Math.max(0, (msg.gorgees[i] || 0) - (gorgeesDebutManche[i] || 0));
+  });
   const valeurs = Object.values(bues);
   const max = Math.max(...valeurs), min = Math.min(...valeurs);
-  const perdants = max > 0 ? msg.joueurs.filter(n => bues[n] === max) : [];
-  const gagnants = max > min ? msg.joueurs.filter(n => bues[n] === min) : [];
+  const perdants = max > 0 ? assis.filter(n => bues[n] === max) : [];
+  const gagnants = max > min ? assis.filter(n => bues[n] === min) : [];
   const moi = MOI < msg.joueurs.length ? msg.joueurs[MOI] : null;
   const total = valeurs.reduce((a, b) => a + b, 0);
   Soiree.ecranResultat({
-    evt: 'manche', perdants, gagnants, bues, joueurs: msg.joueurs,
+    evt: 'manche', perdants, gagnants, bues, joueurs: assis,
     titre: moi && perdants.includes(moi) ? 'Tournée pour toi !' : moi && gagnants.includes(moi) ? 'Tu t’en sors bien !' : 'Fin de la manche',
     sous: (perdants.length ? perdants.join(' et ') + (perdants.length > 1 ? ' ont' : ' a') + ' le plus bu (' + max + ')' : 'Personne n’a bu')
       + ' · ' + total + ' gorgée' + (total > 1 ? 's' : '') + ' servie' + (total > 1 ? 's' : '') + ' cette manche',
@@ -2105,7 +2124,7 @@ function panneauMenottes(etat) {
 
 function panneauSpectateur() {
   const p = ouvrirPanneau('Spectateur');
-  p.appendChild(aide('La table est pleine : six joueurs au maximum. Tu suis la partie en direct.'));
+  p.appendChild(aide('La table est pleine : huit joueurs au maximum. Tu suis la partie en direct.'));
   const r = rangee();
   r.appendChild(bouton('Quitter le salon', 'sombre', () => {
     enPartie = false; oublierSession(); monJeton = null;
@@ -2218,7 +2237,9 @@ function botRecevoir(index, msg) {
 }
 
 function botComposer(index) {
-  const total = 4 + Math.floor(Math.random() * 5);
+  const e = dernierEtatBot[index] || {};
+  const mini = e.cartouches_min || 4, maxi = e.cartouches_max || 8;
+  const total = mini + Math.floor(Math.random() * (maxi - mini + 1));
   const reel = 1 + Math.floor(Math.random() * (total - 1));
   envoyerIntention(index, { type: 'bt_composer', total, reel });
 }
@@ -2404,7 +2425,7 @@ function panneauEnLigne() {
 
   const l3 = rangee();
   l3.style.marginTop = '10px';
-  l3.appendChild(champTexte('code-salon', 'CODE', 4));
+  l3.appendChild(champTexte('code-salon', 'CODE', 6));
   l3.appendChild(bouton('Rejoindre', 'sombre', rejoindreSalon));
   p.appendChild(l3);
 
@@ -2449,7 +2470,7 @@ async function rejoindreSalon() {
   if (!lireNom()) return;
   const champ = document.getElementById('code-salon');
   codeSalon = (champ ? champ.value : '').trim().toUpperCase();
-  if (codeSalon.length !== 4) { afficherErreur('Le code fait 4 lettres'); return; }
+  if (!/^[A-Z]{4}(-[2-9])?$/.test(codeSalon)) { afficherErreur('Le code fait 4 lettres'); return; }
   afficherErreur('Connexion au serveur...');
   try {
     const rep = await fetch(SERVEURS[serveurChoisi].http + '/salon/' + codeSalon);
