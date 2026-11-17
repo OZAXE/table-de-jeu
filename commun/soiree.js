@@ -107,7 +107,7 @@
     const st = document.createElement('style');
     st.id = 'styles-resultat';
     st.textContent = `
-      .res-voile { position: fixed; inset: 0; z-index: 99980; display: grid; place-items: center; overflow: hidden; padding: 16px;
+      .res-voile { position: fixed; inset: 0; z-index: 99993; display: grid; place-items: center; overflow: hidden; padding: 16px;
         font-family: var(--police, Outfit, system-ui, sans-serif); animation: res-entre 0.35s ease-out both; cursor: pointer; }
       .res-voile.sort { animation: res-sort 0.35s ease-in forwards; }
       .res-voile.perdu { background: radial-gradient(circle at 50% 40%, rgba(170, 16, 26, 0.85), rgba(26, 0, 4, 0.96) 72%); }

@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;600;700&family=Special+Elite&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 <style>
   html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; background: #07110d; }
@@ -203,7 +203,8 @@
 </style>
 <!-- Direction artistique commune « bar moderne » ; accent rose néon pour Undercover. -->
 <link rel="stylesheet" href="da/bar-moderne.css">
-<style>:root { --accent: #f472b6; --accent-2: #be185d; }</style>
+<link rel="stylesheet" href="da/themes/interrogatoire.css">
+<link rel="stylesheet" href="da/mise-en-page.css">
 </head>
 <body>
 
@@ -294,6 +295,15 @@ import {
   preparerAmbiance, lisser as lisserScene, creerDecorBar, dessinerEtiquette as dessinerPastille,
   quandPoliceChargee, creerSousVerre, creerTableRonde, POLICE,
 } from './da/bar-moderne.js';
+import { modeLeger, optionsRendu, reglerRendu, surveillerFluidite } from './da/qualite.js';
+import { suivreZoneLibre } from './da/cadrage.js';
+import {
+  FOND as FOND_SALLE, POLICE_TEXTE, preparerAmbianceInterrogatoire, creerTableInterrogatoire, creerDecorInterrogatoire,
+  creerChaiseInterrogatoire, dessinerEtiquetteInterrogatoire, quandPolicesInterrogatoire,
+} from './da/themes/interrogatoire.js';
+
+// Version légère (interrupteur de l'accueil) : même salle, moins de détails.
+const LEGER = modeLeger();
 
 const ACCENT = 0xf472b6;   // rose néon d'Undercover, comme sur l'accueil
 
@@ -343,8 +353,11 @@ const FAMILLES = {
 // SCÈNE / CAMÉRA / RENDU (même cadrage que le Menteur)
 // =====================================================================
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x07110d);
-scene.fog = new THREE.FogExp2(0x07110d, 0.075);
+scene.background = new THREE.Color(FOND_SALLE);
+scene.fog = new THREE.FogExp2(FOND_SALLE, 0.075);
+
+// La table tient dans la zone libre de l'écran (da/cadrage.js).
+const zone = suivreZoneLibre(() => { majCadrageTable(camera); camObjectifPos = CAM_POS.clone(); });
 
 const CAM_CIBLE = new THREE.Vector3(0, 0.35, 0);
 const LARGEUR_VUE = 2.3;
@@ -354,12 +367,12 @@ const CAM_POS = new THREE.Vector3(0, 3.0, 5.0);
 function distanceCadrage(cam) {
   const vHalf = THREE.MathUtils.degToRad(cam.fov) / 2;
   const hHalf = Math.atan(Math.tan(vHalf) * cam.aspect);
-  return Math.max(LARGEUR_VUE / Math.tan(hHalf), HAUTEUR_VUE / Math.tan(vHalf), 4.2);
+  return Math.max(LARGEUR_VUE / (Math.tan(hHalf) * zone.c.fracL), HAUTEUR_VUE / (Math.tan(vHalf) * zone.c.fracH), 4.2);
 }
 const FOG_DENSITE_MAX = 0.075;
 function majCadrageTable(cam) {
   const d = distanceCadrage(cam);
-  const dir = new THREE.Vector3(0, 0.62, 0.78).normalize();
+  const dir = new THREE.Vector3(0, 0.56, 0.83).normalize();
   CAM_POS.copy(CAM_CIBLE).addScaledVector(dir, d);
   if (scene.fog) scene.fog.density = Math.min(FOG_DENSITE_MAX, 0.536 / d);
 }
@@ -374,10 +387,9 @@ camObjectifPos = CAM_POS.clone();
 camera.position.copy(CAM_POS);
 camera.lookAt(camCibleActuelle);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer(optionsRendu());
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
+reglerRendu(renderer);
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -388,6 +400,7 @@ function redimensionner() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  zone.recalculer();
   majCadrageTable(camera);
   camObjectifPos = CAM_POS.clone();
   camObjectifCible = CAM_CIBLE.clone();
@@ -399,14 +412,14 @@ scene.add(new THREE.AmbientLight(0x2a2a30, 1.0));
 const keyLight = new THREE.DirectionalLight(0xffd6a8, 3.0);
 keyLight.position.set(0.8, 3.4, 1.2);
 keyLight.target.position.set(0, 0.3, 0);
-keyLight.castShadow = true;
-keyLight.shadow.mapSize.set(2048, 2048);
+keyLight.castShadow = !LEGER;
+keyLight.shadow.mapSize.set(1024, 1024);
 Object.assign(keyLight.shadow.camera, { left: -3.4, right: 3.4, top: 3.4, bottom: -3.4, near: 0.5, far: 9 });
 scene.add(keyLight, keyLight.target);
-preparerAmbiance(renderer, scene, { accent: ACCENT });
+preparerAmbianceInterrogatoire(renderer, scene, { leger: LEGER });
 
 // Noyer, tapis prune, cerclage laiton.
-const { groupe: table } = creerTableRonde(R_TABLE, { rayonFeutre: R_FEUTRE, feutreCouleur: 0x2a1030 });
+const { groupe: table } = creerTableInterrogatoire(R_TABLE, { rayonFeutre: R_FEUTRE, leger: LEGER });
 scene.add(table);
 
 // Le projecteur suit celui qui parle : un halo rose posé sur le tapis.
@@ -418,7 +431,7 @@ halo.rotation.x = -Math.PI / 2;
 halo.position.y = 0.016;
 scene.add(halo);
 
-creerDecorBar(scene, { accent: ACCENT, nom: 'UNDERCOVER', solY: -1.2 });
+const decor = creerDecorInterrogatoire(scene, { nom: 'UNDERCOVER', solY: -1.2, leger: LEGER });
 
 // =====================================================================
 // CARTES DES JOUEURS (dos « ? » ; face = le rôle, à l'élimination)
@@ -511,7 +524,7 @@ function creerCarte() {
 // ÉTIQUETTES ET ICÔNES (sprites face caméra)
 // =====================================================================
 function dessinerEtiquette(ctx, texte, actif, absent) {
-  dessinerPastille(ctx, texte, { actif, absent, accent: ACCENT });
+  dessinerEtiquetteInterrogatoire(ctx, texte, { actif, absent });
 }
 function creerEtiquette(texte) {
   const c = document.createElement('canvas');
@@ -532,6 +545,11 @@ function majEtiquette(sprite, texte, actif, absent) {
   dessinerEtiquette(sprite.material.map.image.getContext('2d'), texte, actif, absent);
   sprite.material.map.needsUpdate = true;
 }
+quandPolicesInterrogatoire(() => sieges.forEach(st => {
+  const d = st.etiquette.userData.dernier;
+  st.etiquette.userData.cle = null;
+  if (d) majEtiquette(st.etiquette, ...d); else majEtiquette(st.etiquette, st.nom, false, false);
+}));
 quandPoliceChargee(() => sieges.forEach(st => {
   const d = st.etiquette.userData.dernier;
   st.etiquette.userData.cle = null;
@@ -696,7 +714,9 @@ function creerSieges(noms) {
     icone.position.set(base.x, 0.86, base.z);
     majIcone(icone, null);
 
-    groupe.add(avatar, chope, carte, etiquette, icone);
+    // Une chaise derrière chaque place : c'est elle qui fait lire « table ».
+    const chaise = creerChaiseInterrogatoire(dir, 2.42, -1.2);
+    groupe.add(avatar, chope, carte, etiquette, icone, chaise);
     scene.add(groupe);
     lisserScene(groupe);
 
@@ -1924,7 +1944,15 @@ function boucle() {
 
   camera.position.lerp(camObjectifPos, CAM_VITESSE);
   camCibleActuelle.lerp(camObjectifCible, CAM_VITESSE);
+  decor.animer(t);
+  // Plus la caméra recule, plus les prénoms grossissent (lisibles sans se toucher).
+  const recul = THREE.MathUtils.clamp(camera.position.distanceTo(camCibleActuelle) / 6.2, 1, 1.4);
+  sieges.forEach(st => {
+    const e = sieges.length > 10 ? 0.7 : sieges.length > 7 ? 0.85 : 1;
+    st.etiquette.scale.set(0.9 * e * recul, 0.225 * e * recul, 1);
+  });
   camera.lookAt(camCibleActuelle);
+  zone.appliquer(camera);
   renderer.render(scene, camera);
 }
 
@@ -1950,7 +1978,9 @@ if (salonDansUrl && /^[A-Za-z]{4}(-[2-9])?$/.test(salonDansUrl)) {
   panneauAccueil();
 }
 lisserScene(scene);
+zone.mesurer();
 boucle();
+surveillerFluidite();
 </script>
 <script>
   // Appli installable (PWA) : voir service-worker.js
