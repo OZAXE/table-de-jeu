@@ -1099,9 +1099,9 @@ function majSurbrillance() {
 // =====================================================================
 const BT_OBJETS = [
   { id: 'loupe',     nom: 'Loupe',     icone: '🔍' },
-  { id: 'telephone', nom: 'Telephone', icone: '📱' },
+  { id: 'telephone', nom: 'Téléphone', icone: '📱' },
   { id: 'inverseur', nom: 'Inverseur', icone: '🔄' },
-  { id: 'biere',     nom: 'Biere',     icone: '🍺' },
+  { id: 'biere',     nom: 'Bière',     icone: '🍺' },
   { id: 'menottes',  nom: 'Menottes',  icone: '🔒' },
   { id: 'scie',      nom: 'Scie',      icone: '🪚' },
 ];
@@ -1177,7 +1177,7 @@ const serveur = {
     this.noms = noms;
     const nb = noms.length;
     if (nb < 2) { this.diffuser({ type: 'erreur', message: 'Buckshot demande au moins 2 joueurs.' }); return; }
-    if (nb > 8) { this.diffuser({ type: 'erreur', message: 'Buckshot se joue a 8 joueurs maximum.' }); return; }
+    if (nb > 8) { this.diffuser({ type: 'erreur', message: 'Buckshot se joue à 8 joueurs maximum.' }); return; }
     this.etat = btInitialiser(nb);
     this.etat.chargeur = btLePlusVide(this.etat, this.absents);
     this.diffuser({ type: 'bt_demarree', joueurs: noms.slice() });
@@ -1246,7 +1246,7 @@ const serveur = {
     e.annonce_total = total;
     e.courant = e.chargeur;
     e.phase = 'objets';
-    e.message = 'Nouvelle manche : ' + reel + ' reelle(s) sur ' + total + '.';
+    e.message = 'Nouvelle manche : ' + reel + ' réelle(s) sur ' + total + '.';
     this.diffuser(this.etatPublic());
   },
 
@@ -1266,7 +1266,7 @@ const serveur = {
 
     } else if (o.id === 'telephone') {
       o.utilise = true;
-      e.message = nom + ' utilise le Telephone.';
+      e.message = nom + ' utilise le Téléphone.';
       if (e.pile.length) {
         let pos = 0;
         if (e.pile.length > 1) pos = 1 + Math.floor(Math.random() * (e.pile.length - 1));
@@ -1283,7 +1283,7 @@ const serveur = {
     } else if (o.id === 'biere') {
       o.utilise = true;
       if (e.pile.length) e.pile.shift();
-      e.message = nom + ' defausse la carte du dessus.';
+      e.message = nom + ' défausse la carte du dessus.';
       if (!e.pile.length) { this.mancheFin(); return; }
       this.diffuser(this.etatPublic());
 
@@ -1336,7 +1336,7 @@ const serveur = {
     const e = this.etat;
     e.chargeur = btLePlusVide(e, this.absents);
     e.phase = 'composition';
-    e.message = 'Manche terminee.';
+    e.message = 'Manche terminée.';
     this.diffuser({ type: 'bt_manche_fin', joueurs: this.noms.slice(), gorgees: e.gorgees.slice(), chargeur: e.chargeur });
     this.diffuser(this.etatPublic());
   },

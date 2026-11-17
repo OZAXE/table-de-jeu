@@ -1041,7 +1041,7 @@ const serveur = {
     const e = this.etat;
     if (index !== e.joueur_courant) return;
     if (!SCORES_ANNONCABLES.includes(score)) {
-      this.prive(index, { type: 'erreur', message: 'Ce score ne peut pas etre annonce.' });
+      this.prive(index, { type: 'erreur', message: 'Ce score ne peut pas être annoncé.' });
       return;
     }
     e.score_annonce = score;
@@ -1764,7 +1764,7 @@ function panneauRejoindreDirect(code) {
 
   const l1 = document.createElement('div');
   l1.className = 'rangee';
-  const pseudo = champTexte('pseudo', 'Ton prenom', 16);
+  const pseudo = champTexte('pseudo', 'Ton prénom', 16);
   pseudo.value = monNom;
   l1.appendChild(pseudo);
   p.appendChild(l1);
@@ -1807,7 +1807,7 @@ function panneauEnLigne() {
 
   const l1 = document.createElement('div');
   l1.className = 'rangee';
-  const pseudo = champTexte('pseudo', 'Ton prenom', 16);
+  const pseudo = champTexte('pseudo', 'Ton prénom', 16);
   pseudo.value = monNom;
   l1.appendChild(pseudo);
   p.appendChild(l1);
@@ -1815,7 +1815,7 @@ function panneauEnLigne() {
   const l2 = document.createElement('div');
   l2.className = 'rangee';
   l2.style.marginTop = '10px';
-  l2.appendChild(bouton('Creer un salon', '', creerSalon));
+  l2.appendChild(bouton('Créer un salon', '', creerSalon));
   p.appendChild(l2);
 
   const l3 = document.createElement('div');
@@ -1853,7 +1853,7 @@ function lireNom() {
   const champ = document.getElementById('pseudo');
   monNom = champ ? champ.value.trim() : '';
   if (monNom) monNom = Soiree.definirNom(monNom);
-  if (!monNom) { afficherErreur('Entre ton prenom'); return false; }
+  if (!monNom) { afficherErreur('Entre ton prénom'); return false; }
   return true;
 }
 
@@ -2003,7 +2003,7 @@ function panneauRemplace() {
 
 function panneauReconnexion() {
   elMessage.textContent = 'Connexion perdue';
-  const p = ouvrirPanneau('Deconnecte');
+  const p = ouvrirPanneau('Déconnecté');
   const t = document.createElement('p');
   t.textContent = 'Ta place est gardee : les autres continuent sans toi en attendant.';
   p.appendChild(t);
@@ -2107,7 +2107,7 @@ function panneauAttente() {
   r.className = 'rangee';
   r.style.marginTop = '12px';
   if (estCreateur) {
-    const b = bouton('Demarrer la partie', '', () =>
+    const b = bouton('Démarrer la partie', '', () =>
       Soiree.lancer('kinito', () => envoyerIntention(MOI, { type: 'demarrer', difficulte: difficulteChoisie })));
     b.disabled = joueursSalon.length < 2;
     r.appendChild(b);
