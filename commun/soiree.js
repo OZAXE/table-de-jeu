@@ -540,9 +540,9 @@
     const cadreOuvert = calque.querySelector('iframe');
     if (p.message) try { cadreOuvert.contentWindow.postMessage(p.message + ':reprise', '*'); } catch (e) { /* tant pis */ }
   }
-  // Chaque onglet n'apparaît que si son jeu tourne dans la soirée (couche
-  // « enq » pour l'Enquête, « bng » pour le Bingo), et disparaît quand il est
-  // fermé. Revérifié toutes les 30 s et au retour sur l'appli : une enquête
+  // Chaque onglet n'apparaît que si son jeu est en cours dans la soirée
+  // (couche « enq » pour l'Enquête, « bng » pour le Bingo), et disparaît
+  // quand il se termine. Revérifié toutes les 30 s et au retour sur l'appli : une enquête
   // lancée pendant la partie fait apparaître sa loupe sans recharger.
   const COUCHES = { enquete: 'enq', bingo: 'bng' };
   let suiviParalleles = null;
@@ -552,7 +552,10 @@
     if (s) {
       try {
         const info = await Soiree.infoSoiree(s.code, s.serveur, Soiree.nom(), s.table);
-        couches = info.existe ? info.couches || [] : [];
+        // Seulement les jeux LANCÉS (pas une enquête restée en salle
+        // d'attente ni un bingo terminé). Ancien serveur sans cette liste :
+        // aucun onglet plutôt que des onglets fantômes.
+        couches = info.existe ? info.couches_en_cours || [] : [];
       } catch (e) { return; }      // serveur injoignable : on ne touche à rien
     }
     Object.entries(COUCHES).forEach(([cle, couche]) => {
