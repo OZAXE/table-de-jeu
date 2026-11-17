@@ -1199,6 +1199,13 @@ function livrer(index, msg) {
   else botRecevoir(index, msg);
 }
 
+// Redemande l'état complet de la partie au serveur (en ligne seulement).
+function demanderEtat() {
+  if (mode === 'ligne' && ws && ws.readyState === WebSocket.OPEN) {
+    try { ws.send('{"type":"resync"}'); } catch (e) { /* elle se fermera */ }
+  }
+}
+
 // Unique point de bascule entre le moteur local et le vrai serveur.
 function envoyerIntention(index, msg) {
   if (mode === 'ligne') {
@@ -1222,6 +1229,7 @@ let premiereAnnonceLocale = true;
 // Liste autorisee telle que le serveur la donne : c'est lui qui fait autorite.
 let scoresPossibles = SCORES_ANNONCABLES;
 let dernierOral = null;      // annonce entendue (artifice prototype)
+let resultatCompte = null;   // dernier fin_manche déjà ajouté aux compteurs
 
 function libelleScore(s) {
   if (s === 21) return { n: '21', sub: 'Kinito' };
@@ -1251,6 +1259,11 @@ function clientRecevoir(msg) {
     case 'joueur_rejoint':
       joueursSalon = msg.joueurs;
       if (enPartie && msg.retour) elRappel.textContent = msg.nom + ' est revenu.';
+      // Partie en attente (moins de deux présents) : le retour la relance,
+      // mais le serveur n'envoie le nouvel état qu'au revenant. Sans ce
+      // resync, les autres restaient sur « plus assez de joueurs », le
+      // revenant noté parti, et personne n'avait la main : partie figée.
+      if (enPartie && msg.retour && etatCourant && etatCourant.phase === 'attente') demanderEtat();
       if (!enPartie) panneauAttente();
       break;
 
@@ -1357,13 +1370,25 @@ function appliquerEtat(etat) {
     });
   });
   placerGobelet(etat.joueur_courant);
-  montrerDes(false);
+  // Pendant MON annonce, un état (arrivée d'un joueur...) ne doit pas faire
+  // disparaître mes dés : « Regarder les dés » montrerait un gobelet vide.
+  if (!(etat.phase === 'annonce' && etat.joueur_courant === MOI)) montrerDes(false);
+  if (etat.phase !== 'resultat') resultatCompte = null;
 
   if (etat.message) elMessage.textContent = etat.message;
   const sensTxt = etat.sens === 1 ? '↻ horaire' : '↺ anti-horaire';
   const prec = etat.premiere_annonce ? 'aucune annonce à battre' : `à battre : ${etat.annonce_precedente}`;
   const diff = etat.difficulte ? ` · ${etat.difficulte}` : '';
   elRappel.textContent = `${sensTxt} · ${prec}${diff}`;
+
+  // Plus assez de joueurs : la partie attend un retour. Les boutons encore
+  // ouverts (réagir, annoncer...) ne mèneraient plus à rien.
+  if (etat.phase === 'attente') {
+    cacherPanneau();
+    elMessage.textContent = etat.message || 'Il ne reste plus assez de joueurs.';
+    elRappel.textContent = 'La partie reprend dès que quelqu’un revient ou rejoint.';
+    return;
+  }
 
   if (etat.phase !== 'lancer') return;
 
@@ -1518,10 +1543,13 @@ function panneauReaction(annonceur, premiereAnnonce) {
   }
   p.appendChild(r);
 
-  const note = document.createElement('div');
-  note.className = 'note';
-  note.textContent = 'Prototype : en ligne, l\'annonce est dite à l\'oral, le serveur ne la transmet pas.';
-  p.appendChild(note);
+  // L'annonce est affichée quand le serveur la transmet ; sinon elle se dit à l'oral.
+  if (dernierOral === null) {
+    const note = document.createElement('div');
+    note.className = 'note';
+    note.textContent = 'L\'annonce se dit à voix haute : écoute bien avant de réagir.';
+    p.appendChild(note);
+  }
 }
 
 function panneauMoins(annonceur) {
@@ -1556,7 +1584,12 @@ function panneauResultat(msg) {
   const iPerdant = msg.index_perdant !== undefined
     ? msg.index_perdant
     : sieges.findIndex(s => s.nom === msg.perdant);
-  if (sieges[iPerdant] && typeof msg.gorgees === 'number') {
+  // Le serveur renvoie le même résultat à chaque reconnexion ou resync
+  // pendant l'écran de fin de manche : on ne le compte qu'une fois.
+  const cle = JSON.stringify(msg);
+  const dejaCompte = cle === resultatCompte;
+  resultatCompte = cle;
+  if (!dejaCompte && sieges[iPerdant] && typeof msg.gorgees === 'number') {
     sieges[iPerdant].gorgees += msg.gorgees;
     if (etatCourant) majListeJoueurs(etatCourant);
   }
@@ -1862,7 +1895,7 @@ function panneauEnLigne() {
   const l3 = document.createElement('div');
   l3.className = 'rangee';
   l3.style.marginTop = '10px';
-  l3.appendChild(champTexte('code-salon', 'CODE', 4));
+  l3.appendChild(champTexte('code-salon', 'CODE', 6));
   l3.appendChild(bouton('Rejoindre', 'sombre', rejoindreSalon));
   p.appendChild(l3);
 
@@ -1915,7 +1948,7 @@ async function rejoindreSalon() {
   if (!lireNom()) return;
   const champ = document.getElementById('code-salon');
   codeSalon = (champ ? champ.value : '').trim().toUpperCase();
-  if (codeSalon.length !== 4) { afficherErreur('Le code fait 4 lettres'); return; }
+  if (!/^[A-Z]{4}(-[2-9])?$/.test(codeSalon)) { afficherErreur('Le code fait 4 lettres'); return; }
   afficherErreur('Connexion au serveur...');
   try {
     const rep = await fetch(SERVEURS[serveurChoisi].http + '/salon/' + codeSalon);
@@ -2161,10 +2194,14 @@ function panneauAttente() {
 }
 
 function demarrerScene(noms) {
+  // Le serveur renvoie partie_demarree à CHAQUE reconnexion (téléphone
+  // verrouillé, réseau changé...) : on garde alors les compteurs de la
+  // partie en cours au lieu de les remettre à zéro.
+  const anciens = enPartie ? new Map(sieges.map(s => [s.nom, s.gorgees])) : new Map();
   enPartie = true;
   cacherPanneau();
   creerSieges(noms);
-  sieges.forEach(s => { s.gorgees = 0; });
+  sieges.forEach(s => { s.gorgees = anciens.get(s.nom) || 0; });
   placerGobelet(MOI, true);
   vueTable();
 }
@@ -2268,7 +2305,7 @@ placerGobelet(0, true);
 
 // Page servie en local : on vise le serveur local par defaut, ca evite
 // d'avoir a basculer le reglage a chaque essai.
-if (/^(localhost|127.0.0.1|[::1])$/.test(location.hostname)) serveurChoisi = 'local';
+if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) serveurChoisi = 'local';
 
 const salonDansUrl = new URLSearchParams(location.search).get('salon');
 // Code de table : ABCD (table 1 de la soirée) ou ABCD-2 ... ABCD-9.
