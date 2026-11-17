@@ -91,6 +91,17 @@
     box-shadow: 0 10px 30px rgba(40, 60, 80, 0.22); text-align: center; box-sizing: border-box;
   }
   #panneau.cache { display: none; }
+  /* Bouton pour réduire le panneau et regarder le plateau (qui a quoi). */
+  #panneau .reduire {
+    position: absolute; top: 8px; right: 8px; padding: 3px 9px; font-size: 13px; box-shadow: none;
+  }
+  #panneau.a-reduire h2 { padding: 0 92px; }
+  /* Réduit : il ne reste qu'une pastille avec le titre, pour revenir. */
+  #panneau.reduit { min-width: 0; padding: 8px 14px; cursor: pointer; max-height: none; overflow: visible; }
+  #panneau.reduit > :not(h2):not(.delai) { display: none; }
+  #panneau.reduit .delai { margin-top: 2px; }
+  #panneau.reduit h2 { margin: 0; padding: 0; font-size: 16px; }
+  #panneau.reduit h2::after { content: '  ▲ Revenir'; font-size: 13px; font-weight: 600; color: var(--accent-fonce); white-space: nowrap; }
   #panneau h2 { margin: 0 0 8px; font-size: 20px; font-weight: 700; }
   #panneau p { margin: 0 0 10px; font-size: 16px; }
   .rangee { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 6px 0; }
@@ -3097,7 +3108,7 @@ let repartition = {};             // brouillon du Sommelier
 let brouillon = null;             // brouillon d'échange
 const boutonsActifs = [];         // les boutons du panneau (le test de fumée les « clique »)
 
-function cacherPanneau() { elPanneau.className = 'cache'; elPanneau.innerHTML = ''; boutonsActifs.length = 0; }
+function cacherPanneau() { titreReduit = null; elPanneau.className = 'cache'; elPanneau.innerHTML = ''; boutonsActifs.length = 0; }
 
 function bouton(texte, classe, onClick) {
   const b = document.createElement('button');
@@ -3108,6 +3119,11 @@ function bouton(texte, classe, onClick) {
   return b;
 }
 
+// Titre du panneau que le joueur a réduit pour regarder le plateau. Il reste
+// réduit tant que le panneau garde ce titre (une hypothèque redessine le
+// panneau sans changer la situation) ; une nouvelle situation le rouvre.
+let titreReduit = null;
+
 function ouvrirPanneau(titre) {
   elPanneau.className = '';
   elPanneau.innerHTML = '';
@@ -3116,9 +3132,24 @@ function ouvrirPanneau(titre) {
     const h = document.createElement('h2');
     h.textContent = titre;
     elPanneau.appendChild(h);
-  }
+    elPanneau.classList.add('a-reduire');
+    const b = document.createElement('button');
+    b.className = 'clair reduire';
+    b.textContent = '👁 Plateau';
+    b.title = 'Réduire pour voir le plateau';
+    b.addEventListener('click', ev => { ev.stopPropagation(); titreReduit = titre; elPanneau.classList.add('reduit'); });
+    elPanneau.appendChild(b);
+    if (titreReduit === titre) elPanneau.classList.add('reduit');
+    else titreReduit = null;
+  } else titreReduit = null;
   return elPanneau;
 }
+
+elPanneau.addEventListener('click', () => {
+  if (!elPanneau.classList.contains('reduit')) return;
+  titreReduit = null;
+  elPanneau.classList.remove('reduit');
+});
 
 function aide(texte) {
   const d = document.createElement('p');
