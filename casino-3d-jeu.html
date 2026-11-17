@@ -1161,7 +1161,7 @@ function clientRecevoir(msg) {
       MOI = msg.index;
       if (msg.jeton) {
         monJeton = msg.jeton;
-        ecrireSession({ code: codeSalon, nom: monNom, jeton: monJeton, serveur: serveurChoisi });
+        ecrireSession({ code: codeSalon, nom: monNom, jeton: monJeton, serveur: serveurChoisi, createur: estCreateur });
       }
       if (!enPartie) panneauAttente();
       break;
@@ -1870,8 +1870,11 @@ function panneauBlackjack(etat) {
     p.appendChild(choixJetons(etat));
     const r1 = rangee();
     const m = miseAjustee(etat);
-    r1.appendChild(bouton(valeurJeton === 'tout' ? 'Tapis : miser ' + m : 'Miser ' + m, '',
-      () => agir(valeurJeton === 'tout' ? { type: 'cs_bj_miser', tapis: true } : { type: 'cs_bj_miser', montant: m })));
+    const bMiser = bouton(valeurJeton === 'tout' ? 'Tapis : miser ' + m : 'Miser ' + m, '',
+      () => agir(valeurJeton === 'tout' ? { type: 'cs_bj_miser', tapis: true } : { type: 'cs_bj_miser', montant: m }));
+    // Sous la mise minimum (tout est déjà sur le tapis), le serveur refuse.
+    bMiser.disabled = m < (etat.regles ? etat.regles.mise_min : 10);
+    r1.appendChild(bMiser);
     if (valeurJeton !== 'tout' && etat.jetons[MOI] > 0) {
       r1.appendChild(bouton('All in (' + etat.jetons[MOI] + ')', 'danger', () => agir({ type: 'cs_bj_miser', tapis: true })));
     }
@@ -1965,7 +1968,9 @@ function panneauPoker(etat) {
     const maxTotal = t.mise_tour[MOI] + pile;
     const minTotal = Math.min(maxTotal, t.mise_max + t.relance_min);
     if (montantRelance === null || montantRelance < minTotal || montantRelance > maxTotal) montantRelance = minTotal;
-    p.appendChild(aide(du > 0 ? 'Il faut ' + du + ' pour suivre (mise à ' + t.mise_max + ').' : 'Personne n’a misé : tu peux checker.'));
+    p.appendChild(aide(du > 0 ? 'Il faut ' + du + ' pour suivre (mise à ' + t.mise_max + ').'
+      : t.mise_max > 0 ? 'Tu as déjà ' + t.mise_max + ' devant toi : tu peux checker ou relancer.'
+        : 'Personne n’a misé : tu peux checker.'));
     const r = rangee();
     r.appendChild(bouton('Se coucher', 'danger', () => agir({ type: 'cs_pk_coucher' })));
     r.appendChild(bouton(du <= 0 ? 'Check' : du >= pile ? 'Tapis ' + pile : 'Suivre ' + du, 'vert', () => agir({ type: 'cs_pk_suivre' })));
@@ -2090,7 +2095,8 @@ function panneauAccueil() {
     r2.appendChild(bouton('Reprendre la partie ' + s.code, 'sombre', () => {
       monNom = s.nom; codeSalon = s.code; monJeton = s.jeton;
       serveurChoisi = s.serveur || 'render';
-      estCreateur = false;
+      // Le créateur garde son bouton « Ouvrir le casino » après une coupure.
+      estCreateur = !!s.createur;
       afficherErreur('Reconnexion...');
       seConnecter();
     }));

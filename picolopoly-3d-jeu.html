@@ -2730,7 +2730,7 @@ function clientRecevoir(msg) {
       MOI = msg.index;
       if (msg.jeton) {
         monJeton = msg.jeton;
-        ecrireSession({ code: codeSalon, nom: monNom, jeton: monJeton, serveur: serveurChoisi });
+        ecrireSession({ code: codeSalon, nom: monNom, jeton: monJeton, serveur: serveurChoisi, createur: estCreateur });
       }
       if (!enPartie) panneauAttente();
       break;
@@ -2946,6 +2946,13 @@ function appliquerEtat(e) {
       || JSON.stringify(avant.attente) !== JSON.stringify(e.attente) || !!avant.dette !== !!e.dette) {
     vuePanneau = 'principal';
   }
+  // Un choix neuf repart d'un brouillon vide. Sans ça, un Sommelier joué par
+  // défaut (délai écoulé) laissait sa répartition au suivant : les gorgées
+  // fantômes faussaient le total, le serveur refusait « Servir » en boucle.
+  if (!avant || JSON.stringify(avant.attente) !== JSON.stringify(e.attente)) repartition = {};
+  // La difficulté proposée à la relance part de celle de la partie (après un
+  // rechargement, difficulteChoisie était revenue à « normal »).
+  if (!avant || avant.difficulte !== e.difficulte) difficulteChoisie = difficulteCourante();
   majPanneau();
   if (ficheOuverte !== null) afficherFiche(ficheOuverte);
 }
@@ -3345,7 +3352,9 @@ function panneauChoix(e, a) {
     p.appendChild(aide('Tu as une carte « Sortie de prison ». En prison, aucune carte ne peut te viser — mais tu n’avances plus.'));
     const r = rangee();
     r.appendChild(bouton('🗝️ Utiliser la carte', '', () => envoyer({ type: 'pp_choix', valeur: true })));
-    r.appendChild(bouton('Aller en prison (1 gorgée)', 'clair', () => envoyer({ type: 'pp_choix', valeur: false })));
+    const gPrison = regleCourante().prison;
+    r.appendChild(bouton('Aller en prison' + (gPrison > 0 ? ' (' + gPrison + ' gorgée' + (gPrison > 1 ? 's' : '') + ')' : ''), 'clair',
+      () => envoyer({ type: 'pp_choix', valeur: false })));
     p.appendChild(r);
   } else if (a.type === 'echange') {
     const pr = a.proposition;
@@ -3366,7 +3375,8 @@ function panneauChoix(e, a) {
     ligne('Tu reçois', pr.donne, pr.argent_donne);
     ligne('Tu donnes', pr.recoit, pr.argent_recu);
     const r = rangee();
-    r.appendChild(bouton('Accepter (toast !)', '', () => envoyer({ type: 'pp_choix', valeur: true })));
+    // Pas de toast d'échange en Facile (PP_DIFFICULTES.facile.echange = 0).
+    r.appendChild(bouton(regleCourante().echange > 0 ? 'Accepter (toast !)' : 'Accepter', '', () => envoyer({ type: 'pp_choix', valeur: true })));
     r.appendChild(bouton('Refuser', 'clair', () => envoyer({ type: 'pp_choix', valeur: false })));
     p.appendChild(r);
   }
@@ -3530,7 +3540,10 @@ function panneauFin(e) {
   });
   p.appendChild(t);
   const r = rangee();
-  if (estCreateur) r.appendChild(bouton('Relancer une partie', '', () => envoyer({ type: 'pp_demarrer', difficulte: difficulteCourante() })));
+  // La relance pouvait seulement rejouer la même difficulté : le créateur
+  // la choisit ici, comme en salle d'attente.
+  if (estCreateur) p.appendChild(rangeeDifficulte(() => panneauFin(e)));
+  if (estCreateur) r.appendChild(bouton('Relancer une partie', '', () => envoyer({ type: 'pp_demarrer', difficulte: difficulteChoisie })));
   else p.appendChild(aide('Le créateur du salon peut relancer une partie.'));
   r.appendChild(bouton('Quitter', 'clair', () => { oublierSession(); if (ws) { try { ws.close(); } catch (x) { /* déjà fermée */ } } location.href = location.pathname; }));
   r.appendChild(bouton('🎲 Tous les jeux', 'clair', () => { oublierSession(); location.href = 'index.html'; }));
@@ -3934,7 +3947,9 @@ function panneauAccueil() {
     r2.appendChild(bouton('Reprendre la partie ' + s.code, 'clair', () => {
       monNom = s.nom; codeSalon = s.code; monJeton = s.jeton;
       serveurChoisi = s.serveur || 'render';
-      estCreateur = false;
+      // Le créateur garde ses droits (démarrer, relancer) après une coupure :
+      // sinon plus personne ne pouvait relancer la partie.
+      estCreateur = !!s.createur;
       afficherErreur('Reconnexion...');
       seConnecter();
     }));
