@@ -891,7 +891,7 @@ function clientRecevoir(msg) {
       MOI = msg.index;
       if (msg.jeton) {
         monJeton = msg.jeton;
-        ecrireSession({ code: codeSalon, nom: monNom, jeton: monJeton, serveur: serveurChoisi });
+        ecrireSession({ code: codeSalon, nom: monNom, jeton: monJeton, serveur: serveurChoisi, createur: estCreateur });
       }
       if (!enPartie) panneauAttente();
       break;
@@ -948,6 +948,9 @@ function appliquerEtat(etat) {
   }
   etatCourant = etat;
   echeanceLocale = etat.delai === null || etat.delai === undefined ? null : Date.now() + etat.delai * 1000;
+  // « Rejouer » repart de la famille de mots de la partie (après un
+  // rechargement, elle était revenue à Classique).
+  if ((!avant || avant.famille !== etat.famille) && FAMILLES[etat.famille]) familleChoisie = etat.famille;
 
   // Un nouveau scrutin efface mon vote local.
   const cle = etat.phase === 'vote' ? etat.tour + ':' + (etat.departage || []).join(',') : '';
@@ -970,7 +973,7 @@ function appliquerEtat(etat) {
     majMort(s, !etat.vivants[i]);
     if (etat.roles[i] && !(finNouvelle && etat.vivants[i])) retournerCarte(s, etat.roles[i], false);
   });
-  if (finNouvelle) annoncerFin(etat);
+  if (finNouvelle) { dernierEvenement = ''; annoncerFin(etat); }
 
   majSurbrillance();
   majIcones(etat);
@@ -1384,8 +1387,16 @@ function panneauFin(etat) {
   p.appendChild(blocMotsReveles(etat));
   p.appendChild(bilan(etat));
   p.appendChild(aide('Une autre ? Ceux qui sont arrivés en cours de partie s’assoient.'));
-  p.appendChild(blocReglage(joueursSalon.length || etat.joueurs.length, () => panneauFin(etat)));
-  const ok = repartitionValide(joueursSalon.length || etat.joueurs.length, nbUndercover, nbWhite);
+  const n = joueursProchainePartie(etat);
+  p.appendChild(blocReglage(Math.max(n, JOUEURS_MIN), () => panneauFin(etat)));
+  const ok = n >= JOUEURS_MIN && n <= JOUEURS_MAX && repartitionValide(n, nbUndercover, nbWhite);
+  if (n < JOUEURS_MIN) p.appendChild(aide('Il faut au moins ' + JOUEURS_MIN + ' joueurs présents pour rejouer.'));
+  else if (n > JOUEURS_MAX) {
+    const al = document.createElement('div');
+    al.className = 'alerte';
+    al.textContent = 'Vous êtes ' + n + ' : Undercover se joue à ' + JOUEURS_MAX + ' au plus.';
+    p.appendChild(al);
+  }
   const rg = rangee();
   const b = bouton('Rejouer', '', () => agir(messageDemarrer()));
   b.disabled = !ok;
@@ -1418,10 +1429,23 @@ function repartitionValide(n, u, w) {
   const inf = u + w;
   return u >= 0 && w >= 0 && inf >= 1 && n - inf >= inf + 1;
 }
+// Un réglage perso est gardé tel quel, même invalide, tant que la table ne
+// change pas : l'alerte s'affiche et le bouton reste grisé (avant, il revenait
+// en silence au conseillé et le message d'erreur ne se voyait jamais). Si des
+// joueurs partent ou arrivent et qu'il ne tient plus, on repart du conseillé.
+let nReglage = null;
 function suivreConseil(n) {
-  if (reglageManuel && nbUndercover !== null && repartitionValide(n, nbUndercover, nbWhite)) return;
+  const garder = reglageManuel && nbUndercover !== null
+    && (n === nReglage || repartitionValide(n, nbUndercover, nbWhite));
+  nReglage = n;
+  if (garder) return;
   [nbUndercover, nbWhite] = repartitionConseillee(Math.max(3, n));
-  if (reglageManuel && !repartitionValide(n, nbUndercover, nbWhite)) reglageManuel = false;
+  reglageManuel = false;
+}
+// Les joueurs de la prochaine partie : le serveur ne garde que les présents.
+function joueursProchainePartie(etat) {
+  const absents = (etat.partis || []).filter(Boolean).length;
+  return Math.max(0, (joueursSalon.length || etat.joueurs.length) - absents);
 }
 function messageDemarrer() {
   return { type: 'uc_demarrer', famille: familleChoisie, undercover: nbUndercover, white: nbWhite };
@@ -1547,7 +1571,9 @@ function panneauAccueil() {
     r2.appendChild(bouton('Reprendre la partie ' + s.code, 'sombre', () => {
       monNom = s.nom; codeSalon = s.code; monJeton = s.jeton;
       serveurChoisi = s.serveur || 'render';
-      estCreateur = false;
+      // Le créateur garde son bouton « Démarrer » après une coupure : sinon
+      // plus personne ne pouvait lancer la partie.
+      estCreateur = !!s.createur;
       afficherErreur('Reconnexion...');
       seConnecter();
     }));
