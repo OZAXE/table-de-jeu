@@ -1,0 +1,84 @@
+/* =====================================================================
+   Thème « Interrogatoire » (Undercover) : dossiers kraft tamponnés,
+   lettres de machine à écrire, rose néon gardé en accent.
+   Titres : Special Elite. Texte : IBM Plex Sans.
+   ===================================================================== */
+:root {
+  --accent: #f472b6;
+  --accent-2: #be185d;
+  --fond: #0b0d0c;
+  --verre: rgba(30, 26, 20, 0.9);
+  --verre-fort: rgba(26, 23, 18, 0.96);
+  --bord: rgba(214, 191, 142, 0.3);
+  --texte: #f0e8d8;
+  --texte-doux: #c9bda6;
+  --texte-pale: #8a7f6c;
+  --police: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+  --police-titre: 'Special Elite', 'Courier New', monospace;
+}
+html, body { background: var(--fond) !important; }
+#overlay, button, input, .modale, #panneau { font-family: var(--police) !important; }
+#message, #panneau h2, .modale h2, .code-salon { font-family: var(--police-titre) !important; font-weight: 400 !important; letter-spacing: 0.02em !important; }
+#message { color: var(--texte) !important; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9) !important; }
+#rappel { color: var(--texte-doux) !important; }
+#compteur { background: rgba(30, 26, 20, 0.92) !important; border: 1px solid var(--bord) !important; border-radius: 3px !important; font-family: var(--police-titre); }
+
+.joueur {
+  background: linear-gradient(180deg, #ead8b0, #d6bf8e) !important; color: #2a2014 !important;
+  border: 1px solid rgba(90, 70, 40, 0.6) !important; border-radius: 3px !important;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45) !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+.joueur .info { color: #5a4a30 !important; }
+.joueur.actif { background: linear-gradient(180deg, #f472b6, #be185d) !important; color: #fff !important; border-color: #ffe4f1 !important; }
+.joueur.actif .info { color: #ffe4f1 !important; }
+.joueur.mort { opacity: 0.6; filter: grayscale(0.5); }
+
+/* Panneau : chemise cartonnée kraft avec onglet et tampon CONFIDENTIEL. */
+#panneau {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='60'%3E%3Cg transform='rotate(-8 85 30)'%3E%3Crect x='8' y='14' width='154' height='32' fill='none' stroke='rgba(220,40,50,0.28)' stroke-width='3'/%3E%3Ctext x='85' y='37' font-family='Courier New,monospace' font-size='17' font-weight='700' fill='rgba(220,40,50,0.3)' text-anchor='middle' letter-spacing='2'%3ECONFIDENTIEL%3C/text%3E%3C/g%3E%3C/svg%3E") no-repeat right 8px bottom 6px,
+    linear-gradient(180deg, rgba(0, 0, 0, 0) 0, rgba(0, 0, 0, 0.18) 100%),
+    repeating-linear-gradient(0deg, rgba(90, 60, 20, 0.05) 0 2px, transparent 2px 6px),
+    linear-gradient(180deg, #4a3d2a, #33291c) !important;
+  border: 1px solid #6b5636 !important; border-radius: 4px !important;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.65), inset 0 0 0 1px rgba(234, 216, 176, 0.12) !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+/* Le tampon CONFIDENTIEL est un filigrane du fond : toujours derrière le texte. */
+#panneau h2 { color: var(--texte) !important; }
+#panneau p, .aide { color: var(--texte-doux) !important; }
+
+button {
+  font-family: var(--police) !important; font-weight: 700 !important; color: #fff !important;
+  background: linear-gradient(180deg, #f472b6, #be185d) !important; border: 1px solid #7a0f3c !important; border-radius: 4px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 3px 0 #4a0824, 0 6px 14px rgba(0, 0, 0, 0.5) !important;
+}
+button:active { transform: translateY(2px) !important; box-shadow: 0 1px 0 #4a0824 !important; }
+button.danger { background: linear-gradient(180deg, #e0303c, #8a1018) !important; border-color: #4a0808 !important; box-shadow: inset 0 1px 0 rgba(255, 200, 200, 0.3), 0 3px 0 #2a0404, 0 6px 14px rgba(0, 0, 0, 0.5) !important; }
+button.sombre, button.clair { color: var(--texte) !important; background: linear-gradient(180deg, #4a3d2a, #2e2519) !important; border: 1px solid var(--bord) !important; box-shadow: 0 2px 0 #120e08 !important; }
+button.choisi { outline: 3px solid #ffe4f1 !important; }
+#btn-regles { background: linear-gradient(180deg, #4a3d2a, #2e2519) !important; border: 1px solid var(--bord) !important; border-radius: 4px !important; }
+
+.mode, .role-compte { border-radius: 4px !important; background: rgba(20, 17, 12, 0.6) !important; }
+.mode.choisi { border-color: var(--accent) !important; background: rgba(190, 24, 93, 0.25) !important; }
+.ordre span { border-radius: 3px !important; font-family: var(--police-titre); }
+.mots-reveles div { border-radius: 3px !important; }
+.mot-secret { border-radius: 4px !important; font-family: var(--police-titre); }
+.mot-secret .mot { font-family: var(--police-titre); font-weight: 400 !important; }
+input[type="text"] { background: rgba(10, 8, 5, 0.6) !important; border: 1px solid var(--bord) !important; border-radius: 3px !important; color: var(--texte) !important; }
+.code-salon { background: none !important; color: var(--texte) !important; -webkit-background-clip: initial !important; background-clip: initial !important; }
+
+#modale-regles { background: rgba(5, 4, 3, 0.82) !important; }
+.modale { background: linear-gradient(180deg, #efe3c6, #dccaa0) !important; color: #3a2e1c !important; border: 2px solid #6b5636 !important; border-radius: 4px !important; }
+.modale h2 { color: #2a2014 !important; }
+.modale h3 { color: #a3123c !important; font-family: var(--police-titre); font-weight: 400 !important; }
+.modale .accent, .modale td:first-child { color: #2a2014 !important; }
+.modale button.sombre { color: var(--texte) !important; }
+
+.annonce-uc .gros { font-family: var(--police-titre) !important; font-weight: 400 !important; }
+.annonce-uc .petit { font-family: var(--police) !important; border-radius: 4px !important; }
+
+@media (max-width: 760px), (pointer: coarse) {
+  #panneau { border-radius: 6px 6px 0 0 !important; border-width: 1px 0 0 0 !important; }
+}
