@@ -2184,6 +2184,13 @@ function panneauActions(etat) {
     elPanneau.appendChild(aide('Choisis une carte pour voir ce qu’elle permet, ou déplace-toi.'));
   }
 
+  // Tous les autres encore en jeu sont partis : la partie ne finira pas
+  // d'elle-même (elle attend un éliminé de plus). On le dit.
+  const autresEnJeu = etat.joueurs.map((_, j) => j).filter(j => j !== MOI && !etat.elimine[j]);
+  if (autresEnJeu.length && autresEnJeu.every(j => etat.partis && etat.partis[j])) {
+    elPanneau.appendChild(aide('Les autres joueurs encore en lice sont partis : attends leur retour, ou va les éliminer pour gagner.'));
+  }
+
   zone.appendChild(bouton('Ne rien faire', 'sombre', () =>
     envoyerIntention(MOI, { type: 'bb_ne_rien_faire' })));
 

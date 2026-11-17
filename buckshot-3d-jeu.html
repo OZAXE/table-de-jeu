@@ -1722,7 +1722,10 @@ function animerTir(msg) {
       texteFlottant(pos, '+' + msg.gorgees, msg.gorgees > 1 ? 'gorgées' : 'gorgée', '#ff8a5c', 0.42);
       Soiree.annonce('💥 RÉELLE !', (msg.cible === MOI ? 'Tu bois ' : nomCible + ' boit ') + msg.gorgees
         + (msg.gorgees > 1 ? ' gorgées' : ' gorgée') + (msg.gorgees > 1 ? ' (scie)' : ''), {
-        couleur: '#ff6a4c', duree: 2.2, flash: true, vibrer: msg.cible === MOI ? [120, 60, 160] : null });
+        couleur: '#ff6a4c', duree: 2.2, flash: true,
+        // Avant tout toucher de l'écran, le navigateur refuse la vibration
+        // (et l'inscrit en erreur dans la console) : on ne la demande pas.
+        vibrer: msg.cible === MOI && peutVibrer() ? [120, 60, 160] : null });
       dernierEvenement += 'réelle ! ' + (msg.cible === MOI ? 'Tu bois ' : nomCible + ' boit ') + msg.gorgees + '.';
     } else {
       texteFlottant(pos, '♥', 'à blanc', '#cfe2ea', 0.42);
@@ -1742,6 +1745,10 @@ function animerTir(msg) {
       deplacerCarte(carte, posDefausse(k), Math.PI, 0.45, 0.2);
     });
   });
+}
+
+function peutVibrer() {
+  return !navigator.userActivation || navigator.userActivation.hasBeenActive;
 }
 
 // Bilan de la manche, le même sur tous les écrans : ce que chacun a bu
