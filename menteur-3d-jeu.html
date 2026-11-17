@@ -446,7 +446,8 @@ const CARTES = {
   M: { nom: 'Maître', sym: '🎩', fond: '#0f1f2c', encre: '#ffd98a', bord: '#d4af68', classe: 'maitre' },
 };
 function infoCarte(c) { return CARTES[c] || { nom: c, sym: '?', fond: '#fff', encre: '#000', bord: '#999', classe: '' }; }
-function pluriel(nom, n) { return n > 1 ? (nom === 'Maître' ? 'Maîtres' : nom + 's') : nom; }
+// « As » est invariable (on affichait « 2 Ass »).
+function pluriel(nom, n) { return n > 1 && !/s$/.test(nom) ? nom + 's' : nom; }
 
 function creerTextureDos() {
   const c = document.createElement('canvas');
@@ -1016,7 +1017,7 @@ function clientRecevoir(msg) {
       MOI = msg.index;
       if (msg.jeton) {
         monJeton = msg.jeton;
-        ecrireSession({ code: codeSalon, nom: monNom, jeton: monJeton, serveur: serveurChoisi });
+        ecrireSession({ code: codeSalon, nom: monNom, jeton: monJeton, serveur: serveurChoisi, createur: estCreateur });
       }
       if (!enPartie) panneauAttente();
       break;
@@ -1072,6 +1073,9 @@ function appliquerEtat(etat) {
   }
   etatCourant = etat;
   echeanceLocale = etat.delai === null || etat.delai === undefined ? null : Date.now() + etat.delai * 1000;
+  // « Rejouer » repart du mode de la partie (après un rechargement, il était
+  // revenu à Classique sans que personne ne l'ait choisi).
+  if ((!avant || avant.mode !== etat.mode) && MODES[etat.mode]) modeChoisi = etat.mode;
 
   const nouvelleManche = !avant || avant.manche !== etat.manche || etat.phase === 'jeu' && avant.phase !== 'jeu';
   if (nouvelleManche && etat.phase === 'jeu') {
@@ -1213,20 +1217,24 @@ function animerTirs(rev, annoncerVotes) {
     messageCentral(rev.special === 'maitre' ? '🎩' : '🌀', txt, rev.special === 'maitre' ? '#ffd98a' : '#c4a5ff', 1.8);
   }
   const tirs = (rev.tirs || []).slice();
+  const chambres = (etatCourant && etatCourant.chambres) || 6;
+  // Gorgées déjà montrées pendant cette rafale : sous le Chaos, un même
+  // joueur peut être visé plusieurs fois, sa chope doit monter à chaque clic.
+  const bues = {};
   const suivant = () => {
     const t = tirs.shift();
     if (!t) return;
     const s = sieges[t.joueur];
     const nom = nomDe(t.joueur, true);
-    messageCentral('🔫 …', (t.joueur === MOI ? 'Tu tires' : nom + ' tire') + ' (coup ' + t.numero + '/6)', '#f4f1ea', 1.0);
+    messageCentral('🔫 …', (t.joueur === MOI ? 'Tu tires' : nom + ' tire') + ' (coup ' + t.numero + '/' + chambres + ')', '#f4f1ea', 1.0);
     if (s) {
       animer(0.9, an => {
         s.tourne = lisser(an.t / an.duree) * Math.PI * 4;
-        majBarillet(s, s.tirsAffiches || 0, 6, false);
+        majBarillet(s, s.tirsAffiches || 0, chambres, false);
       }, () => { s.tourne = 0; });
     }
     attendre(1.0, () => {
-      if (s) majBarillet(s, t.numero, 6, t.resultat === 'balle');
+      if (s) majBarillet(s, t.numero, chambres, t.resultat === 'balle');
       if (t.resultat === 'balle') {
         eclair();
         messageCentral('💥 BANG !', (t.joueur === MOI ? 'Cul sec, tu es éliminé' : nom + ' : cul sec, éliminé'), '#ff3b4e', 1.8,
@@ -1238,7 +1246,8 @@ function animerTirs(rev, annoncerVotes) {
         if (s) {
           encaisser(t.joueur);
           texteFlottant(s.chope.position, '+' + (t.gorgees || 1), 'gorgée', '#ffb44c', 0.36);
-          if (etatCourant) s.objectif = niveauGorgees((etatCourant.gorgees[t.joueur] || 0) + (t.gorgees || 1));
+          bues[t.joueur] = (bues[t.joueur] || 0) + (t.gorgees || 1);
+          if (etatCourant) s.objectif = niveauGorgees((etatCourant.gorgees[t.joueur] || 0) + bues[t.joueur]);
         }
         dernierEvenement = 'Clic : ' + (t.joueur === MOI ? 'tu bois' : nom + ' boit') + ' une gorgée.';
       }
@@ -1357,7 +1366,7 @@ function blocMain(jouable) {
   maMain.forEach((c, k) => {
     const i = infoCarte(c);
     const el = document.createElement('div');
-    el.className = 'carte ' + i.classe + (c === table ? ' vraie' : '') + (selection.includes(k) ? ' selection' : '');
+    el.className = 'carte ' + i.classe + (c === table || c === 'J' ? ' vraie' : '') + (selection.includes(k) ? ' selection' : '');
     el.innerHTML = '<span class="sym"></span><span class="lib"></span>';
     el.querySelector('.sym').textContent = i.sym;
     el.querySelector('.lib').textContent = i.nom;
@@ -1591,7 +1600,8 @@ function panneauAccueil() {
     r2.appendChild(bouton('Reprendre la partie ' + s.code, 'sombre', () => {
       monNom = s.nom; codeSalon = s.code; monJeton = s.jeton;
       serveurChoisi = s.serveur || 'render';
-      estCreateur = false;
+      // Le créateur garde son bouton « Démarrer » après une coupure.
+      estCreateur = !!s.createur;
       afficherErreur('Reconnexion...');
       seConnecter();
     }));
