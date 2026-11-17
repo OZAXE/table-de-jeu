@@ -2701,7 +2701,7 @@ function panneauAttente() {
   r.style.marginTop = '12px';
   if (estCreateur) {
     const trop = joueursSalon.length > JOUEURS_MAX;
-    const b = bouton('Démarrer la partie', '', () => Soiree.lancer('buckshot', () => envoyerIntention(MOI, { type: 'bt_demarrer' })));
+    const b = bouton('Démarrer la partie', '', () => Soiree.lancer('buckshot', o => envoyerIntention(MOI, { type: 'bt_demarrer', ...o })));
     b.disabled = joueursSalon.length < JOUEURS_MIN || trop;
     r.appendChild(b);
     if (joueursSalon.length < JOUEURS_MIN) {
