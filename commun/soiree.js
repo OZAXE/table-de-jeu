@@ -435,6 +435,7 @@
     async verifierJeuEnCours(jeuPage) {
       jeuDeLaPage = jeuPage;
       Soiree.boutonEnquete();
+      Soiree.boutonBingo();
       const s = Soiree.actuelle();
       if (!s) return;
       try {
@@ -485,50 +486,71 @@
   });
   window.addEventListener('online', () => { if (jeuDeLaPage) Soiree.verifierJeuEnCours(jeuDeLaPage); });
 
-  // --- L'Enquête par-dessus le jeu ---
-  // Un onglet « 🔍 » sur le bord gauche ouvre la page de l'Enquête dans un
+  // --- Les jeux en parallèle par-dessus le jeu (Enquête, Bingo) ---
+  // Un onglet sur le bord gauche ouvre la page du jeu parallèle dans un
   // calque plein écran. Elle a sa propre connexion (« soirée ») : la partie
   // en cours n'est pas dérangée. Fermer le calque le cache sans le détruire,
   // pour garder la connexion et l'état.
-  let calque = null;
-  Soiree.boutonEnquete = function () {
-    if (document.getElementById('onglet-enquete') || !Soiree.actuelle()) return;
-    const b = document.createElement('button');
-    b.id = 'onglet-enquete';
-    b.type = 'button';
-    b.setAttribute('aria-label', 'Ouvrir l\'enquête');
-    b.textContent = '🔍';
-    b.style.cssText = 'position:fixed;left:0;top:42%;z-index:99990;border:1px solid rgba(201,162,74,.5);' +
-      'border-left:0;border-radius:0 14px 14px 0;padding:10px 9px 10px 7px;font-size:20px;line-height:1;' +
-      'background:rgba(26,11,14,.88);color:#f3e6cf;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.4)';
-    b.addEventListener('click', ouvrirEnquete);
-    document.body.appendChild(b);
+  const PARALLELES = {
+    enquete: { icone: '🔍', titre: 'l\'enquête', page: 'enquete.html?dans=1', haut: '42%', fond: '#1a0b0e',
+      bord: 'rgba(201,162,74,.5)', teinte: 'rgba(26,11,14,.88)', texte: '#f3e6cf', message: 'enquete' },
+    bingo: { icone: '🎯', titre: 'le bingo', page: 'bingo.html?dans=1', haut: 'calc(42% + 52px)', fond: '#050a14',
+      bord: 'rgba(52,211,153,.55)', teinte: 'rgba(5,10,20,.9)', texte: '#d1fae5', message: null },
   };
-  function ouvrirEnquete() {
+  const calques = {};
+  function boutonParallele(cle) {
+    const p = PARALLELES[cle];
+    if (document.getElementById('onglet-' + cle) || !Soiree.actuelle()) return;
+    const b = document.createElement('button');
+    b.id = 'onglet-' + cle;
+    b.type = 'button';
+    b.setAttribute('aria-label', 'Ouvrir ' + p.titre);
+    b.textContent = p.icone;
+    b.style.cssText = 'position:fixed;left:0;top:' + p.haut + ';z-index:99990;border:1px solid ' + p.bord + ';' +
+      'border-left:0;border-radius:0 14px 14px 0;padding:10px 9px 10px 7px;font-size:20px;line-height:1;' +
+      'background:' + p.teinte + ';color:' + p.texte + ';cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.4)';
+    b.addEventListener('click', () => ouvrirParallele(cle));
+    document.body.appendChild(b);
+  }
+  function ouvrirParallele(cle) {
+    const p = PARALLELES[cle];
+    let calque = calques[cle];
     if (!calque) {
-      calque = document.createElement('div');
-      calque.style.cssText = 'position:fixed;inset:0;z-index:99995;background:#1a0b0e;display:flex;flex-direction:column';
+      calque = calques[cle] = document.createElement('div');
+      calque.style.cssText = 'position:fixed;inset:0;z-index:99995;background:' + p.fond + ';display:flex;flex-direction:column';
       const fermer = document.createElement('button');
       fermer.type = 'button';
       fermer.textContent = '✕ Retour au jeu';
-      fermer.style.cssText = 'align-self:flex-end;margin:max(10px, env(safe-area-inset-top)) 12px 0 0;border:1px solid rgba(201,162,74,.4);' +
-        'border-radius:999px;padding:8px 14px;background:rgba(243,230,207,.08);color:#f3e6cf;font:600 14px Outfit, system-ui, sans-serif;cursor:pointer';
+      fermer.style.cssText = 'align-self:flex-end;margin:max(10px, env(safe-area-inset-top)) 12px 0 0;border:1px solid ' + p.bord + ';' +
+        'border-radius:999px;padding:8px 14px;background:rgba(255,255,255,.08);color:' + p.texte + ';font:600 14px Outfit, system-ui, sans-serif;cursor:pointer';
+      const cadre = document.createElement('iframe');
       fermer.addEventListener('click', () => {
         calque.style.display = 'none';
         // La maison 3D de l'enquête se met en pause : un seul rendu 3D à la fois.
-        try { cadre.contentWindow.postMessage('enquete:pause', '*'); } catch (e) { /* tant pis */ }
+        if (p.message) try { cadre.contentWindow.postMessage(p.message + ':pause', '*'); } catch (e) { /* tant pis */ }
       });
-      const cadre = document.createElement('iframe');
-      cadre.src = 'enquete.html?dans=1';
-      cadre.title = 'Enquête';
+      cadre.src = p.page;
+      cadre.title = p.titre;
       cadre.style.cssText = 'flex:1;border:0;width:100%';
       calque.append(fermer, cadre);
       document.body.appendChild(calque);
     }
+    // Un seul calque visible à la fois.
+    Object.entries(calques).forEach(([k, c]) => { if (k !== cle) c.style.display = 'none'; });
     calque.style.display = 'flex';
     const cadreOuvert = calque.querySelector('iframe');
-    try { cadreOuvert.contentWindow.postMessage('enquete:reprise', '*'); } catch (e) { /* tant pis */ }
+    if (p.message) try { cadreOuvert.contentWindow.postMessage(p.message + ':reprise', '*'); } catch (e) { /* tant pis */ }
   }
+  Soiree.boutonEnquete = function () { boutonParallele('enquete'); };
+  // Le bingo n'a son onglet que s'il tourne dans la soirée.
+  Soiree.boutonBingo = async function () {
+    const s = Soiree.actuelle();
+    if (!s || document.getElementById('onglet-bingo')) return;
+    try {
+      const info = await Soiree.infoSoiree(s.code, s.serveur, Soiree.nom(), s.table);
+      if (info.existe && (info.couches || []).includes('bng')) boutonParallele('bingo');
+    } catch (e) { /* pas d'onglet cette fois */ }
+  };
 
   Soiree.confirmer = confirmer;
   Soiree.animerResultat = animerResultat;
