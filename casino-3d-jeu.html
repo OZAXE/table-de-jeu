@@ -359,7 +359,7 @@ import {
   quandPoliceChargee, creerSousVerre, creerTableRonde, POLICE,
 } from './da/bar-moderne.js';
 import { modeLeger, optionsRendu, reglerRendu, surveillerFluidite } from './da/qualite.js';
-import { mesurerZone } from './da/cadrage.js';
+import { mesurerZone, suivreZoneLibre } from './da/cadrage.js';
 import {
   FOND as FOND_CASINO, POLICE_TEXTE, POLICE_TITRE, preparerAmbianceCasino, creerTableCasino, creerDecorCasino,
   creerFauteuilCasino, dessinerEtiquetteCasino, quandPolicesCasino,
@@ -428,6 +428,9 @@ const CAM_POS = new THREE.Vector3(0, 3.0, 5.0);
 // La zone est mesurée sur l'interface réelle (da/cadrage.js) : titre,
 // joueurs et onglet de l'Enquête en haut et à gauche, panneau en bas ou en
 // colonne à droite (paysage).
+// En vue normale, c'est la table elle-même qui est centrée et mise à la
+// bonne taille (da/cadrage.js) ; la roue et le blackjack gardent leur vue.
+const zone = suivreZoneLibre(() => recadrer());
 const zoneVue = { hauteur: window.innerHeight, largeur: window.innerWidth, decalage: 0, decalageX: 0, decalageCourant: 0, decalageXCourant: 0 };
 function mesurerZoneVue() {
   const z = mesurerZone();
@@ -443,13 +446,13 @@ function distanceCadrage(cam) {
   // Au blackjack on serre le cadre sur la zone des cartes (le bord de la
   // table peut sortir de l'écran).
   const k = vueDessus ? 0.72 : 1;
-  return Math.max(k * LARGEUR_VUE / Math.tan(hHalf), k * HAUTEUR_VUE / Math.tan(vUtile), vueDessus ? 2.6 : 4.2);
+  return Math.max(k * LARGEUR_VUE / Math.tan(hHalf), k * HAUTEUR_VUE / Math.tan(vUtile), vueDessus ? 2.6 : 4.2) * zone.c.zoom;
 }
 const FOG_DENSITE_MAX = 0.075;
 function majCadrageTable(cam) {
   mesurerZoneVue();
   const d = distanceCadrage(cam);
-  const dir = (vueDessus ? new THREE.Vector3(0, 0.82, 0.57) : new THREE.Vector3(0, 0.66, 0.75)).normalize();
+  const dir = vueDessus ? new THREE.Vector3(0, 0.82, 0.57).normalize() : zone.direction(0.62);
   CAM_POS.copy(CAM_CIBLE).addScaledVector(dir, d);
   if (scene.fog) scene.fog.density = Math.min(FOG_DENSITE_MAX, 0.536 / d);
 }
@@ -2409,10 +2412,9 @@ function boucle() {
     if (k >= D) { scene.remove(m.sprite); messageSprite.courant = null; }
   }
 
-  zoneVue.decalageCourant += (zoneVue.decalage - zoneVue.decalageCourant) * CAM_VITESSE;
-  zoneVue.decalageXCourant += (zoneVue.decalageX - zoneVue.decalageXCourant) * CAM_VITESSE;
+
   const W = window.innerWidth, H = window.innerHeight;
-  camera.setViewOffset(W, H, Math.round(zoneVue.decalageXCourant), Math.round(zoneVue.decalageCourant), W, H);
+  zone.appliquer(camera, (zoomRoue || vueDessus) ? null : { rayon: R_TABLE, places: R_CHOPE }, { pos: camObjectifPos, cible: camObjectifCible });
   camera.position.lerp(camObjectifPos, CAM_VITESSE);
   camCibleActuelle.lerp(camObjectifCible, CAM_VITESSE);
   decor.animer(clock.elapsedTime);
@@ -2445,11 +2447,7 @@ if (salonDansUrl && /^[A-Za-z]{4}(-[2-9])?$/.test(salonDansUrl)) {
   panneauAccueil();
 }
 lisserScene(scene);
-// Le panneau, le titre et la liste changent de taille au fil des coups : on recadre.
-if (window.ResizeObserver) {
-  const obs = new ResizeObserver(() => recadrer());
-  ['panneau', 'joueurs', 'bandeau'].forEach(id => { const el = document.getElementById(id); if (el) obs.observe(el); });
-}
+zone.mesurer();
 boucle();
 surveillerFluidite();
 </script>

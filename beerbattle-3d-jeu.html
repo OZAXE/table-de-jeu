@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Alegreya+Sans:wght@400;700;800&family=Pirata+One&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 <style>
   html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; background: #08150f; }
@@ -258,7 +258,8 @@
 </style>
 <!-- Direction artistique commune « bar moderne » ; accent turquoise pour BeerBattle. -->
 <link rel="stylesheet" href="da/bar-moderne.css">
-<style>:root { --accent: #22c3a6; --accent-2: #0f766e; }</style>
+<link rel="stylesheet" href="da/themes/brasserie.css">
+<link rel="stylesheet" href="da/mise-en-page.css">
 </head>
 <body>
 
@@ -332,8 +333,17 @@ import {
   preparerAmbiance, lisser as lisserScene, creerDecorBar, dessinerEtiquette as dessinerPastille,
   quandPoliceChargee, creerTableRonde, POLICE,
 } from './da/bar-moderne.js';
+import { modeLeger, optionsRendu, reglerRendu, surveillerFluidite } from './da/qualite.js';
+import { suivreZoneLibre } from './da/cadrage.js';
+import {
+  FOND as FOND_BRASSERIE, preparerAmbianceBrasserie, creerTableBrasserie, creerDecorBrasserie,
+  creerChaiseBrasserie, dessinerEtiquetteBrasserie, quandPolicesBrasserie,
+} from './da/themes/brasserie.js';
 
-const ACCENT = 0x22c3a6;   // turquoise de BeerBattle, comme sur l'accueil
+// Version légère (interrupteur de l'accueil) : même brasserie, moins de détails.
+const LEGER = modeLeger();
+
+const ACCENT = 0x2f7a50;   // vert sapin de la brasserie
 
 const elModaleRegles = document.getElementById('modale-regles');
 document.getElementById('btn-regles').addEventListener('click', () => {
@@ -369,8 +379,11 @@ const CAM_VITESSE = 0.12;
 // SCÈNE / CAMÉRA / RENDU
 // =====================================================================
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x08150f);
-scene.fog = new THREE.FogExp2(0x08150f, 0.07);
+scene.background = new THREE.Color(FOND_BRASSERIE);
+scene.fog = new THREE.FogExp2(FOND_BRASSERIE, 0.07);
+
+// La table tient dans la zone libre de l'écran (da/cadrage.js).
+const zone = suivreZoneLibre(() => { majCadrageTable(camera); camObjectifPos = CAM_POS.clone(); });
 
 // Comme pour le Kinito 3D : la distance de la camera est calculee a partir
 // du format de l'ecran. En portrait le champ horizontal est etroit, il faut
@@ -383,7 +396,7 @@ const CAM_POS = new THREE.Vector3(0, 3.3, 3.6);
 function distanceCadrage(cam) {
   const vHalf = THREE.MathUtils.degToRad(cam.fov) / 2;
   const hHalf = Math.atan(Math.tan(vHalf) * cam.aspect);
-  return Math.max(LARGEUR_VUE / Math.tan(hHalf), HAUTEUR_VUE / Math.tan(vHalf), 3.8);
+  return Math.max(LARGEUR_VUE / (Math.tan(hHalf) * zone.c.fracL), HAUTEUR_VUE / (Math.tan(vHalf) * zone.c.fracH), 3.8) * zone.c.zoom;
 }
 
 const FOG_DENSITE_MAX = 0.07;
@@ -391,7 +404,7 @@ const FOG_DENSITE_MAX = 0.07;
 function majCadrageTable(cam) {
   const d = distanceCadrage(cam);
   // Plongee assez forte : c'est un plateau, on veut lire la grille.
-  const dir = new THREE.Vector3(0, 0.74, 0.67).normalize();
+  const dir = zone.direction(0.74, 0.86);
   CAM_POS.copy(CAM_CIBLE).addScaledVector(dir, d);
   if (scene.fog) scene.fog.density = Math.min(FOG_DENSITE_MAX, 0.5 / d);
 }
@@ -406,10 +419,9 @@ camObjectifPos = CAM_POS.clone();
 camera.position.copy(CAM_POS);
 camera.lookAt(camCibleActuelle);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer(optionsRendu());
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
+reglerRendu(renderer);
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -420,6 +432,7 @@ function redimensionner() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  zone.recalculer();
   majCadrageTable(camera);
   camObjectifPos = CAM_POS.clone();
   camObjectifCible = CAM_CIBLE.clone();
@@ -431,8 +444,8 @@ scene.add(new THREE.AmbientLight(0x2a3a30, 1.1));
 const keyLight = new THREE.DirectionalLight(0xffd9a0, 3.0);
 keyLight.position.set(0.9, 3.8, 1.4);
 keyLight.target.position.set(0, 0, 0);
-keyLight.castShadow = true;
-keyLight.shadow.mapSize.set(2048, 2048);
+keyLight.castShadow = !LEGER;
+keyLight.shadow.mapSize.set(1024, 1024);
 keyLight.shadow.camera.left = -3.2;
 keyLight.shadow.camera.right = 3.2;
 keyLight.shadow.camera.top = 3.2;
@@ -440,13 +453,13 @@ keyLight.shadow.camera.bottom = -3.2;
 keyLight.shadow.camera.near = 0.5;
 keyLight.shadow.camera.far = 10;
 scene.add(keyLight, keyLight.target);
-preparerAmbiance(renderer, scene, { accent: ACCENT });
+preparerAmbianceBrasserie(renderer, scene, { leger: LEGER });
 
 // =====================================================================
 // TABLE ET TAPIS DE FEUTRE
 // =====================================================================
 // Noyer foncé, feutre vert profond, cerclage laiton (le damier se pose dessus).
-const { groupe: table } = creerTableRonde(R_TABLE, { feutreCouleur: 0x0b231a });
+const { groupe: table } = creerTableBrasserie(R_TABLE, { leger: LEGER });
 scene.add(table);
 
 // Tapis de feutre vert sous la grille : c'est lui qui donne au plateau
@@ -471,10 +484,7 @@ scene.add(lisere);
 // =====================================================================
 const SOL_Y = -1.2;
 
-function creerDecor() {
-  creerDecorBar(scene, { accent: ACCENT, nom: 'BEERBATTLE', solY: SOL_Y });
-}
-creerDecor();
+const decor = creerDecorBrasserie(scene, { nom: 'BeerBattle', solY: SOL_Y, leger: LEGER });
 
 // =====================================================================
 // REPÈRE DU PLATEAU
@@ -724,7 +734,7 @@ function cacherCarteRevelee() {
 // ÉTIQUETTES (sprites) — toujours face caméra
 // =====================================================================
 function dessinerEtiquette(ctx, texte, actif, mort) {
-  dessinerPastille(ctx, texte, { actif, absent: mort, accent: ACCENT });
+  dessinerEtiquetteBrasserie(ctx, texte, { actif, absent: mort });
   if (mort) {
     // Éliminé : prénom barré.
     const W = ctx.canvas.width, l = Math.min(W - 60, ctx.measureText(texte).width + 30);
@@ -735,6 +745,9 @@ function dessinerEtiquette(ctx, texte, actif, mort) {
 }
 
 const toutesEtiquettes = new Set();
+quandPolicesBrasserie(() => toutesEtiquettes.forEach(sp => {
+  if (sp.parent && sp.userData.dernier) majEtiquette(sp, ...sp.userData.dernier);
+}));
 quandPoliceChargee(() => toutesEtiquettes.forEach(sp => {
   if (!sp.parent) { toutesEtiquettes.delete(sp); return; }
   majEtiquette(sp, ...sp.userData.dernier);
@@ -808,12 +821,10 @@ function texteFlottant(position, gros, petit, couleur, echelle) {
 // Gros message au centre de la table, lisible par tous.
 const messageSprite = { courant: null };
 
+// Passe par la grande annonce commune (commun/soiree.js) : lisible de
+// tous, dans la zone libre, sans cacher le plateau.
 function messageCentral(gros, petit, couleur, duree) {
-  if (messageSprite.courant) scene.remove(messageSprite.courant.sprite);
-  const sp = creerSpriteTexte(String(gros), petit || '', couleur || '#ecd29a');
-  sp.position.set(0, 1.0, 0);
-  scene.add(sp);
-  messageSprite.courant = { sprite: sp, t: 0, duree: duree || 1.8 };
+  if (window.Soiree && Soiree.annonce) Soiree.annonce(String(gros), petit || '', { couleur: couleur || '#ecd29a', duree: duree || 1.8 });
 }
 
 // =====================================================================
@@ -1000,7 +1011,8 @@ function creerVerres(noms) {
     jeton.position.copy(dir).multiplyScalar(R_VERRE);
     jeton.position.y = 0.004;
 
-    groupe.add(jeton, verre, etiquette);
+    // Une chaise bavaroise derrière chaque verre : c'est elle qui fait lire « table ».
+    groupe.add(jeton, verre, etiquette, creerChaiseBrasserie(dir, R_TABLE + 0.45, SOL_Y));
     scene.add(groupe);
     lisserScene(groupe);
     verres.push({
@@ -3110,7 +3122,12 @@ function animer() {
   // --- caméra ---
   camera.position.lerp(camObjectifPos, CAM_VITESSE);
   camCibleActuelle.lerp(camObjectifCible, CAM_VITESSE);
+  decor.animer(clock.elapsedTime);
+  // Plus la caméra recule, plus les prénoms grossissent (lisibles sans se toucher).
+  const recul = THREE.MathUtils.clamp(camera.position.distanceTo(camCibleActuelle) / 6.2, 1, 1.4);
+  verres.forEach(v => { if (v.etiquette && v.etiquette.userData.echelle0) v.etiquette.scale.copy(v.etiquette.userData.echelle0).multiplyScalar(recul); else if (v.etiquette) v.etiquette.userData.echelle0 = v.etiquette.scale.clone(); });
   camera.lookAt(camCibleActuelle);
+  zone.appliquer(camera, { rayon: R_TABLE, places: R_VERRE }, { pos: camObjectifPos, cible: camObjectifCible });
 
   renderer.render(scene, camera);
 }
@@ -3142,7 +3159,9 @@ if (salonDansUrl && /^[A-Za-z]{4}(-[2-9])?$/.test(salonDansUrl)) {
 }
 // Plus aucune facette dans la scène.
 lisserScene(scene);
+zone.mesurer();
 animer();
+surveillerFluidite();
 </script>
 <script>
   // Appli installable (PWA) : voir service-worker.js
