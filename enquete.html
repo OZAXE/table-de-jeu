@@ -844,7 +844,7 @@
     };
     section('🎯 Le principe', true, [
       'Un meurtre a eu lieu. Victime : ' + pack.victime + '. **' + maj(voc.tueur) + '** est l’un de vous. Tous les autres, ' + voc.enqueteurs + ', doivent trouver **qui**, **où** et **avec quoi** avant la fin du temps (' + duree(etat.duree) + ').',
-      'L’enquête tourne **en parallèle des autres jeux de la soirée** : chaque victoire aux jeux rapporte des points d’enquête (PE), qui servent à obtenir des indices. Tu joues à Kinito, au Menteur… et tu enquêtes entre deux parties.',
+      'L’enquête tourne **en parallèle des autres jeux de la soirée** : chaque victoire aux jeux rapporte des points d’enquête (PE), qui servent à obtenir des indices. Tu joues à Kinito, à Cal 12… et tu enquêtes entre deux parties.',
       maj(voc.tueur) + ' gagne s’il n’est pas démasqué à temps, ou si les accusations ratées s’accumulent trop. Les perdants boivent.',
     ]);
     section('🎭 Les rôles', false, [
@@ -860,7 +860,7 @@
         '**Fin** : à la première accusation juste, à l’heure butoir, ou quand la patience est épuisée. ' + nar + ' révèle tout.'],
     ]);
     section('💰 Gagner des indices', false, [
-      'Les jeux comptés rapportent des **PE** : une victoire au Menteur, 2 à BeerBattle, des paliers de temps à Picopoly et au Casino, quelques manches gagnées à Kinito… (onglet Réglages pour la liste des jeux comptés).',
+      'Les jeux comptés rapportent des **PE** : une victoire à Cal 12 ou à Undercover, 2 à BeerBattle, des paliers de temps à Picopoly et au Casino, quelques manches gagnées à Kinito… (onglet Réglages pour la liste des jeux comptés).',
       ['Un indice coûte **' + v.pe_par_indice + ' PE** (onglet Indices, « Demander un indice »).',
         'Pas plus de **2 indices par heure** et par joueur, pour qu’on ne puisse pas tout rafler.',
         'Pas assez de PE ? Tu peux **acheter** un indice contre ' + u(etat.gorgees_achat) + '.',

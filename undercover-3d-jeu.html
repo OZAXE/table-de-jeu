@@ -1,0 +1,1960 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Undercover 3D</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=2">
+<link rel="apple-touch-icon" href="icons/icon-180.png?v=2">
+<meta name="theme-color" content="#0a2017">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SHIELD">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; background: #07110d; }
+  canvas { display: block; }
+
+  #overlay { position: fixed; inset: 0; pointer-events: none; font-family: 'Outfit', system-ui, sans-serif; }
+  #vignette { position: fixed; inset: 0; pointer-events: none; }
+
+  /* --- Liste des joueurs --- */
+  #joueurs { position: absolute; top: 18px; left: 18px; display: flex; flex-direction: column; gap: 6px; max-height: 70vh; overflow: hidden; }
+  .joueur {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 12px; font-size: 16px; min-width: 190px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .joueur.absent { opacity: 0.45; font-style: italic; }
+  .joueur.mort { opacity: 0.55; }
+  .joueur.mort .nom { text-decoration: line-through; }
+  .joueur .pastille { width: 12px; height: 12px; border-radius: 50%; flex: 0 0 auto; }
+  .joueur .nom { flex: 1 1 auto; }
+  .joueur .info { font-size: 13px; color: var(--texte-doux); white-space: nowrap; }
+
+  /* --- Bandeau du haut --- */
+  #bandeau { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); text-align: center; max-width: 52vw; }
+  #message { font-size: 21px; }
+  #rappel { font-size: 15px; margin-top: 4px; }
+  #compteur {
+    display: inline-block; margin-top: 6px; padding: 4px 14px;
+    color: var(--texte); font-size: 14px;
+    background: var(--verre); border: 1px solid var(--bord); border-radius: 999px;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  }
+  #compteur:empty { display: none; }
+  #compteur b { color: var(--accent); }
+  #compteur .chrono.urgent { color: #ff8a8a; font-weight: 700; }
+
+  /* --- Panneau du bas --- */
+  #panneau {
+    position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+    pointer-events: auto; padding: 14px 18px;
+    min-width: 320px; max-width: min(780px, 94vw); text-align: center;
+    max-height: 62vh; overflow-y: auto;
+  }
+  #panneau.cache { display: none; }
+  #panneau h2 { margin: 0 0 8px; font-size: 20px; }
+  #panneau p { margin: 0 0 10px; font-size: 16px; }
+  .rangee { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  button {
+    pointer-events: auto; font-family: 'Outfit', system-ui, sans-serif;
+    font-weight: 700; font-size: 18px; padding: 11px 22px; cursor: pointer;
+  }
+  button.petit { font-size: 14px; padding: 7px 14px; }
+  button.gros { font-size: 22px; padding: 14px 30px; letter-spacing: 0.04em; }
+  button.choisi { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  /* --- Mon mot secret --- */
+  .mot-secret {
+    position: relative; display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+    min-width: 230px; min-height: 76px; margin: 4px auto 10px; padding: 10px 22px; border-radius: 16px;
+    background: #f6efe0; color: #1d2430; border: 2px solid var(--accent);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4); cursor: pointer; user-select: none; -webkit-user-select: none;
+  }
+  .mot-secret .lib { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7a6a55; }
+  .mot-secret .mot { font-size: 30px; font-weight: 800; line-height: 1.15; margin-top: 2px; }
+  .mot-secret .touche { font-size: 12px; color: #7a6a55; margin-top: 2px; }
+  .mot-secret.voile { background: repeating-linear-gradient(45deg, #2b1530, #2b1530 10px, #3a1b40 10px, #3a1b40 20px); color: #f4ebe0; }
+  .mot-secret.voile .lib, .mot-secret.voile .touche { color: #f3c4e3; }
+  .mot-secret.white { background: #eef2f7; color: #334155; border-color: #cbd5e1; }
+  .mot-secret.white.voile { background: repeating-linear-gradient(45deg, #2b1530, #2b1530 10px, #3a1b40 10px, #3a1b40 20px); color: #f4ebe0; }
+  .mot-secret.mini { min-width: 0; min-height: 0; padding: 5px 14px; margin: 0 auto 8px; }
+  .mot-secret.mini .mot { font-size: 20px; }
+
+  .aide { color: var(--texte-doux); font-size: 14px; margin: 6px 0 4px; }
+  .verdict { font-size: 17px; color: var(--texte); margin: 4px 0 10px; }
+  .ordre { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 4px 0 10px; }
+  .ordre span { padding: 3px 10px; border-radius: 999px; font-size: 13px; border: 1px solid var(--bord); color: var(--texte-doux); }
+  .ordre span.fait { opacity: 0.5; text-decoration: line-through; }
+  .ordre span.actuel { border-color: var(--accent); color: var(--texte); font-weight: 700; background: color-mix(in srgb, var(--accent) 22%, transparent); }
+  .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 6px 0 10px; }
+  .mode {
+    pointer-events: auto; cursor: pointer; text-align: left;
+    padding: 10px 12px; border-radius: 16px; border: 1px solid var(--bord);
+    background: rgba(255,255,255,0.05); color: var(--texte);
+  }
+  .mode b { display: block; font-size: 15px; margin-bottom: 2px; }
+  .mode span { font-size: 12px; color: var(--texte-doux); line-height: 1.35; display: block; }
+  .mode.choisi { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
+
+  .reglage { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 6px 0 4px; }
+  .role-compte {
+    display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 14px;
+    border: 1px solid var(--bord); background: rgba(255,255,255,0.05); color: var(--texte); font-size: 15px;
+  }
+  .role-compte b { min-width: 18px; text-align: center; font-size: 18px; color: var(--accent); }
+  .role-compte button { font-size: 16px; padding: 3px 11px; }
+
+  .bilan { margin: 6px auto 10px; border-collapse: collapse; font-size: 15px; min-width: 260px; }
+  .bilan td { padding: 4px 9px; color: var(--texte); text-align: left; border-bottom: 1px solid var(--bord); }
+  .bilan td.n { text-align: right; color: var(--accent); font-weight: 700; white-space: nowrap; }
+  .bilan tr.gagnant td:first-child { color: #ffd98a; }
+  .mots-reveles { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 4px 0 8px; }
+  .mots-reveles div { padding: 6px 12px; border-radius: 12px; background: rgba(255,255,255,0.06); border: 1px solid var(--bord); font-size: 14px; color: var(--texte-doux); }
+  .mots-reveles b { display: block; font-size: 18px; color: var(--texte); }
+
+  input[type="text"] {
+    pointer-events: auto; font-family: 'Outfit', system-ui, sans-serif;
+    font-size: 18px; text-align: center; padding: 10px 14px; width: 210px; margin: 0 4px;
+  }
+  input#code-salon { width: 120px; letter-spacing: 6px; text-transform: uppercase; }
+  input#devine { width: 240px; }
+  .code-salon { font-size: 38px; letter-spacing: 8px; margin: 2px 0 6px; }
+  .liste-attente { font-size: 17px; margin: 10px 0; line-height: 1.6; }
+  .qr { display: block; margin: 10px auto 4px; width: 168px; height: 168px; }
+  @media (max-width: 760px), (pointer: coarse) { .qr { width: 132px; height: 132px; } }
+
+  /* --- Règles --- */
+  #btn-regles { position: absolute; top: 18px; right: 18px; pointer-events: auto; font-size: 15px; padding: 8px 16px; cursor: pointer; }
+  #modale-regles {
+    position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-start; justify-content: center;
+    padding: 20px; overflow-y: auto; pointer-events: auto;
+  }
+  #modale-regles.cache { display: none; }
+  .modale { padding: 22px; max-width: 490px; width: 100%; margin: auto; line-height: 1.55; }
+  .modale h2 { font-size: 22px; margin: 0 0 12px; text-align: center; }
+  .modale h3 { font-size: 17px; margin: 16px 0 6px; }
+  .modale p { margin: 0 0 10px; font-size: 15px; }
+  .modale ul { margin: 0 0 10px 18px; font-size: 15px; padding: 0; }
+  .modale li { margin-bottom: 5px; }
+  .modale table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 14px; }
+  .modale td { padding: 5px 7px; text-align: left; border-bottom: 1px solid var(--bord); vertical-align: top; }
+  .modale td:first-child { white-space: nowrap; color: var(--texte); }
+
+  .cache { display: none !important; }
+  .note { font-size: 12px; margin-top: 10px; }
+  .alerte { font-size: 13px; color: #e0a05a; margin-top: 8px; }
+
+  /* ================= Téléphones ================= */
+  @media (max-width: 760px), (pointer: coarse) {
+    #joueurs { top: 88px; left: 8px; right: 8px; flex-direction: row; flex-wrap: wrap; gap: 4px; justify-content: center; }
+    .joueur { padding: 3px 9px; font-size: 13px; min-width: 0; gap: 5px; }
+    .joueur .info { font-size: 11px; }
+    #bandeau { top: 12px; max-width: calc(100vw - 130px); left: 8px; transform: none; text-align: left; }
+    #message { font-size: 17px; }
+    #rappel { font-size: 12px; }
+    #compteur { font-size: 11px; padding: 2px 9px; margin-top: 3px; white-space: nowrap; }
+    #btn-regles { top: 10px; right: 10px; font-size: 13px; padding: 6px 12px; }
+    #panneau {
+      bottom: 0; left: 0; right: 0; transform: none; width: 100%; max-width: none; min-width: 0; box-sizing: border-box;
+      padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px)); max-height: 62vh;
+    }
+    #panneau h2 { font-size: 17px; margin-bottom: 6px; }
+    #panneau p { font-size: 14px; margin-bottom: 8px; }
+    button { font-size: 15px; padding: 9px 14px; }
+    button.gros { font-size: 19px; padding: 12px 24px; }
+    .rangee { gap: 7px; }
+    .mot-secret { min-width: 200px; }
+    .mot-secret .mot { font-size: 26px; }
+    .modes { grid-template-columns: 1fr; }
+    input[type="text"] { width: 160px; font-size: 16px; }
+    input#code-salon { width: 104px; }
+    input#devine { width: 200px; }
+    .code-salon { font-size: 30px; letter-spacing: 6px; }
+    .modale { padding: 16px; }
+    .modale h2 { font-size: 19px; }
+    .modale p, .modale ul { font-size: 14px; }
+  }
+  @media (max-height: 460px) {
+    #joueurs { top: 80px; }
+    #panneau { max-height: 78vh; padding: 8px 10px; }
+  }
+
+  /* Grande annonce pour toute la table (ÉLIMINÉ, le rôle, ÉGALITÉ, la victoire) */
+  .annonce-uc { position: fixed; left: 12px; right: 12px; top: calc(14vh + env(safe-area-inset-top)); z-index: 60; text-align: center; pointer-events: none; }
+  .annonce-uc .gros { font: 900 clamp(40px, 12vw, 84px)/1.05 'Outfit', system-ui, sans-serif; letter-spacing: 0.03em; color: var(--c);
+    text-shadow: 0 0 26px var(--c), 0 6px 22px rgba(0, 0, 0, 0.85); animation: uc-pop 0.45s cubic-bezier(.2, 1.6, .4, 1) both; }
+  .annonce-uc .petit { display: inline-block; margin-top: 12px; padding: 7px 16px; border-radius: 999px; background: rgba(0, 0, 0, 0.6);
+    border: 1px solid var(--c); color: #fff; font: 700 clamp(17px, 5vw, 22px)/1.25 'Outfit', system-ui, sans-serif; animation: uc-monte 0.4s 0.15s both; }
+  .annonce-uc.sort { animation: uc-sort 0.35s ease-in forwards; }
+  .flash-uc { position: fixed; inset: 0; z-index: 59; pointer-events: none; background: var(--c); animation: uc-flash 0.7s ease-out forwards; }
+  @keyframes uc-pop { from { opacity: 0; transform: scale(2.2) rotate(-6deg); } to { opacity: 1; transform: none; } }
+  @keyframes uc-monte { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes uc-sort { to { opacity: 0; transform: translateY(-16px) scale(0.92); } }
+  @keyframes uc-flash { 0% { opacity: 0.5; } 100% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .annonce-uc .gros, .annonce-uc .petit { animation: none; } .flash-uc { display: none; } }
+</style>
+<!-- Direction artistique commune « bar moderne » ; accent rose néon pour Undercover. -->
+<link rel="stylesheet" href="da/bar-moderne.css">
+<style>:root { --accent: #f472b6; --accent-2: #be185d; }</style>
+</head>
+<body>
+
+<div id="overlay">
+  <button id="btn-regles">Règles &#9432;</button>
+  <div id="joueurs"></div>
+  <div id="bandeau">
+    <div id="message">Undercover 3D</div>
+    <div id="rappel"></div>
+    <div id="compteur"></div>
+  </div>
+  <div id="panneau"></div>
+</div>
+<div id="vignette"></div>
+
+<div id="modale-regles" class="cache">
+  <div class="modale">
+    <h2>Règles d'Undercover</h2>
+    <p>Chacun reçoit un <span class="accent">mot secret</span>. Presque tout le monde a le même… sauf les infiltrés. Les indices se donnent <span class="accent">à voix haute</span> : le téléphone sert à lire son mot, voir qui parle et voter.</p>
+
+    <h3>Les rôles</h3>
+    <table>
+      <tr><td>😇 Civils</td><td>Ils ont tous le même mot. Ils doivent démasquer les infiltrés.</td></tr>
+      <tr><td>🕵️ Undercover</td><td>Un mot <span class="accent">proche</span> de celui des Civils. Au début, il ne sait même pas qu'il est l'Undercover : à lui de le deviner en écoutant.</td></tr>
+      <tr><td>👻 Mr White</td><td><span class="accent">Aucun mot.</span> Il improvise, se fond dans la masse et essaie de deviner le mot des Civils.</td></tr>
+    </table>
+
+    <h3>Un tour</h3>
+    <ul>
+      <li><span class="accent">Indices</span> : chacun son tour, donne un indice sur ton mot (un mot ou une courte phrase), puis touche « J'ai donné mon indice ». Assez clair pour tes alliés, assez flou pour Mr White.</li>
+      <li><span class="accent">Débat et vote</span> : discutez à voix haute, et chacun vote pour éliminer quelqu'un. Ton vote reste secret jusqu'au dépouillement, et tu peux le changer tant que tout le monde n'a pas voté.</li>
+      <li>Le plus désigné est éliminé et <span class="accent">son rôle est révélé</span>. Un éliminé peut encore débattre, mais ne vote plus.</li>
+      <li><span class="accent">Égalité</span> : les ex aequo redonnent un indice, puis on revote entre eux. Nouvelle égalité : le sort tranche.</li>
+      <li>Mr White ne commence jamais un tour.</li>
+    </ul>
+
+    <h3>La dernière chance de Mr White</h3>
+    <p>Éliminé, Mr White écrit le mot des Civils. S'il trouve, <span class="accent">il gagne seul</span>. Les accents, le pluriel, « le / la / un » et une petite faute sont tolérés, mais pas le mot de l'Undercover.</p>
+
+    <h3>Qui gagne ?</h3>
+    <ul>
+      <li>Les <span class="accent">Civils</span> quand il ne reste plus aucun infiltré.</li>
+      <li>Les <span class="accent">infiltrés</span> (Undercovers et Mr White, en vie ou non) quand il ne reste plus qu'un Civil.</li>
+    </ul>
+
+    <h3>Les gorgées</h3>
+    <table>
+      <tr><td>Infiltré démasqué</td><td>Il boit <span class="accent">3 gorgées</span>.</td></tr>
+      <tr><td>Civil éliminé</td><td>Il boit 1 gorgée, et <span class="accent">chacun de ses accusateurs boit 2</span>.</td></tr>
+      <tr><td>Fin de partie</td><td>Chaque perdant boit 2 gorgées (3 si Mr White a trouvé le mot).</td></tr>
+    </table>
+
+    <h3>Les points de la soirée</h3>
+    <p>À chaque victoire : Civil <span class="accent">2 pts</span>, Mr White <span class="accent">6 pts</span>, Undercover <span class="accent">10 pts</span>. Ils s'additionnent de partie en partie.</p>
+
+    <h3>Le réglage</h3>
+    <p>Le nombre d'Undercovers et de Mr White est proposé selon le nombre de joueurs, et modifiable avant de lancer. Il faut au moins un infiltré et plus de Civils que d'infiltrés. Mots <span class="accent">Classique</span>, <span class="accent">Trash 🔞</span> (humour noir, sous la couette, border) ou un mélange des deux.</p>
+
+    <div id="bloc-qr-regles" class="cache">
+      <h3>Inviter quelqu'un</h3>
+      <p>Salon <span class="accent" id="qr-code-salon">----</span> : fais scanner ce code, le prénom suffira.</p>
+      <canvas id="qr-regles" class="qr"></canvas>
+      <div id="qr-note-regles" class="note"></div>
+      <div class="rangee" style="margin-top:8px;">
+        <button id="copier-lien-regles" class="sombre">Copier le lien</button>
+      </div>
+    </div>
+
+    <div class="rangee" style="margin-top:14px;">
+      <button id="fermer-regles">Fermer</button>
+      <button id="quitter-table" class="sombre cache">Quitter la table</button>
+      <button id="menu-jeux" class="sombre">🎲 Tous les jeux</button>
+    </div>
+    <p class="note" style="text-align:center;">À consommer avec modération.</p>
+  </div>
+</div>
+
+<script src="commun/soiree.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import {
+  preparerAmbiance, lisser as lisserScene, creerDecorBar, dessinerEtiquette as dessinerPastille,
+  quandPoliceChargee, creerSousVerre, creerTableRonde, POLICE,
+} from './da/bar-moderne.js';
+
+const ACCENT = 0xf472b6;   // rose néon d'Undercover, comme sur l'accueil
+
+const elModaleRegles = document.getElementById('modale-regles');
+document.getElementById('btn-regles').addEventListener('click', () => {
+  majQRModale();
+  document.getElementById('quitter-table').classList.toggle('cache', !enPartie);
+  elModaleRegles.classList.remove('cache');
+});
+document.getElementById('fermer-regles').addEventListener('click', () => elModaleRegles.classList.add('cache'));
+document.getElementById('menu-jeux').addEventListener('click', () => { location.href = 'index.html'; });
+elModaleRegles.addEventListener('click', e => { if (e.target === elModaleRegles) elModaleRegles.classList.add('cache'); });
+document.getElementById('quitter-table').addEventListener('click', () => {
+  oublierSession();
+  if (ws) { try { ws.close(); } catch (e) { /* deja ferme */ } }
+  location.href = location.pathname;
+});
+
+// =====================================================================
+// CONSTANTES DE LA SCÈNE
+// =====================================================================
+const R_TABLE = 2.0;
+const R_FEUTRE = 1.72;
+const R_SIEGE = 1.55;    // sous-verre et chope de chaque joueur
+const R_CARTE = 1.05;    // sa carte (face cachée, retournée à l'élimination)
+const VERRE_PLEIN = 10;  // repère visuel des gorgées
+
+const CARTE_L = 0.26;
+const CARTE_P = 0.37;
+const CARTE_E = 0.009;
+
+const CAM_VITESSE = 0.12;
+
+// Ce que montre la carte d'un joueur éliminé (même table dans le panneau).
+const ROLES = {
+  civil:      { nom: 'Civil',      sym: '😇', fond: '#e8f7ee', encre: '#14532d', bord: '#22c55e', couleur: '#5dffa0' },
+  undercover: { nom: 'Undercover', sym: '🕵️', fond: '#1f1530', encre: '#f0abfc', bord: '#c026d3', couleur: '#f472b6' },
+  white:      { nom: 'Mr White',   sym: '👻', fond: '#f8fafc', encre: '#334155', bord: '#cbd5e1', couleur: '#e2e8f0' },
+};
+const FAMILLES = {
+  classique: { nom: 'Classique', desc: 'Bouffe, objets, lieux, ciné, sport, soirée… tout public.' },
+  trash:     { nom: '🔞 Trash', desc: 'Humour noir, sous la couette, lendemains difficiles, border.' },
+  melange:   { nom: '🎲 Mélange', desc: 'Les deux à la fois : on ne sait jamais sur quoi on tombe.' },
+};
+
+// =====================================================================
+// SCÈNE / CAMÉRA / RENDU (même cadrage que le Menteur)
+// =====================================================================
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x07110d);
+scene.fog = new THREE.FogExp2(0x07110d, 0.075);
+
+const CAM_CIBLE = new THREE.Vector3(0, 0.35, 0);
+const LARGEUR_VUE = 2.3;
+const HAUTEUR_VUE = 2.1;
+const CAM_POS = new THREE.Vector3(0, 3.0, 5.0);
+
+function distanceCadrage(cam) {
+  const vHalf = THREE.MathUtils.degToRad(cam.fov) / 2;
+  const hHalf = Math.atan(Math.tan(vHalf) * cam.aspect);
+  return Math.max(LARGEUR_VUE / Math.tan(hHalf), HAUTEUR_VUE / Math.tan(vHalf), 4.2);
+}
+const FOG_DENSITE_MAX = 0.075;
+function majCadrageTable(cam) {
+  const d = distanceCadrage(cam);
+  const dir = new THREE.Vector3(0, 0.62, 0.78).normalize();
+  CAM_POS.copy(CAM_CIBLE).addScaledVector(dir, d);
+  if (scene.fog) scene.fog.density = Math.min(FOG_DENSITE_MAX, 0.536 / d);
+}
+
+let camObjectifPos = CAM_POS.clone();
+let camObjectifCible = CAM_CIBLE.clone();
+const camCibleActuelle = CAM_CIBLE.clone();
+
+const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.1, 40);
+majCadrageTable(camera);
+camObjectifPos = CAM_POS.clone();
+camera.position.copy(CAM_POS);
+camera.lookAt(camCibleActuelle);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+document.body.appendChild(renderer.domElement);
+
+function redimensionner() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  majCadrageTable(camera);
+  camObjectifPos = CAM_POS.clone();
+  camObjectifCible = CAM_CIBLE.clone();
+}
+window.addEventListener('resize', redimensionner);
+window.addEventListener('orientationchange', redimensionner);
+
+scene.add(new THREE.AmbientLight(0x2a2a30, 1.0));
+const keyLight = new THREE.DirectionalLight(0xffd6a8, 3.0);
+keyLight.position.set(0.8, 3.4, 1.2);
+keyLight.target.position.set(0, 0.3, 0);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.set(2048, 2048);
+Object.assign(keyLight.shadow.camera, { left: -3.4, right: 3.4, top: 3.4, bottom: -3.4, near: 0.5, far: 9 });
+scene.add(keyLight, keyLight.target);
+preparerAmbiance(renderer, scene, { accent: ACCENT });
+
+// Noyer, tapis prune, cerclage laiton.
+const { groupe: table } = creerTableRonde(R_TABLE, { rayonFeutre: R_FEUTRE, feutreCouleur: 0x2a1030 });
+scene.add(table);
+
+// Le projecteur suit celui qui parle : un halo rose posé sur le tapis.
+const halo = new THREE.Mesh(
+  new THREE.RingGeometry(0.2, 0.3, 48),
+  new THREE.MeshBasicMaterial({ color: ACCENT, transparent: true, opacity: 0.0, side: THREE.DoubleSide })
+);
+halo.rotation.x = -Math.PI / 2;
+halo.position.y = 0.016;
+scene.add(halo);
+
+creerDecorBar(scene, { accent: ACCENT, nom: 'UNDERCOVER', solY: -1.2 });
+
+// =====================================================================
+// CARTES DES JOUEURS (dos « ? » ; face = le rôle, à l'élimination)
+// =====================================================================
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function creerTextureDos() {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 360;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#f0e6da';
+  roundRect(ctx, 0, 0, 256, 360, 26); ctx.fill();
+  ctx.fillStyle = '#3a1240';
+  roundRect(ctx, 12, 12, 232, 336, 18); ctx.fill();
+  ctx.strokeStyle = 'rgba(244,114,182,0.3)';
+  ctx.lineWidth = 3;
+  for (let i = -360; i < 360; i += 26) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + 360, 360); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(i + 360, 0); ctx.lineTo(i, 360); ctx.stroke();
+  }
+  ctx.fillStyle = '#f472b6';
+  ctx.font = 'bold 140px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('?', 128, 186);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+function creerTextureRole(role) {
+  const i = ROLES[role];
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 360;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = i.bord;
+  roundRect(ctx, 0, 0, 256, 360, 26); ctx.fill();
+  ctx.fillStyle = i.fond;
+  roundRect(ctx, 9, 9, 238, 342, 18); ctx.fill();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = '150px serif';
+  ctx.fillText(i.sym, 128, 150);
+  ctx.fillStyle = i.encre;
+  let taille = 48;
+  ctx.font = `800 ${taille}px ${POLICE}`;
+  while (ctx.measureText(i.nom.toUpperCase()).width > 220 && taille > 24) { taille -= 2; ctx.font = `800 ${taille}px ${POLICE}`; }
+  ctx.fillText(i.nom.toUpperCase(), 128, 298);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  // La face est dessous et la carte se retourne autour de z.
+  t.center.set(0.5, 0.5);
+  t.rotation = Math.PI;
+  return t;
+}
+
+const GEO_TRANCHE = new THREE.BoxGeometry(CARTE_L, CARTE_E, CARTE_P);
+const GEO_FACE = new THREE.PlaneGeometry(CARTE_L * 0.98, CARTE_P * 0.98);
+const MAT_TRANCHE = new THREE.MeshStandardMaterial({ color: 0xe8dccb, roughness: 0.8 });
+const MAT_DOS = new THREE.MeshStandardMaterial({ map: creerTextureDos(), roughness: 0.7 });
+const MAT_ROLE = {};
+Object.keys(ROLES).forEach(k => { MAT_ROLE[k] = new THREE.MeshStandardMaterial({ map: creerTextureRole(k), roughness: 0.7 }); });
+const MAT_FACE_VIDE = new THREE.MeshStandardMaterial({ color: 0x3a1240, roughness: 0.8 });
+quandPoliceChargee(() => Object.keys(ROLES).forEach(k => { MAT_ROLE[k].map = creerTextureRole(k); MAT_ROLE[k].needsUpdate = true; }));
+
+function creerCarte() {
+  const g = new THREE.Group();
+  const tranche = new THREE.Mesh(GEO_TRANCHE, MAT_TRANCHE);
+  tranche.castShadow = true;
+  const dos = new THREE.Mesh(GEO_FACE, MAT_DOS);
+  dos.rotation.x = -Math.PI / 2;
+  dos.position.y = CARTE_E / 2 + 0.0008;
+  const face = new THREE.Mesh(GEO_FACE, MAT_FACE_VIDE);
+  face.rotation.x = Math.PI / 2;
+  face.position.y = -CARTE_E / 2 - 0.0008;
+  g.add(tranche, dos, face);
+  g.userData.face = face;
+  return g;
+}
+
+// =====================================================================
+// ÉTIQUETTES ET ICÔNES (sprites face caméra)
+// =====================================================================
+function dessinerEtiquette(ctx, texte, actif, absent) {
+  dessinerPastille(ctx, texte, { actif, absent, accent: ACCENT });
+}
+function creerEtiquette(texte) {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 128;
+  dessinerEtiquette(c.getContext('2d'), texte, false, false);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+  sprite.renderOrder = 10;
+  sprite.scale.set(0.9, 0.225, 1);
+  return sprite;
+}
+function majEtiquette(sprite, texte, actif, absent) {
+  const cle = texte + '|' + actif + '|' + absent;
+  if (sprite.userData.cle === cle) return;
+  sprite.userData.cle = cle;
+  sprite.userData.dernier = [texte, actif, absent];
+  dessinerEtiquette(sprite.material.map.image.getContext('2d'), texte, actif, absent);
+  sprite.material.map.needsUpdate = true;
+}
+quandPoliceChargee(() => sieges.forEach(st => {
+  const d = st.etiquette.userData.dernier;
+  st.etiquette.userData.cle = null;
+  if (d) majEtiquette(st.etiquette, ...d); else majEtiquette(st.etiquette, st.nom, false, false);
+}));
+
+// Petite icône au-dessus d'un siège (🎤 qui parle, 🗳️ a voté, ✔ prêt).
+function creerIcone(taille) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false }));
+  sp.scale.set(taille, taille, 1);
+  sp.renderOrder = 12;
+  sp.userData.symbole = undefined;
+  return sp;
+}
+function majIcone(sp, symbole) {
+  if (sp.userData.symbole === symbole) return;
+  sp.userData.symbole = symbole;
+  sp.visible = !!symbole;
+  if (!symbole) return;
+  const ctx = sp.material.map.image.getContext('2d');
+  ctx.clearRect(0, 0, 128, 128);
+  ctx.fillStyle = 'rgba(10, 6, 14, 0.75)';
+  ctx.beginPath(); ctx.arc(64, 64, 58, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#f472b6'; ctx.lineWidth = 5; ctx.stroke();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '68px serif';
+  ctx.fillText(symbole, 64, 70);
+  sp.material.map.needsUpdate = true;
+}
+
+const textesFlottants = [];
+function creerSpriteTexte(gros, petit, couleur) {
+  const c = document.createElement('canvas');
+  c.width = 1024; c.height = 512;
+  const ctx = c.getContext('2d');
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = '#000';
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 6;
+  ctx.fillStyle = couleur;
+  let taille = 230;
+  ctx.font = `800 ${taille}px ${POLICE}`;
+  while (ctx.measureText(gros).width > 980 && taille > 80) { taille -= 10; ctx.font = `800 ${taille}px ${POLICE}`; }
+  ctx.fillText(gros, 512, petit ? 200 : 256);
+  if (petit) {
+    ctx.fillStyle = '#f4ebe0';
+    let t2 = 74;
+    ctx.font = `600 ${t2}px ${POLICE}`;
+    while (ctx.measureText(petit).width > 1000 && t2 > 36) { t2 -= 4; ctx.font = `600 ${t2}px ${POLICE}`; }
+    ctx.fillText(petit, 512, 400);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false }));
+  sp.renderOrder = 999;
+  return sp;
+}
+function texteFlottant(position, gros, petit, couleur, echelle) {
+  const sp = creerSpriteTexte(String(gros), petit || '', couleur || '#ffdca0');
+  const e = echelle || 0.5;
+  sp.scale.set(e * 2, e, 1);
+  sp.position.copy(position);
+  sp.position.y += 0.5;
+  scene.add(sp);
+  textesFlottants.push({ sprite: sp, t: 0, duree: 1.8, depart: sp.position.clone() });
+}
+
+// Grande annonce HTML, la même pour tous les joueurs.
+let annonceUc = null, minuteurAnnonce = null;
+function annoncer(gros, petit, couleur, duree, opts = {}) {
+  if (annonceUc) annonceUc.remove();
+  clearTimeout(minuteurAnnonce);
+  const a = document.createElement('div');
+  a.className = 'annonce-uc';
+  a.style.setProperty('--c', couleur || '#f4f1ea');
+  const g = document.createElement('div'); g.className = 'gros'; g.textContent = gros; a.appendChild(g);
+  if (petit) { const p = document.createElement('div'); p.className = 'petit'; p.textContent = petit; a.appendChild(p); }
+  if (opts.flash) {
+    const f = document.createElement('div'); f.className = 'flash-uc'; f.style.setProperty('--c', couleur);
+    document.body.appendChild(f); setTimeout(() => f.remove(), 800);
+  }
+  if (opts.vibrer) { try { if (navigator.vibrate) navigator.vibrate(opts.vibrer); } catch (e) { /* pas de vibreur */ } }
+  document.body.appendChild(a);
+  annonceUc = a;
+  minuteurAnnonce = setTimeout(() => { a.classList.add('sort'); setTimeout(() => { a.remove(); if (annonceUc === a) annonceUc = null; }, 380); }, (duree || 1.8) * 1000);
+}
+
+// =====================================================================
+// SIÈGES : sous-verre, chope, carte, étiquette, icône
+// Chacun se voit au premier plan : dire les prénoms, jamais « à gauche ».
+// =====================================================================
+const COULEURS = [0x4a7ec2, 0xc25a4a, 0x5aa86a, 0xb58ac2, 0xc2a44a, 0x4ab0b5, 0xd9823a, 0xd46a9e,
+  0x7a8cff, 0x9fd65a, 0xe05a8a, 0x5ac2a0, 0xb0b0b0, 0xe0c25a, 0x8a5ac2];
+const sieges = [];
+
+function creerChope() {
+  const g = new THREE.Group();
+  const verre = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.11, 0.095, 0.27, 40, 1, true),
+    new THREE.MeshPhysicalMaterial({ color: 0xe6f3f8, roughness: 0.08, metalness: 0, side: THREE.DoubleSide, transparent: true, opacity: 0.32, clearcoat: 1, clearcoatRoughness: 0.05 })
+  );
+  verre.position.y = 0.135;
+  const fond = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.095, 0.095, 0.014, 40),
+    new THREE.MeshPhysicalMaterial({ color: 0xdfeef7, roughness: 0.22, transparent: true, opacity: 0.55 })
+  );
+  fond.position.y = 0.007;
+  const biere = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.097, 0.09, 1, 40),
+    new THREE.MeshPhysicalMaterial({ color: 0xe0961c, roughness: 0.18, emissive: 0x6a3a05, emissiveIntensity: 0.25 })
+  );
+  biere.castShadow = true;
+  const mousse = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.099, 0.099, 0.026, 40),
+    new THREE.MeshStandardMaterial({ color: 0xfaf3e4, roughness: 0.75 })
+  );
+  g.add(fond, verre, biere, mousse);
+  g.userData = { biere, mousse };
+  return g;
+}
+
+function dirSiege(i, n) {
+  // Un spectateur (index hors table) regarde depuis le siège 0.
+  const base = MOI < n ? MOI : 0;
+  const angle = ((((i - base) % n) + n) % n) / n * Math.PI * 2;
+  return new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
+}
+
+function creerSieges(noms) {
+  sieges.forEach(s => scene.remove(s.groupe));
+  sieges.length = 0;
+  const n = noms.length;
+  const echelle = n > 10 ? 0.7 : n > 7 ? 0.85 : 1;
+  for (let i = 0; i < n; i++) {
+    const dir = dirSiege(i, n);
+    const groupe = new THREE.Group();
+
+    const base = dir.clone().multiplyScalar(R_SIEGE);
+    const avatar = creerSousVerre(COULEURS[i % COULEURS.length]);
+    avatar.position.set(base.x, 0, base.z);
+    avatar.scale.setScalar(echelle);
+    const chope = creerChope();
+    chope.position.set(base.x, 0.014, base.z);
+    chope.scale.setScalar(echelle);
+
+    const carte = creerCarte();
+    const pc = dir.clone().multiplyScalar(R_CARTE);
+    carte.position.set(pc.x, 0.014 + CARTE_E / 2, pc.z);
+    carte.rotation.set(0, Math.atan2(dir.x, dir.z), 0);
+    carte.scale.setScalar(echelle);
+
+    const etiquette = creerEtiquette(noms[i]);
+    etiquette.position.set(base.x, 0.6, base.z);
+    etiquette.scale.set(0.9 * echelle, 0.225 * echelle, 1);
+
+    const icone = creerIcone(0.24 * echelle);
+    icone.position.set(base.x, 0.86, base.z);
+    majIcone(icone, null);
+
+    groupe.add(avatar, chope, carte, etiquette, icone);
+    scene.add(groupe);
+    lisserScene(groupe);
+
+    sieges.push({
+      index: i, nom: noms[i], groupe, avatar, chope, carte, etiquette, icone, dir, base,
+      niveau: 0, objectif: 0, mort: false, role: null, retournee: false,
+    });
+  }
+}
+
+function dessinerChope(s) {
+  const h = Math.max(0.001, s.niveau * 0.24);
+  const { biere, mousse } = s.chope.userData;
+  biere.scale.y = h;
+  biere.position.y = 0.012 + h / 2;
+  mousse.position.y = 0.012 + h + 0.012;
+  mousse.visible = s.niveau > 0.02;
+}
+function niveauGorgees(g) { return Math.min(1, g / VERRE_PLEIN); }
+
+// Joueur éliminé : sa chope se couche.
+function majMort(s, mort) {
+  if (s.mort === mort) return;
+  s.mort = mort;
+  s.chope.rotation.x = mort ? Math.PI / 2.1 : 0;
+  s.chope.position.y = mort ? 0.1 : 0.014;
+}
+
+// La carte se retourne et montre le rôle.
+function retournerCarte(s, role, anime) {
+  if (!role || s.retournee) return;
+  s.retournee = true;
+  s.role = role;
+  s.carte.userData.face.material = MAT_ROLE[role] || MAT_FACE_VIDE;
+  const y0 = s.carte.position.y;
+  if (!anime) { s.carte.rotation.z = Math.PI; return; }
+  animer(0.8, an => {
+    const k = lisser(an.t / an.duree);
+    s.carte.rotation.z = Math.PI * k;
+    s.carte.position.y = y0 + Math.sin(k * Math.PI) * 0.35;
+  }, () => { s.carte.rotation.z = Math.PI; s.carte.position.y = y0; });
+}
+function cacherCartes() {
+  sieges.forEach(s => { s.retournee = false; s.role = null; s.carte.rotation.z = 0; s.carte.userData.face.material = MAT_FACE_VIDE; });
+}
+
+// =====================================================================
+// ANIMATIONS ET FILE D'ATTENTE
+// =====================================================================
+const animations = [];
+function animer(duree, maj, fin) { animations.push({ t: 0, duree, maj, fin }); }
+function lisser(k) { return k < 0 ? 0 : k > 1 ? 1 : k * k * (3 - 2 * k); }
+function attendre(duree, apres) { animer(duree, null, apres); }
+
+function encaisser(i) {
+  const s = sieges[i];
+  if (!s) return;
+  const corps = s.chope;
+  const base = corps.position.clone();
+  animer(0.5, an => {
+    const k = an.t / an.duree;
+    const amp = (1 - k) * 0.035;
+    corps.position.set(base.x + Math.sin(an.t * 46) * amp, base.y, base.z + Math.cos(an.t * 39) * amp);
+  }, () => { corps.position.copy(base); });
+}
+
+const fileActions = [];
+let pompeActive = false;
+function quandLibre(fn, delai) { fileActions.push({ fn, delai: delai || 0 }); pomper(); }
+function pomper() {
+  if (pompeActive || fileActions.length === 0) return;
+  pompeActive = true;
+  (function patienter() {
+    if (animations.length > 0) { setTimeout(patienter, 80); return; }
+    const tache = fileActions.shift();
+    setTimeout(() => {
+      try { tache.fn(); } catch (e) { console.error(e); }
+      pompeActive = false;
+      pomper();
+    }, tache.delai);
+  })();
+}
+
+// =====================================================================
+// CLICS SUR LES JOUEURS (voter)
+// =====================================================================
+const rayon = new THREE.Raycaster();
+const souris = new THREE.Vector2();
+let ciblesCliquables = null;
+function reinitialiserClics() { ciblesCliquables = null; majSurbrillance(); }
+function armerCibles(map) { ciblesCliquables = map; majSurbrillance(); }
+function surClic(ev) {
+  if (!ciblesCliquables || !ciblesCliquables.size) return;
+  souris.x = (ev.clientX / window.innerWidth) * 2 - 1;
+  souris.y = -(ev.clientY / window.innerHeight) * 2 + 1;
+  rayon.setFromCamera(souris, camera);
+  const objets = [];
+  ciblesCliquables.forEach((fn, i) => { if (sieges[i]) objets.push(sieges[i].avatar, sieges[i].chope, sieges[i].carte); });
+  const touche = rayon.intersectObjects(objets, true)[0];
+  if (!touche) return;
+  const i = sieges.findIndex(s => {
+    let o = touche.object;
+    while (o) { if (o === s.avatar || o === s.chope || o === s.carte) return true; o = o.parent; }
+    return false;
+  });
+  if (i >= 0 && ciblesCliquables.has(i)) ciblesCliquables.get(i)();
+}
+renderer.domElement.addEventListener('click', surClic);
+
+function majSurbrillance() {
+  const etat = etatCourant;
+  sieges.forEach((s, i) => {
+    const absent = etat && etat.partis && etat.partis[i];
+    const mort = etat && etat.vivants && !etat.vivants[i];
+    const actif = etat && etat.orateur === i;
+    const cible = ciblesCliquables && ciblesCliquables.has(i);
+    const vote = monVote === i && etat && etat.phase === 'vote';
+    s.avatar.userData.materiaux.forEach(m => {
+      m.emissive = new THREE.Color(vote ? 0xff3b6b : cible ? 0x8a2a50 : actif ? ACCENT : 0x000000);
+      m.emissiveIntensity = vote ? 1.0 : 0.6;
+      m.transparent = !!(absent || mort);
+      m.opacity = absent || mort ? 0.35 : 1;
+    });
+  });
+}
+
+// =====================================================================
+// CLIENT : messages du serveur
+// =====================================================================
+let MOI = 0;
+let mode = 'local';   // devient 'ligne' à la connexion (lu par le QR des règles)
+let ws = null;
+
+function envoyerIntention(index, msg) {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+}
+
+const elMessage = document.getElementById('message');
+const elRappel = document.getElementById('rappel');
+const elCompteur = document.getElementById('compteur');
+const elPanneau = document.getElementById('panneau');
+const elJoueurs = document.getElementById('joueurs');
+
+let etatCourant = null;
+let monMot = undefined;      // undefined : pas encore reçu ; null : Mr White
+let suisWhite = false;
+let motVisible = false;
+let monVote = null;          // mon vote du scrutin en cours (le serveur le garde secret)
+let cleScrutin = '';
+let dernierEvenement = '';
+let echeanceLocale = null;
+let derniereElimination = 0;
+let derniereDevinette = '';
+
+// Réglage de la partie (salle d'attente et fin de partie).
+let familleChoisie = 'classique';
+let nbUndercover = null, nbWhite = null;
+let reglageManuel = false;
+
+function nomDe(i, majuscule) {
+  if (i === MOI) return majuscule ? 'Tu' : 'toi';
+  return etatCourant ? etatCourant.joueurs[i] : '';
+}
+function prenom(i) { return etatCourant ? etatCourant.joueurs[i] : ''; }
+
+function clientRecevoir(msg) {
+  switch (msg.type) {
+    case 'ton_index':
+      MOI = msg.index;
+      if (msg.jeton) {
+        monJeton = msg.jeton;
+        ecrireSession({ code: codeSalon, nom: monNom, jeton: monJeton, serveur: serveurChoisi });
+      }
+      if (!enPartie) panneauAttente();
+      break;
+    case 'joueur_rejoint':
+      joueursSalon = msg.joueurs;
+      if (enPartie) elRappel.textContent = msg.nom + (msg.retour ? ' est revenu.' : ' rejoint la table.');
+      else panneauAttente();
+      break;
+    case 'joueur_parti':
+      joueursSalon = msg.joueurs;
+      if (enPartie) elRappel.textContent = msg.nom + ' a quitté la table.';
+      else panneauAttente();
+      break;
+    case 'uc_demarree':
+      quandLibre(() => demarrerScene(msg.joueurs));
+      break;
+    case 'uc_etat':
+      quandLibre(() => appliquerEtat(msg));
+      break;
+    case 'uc_mot':
+      quandLibre(() => {
+        MOI = msg.index;
+        const nouveau = msg.mot !== monMot || msg.white !== suisWhite;
+        monMot = msg.mot;
+        suisWhite = !!msg.white;
+        if (nouveau) rafraichirPanneau();
+      });
+      break;
+    case 'uc_elimination':
+      quandLibre(() => animerElimination(msg.elimination));
+      break;
+    case 'uc_egalite':
+      quandLibre(() => animerEgalite(msg));
+      break;
+    case 'uc_devinette':
+      quandLibre(() => animerDevinette(msg.devinette));
+      break;
+    case 'erreur':
+      elRappel.textContent = msg.message;
+      if (enPartie) rafraichirPanneau();
+      break;
+  }
+}
+
+// =====================================================================
+// APPLICATION DE L'ÉTAT
+// =====================================================================
+function appliquerEtat(etat) {
+  const avant = etatCourant;
+  const n = etat.joueurs.length;
+  if (!sieges.length || n !== sieges.length || moiDeLaTable !== MOI) {
+    if (!enPartie) demarrerScene(etat.joueurs);
+    else construireTable(etat.joueurs);
+  }
+  etatCourant = etat;
+  echeanceLocale = etat.delai === null || etat.delai === undefined ? null : Date.now() + etat.delai * 1000;
+
+  // Un nouveau scrutin efface mon vote local.
+  const cle = etat.phase === 'vote' ? etat.tour + ':' + (etat.departage || []).join(',') : '';
+  if (cle !== cleScrutin) { cleScrutin = cle; monVote = null; }
+
+  // Annonce d'un nouveau tour.
+  if (etat.phase === 'indices' && (!avant || avant.tour !== etat.tour) && !etat.departage) {
+    annoncer('Tour ' + etat.tour, (etat.premier === MOI ? 'Tu commences' : prenom(etat.premier) + ' commence') + ' : un indice chacun, à voix haute', '#f472b6', 2.2);
+    dernierEvenement = 'Tour ' + etat.tour + ' : ' + (etat.premier === MOI ? 'tu commences.' : prenom(etat.premier) + ' commence.');
+  }
+  if (etat.phase === 'vote' && avant && avant.phase !== 'vote') {
+    annoncer('🗳️ VOTE', etat.departage ? 'Revote entre ' + etat.departage.map(j => nomDe(j)).join(' et ') : 'Débattez, puis votez', '#f472b6', 1.8);
+    dernierEvenement = '';
+  }
+
+  // En fin de partie, les cartes des survivants se retournent avec l'annonce.
+  const finNouvelle = etat.phase === 'fin' && (!avant || avant.phase !== 'fin');
+  sieges.forEach((s, i) => {
+    s.objectif = niveauGorgees(etat.gorgees[i] || 0);
+    majMort(s, !etat.vivants[i]);
+    if (etat.roles[i] && !(finNouvelle && etat.vivants[i])) retournerCarte(s, etat.roles[i], false);
+  });
+  if (finNouvelle) annoncerFin(etat);
+
+  majSurbrillance();
+  majIcones(etat);
+  majListeJoueurs(etat);
+  majBandeau(etat);
+  majCompteur();
+  rafraichirPanneau();
+}
+
+function majIcones(etat) {
+  sieges.forEach((s, i) => {
+    let sym = null;
+    if (etat.phase === 'indices' && etat.orateur === i) sym = '🎤';
+    else if (etat.phase === 'lecture' && etat.prets[i]) sym = '✔️';
+    else if (etat.phase === 'vote' && etat.a_vote[i]) sym = '🗳️';
+    else if (etat.phase === 'mrwhite' && etat.elimination && etat.elimination.joueur === i) sym = '💭';
+    majIcone(s.icone, sym);
+  });
+  const o = etat.phase === 'indices' ? etat.orateur : null;
+  if (o !== null && o !== undefined && sieges[o]) {
+    halo.position.x = sieges[o].base.x;
+    halo.position.z = sieges[o].base.z;
+    halo.userData.visible = true;
+  } else halo.userData.visible = false;
+}
+
+function annoncerFin(etat) {
+  const r = etat.resultat;
+  if (!r) return;
+  const gagne = r.gagnants.includes(MOI);
+  let gros, couleur;
+  if (r.vainqueur === 'civils') { gros = '😇 Les Civils gagnent'; couleur = '#5dffa0'; }
+  else if (r.vainqueur === 'infiltres') { gros = '🕵️ Les infiltrés gagnent'; couleur = '#f472b6'; }
+  else { gros = '👻 Mr White gagne'; couleur = '#e2e8f0'; }
+  attendre(0.2, () => annoncer(gros, MOI < etat.joueurs.length ? (gagne ? 'Bravo, tu gagnes !' : 'Perdu… tu bois') : 'fin de la partie', couleur, 3.5,
+    { flash: true, vibrer: gagne ? [80, 40, 80] : [200, 80, 200] }));
+  // Toutes les cartes se retournent.
+  sieges.forEach((s, i) => { if (!s.retournee && etat.roles[i]) attendre(0.3 + i * 0.12, () => retournerCarte(s, etat.roles[i], true)); });
+}
+
+// Quelqu'un est éliminé : son nom, puis sa carte se retourne et montre son rôle.
+function animerElimination(el) {
+  if (!el || el.num <= derniereElimination) return;
+  derniereElimination = el.num;
+  const s = sieges[el.joueur];
+  const nom = nomDe(el.joueur, true);
+  const moi = el.joueur === MOI;
+  annoncer(moi ? '😱 TOI' : '🗳️ ' + prenom(el.joueur).toUpperCase(),
+    el.sort ? (moi ? 'Le sort t’a désigné' : 'Le sort a désigné ' + prenom(el.joueur)) : (moi ? 'Tu es éliminé' : 'est éliminé'),
+    '#ffd98a', 1.8, { vibrer: moi ? [120, 60, 120] : null });
+  dernierEvenement = (el.sort ? 'Le sort désigne ' : 'Éliminé : ') + prenom(el.joueur) + '.';
+  elRappel.textContent = dernierEvenement;
+  // Les votes, au-dessus de chaque joueur visé.
+  const compte = {};
+  el.votes.forEach(v => { compte[v.cible] = (compte[v.cible] || 0) + 1; });
+  Object.entries(compte).forEach(([c, nb]) => {
+    const st = sieges[+c];
+    if (st) texteFlottant(st.base, nb + ' vote' + (nb > 1 ? 's' : ''), '', '#ffd0e6', 0.34);
+  });
+  attendre(2.0, () => {
+    if (s) { retournerCarte(s, el.role, true); majMort(s, true); }
+    const info = ROLES[el.role];
+    let petit;
+    if (el.role === 'civil') petit = moi ? 'Tu étais innocent : tes accusateurs boivent' : nom + ' était innocent : ses accusateurs boivent';
+    else if (el.role === 'white') petit = moi ? 'Démasqué ! Tente de deviner le mot' : nom + ' va tenter de deviner le mot';
+    else petit = moi ? 'Démasqué : tu bois 3 gorgées' : 'Démasqué ! ' + nom + ' boit 3 gorgées';
+    annoncer(info.sym + ' ' + info.nom.toUpperCase(), petit, info.couleur, 2.6, { flash: true });
+    dernierEvenement = prenom(el.joueur) + ' était ' + info.nom + '.';
+    elRappel.textContent = dernierEvenement;
+    attendre(0.9, () => {
+      (el.gorgees || []).forEach(b => {
+        const st = sieges[b.joueur];
+        if (!st) return;
+        encaisser(b.joueur);
+        texteFlottant(st.chope.position, '+' + b.gorgees, 'gorgée' + (b.gorgees > 1 ? 's' : ''), '#ffb44c', 0.34);
+      });
+      attendre(1.2, () => {});
+    });
+  });
+}
+
+function animerEgalite(msg) {
+  const noms = msg.candidats.map(j => nomDe(j)).join(' et ');
+  annoncer('⚖️ ÉGALITÉ', noms + ' : un indice de plus chacun', '#ffd98a', 2.4, { flash: true });
+  dernierEvenement = 'Égalité entre ' + noms + ' : nouvel indice, puis revote.';
+  elRappel.textContent = dernierEvenement;
+  attendre(1.5, () => {});
+}
+
+function animerDevinette(d) {
+  if (!d) return;
+  const cle = d.joueur + ':' + d.mot + ':' + derniereElimination;
+  if (cle === derniereDevinette) return;
+  derniereDevinette = cle;
+  const nom = nomDe(d.joueur, true);
+  annoncer('👻 « ' + (d.mot || '…') + ' »', d.mot ? (d.joueur === MOI ? 'Ta proposition' : nom + ' propose') : nom + ' n’a rien trouvé', '#e2e8f0', 1.8);
+  attendre(2.0, () => {
+    if (d.correct) annoncer('✅ TROUVÉ', 'Mr White gagne la partie !', '#5dffa0', 2.4, { flash: true });
+    else annoncer('❌ RATÉ', 'La partie continue', '#ff6b8a', 2.0, { flash: true });
+    dernierEvenement = d.correct ? 'Mr White a trouvé le mot !' : 'Mr White s’est trompé' + (d.mot ? ' (« ' + d.mot + ' »)' : '') + '.';
+    elRappel.textContent = dernierEvenement;
+    attendre(1.0, () => {});
+  });
+}
+
+// =====================================================================
+// BANDEAU, COMPTEUR, LISTE DES JOUEURS
+// =====================================================================
+function majBandeau(etat) {
+  const n = etat.joueurs.length;
+  if (MOI >= n) elMessage.textContent = 'Tu regardes la partie';
+  else if (etat.phase === 'fin') elMessage.textContent = 'Partie terminée';
+  else if (etat.phase === 'lecture') elMessage.textContent = 'Découvre ton mot';
+  else if (etat.phase === 'indices') elMessage.textContent = etat.orateur === MOI ? '🎤 À toi de parler' : '🎤 ' + prenom(etat.orateur) + ' parle';
+  else if (etat.phase === 'vote') elMessage.textContent = etat.departage ? '⚖️ Revote' : '🗳️ Débat et vote';
+  else if (etat.phase === 'mrwhite') elMessage.textContent = '👻 Mr White cherche le mot';
+  else elMessage.textContent = 'Révélation';
+  elRappel.textContent = dernierEvenement || etat.message || '';
+}
+
+function infiltresRestants(etat) {
+  const r = etat.repartition;
+  const reveles = etat.roles.filter((x, i) => x && x !== 'civil' && !etat.vivants[i]).length;
+  return r.undercover + r.white - reveles;
+}
+
+function majCompteur() {
+  const etat = etatCourant;
+  if (!etat || !enPartie || etat.phase === 'fin') { elCompteur.innerHTML = ''; return; }
+  const parts = [];
+  if (etat.tour) parts.push('Tour <b>' + etat.tour + '</b>');
+  parts.push('🕵️ ' + etat.repartition.undercover + ' · 👻 ' + etat.repartition.white);
+  parts.push('Infiltrés restants : <b>' + infiltresRestants(etat) + '</b>');
+  if (echeanceLocale && etat.phase !== 'revelation') {
+    const s = Math.max(0, Math.round((echeanceLocale - Date.now()) / 1000));
+    parts.push('<span class="chrono' + (s <= 10 ? ' urgent' : '') + '">⏱ ' + s + ' s</span>');
+  }
+  elCompteur.innerHTML = parts.join(' · ');
+}
+setInterval(majCompteur, 1000);
+
+function majListeJoueurs(etat) {
+  elJoueurs.innerHTML = '';
+  etat.joueurs.forEach((nom, i) => {
+    const d = document.createElement('div');
+    const actif = etat.orateur === i;
+    d.className = 'joueur' + (actif ? ' actif' : '') + (etat.partis[i] ? ' absent' : '') + (!etat.vivants[i] ? ' mort' : '');
+    const p = document.createElement('span');
+    p.className = 'pastille';
+    p.style.background = '#' + COULEURS[i % COULEURS.length].toString(16).padStart(6, '0');
+    const nm = document.createElement('span');
+    nm.className = 'nom';
+    const role = etat.roles[i] ? ROLES[etat.roles[i]].sym + ' ' : '';
+    nm.textContent = role + nom + (i === MOI ? ' (toi)' : '');
+    const inf = document.createElement('span');
+    inf.className = 'info';
+    const voteFait = etat.phase === 'vote' && etat.a_vote[i] ? '🗳️ · ' : '';
+    inf.textContent = voteFait + '🍺 ' + etat.gorgees[i] + ' · ⭐ ' + etat.points[i];
+    inf.title = 'gorgées bues · points de la soirée';
+    d.append(p, nm, inf);
+    elJoueurs.appendChild(d);
+  });
+  etat.joueurs.forEach((nom, i) => {
+    if (!sieges[i]) return;
+    const actif = etat.orateur === i;
+    const txt = (etat.roles[i] ? ROLES[etat.roles[i]].sym + ' ' : '') + nom;
+    majEtiquette(sieges[i].etiquette, txt, actif, etat.partis[i] || !etat.vivants[i]);
+  });
+}
+
+// =====================================================================
+// PANNEAUX D'INTERFACE
+// =====================================================================
+function cacherPanneau() { elPanneau.className = 'cache'; elPanneau.innerHTML = ''; }
+function boutonMenuJeux() { return bouton('🎲 Tous les jeux', 'sombre', () => { location.href = 'index.html'; }); }
+function bouton(texte, classe, onClick) {
+  const b = document.createElement('button');
+  b.textContent = texte;
+  if (classe) b.className = classe;
+  b.addEventListener('click', onClick);
+  return b;
+}
+function ouvrirPanneau(titre) {
+  elPanneau.className = '';
+  elPanneau.innerHTML = '';
+  if (titre) {
+    const h = document.createElement('h2');
+    h.textContent = titre;
+    elPanneau.appendChild(h);
+  }
+  return elPanneau;
+}
+function aide(texte) {
+  const d = document.createElement('p');
+  d.className = 'aide';
+  d.textContent = texte;
+  return d;
+}
+function rangee() {
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  return r;
+}
+// Envoie une intention et gèle le panneau : l'état suivant le reconstruira.
+function agir(msg) {
+  reinitialiserClics();
+  elPanneau.querySelectorAll('button').forEach(b => { b.disabled = true; });
+  envoyerIntention(MOI, msg);
+}
+
+// Mon mot, voilé par défaut : les voisins de table voient l'écran.
+function blocMot(mini) {
+  const d = document.createElement('div');
+  d.className = 'mot-secret' + (suisWhite ? ' white' : '') + (motVisible ? '' : ' voile') + (mini ? ' mini' : '');
+  d.setAttribute('role', 'button');
+  const lib = document.createElement('span'); lib.className = 'lib';
+  const mot = document.createElement('span'); mot.className = 'mot';
+  const touche = document.createElement('span'); touche.className = 'touche';
+  if (monMot === undefined && !suisWhite) {
+    lib.textContent = 'Ton mot'; mot.textContent = '…'; touche.textContent = 'distribution en cours';
+  } else if (!motVisible) {
+    lib.textContent = 'Ton mot secret'; mot.textContent = '🙈'; touche.textContent = 'touche pour le voir (cache l’écran)';
+  } else if (suisWhite) {
+    lib.textContent = 'Tu es'; mot.textContent = '👻 Mr White'; touche.textContent = 'aucun mot : improvise ! · touche pour cacher';
+  } else {
+    lib.textContent = 'Ton mot'; mot.textContent = monMot; touche.textContent = 'touche pour cacher';
+  }
+  d.append(lib, mot, touche);
+  d.addEventListener('click', () => { motVisible = !motVisible; rafraichirPanneau(); });
+  return d;
+}
+
+function blocOrdre(etat) {
+  const d = document.createElement('div');
+  d.className = 'ordre';
+  etat.ordre.forEach((j, k) => {
+    const s = document.createElement('span');
+    s.className = k < etat.parole ? 'fait' : k === etat.parole ? 'actuel' : '';
+    s.textContent = (k + 1) + '. ' + (j === MOI ? 'toi' : etat.joueurs[j]);
+    d.appendChild(s);
+  });
+  return d;
+}
+
+function rafraichirPanneau() {
+  if (!enPartie || !etatCourant) return;
+  const etat = etatCourant;
+  reinitialiserClics();
+  if (MOI >= etat.joueurs.length) { panneauSpectateur(etat); return; }
+  if (etat.phase === 'fin') { panneauFin(etat); return; }
+  if (etat.phase === 'lecture') { panneauLecture(etat); return; }
+  if (etat.phase === 'mrwhite') { panneauMrWhite(etat); return; }
+  if (etat.phase === 'revelation') { panneauRevelation(etat); return; }
+  if (!etat.vivants[MOI]) { panneauElimine(etat); return; }
+  if (etat.phase === 'indices') { panneauIndices(etat); return; }
+  if (etat.phase === 'vote') { panneauVote(etat); return; }
+}
+
+function panneauLecture(etat) {
+  const p = ouvrirPanneau('🤫 Découvre ton mot, en secret');
+  p.appendChild(blocMot(false));
+  p.appendChild(aide(suisWhite
+    ? 'Tu n’as pas de mot : écoute les indices, glisse un indice passe-partout, et essaie de deviner le mot des Civils.'
+    : 'Tu ne sais pas si tu es Civil ou Undercover : écoute bien les autres pour le deviner.'));
+  const r = rangee();
+  if (!etat.prets[MOI]) {
+    const b = bouton('C’est bon, j’ai lu', 'gros', () => { motVisible = false; agir({ type: 'uc_pret' }); });
+    b.disabled = monMot === undefined && !suisWhite;
+    r.appendChild(b);
+  } else {
+    const attendus = etat.joueurs.filter((n, i) => etat.vivants[i] && !etat.prets[i]);
+    r.appendChild(aide('Prêt ! On attend : ' + attendus.join(', ') + '.'));
+  }
+  p.appendChild(r);
+}
+
+function panneauIndices(etat) {
+  const aMoi = etat.orateur === MOI;
+  const p = ouvrirPanneau(aMoi ? '🎤 À toi : donne ton indice' : '🎤 ' + prenom(etat.orateur) + ' donne son indice');
+  if (etat.departage) p.appendChild(aide('⚖️ Égalité : ' + etat.departage.map(j => nomDe(j)).join(' et ') + ' redonnent un indice avant le revote.'));
+  p.appendChild(blocOrdre(etat));
+  p.appendChild(blocMot(true));
+  if (aMoi) {
+    p.appendChild(aide('Un mot ou une courte phrase, à voix haute. Assez clair pour tes alliés, assez flou pour Mr White.'));
+    const r = rangee();
+    r.appendChild(bouton('✔ J’ai donné mon indice', 'gros', () => agir({ type: 'uc_fini' })));
+    p.appendChild(r);
+  } else {
+    p.appendChild(aide('Écoute bien. Quand ' + prenom(etat.orateur) + ' a fini, son téléphone passe la parole.'));
+  }
+}
+
+function panneauVote(etat) {
+  const candidats = (etat.departage || etat.joueurs.map((n, i) => i).filter(i => etat.vivants[i])).filter(i => i !== MOI);
+  const p = ouvrirPanneau(etat.departage ? '⚖️ Revote : qui part ?' : '🗳️ Qui est l’infiltré ?');
+  p.appendChild(blocMot(true));
+  p.appendChild(aide('Débattez à voix haute. Touche un joueur ou un bouton : ton vote reste secret jusqu’au dépouillement, et tu peux le changer tant que tout le monde n’a pas voté.'));
+  const r = rangee();
+  const map = new Map();
+  candidats.forEach(i => {
+    const fn = () => { monVote = i; envoyerIntention(MOI, { type: 'uc_voter', cible: i }); rafraichirPanneau(); majSurbrillance(); };
+    r.appendChild(bouton(etat.joueurs[i], 'danger' + (monVote === i ? ' choisi' : ''), fn));
+    map.set(i, fn);
+  });
+  p.appendChild(r);
+  const votants = etat.joueurs.map((n, i) => i).filter(i => etat.vivants[i]);
+  const faits = votants.filter(i => etat.a_vote[i]).length;
+  const manquent = votants.filter(i => !etat.a_vote[i] && !etat.partis[i]).map(i => i === MOI ? 'toi' : etat.joueurs[i]);
+  p.appendChild(aide((monVote !== null ? 'Ton vote : ' + etat.joueurs[monVote] + '. ' : '') + faits + '/' + votants.length + ' ont voté'
+    + (manquent.length ? ' · on attend ' + manquent.join(', ') : '') + '.'));
+  armerCibles(map);
+}
+
+function panneauMrWhite(etat) {
+  const el = etat.elimination;
+  if (el && el.joueur === MOI) {
+    const p = ouvrirPanneau('👻 Démasqué ! Dernière chance');
+    p.appendChild(aide('Écris le mot des Civils. Si tu trouves, tu gagnes seul la partie.'));
+    const r = rangee();
+    // Un état qui arrive pendant qu'il écrit (quelqu'un part, revient) ne doit pas effacer sa saisie.
+    const ancien = document.getElementById('devine');
+    const saisie = ancien ? ancien.value : '';
+    const avaitFocus = ancien && document.activeElement === ancien;
+    const champ = champTexte('devine', 'Le mot des Civils', 40);
+    champ.value = saisie;
+    champ.addEventListener('keydown', e => { if (e.key === 'Enter') valider(); });
+    const valider = () => {
+      const mot = champ.value.trim();
+      if (!mot) { afficherErreur('Écris un mot'); return; }
+      agir({ type: 'uc_deviner', mot });
+    };
+    r.appendChild(champ);
+    r.appendChild(bouton('Valider', '', valider));
+    p.appendChild(r);
+    if (avaitFocus || !saisie) setTimeout(() => { try { champ.focus(); } catch (e) { /* tant pis */ } }, 50);
+    return;
+  }
+  const p = ouvrirPanneau(null);
+  p.appendChild(aide((el ? prenom(el.joueur) : 'Mr White') + ' était Mr White ! Il cherche le mot des Civils… Silence, pas d’aide !'));
+  if (MOI < etat.joueurs.length && etat.vivants[MOI]) p.appendChild(blocMot(true));
+}
+
+function panneauRevelation(etat) {
+  const p = ouvrirPanneau(null);
+  const el = etat.elimination;
+  if (el) {
+    const v = document.createElement('div');
+    v.className = 'verdict';
+    const info = ROLES[el.role];
+    v.textContent = (el.joueur === MOI ? 'Tu étais ' : prenom(el.joueur) + ' était ') + info.sym + ' ' + info.nom + '.';
+    p.appendChild(v);
+  }
+  if (etat.devinette && !etat.devinette.correct) p.appendChild(aide('Mr White s’est trompé' + (etat.devinette.mot ? ' : « ' + etat.devinette.mot + ' »' : '') + '.'));
+  p.appendChild(aide('Infiltrés restants : ' + infiltresRestants(etat) + '. Tour suivant dans quelques secondes…'));
+}
+
+function panneauElimine(etat) {
+  const r0 = etat.roles[MOI];
+  const p = ouvrirPanneau('💀 Tu es éliminé' + (r0 ? ' (' + ROLES[r0].nom + ')' : ''));
+  p.appendChild(aide('Tu peux encore débattre et semer le doute, mais tu ne votes plus. '
+    + (etat.phase === 'indices' ? '🎤 ' + prenom(etat.orateur) + ' parle.' : etat.phase === 'vote' ? 'Le vote est en cours.' : '')));
+  const r = rangee();
+  r.appendChild(boutonMenuJeux());
+  p.appendChild(r);
+}
+
+function bilan(etat) {
+  const t = document.createElement('table');
+  t.className = 'bilan';
+  const r = etat.resultat || { gagnants: [], points: [] };
+  const gains = {};
+  (r.points || []).forEach(g => { gains[g.joueur] = g.points; });
+  const ordre = etat.joueurs.map((nom, i) => ({ nom, i })).sort((a, b) => etat.points[b.i] - etat.points[a.i]);
+  ordre.forEach(x => {
+    const tr = document.createElement('tr');
+    if (r.gagnants.includes(x.i)) tr.className = 'gagnant';
+    const role = ROLES[etat.roles[x.i]];
+    const a = document.createElement('td');
+    a.textContent = (r.gagnants.includes(x.i) ? '🏆 ' : '') + role.sym + ' ' + x.nom + (x.i === MOI ? ' (toi)' : '');
+    a.title = role.nom;
+    const b = document.createElement('td');
+    b.className = 'n';
+    b.textContent = etat.gorgees[x.i] + ' 🍺';
+    const c = document.createElement('td');
+    c.className = 'n';
+    c.textContent = '⭐ ' + etat.points[x.i] + (gains[x.i] ? ' (+' + gains[x.i] + ')' : '');
+    tr.append(a, b, c);
+    t.appendChild(tr);
+  });
+  return t;
+}
+
+function blocMotsReveles(etat) {
+  const d = document.createElement('div');
+  d.className = 'mots-reveles';
+  if (!etat.mots) return d;
+  [['😇 Civils', etat.mots.civil], ['🕵️ Undercover', etat.mots.undercover], ['Catégorie', etat.mots.categorie]].forEach(([t, m]) => {
+    const x = document.createElement('div');
+    x.textContent = t;
+    const b = document.createElement('b'); b.textContent = m;
+    x.appendChild(b);
+    d.appendChild(x);
+  });
+  return d;
+}
+
+function panneauFin(etat) {
+  const r = etat.resultat || { vainqueur: '', gagnants: [] };
+  const titres = { civils: '😇 Les Civils gagnent !', infiltres: '🕵️ Les infiltrés gagnent !', white: '👻 Mr White a trouvé le mot !' };
+  const p = ouvrirPanneau(titres[r.vainqueur] || 'Partie terminée');
+  p.appendChild(blocMotsReveles(etat));
+  p.appendChild(bilan(etat));
+  p.appendChild(aide('Une autre ? Ceux qui sont arrivés en cours de partie s’assoient.'));
+  p.appendChild(blocReglage(joueursSalon.length || etat.joueurs.length, () => panneauFin(etat)));
+  const ok = repartitionValide(joueursSalon.length || etat.joueurs.length, nbUndercover, nbWhite);
+  const rg = rangee();
+  const b = bouton('Rejouer', '', () => agir(messageDemarrer()));
+  b.disabled = !ok;
+  rg.appendChild(b);
+  rg.appendChild(boutonMenuJeux());
+  p.appendChild(rg);
+}
+
+function panneauSpectateur(etat) {
+  const p = ouvrirPanneau('Spectateur');
+  p.appendChild(aide('La partie a commencé sans toi : tu la suis en direct, et tu t’assois à la suivante.'));
+  const r = rangee();
+  r.appendChild(bouton('Quitter le salon', 'sombre', () => {
+    enPartie = false; oublierSession(); monJeton = null;
+    if (ws) { try { ws.close(); } catch (e) { /* deja ferme */ } }
+    location.href = location.pathname;
+  }));
+  p.appendChild(r);
+}
+
+// --- Réglage : familles de mots et nombre d'infiltrés ---
+function repartitionConseillee(n) {
+  if (n <= 4) return [1, 0];
+  if (n <= 6) return [1, 1];
+  if (n <= 9) return [2, 1];
+  if (n <= 12) return [3, 1];
+  return [3, 2];
+}
+function repartitionValide(n, u, w) {
+  const inf = u + w;
+  return u >= 0 && w >= 0 && inf >= 1 && n - inf >= inf + 1;
+}
+function suivreConseil(n) {
+  if (reglageManuel && nbUndercover !== null && repartitionValide(n, nbUndercover, nbWhite)) return;
+  [nbUndercover, nbWhite] = repartitionConseillee(Math.max(3, n));
+  if (reglageManuel && !repartitionValide(n, nbUndercover, nbWhite)) reglageManuel = false;
+}
+function messageDemarrer() {
+  return { type: 'uc_demarrer', famille: familleChoisie, undercover: nbUndercover, white: nbWhite };
+}
+
+function blocReglage(n, redessiner) {
+  suivreConseil(n);
+  const d = document.createElement('div');
+  const fam = document.createElement('div');
+  fam.className = 'modes';
+  Object.entries(FAMILLES).forEach(([cle, m]) => {
+    // Une tuile, pas un <button> : le style commun des boutons l'écraserait.
+    const b = document.createElement('div');
+    b.className = 'mode' + (cle === familleChoisie ? ' choisi' : '');
+    b.setAttribute('role', 'button');
+    b.innerHTML = '<b></b><span></span>';
+    b.querySelector('b').textContent = m.nom;
+    b.querySelector('span').textContent = m.desc;
+    b.addEventListener('click', () => { familleChoisie = cle; redessiner(); });
+    fam.appendChild(b);
+  });
+  d.appendChild(fam);
+
+  const reg = document.createElement('div');
+  reg.className = 'reglage';
+  const compteur = (libelle, valeur, changer) => {
+    const c = document.createElement('div');
+    c.className = 'role-compte';
+    const moins = bouton('−', 'sombre petit', () => { changer(-1); });
+    const v = document.createElement('b'); v.textContent = valeur;
+    const plus = bouton('+', 'sombre petit', () => { changer(1); });
+    const l = document.createElement('span'); l.textContent = libelle;
+    c.append(l, moins, v, plus);
+    return c;
+  };
+  const changer = (quoi, delta) => {
+    reglageManuel = true;
+    if (quoi === 'u') nbUndercover = Math.max(0, Math.min(6, nbUndercover + delta));
+    else nbWhite = Math.max(0, Math.min(4, nbWhite + delta));
+    redessiner();
+  };
+  reg.appendChild(compteur('🕵️ Undercover', nbUndercover, dl => changer('u', dl)));
+  reg.appendChild(compteur('👻 Mr White', nbWhite, dl => changer('w', dl)));
+  const civils = document.createElement('div');
+  civils.className = 'role-compte';
+  civils.innerHTML = '<span>😇 Civils</span> <b></b>';
+  civils.querySelector('b').textContent = Math.max(0, n - nbUndercover - nbWhite);
+  reg.appendChild(civils);
+  d.appendChild(reg);
+
+  const conseil = repartitionConseillee(Math.max(3, n));
+  const ok = repartitionValide(n, nbUndercover, nbWhite);
+  const info = document.createElement('div');
+  info.className = ok ? 'aide' : 'alerte';
+  if (!ok) info.textContent = 'Il faut au moins un infiltré, et plus de Civils que d’infiltrés.';
+  else if (nbUndercover === conseil[0] && nbWhite === conseil[1]) info.textContent = 'Réglage conseillé pour ' + n + ' joueurs.';
+  else info.textContent = 'Réglage perso (conseillé pour ' + n + ' : ' + conseil[0] + ' Undercover, ' + conseil[1] + ' Mr White).';
+  d.appendChild(info);
+  if (reglageManuel && !(nbUndercover === conseil[0] && nbWhite === conseil[1])) {
+    const r = rangee();
+    r.appendChild(bouton('Revenir au conseillé', 'sombre petit', () => { reglageManuel = false; nbUndercover = null; redessiner(); }));
+    d.appendChild(r);
+  }
+  return d;
+}
+
+// =====================================================================
+// ACCUEIL ET SALON
+// =====================================================================
+const SERVEURS = {
+  render: { http: 'https://kinito-serveur.onrender.com', ws: 'wss://kinito-serveur.onrender.com' },
+  local:  { http: 'http://127.0.0.1:8000',               ws: 'ws://127.0.0.1:8000' },
+};
+let serveurChoisi = 'render';
+
+let monNom = Soiree.nom();   // prénom de la soirée, saisi une seule fois
+let codeSalon = '';
+let estCreateur = false;
+let joueursSalon = [];
+let enPartie = false;
+let monJeton = null;
+
+const JOUEURS_MIN = 3;
+const JOUEURS_MAX = 15;
+
+// Le jeton permet de retrouver sa place après une coupure ou un rechargement.
+const CLE_SESSION = 'undercover3d.session';
+
+function lireSession() {
+  try { return JSON.parse(localStorage.getItem(CLE_SESSION) || 'null'); }
+  catch (e) { return null; }
+}
+function ecrireSession(s) {
+  try { localStorage.setItem(CLE_SESSION, JSON.stringify(s)); } catch (e) { /* tant pis */ }
+}
+function oublierSession() {
+  lienActif = false;
+  try { localStorage.removeItem(CLE_SESSION); } catch (e) { /* tant pis */ }
+}
+
+function champTexte(id, placeholder, longueurMax) {
+  const i = document.createElement('input');
+  i.type = 'text';
+  i.id = id;
+  i.placeholder = placeholder;
+  i.autocomplete = 'off';
+  if (longueurMax) i.maxLength = longueurMax;
+  return i;
+}
+
+function afficherErreur(texte) { elRappel.textContent = texte; }
+
+function panneauAccueil() {
+  elMessage.textContent = 'Undercover 3D';
+  elRappel.textContent = 'Un mot chacun, des infiltrés parmi vous : démasquez-les';
+  elCompteur.innerHTML = '';
+  const p = panneauEnLigne();
+
+  const s = lireSession();
+  if (s && s.code && s.jeton) {
+    const r2 = rangee();
+    r2.style.marginTop = '12px';
+    r2.appendChild(bouton('Reprendre la partie ' + s.code, 'sombre', () => {
+      monNom = s.nom; codeSalon = s.code; monJeton = s.jeton;
+      serveurChoisi = s.serveur || 'render';
+      estCreateur = false;
+      afficherErreur('Reconnexion...');
+      seConnecter();
+    }));
+    p.appendChild(r2);
+  }
+}
+
+function boutonServeur() {
+  const b = bouton('', 'sombre petit', () => {
+    serveurChoisi = serveurChoisi === 'render' ? 'local' : 'render';
+    majLibelleServeur(b);
+  });
+  majLibelleServeur(b);
+  return b;
+}
+
+function panneauRejoindreDirect(code) {
+  codeSalon = code;
+  elMessage.textContent = 'Undercover 3D';
+  elRappel.textContent = 'Salon ' + code;
+  const p = ouvrirPanneau('Rejoindre le salon');
+
+  const c = document.createElement('div');
+  c.className = 'code-salon';
+  c.textContent = code;
+  p.appendChild(c);
+
+  const l1 = rangee();
+  const pseudo = champTexte('pseudo', 'Ton prénom', 16);
+  pseudo.value = monNom;
+  l1.appendChild(pseudo);
+  p.appendChild(l1);
+
+  const l2 = rangee();
+  l2.style.marginTop = '10px';
+  l2.appendChild(bouton('Rejoindre', '', async () => {
+    if (!lireNom()) return;
+    afficherErreur('Connexion au serveur...');
+    try {
+      const rep = await fetch(SERVEURS[serveurChoisi].http + '/salon/' + codeSalon);
+      if (!(await rep.json()).existe) { afficherErreur('Ce salon n’existe plus'); return; }
+      estCreateur = false;
+      seConnecter();
+    } catch (e) {
+      afficherErreur('Serveur injoignable.');
+    }
+  }));
+  p.appendChild(l2);
+
+  const l3 = rangee();
+  l3.style.marginTop = '12px';
+  l3.appendChild(boutonServeur());
+  l3.appendChild(bouton('Autre salon', 'sombre petit', panneauAccueil));
+  p.appendChild(l3);
+}
+
+function panneauEnLigne() {
+  const p = ouvrirPanneau('Jouer en ligne');
+
+  const l1 = rangee();
+  const pseudo = champTexte('pseudo', 'Ton prénom', 16);
+  pseudo.value = monNom;
+  l1.appendChild(pseudo);
+  p.appendChild(l1);
+
+  const l2 = rangee();
+  l2.style.marginTop = '10px';
+  l2.appendChild(bouton('Créer un salon', '', creerSalon));
+  p.appendChild(l2);
+
+  const l3 = rangee();
+  l3.style.marginTop = '10px';
+  l3.appendChild(champTexte('code-salon', 'CODE', 4));
+  l3.appendChild(bouton('Rejoindre', 'sombre', rejoindreSalon));
+  p.appendChild(l3);
+
+  const l4 = rangee();
+  l4.style.marginTop = '14px';
+  l4.appendChild(boutonServeur());
+  p.appendChild(l4);
+
+  const note = document.createElement('div');
+  note.className = 'note';
+  note.textContent = "Le serveur Render s'endort : la première connexion peut prendre 30 s.";
+  p.appendChild(note);
+  return p;
+}
+
+function majLibelleServeur(b) {
+  b.textContent = serveurChoisi === 'render' ? 'Serveur : Render' : 'Serveur : local';
+}
+
+function lireNom() {
+  const champ = document.getElementById('pseudo');
+  monNom = champ ? champ.value.trim() : '';
+  if (monNom) monNom = Soiree.definirNom(monNom);
+  if (!monNom) { afficherErreur('Entre ton prénom'); return false; }
+  return true;
+}
+
+async function creerSalon() {
+  if (!lireNom()) return;
+  afficherErreur('Connexion au serveur...');
+  try {
+    const rep = await fetch(SERVEURS[serveurChoisi].http + '/creer-salon');
+    codeSalon = (await rep.json()).code;
+    estCreateur = true;
+    seConnecter();
+  } catch (e) {
+    afficherErreur("Serveur injoignable. S'il dort, réessaie dans 30 s.");
+  }
+}
+
+async function rejoindreSalon() {
+  if (!lireNom()) return;
+  const champ = document.getElementById('code-salon');
+  codeSalon = (champ ? champ.value : '').trim().toUpperCase();
+  if (codeSalon.length !== 4) { afficherErreur('Le code fait 4 lettres'); return; }
+  afficherErreur('Connexion au serveur...');
+  try {
+    const rep = await fetch(SERVEURS[serveurChoisi].http + '/salon/' + codeSalon);
+    if (!(await rep.json()).existe) { afficherErreur('Salon introuvable'); return; }
+    estCreateur = false;
+    seConnecter();
+  } catch (e) {
+    afficherErreur('Serveur injoignable.');
+  }
+}
+
+// --- Connexion au serveur : reconnexion automatique et battement de cœur ---
+// (même mécanique que les autres jeux : battement toutes les 5 s, reconnexion
+// automatique, resynchronisation au retour sur la page)
+let lienActif = false;
+let tentativesLien = 0;
+let minuteurLien = null;
+let dernierSignal = 0;
+let cacheeDepuis = 0;
+
+function seConnecter() {
+  Soiree.memoriser(codeSalon, serveurChoisi);
+  if (!monJeton) {
+    const s = lireSession();
+    if (s && s.code === codeSalon && s.jeton) monJeton = s.jeton;
+  }
+
+  clearTimeout(minuteurLien);
+  minuteurLien = null;
+  lienActif = true;
+  let url = SERVEURS[serveurChoisi].ws + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom) + '?bat=1&page=undercover';
+  if (monJeton) url += '&jeton=' + encodeURIComponent(monJeton);
+  const socket = new WebSocket(url);
+  ws = socket;
+  dernierSignal = Date.now();
+  socket.onopen = () => {
+    if (ws !== socket) return;
+    if (tentativesLien > 0) afficherErreur('Reconnecté.');
+    tentativesLien = 0;
+    dernierSignal = Date.now();
+    mode = 'ligne';
+    if (!enPartie) panneauAttente();
+    Soiree.verifierJeuEnCours('undercover');
+  };
+  socket.onmessage = e => {
+    if (ws !== socket) return;
+    dernierSignal = Date.now();
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'pong') return;
+    if (Soiree.traiterMessage(msg, 'undercover')) return;
+    if (msg.type === 'remplace') { lienActif = false; panneauRemplace(); return; }
+    clientRecevoir(msg);
+  };
+  socket.onerror = () => { if (ws === socket && !lienActif) afficherErreur('Erreur de connexion au serveur'); };
+  socket.onclose = () => { if (ws === socket && lienActif) programmerReconnexion(); };
+}
+
+function programmerReconnexion() {
+  if (!lienActif || minuteurLien) return;
+  tentativesLien++;
+  if (tentativesLien > 14) { lienActif = false; panneauReconnexion(); return; }
+  afficherErreur('Connexion perdue, reconnexion…');
+  const delai = Math.min(1000 * tentativesLien, 5000);
+  minuteurLien = setTimeout(() => { minuteurLien = null; if (lienActif) seConnecter(); }, delai);
+}
+
+function verifierLien() {
+  if (!lienActif) return;
+  const absence = cacheeDepuis ? Date.now() - cacheeDepuis : 0;
+  cacheeDepuis = 0;
+  if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+    clearTimeout(minuteurLien);
+    minuteurLien = null;
+    tentativesLien = 0;
+    seConnecter();
+  } else if (ws.readyState === WebSocket.OPEN && absence > 2000) {
+    try { ws.send('{"type":"ping"}'); ws.send('{"type":"resync"}'); } catch (e) { /* elle se fermera */ }
+  }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) cacheeDepuis = Date.now(); else verifierLien();
+});
+window.addEventListener('pageshow', verifierLien);
+window.addEventListener('online', verifierLien);
+
+setInterval(() => {
+  if (!lienActif || !ws || ws.readyState !== WebSocket.OPEN) return;
+  try { ws.send('{"type":"ping"}'); } catch (e) { /* elle se fermera */ }
+  if (!document.hidden && Date.now() - dernierSignal > 15000) seConnecter();
+}, 5000);
+
+function panneauRemplace() {
+  elMessage.textContent = 'Partie reprise ailleurs';
+  const p = ouvrirPanneau('Tu joues sur un autre écran');
+  const t = document.createElement('p');
+  t.textContent = 'Ta place a été reprise depuis un autre onglet ou un autre téléphone, avec le même prénom.';
+  p.appendChild(t);
+  const r = rangee();
+  r.appendChild(bouton('Reprendre ici', '', () => { cacherPanneau(); tentativesLien = 0; seConnecter(); }));
+  r.appendChild(bouton('Tous les jeux', 'sombre', () => { location.href = 'index.html'; }));
+  p.appendChild(r);
+}
+
+function panneauReconnexion() {
+  elMessage.textContent = 'Connexion perdue';
+  reinitialiserClics();
+  const p = ouvrirPanneau('Déconnecté');
+  p.appendChild(aide('Ta place est gardée ; en attendant, la table avance sans toi. Reconnecte-toi pour la reprendre.'));
+  const r = rangee();
+  r.appendChild(bouton('Reconnecter', '', () => { cacherPanneau(); tentativesLien = 0; seConnecter(); }));
+  r.appendChild(bouton('Quitter', 'sombre', () => {
+    enPartie = false; oublierSession(); monJeton = null; location.href = location.pathname;
+  }));
+  p.appendChild(r);
+}
+
+const SITE_PUBLIE = 'https://ozaxe.github.io/table-de-jeu/undercover-3d-jeu.html';
+
+function lienSalon(code) {
+  const fichierLocal = location.protocol === 'file:';
+  const base = fichierLocal ? SITE_PUBLIE : location.origin + location.pathname;
+  return { url: base + '?salon=' + encodeURIComponent(code), repli: fichierLocal };
+}
+
+function majQRModale() {
+  const bloc = document.getElementById('bloc-qr-regles');
+  if (!bloc) return;
+  if (mode !== 'ligne' || !codeSalon) { bloc.className = 'cache'; return; }
+  bloc.className = '';
+  document.getElementById('qr-code-salon').textContent = codeSalon;
+
+  const lien = lienSalon(codeSalon);
+  const cv = document.getElementById('qr-regles');
+  const note = document.getElementById('qr-note-regles');
+
+  cv.style.display = 'none';
+  if (typeof QRious !== 'undefined') {
+    try {
+      new QRious({ element: cv, value: lien.url, size: 340, level: 'M',
+                   background: '#f4ebe0', foreground: '#26100e' });
+      cv.style.display = '';
+    } catch (e) { /* pas de QR : le code à 4 lettres suffit */ }
+  }
+
+  const avertissements = [];
+  if (lien.repli) {
+    avertissements.push('Ce QR mène au site en ligne : la page est ouverte en fichier local, il n’y a pas d’adresse à partager.');
+    if (serveurChoisi === 'local') avertissements.push('Tu joues sur le serveur local : ceux qui scannent arriveront sur le serveur en ligne.');
+  }
+  if (enPartie) {
+    avertissements.push('Partie en cours : celui qui rejoint regarde et entre à la partie suivante. Pour quelqu’un qui s’est fait couper, ce lien lui rend sa place.');
+  }
+  note.textContent = avertissements.join(' ');
+
+  document.getElementById('copier-lien-regles').onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(lien.url);
+      note.textContent = 'Lien copié : ' + lien.url;
+    } catch (e) {
+      note.textContent = lien.url;
+    }
+  };
+}
+
+function panneauAttente() {
+  const p = ouvrirPanneau('Salle d’attente');
+  const invite = document.createElement('p');
+  invite.className = 'invitation-soiree';
+  invite.textContent = 'De 3 à 15 joueurs, autour de la même table : les indices se donnent à voix haute. Le QR de la soirée est sur l’accueil.';
+  p.appendChild(invite);
+
+  const liste = document.createElement('div');
+  liste.className = 'liste-attente';
+  liste.textContent = joueursSalon.length
+    ? joueursSalon.map((n, i) => (i === MOI ? n + ' (toi)' : n)).join(' · ')
+    : 'En attente de joueurs...';
+  p.appendChild(liste);
+
+  if (estCreateur) {
+    const n = joueursSalon.length;
+    p.appendChild(blocReglage(Math.max(n, 3), panneauAttente));
+    const r = rangee();
+    r.style.marginTop = '6px';
+    const trop = n > JOUEURS_MAX;
+    const ok = repartitionValide(n, nbUndercover, nbWhite);
+    const b = bouton('Démarrer la partie', '', () => Soiree.lancer('undercover', () => envoyerIntention(MOI, messageDemarrer())));
+    b.disabled = n < JOUEURS_MIN || trop || !ok;
+    r.appendChild(b);
+    p.appendChild(r);
+    if (n < JOUEURS_MIN) {
+      p.appendChild(aide('Encore ' + (JOUEURS_MIN - n) + ' joueur' + (JOUEURS_MIN - n > 1 ? 's' : '') + ' avant de pouvoir lancer.'));
+    } else if (trop) {
+      const al = document.createElement('div');
+      al.className = 'alerte';
+      al.textContent = 'Vous êtes ' + n + ' : Undercover se joue à ' + JOUEURS_MAX + ' au plus. Ouvrez une deuxième table.';
+      p.appendChild(al);
+    }
+  } else {
+    p.appendChild(aide('En attente du créateur du salon (il règle les rôles et les mots)...'));
+  }
+}
+
+// =====================================================================
+// MISE EN PLACE DE LA TABLE
+// =====================================================================
+let moiDeLaTable = -1;
+
+function construireTable(noms) {
+  creerSieges(noms);
+  const etat = etatCourant;
+  sieges.forEach((s, i) => {
+    const g = etat && etat.gorgees ? etat.gorgees[i] || 0 : 0;
+    s.niveau = s.objectif = niveauGorgees(g);
+    dessinerChope(s);
+    if (etat && etat.roles && etat.roles[i]) retournerCarte(s, etat.roles[i], false);
+    if (etat && etat.vivants) majMort(s, !etat.vivants[i]);
+  });
+  moiDeLaTable = MOI;
+}
+
+function demarrerScene(noms) {
+  enPartie = true;
+  etatCourant = null;
+  monMot = undefined;
+  suisWhite = false;
+  motVisible = false;
+  monVote = null;
+  cleScrutin = '';
+  dernierEvenement = '';
+  cacherPanneau();
+  reinitialiserClics();
+  construireTable(noms);
+  cacherCartes();
+  camObjectifPos = CAM_POS.clone();
+  camObjectifCible = CAM_CIBLE.clone();
+}
+
+// =====================================================================
+// BOUCLE DE RENDU
+// =====================================================================
+const clock = new THREE.Clock();
+
+function boucle() {
+  requestAnimationFrame(boucle);
+  const rattrapage = fileActions.length > 3 ? 4 : 1;
+  const dt = Math.min(clock.getDelta(), 0.1) * rattrapage;
+
+  for (let i = animations.length - 1; i >= 0; i--) {
+    const a = animations[i];
+    a.t += dt;
+    if (a.maj) a.maj(a);
+    if (a.t >= a.duree) {
+      animations.splice(i, 1);
+      if (a.fin) a.fin();
+    }
+  }
+
+  sieges.forEach(s => {
+    if (Math.abs(s.niveau - s.objectif) > 0.001) {
+      s.niveau += (s.objectif - s.niveau) * 0.09;
+      dessinerChope(s);
+    }
+  });
+
+  // Le micro flotte au-dessus de celui qui parle ; le halo respire.
+  const t = clock.elapsedTime;
+  sieges.forEach(s => { if (s.icone.visible) s.icone.position.y = 0.86 + Math.sin(t * 3 + s.index) * 0.03; });
+  const cibleOpacite = halo.userData.visible ? 0.55 + Math.sin(t * 4) * 0.2 : 0;
+  halo.material.opacity += (cibleOpacite - halo.material.opacity) * 0.15;
+
+  for (let i = textesFlottants.length - 1; i >= 0; i--) {
+    const f = textesFlottants[i];
+    f.t += dt;
+    const k = f.t / f.duree;
+    f.sprite.position.y = f.depart.y + k * 0.45;
+    f.sprite.material.opacity = k < 0.1 ? k / 0.1 : Math.max(0, Math.min(1, (1 - k) / 0.45));
+    if (f.t >= f.duree) { scene.remove(f.sprite); textesFlottants.splice(i, 1); }
+  }
+
+  camera.position.lerp(camObjectifPos, CAM_VITESSE);
+  camCibleActuelle.lerp(camObjectifCible, CAM_VITESSE);
+  camera.lookAt(camCibleActuelle);
+  renderer.render(scene, camera);
+}
+
+// =====================================================================
+// DÉMARRAGE
+// =====================================================================
+// Quelques places vides dès l'accueil : la table a l'air prête.
+creerSieges(['', '', '', '', '', '']);
+sieges.forEach(s => { s.etiquette.visible = false; });
+
+if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) serveurChoisi = 'local';
+
+const salonDansUrl = new URLSearchParams(location.search).get('salon');
+if (salonDansUrl && /^[A-Za-z]{4}(-[2-9])?$/.test(salonDansUrl)) {
+  if (monNom) {
+    codeSalon = salonDansUrl.toUpperCase();
+    estCreateur = true;
+    seConnecter();
+  } else {
+    panneauRejoindreDirect(salonDansUrl.toUpperCase());
+  }
+} else {
+  panneauAccueil();
+}
+lisserScene(scene);
+boucle();
+</script>
+<script>
+  // Appli installable (PWA) : voir service-worker.js
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(() => {});
+</script>
+</body>
+</html>
