@@ -434,8 +434,7 @@
     // d'attente vide de sens).
     async verifierJeuEnCours(jeuPage) {
       jeuDeLaPage = jeuPage;
-      Soiree.boutonEnquete();
-      Soiree.boutonBingo();
+      Soiree.ongletsParalleles();
       const s = Soiree.actuelle();
       if (!s) return;
       try {
@@ -541,16 +540,40 @@
     const cadreOuvert = calque.querySelector('iframe');
     if (p.message) try { cadreOuvert.contentWindow.postMessage(p.message + ':reprise', '*'); } catch (e) { /* tant pis */ }
   }
-  Soiree.boutonEnquete = function () { boutonParallele('enquete'); };
-  // Le bingo n'a son onglet que s'il tourne dans la soirée.
-  Soiree.boutonBingo = async function () {
+  // Chaque onglet n'apparaît que si son jeu tourne dans la soirée (couche
+  // « enq » pour l'Enquête, « bng » pour le Bingo), et disparaît quand il est
+  // fermé. Revérifié toutes les 30 s et au retour sur l'appli : une enquête
+  // lancée pendant la partie fait apparaître sa loupe sans recharger.
+  const COUCHES = { enquete: 'enq', bingo: 'bng' };
+  let suiviParalleles = null;
+  async function majOngletsParalleles() {
     const s = Soiree.actuelle();
-    if (!s || document.getElementById('onglet-bingo')) return;
-    try {
-      const info = await Soiree.infoSoiree(s.code, s.serveur, Soiree.nom(), s.table);
-      if (info.existe && (info.couches || []).includes('bng')) boutonParallele('bingo');
-    } catch (e) { /* pas d'onglet cette fois */ }
+    let couches = [];
+    if (s) {
+      try {
+        const info = await Soiree.infoSoiree(s.code, s.serveur, Soiree.nom(), s.table);
+        couches = info.existe ? info.couches || [] : [];
+      } catch (e) { return; }      // serveur injoignable : on ne touche à rien
+    }
+    Object.entries(COUCHES).forEach(([cle, couche]) => {
+      if (couches.includes(couche)) boutonParallele(cle);
+      else {
+        const b = document.getElementById('onglet-' + cle);
+        if (b) b.remove();
+        // Calque fermé ou jamais ouvert : on l'oublie (il se recréera au besoin).
+        if (calques[cle] && calques[cle].style.display === 'none') { calques[cle].remove(); delete calques[cle]; }
+      }
+    });
+  }
+  Soiree.ongletsParalleles = function () {
+    majOngletsParalleles();
+    if (suiviParalleles) return;
+    suiviParalleles = setInterval(() => { if (!document.hidden) majOngletsParalleles(); }, 30000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) majOngletsParalleles(); });
   };
+  // Anciens noms, gardés pour les pages qui les appelleraient encore.
+  Soiree.boutonEnquete = Soiree.ongletsParalleles;
+  Soiree.boutonBingo = Soiree.ongletsParalleles;
 
   Soiree.confirmer = confirmer;
   Soiree.animerResultat = animerResultat;
