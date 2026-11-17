@@ -2374,7 +2374,7 @@ function panneauAttente() {
     const r = rangee();
     r.style.marginTop = '6px';
     const trop = joueursSalon.length > JOUEURS_MAX;
-    const b = bouton('Ouvrir le casino', '', () => Soiree.lancer('casino', () => envoyerIntention({ type: 'cs_demarrer' })));
+    const b = bouton('Ouvrir le casino', '', () => Soiree.lancer('casino', o => envoyerIntention({ type: 'cs_demarrer', ...o })));
     b.disabled = trop || !joueursSalon.length;
     r.appendChild(b);
     p.appendChild(r);

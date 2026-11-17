@@ -2840,17 +2840,19 @@ function clientRecevoir(msg) {
         monJeton = msg.jeton;
         ecrireSession({ code: codeSalon, nom: monNom, jeton: monJeton, serveur: serveurChoisi, createur: estCreateur });
       }
-      if (!enPartie) panneauAttente();
+      // Un serveur pas encore à jour n'envoie pas « jeu » : on retombe sur la salle d'attente.
+      jeuTable = 'jeu' in msg ? msg.jeu : null;
+      if (!enPartie) panneauAttenteOuReprise();
       break;
     case 'joueur_rejoint':
       joueursSalon = msg.joueurs;
       if (enPartie) rappel(msg.nom + (msg.retour ? ' est revenu.' : ' rejoint la table.'));
-      else panneauAttente();
+      else panneauAttenteOuReprise();
       break;
     case 'joueur_parti':
       joueursSalon = msg.joueurs;
       if (enPartie) rappel(msg.nom + ' a quitté la table.');
-      else panneauAttente();
+      else panneauAttenteOuReprise();
       break;
 
     case 'pp_demarree':
@@ -4227,6 +4229,21 @@ function lireNom() {
 
 async function creerSalon() {
   if (!lireNom()) return;
+  // Une partie tourne déjà à ta table de la soirée : la rejoindre plutôt que
+  // d'ouvrir un salon à part (et d'y entraîner les autres).
+  const s = Soiree.actuelle();
+  if (s) {
+    try {
+      const info = await Soiree.info(s.table, s.serveur);
+      if (info.existe && info.jeu && !info.fini && Soiree.JEUX[info.jeu]) {
+        const titre = Soiree.JEUX[info.jeu].titre;
+        const ok = await Soiree.confirmer('⚠️ Une partie de ' + titre + ' est en cours à ta table' +
+          ((info.joueurs || []).length ? ' (' + info.joueurs.join(', ') + ')' : '') + '.\nTu la rejoins plutôt ?',
+          'Rejoindre la partie', 'Créer un autre salon');
+        if (ok) { location.href = Soiree.lienJeu(info.jeu, s.table); return; }
+      }
+    } catch (e) { /* serveur injoignable : on tente la création */ }
+  }
   afficherErreur('Connexion au serveur...');
   try {
     const rep = await fetch(SERVEURS[serveurChoisi].http + '/creer-salon');
@@ -4294,7 +4311,9 @@ function seConnecter() {
     tentativesLien = 0;
     dernierSignal = Date.now();
     mode = 'ligne';
-    if (!enPartie) panneauAttente();
+    // Le serveur dit d'abord quel jeu tourne (ton_index) : en attendant, pas
+    // de salle d'attente, qui ferait croire que la partie est perdue.
+    if (!enPartie) panneauConnexionTable();
     Soiree.verifierJeuEnCours('picolopoly');
   };
   socket.onmessage = e => {
@@ -4315,9 +4334,11 @@ function seConnecter() {
 function programmerReconnexion() {
   if (!lienActif || minuteurLien) return;
   tentativesLien++;
-  // Une minute d'essais (le serveur gratuit peut mettre 30 à 60 s à se
-  // réveiller) ; au-delà, on rend la main au joueur.
-  if (tentativesLien > 14) { lienActif = false; panneauReconnexion(); return; }
+  // Le serveur gratuit peut mettre 30 à 60 s à se réveiller, et un réseau
+  // saturé (soirée, 4G qui rame) coupe souvent : au-delà, on rend la main.
+  // Trois minutes d'essais : la place est gardée, autant insister pour un
+  // téléphone qui capte mal plutôt que de lui proposer de quitter.
+  if (tentativesLien > 40) { lienActif = false; panneauReconnexion(); return; }
   afficherErreur('Connexion perdue, reconnexion…');
   const delai = Math.min(1000 * tentativesLien, 5000);
   minuteurLien = setTimeout(() => { minuteurLien = null; if (lienActif) seConnecter(); }, delai);
@@ -4348,9 +4369,11 @@ window.addEventListener('online', verifierLien);
 setInterval(() => {
   if (!lienActif || !ws || ws.readyState !== WebSocket.OPEN) return;
   try { ws.send('{"type":"ping"}'); } catch (e) { /* elle se fermera */ }
-  // Plus rien reçu depuis 15 s malgré nos battements : la connexion est
-  // morte sans le dire (Wi-Fi changé...). On en ouvre une neuve.
-  if (!document.hidden && Date.now() - dernierSignal > 15000) seConnecter();
+  // Plus rien reçu depuis 30 s malgré nos battements : la connexion est
+  // morte sans le dire (Wi-Fi changé...). On en ouvre une neuve. Pas avant :
+  // sur un réseau qui rame, l'état de la partie peut mettre 15 s à arriver,
+  // et rouvrir une connexion à chaque fois le faisait renvoyer sans fin.
+  if (!document.hidden && Date.now() - dernierSignal > 30000) seConnecter();
 }, 5000);
 
 // Notre place a été reprise depuis un autre onglet ou un autre appareil
@@ -4375,7 +4398,12 @@ function panneauReconnexion() {
   p.appendChild(aide('Ta place est gardée : tes tours sont sautés et on choisit pour toi en attendant. Reconnecte-toi pour la reprendre.'));
   const r = rangee();
   r.appendChild(bouton('Reconnecter', '', () => { cacherPanneau(); tentativesLien = 0; seConnecter(); }));
-  r.appendChild(bouton('Quitter', 'clair', () => {
+  r.appendChild(bouton('Quitter', 'clair', async () => {
+    if (enPartie || jeuTable === 'picolopoly') {
+      const ok = await Soiree.confirmer('La partie continue sans toi et ta place est gardée.\n'
+        + 'Quitter quand même ? Pour revenir, rouvre Picopoly depuis l’accueil.', 'Quitter', 'Rester');
+      if (!ok) return;
+    }
     enPartie = false; oublierSession(); monJeton = null; location.href = location.pathname;
   }));
   p.appendChild(r);
@@ -4429,6 +4457,33 @@ function majQRModale() {
   };
 }
 
+// Jeu qui tourne à la table, d'après le serveur (ton_index). undefined : pas
+// encore su.
+let jeuTable;
+
+function panneauConnexionTable() {
+  const p = ouvrirPanneau('Connexion à la table…');
+  p.appendChild(aide('Si une partie est en cours, tu reprends ta place. Avec un réseau lent, ça peut prendre quelques secondes.'));
+}
+
+// Revenu dans une partie en cours dont l'état n'est pas encore arrivé
+// (réseau lent) : on le dit, au lieu d'une salle d'attente avec un bouton
+// « Démarrer » qui laissait croire que la partie était perdue.
+function panneauReprise() {
+  const p = ouvrirPanneau('Partie en cours : on te remet à ta place…');
+  p.appendChild(aide('Ta place, ton argent et tes propriétés sont gardés. Le plateau arrive dès que le réseau suit : ne relance rien, reste sur cette page.'));
+  const liste = document.createElement('div');
+  liste.className = 'liste-attente';
+  liste.textContent = joueursSalon.join(' · ');
+  p.appendChild(liste);
+}
+
+function panneauAttenteOuReprise() {
+  if (jeuTable === undefined) panneauConnexionTable();
+  else if (jeuTable === 'picolopoly') panneauReprise();
+  else panneauAttente();
+}
+
 function panneauAttente() {
   const p = ouvrirPanneau('Salle d’attente');
   // Le code et le QR de la soirée sont sur l'accueil : inutile de les répéter ici.
@@ -4446,7 +4501,7 @@ function panneauAttente() {
   if (estCreateur) {
     p.appendChild(rangeeDifficulte(panneauAttente));
     const trop = joueursSalon.length > PP_JOUEURS_MAX;
-    const b = bouton('Démarrer la partie', '', () => Soiree.lancer('picolopoly', () => envoyerIntention(MOI, { type: 'pp_demarrer', difficulte: difficulteChoisie })));
+    const b = bouton('Démarrer la partie', '', () => Soiree.lancer('picolopoly', o => envoyerIntention(MOI, { type: 'pp_demarrer', difficulte: difficulteChoisie, ...o })));
     b.disabled = joueursSalon.length < PP_JOUEURS_MIN || trop;
     r.appendChild(b);
     if (joueursSalon.length < PP_JOUEURS_MIN) {

@@ -453,21 +453,32 @@
     },
 
     // Bouton « Démarrer » d'un jeu : si un autre jeu tourne, il sera remplacé
-    // pour tout le monde, donc on demande d'abord.
+    // pour tout le monde, donc on demande d'abord. envoyer({ remplacer: true })
+    // seulement après un « Remplacer » explicite : sans ce drapeau, le serveur
+    // refuse de remplacer une partie pas finie. Ainsi, une page qui rame et
+    // n'arrive pas à vérifier ce qui tourne ne casse plus la partie des autres.
     async lancer(jeuPage, envoyer) {
       const s = Soiree.actuelle();
+      let options = {};
       if (s) {
         try {
           const info = await Soiree.info(s.table, s.serveur);
           if (info.existe && info.jeu && info.jeu !== jeuPage && JEUX[info.jeu]) {
-            const ok = await confirmer('Une partie de ' + JEUX[info.jeu].titre + ' est en cours à ta table.\n' +
-              'La remplacer par ' + (JEUX[jeuPage] || {}).titre + ' pour toute la table ?', 'Remplacer', 'Garder ' + JEUX[info.jeu].titre);
+            const titre = JEUX[info.jeu].titre;
+            const min = info.depuis ? Math.round(info.depuis / 60) : 0;
+            const depuis = min >= 1 ? ' depuis ' + (min >= 60 ? Math.floor(min / 60) + ' h ' + String(min % 60).padStart(2, '0') : min + ' min') : '';
+            const qui = (info.joueurs || []).length ? ' avec ' + info.joueurs.join(', ') : '';
+            const ok = await confirmer((info.fini ? 'La partie de ' + titre + ' est finie à ta table.\n'
+              : '⚠️ Une partie de ' + titre + ' est en cours à ta table' + depuis + qui + '.\n') +
+              'La remplacer par ' + (JEUX[jeuPage] || {}).titre + ' pour toute la table ?' +
+              (info.fini ? '' : ' Elle sera perdue pour tout le monde.'), 'Remplacer', 'Garder ' + titre);
             if (!ok) return;
+            options = { remplacer: true };
           }
-        } catch (e) { /* serveur injoignable : le lancement partira quand même */ }
+        } catch (e) { /* serveur injoignable : on envoie sans « remplacer », le serveur protège la partie en cours */ }
       }
       cacherBandeau();
-      envoyer();
+      envoyer(options);
     },
   };
 

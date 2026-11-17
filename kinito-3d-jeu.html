@@ -2186,7 +2186,7 @@ function panneauAttente() {
   r.style.marginTop = '12px';
   if (estCreateur) {
     const b = bouton('Démarrer la partie', '', () =>
-      Soiree.lancer('kinito', () => envoyerIntention(MOI, { type: 'demarrer', difficulte: difficulteChoisie })));
+      Soiree.lancer('kinito', o => envoyerIntention(MOI, { type: 'demarrer', difficulte: difficulteChoisie, ...o })));
     b.disabled = joueursSalon.length < 2;
     r.appendChild(b);
   } else {

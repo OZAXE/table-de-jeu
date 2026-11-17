@@ -1880,7 +1880,7 @@ function panneauAttente() {
     r.style.marginTop = '6px';
     const trop = n > JOUEURS_MAX;
     const ok = repartitionValide(n, nbUndercover, nbWhite);
-    const b = bouton('Démarrer la partie', '', () => Soiree.lancer('undercover', () => envoyerIntention(MOI, messageDemarrer())));
+    const b = bouton('Démarrer la partie', '', () => Soiree.lancer('undercover', o => envoyerIntention(MOI, { ...messageDemarrer(), ...o })));
     b.disabled = n < JOUEURS_MIN || trop || !ok;
     r.appendChild(b);
     p.appendChild(r);

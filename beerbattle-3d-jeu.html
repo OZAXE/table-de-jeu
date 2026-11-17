@@ -3026,7 +3026,7 @@ function panneauAttente() {
   if (estCreateur) {
     const trop = joueursSalon.length > JOUEURS_MAX;
     const b = bouton('Démarrer la partie', '', () =>
-      Soiree.lancer('beerbattle', () => envoyerIntention(MOI, { type: 'bb_demarrer' })));
+      Soiree.lancer('beerbattle', o => envoyerIntention(MOI, { type: 'bb_demarrer', ...o })));
     b.disabled = joueursSalon.length < JOUEURS_MIN || trop;
     r.appendChild(b);
     if (joueursSalon.length < JOUEURS_MIN) {
