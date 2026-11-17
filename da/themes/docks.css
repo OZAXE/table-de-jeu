@@ -1,0 +1,88 @@
+/* =====================================================================
+   Thème « Docks » (Cal 12) : plaques d'acier rivetées, rouille, pochoir.
+   Chargé après da/bar-moderne.css. Titres : Stardos Stencil. Texte : Barlow.
+   ===================================================================== */
+:root {
+  --accent: #5b9bd5;
+  --accent-2: #2d5f8f;
+  --fond: #0a0f15;
+  --verre: rgba(20, 27, 35, 0.9);
+  --verre-fort: rgba(17, 23, 30, 0.96);
+  --bord: rgba(150, 170, 190, 0.28);
+  --texte: #e6edf3;
+  --texte-doux: #a9b8c6;
+  --texte-pale: #6d7c8a;
+  --rouille: #b5562b;
+  --police: 'Barlow', 'Segoe UI', system-ui, sans-serif;
+  --police-titre: 'Stardos Stencil', Impact, sans-serif;
+}
+html, body { background: var(--fond) !important; }
+#overlay, button, input, .modale, #panneau { font-family: var(--police) !important; }
+
+#message, #panneau h2, .modale h2, .code-salon {
+  font-family: var(--police-titre) !important; font-weight: 700 !important; letter-spacing: 0.04em !important;
+  text-transform: uppercase;
+}
+#message { color: var(--texte) !important; text-shadow: 0 2px 0 #000, 0 3px 12px rgba(0, 0, 0, 0.8) !important; }
+#rappel { color: var(--texte-doux) !important; }
+#compteur { background: rgba(20, 27, 35, 0.92) !important; border: 1px solid var(--bord) !important; border-radius: 4px !important; color: var(--texte) !important; }
+#compteur b { color: #8cc4f5 !important; }
+
+.joueur {
+  background: linear-gradient(180deg, rgba(42, 53, 66, 0.95), rgba(21, 28, 36, 0.95)) !important;
+  border: 1px solid var(--bord) !important; border-radius: 4px !important;
+  color: var(--texte) !important; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45) !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+.joueur.actif {
+  background: linear-gradient(180deg, #5b9bd5, #2d5f8f) !important; border-color: #d7ecff !important; color: #fff !important;
+  box-shadow: 0 0 0 1px rgba(215, 236, 255, 0.4), 0 4px 16px rgba(91, 155, 213, 0.45) !important;
+}
+
+/* Panneau : plaque d'acier brossé, quatre rivets, liseré de rouille. */
+#panneau {
+  background:
+    radial-gradient(circle at 12px 12px, #8a96a3 0 3px, transparent 4px),
+    radial-gradient(circle at calc(100% - 12px) 12px, #8a96a3 0 3px, transparent 4px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, #232d38, #141a21) !important;
+  border: 2px solid #3a4652 !important; border-radius: 6px !important;
+  box-shadow: inset 0 0 0 1px rgba(181, 86, 43, 0.35), 0 18px 40px rgba(0, 0, 0, 0.65) !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+#panneau h2 { color: var(--texte) !important; }
+#panneau p, .aide { color: var(--texte-doux) !important; }
+
+button {
+  font-family: var(--police) !important; font-weight: 700 !important; text-transform: uppercase; letter-spacing: 0.05em;
+  color: #fff !important; background: linear-gradient(180deg, #5b9bd5, #2d5f8f) !important;
+  border: 1px solid #1a3a5a !important; border-radius: 4px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 3px 0 #0c1a28, 0 6px 14px rgba(0, 0, 0, 0.5) !important;
+}
+button:active { transform: translateY(2px) !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 1px 0 #0c1a28 !important; }
+button.danger { background: linear-gradient(180deg, #c9532e, #7a2a14) !important; border-color: #4a1808 !important; box-shadow: inset 0 1px 0 rgba(255, 200, 170, 0.3), 0 3px 0 #2a0c04, 0 6px 14px rgba(0, 0, 0, 0.5) !important; }
+button.sombre, button.clair { color: var(--texte) !important; background: linear-gradient(180deg, #2a3542, #18202a) !important; border: 1px solid var(--bord) !important; box-shadow: 0 2px 0 #06090c !important; }
+button:disabled { filter: grayscale(0.7) brightness(0.6) !important; }
+#btn-regles { text-transform: none; letter-spacing: 0; background: linear-gradient(180deg, #2a3542, #18202a) !important; border: 1px solid var(--bord) !important; border-radius: 4px !important; }
+
+.mode { border-radius: 4px !important; background: rgba(20, 27, 35, 0.8) !important; }
+.mode.choisi { border-color: var(--accent) !important; background: rgba(45, 95, 143, 0.35) !important; }
+input[type="text"] { background: rgba(5, 8, 12, 0.6) !important; border: 1px solid var(--bord) !important; border-radius: 4px !important; color: var(--texte) !important; }
+.code-salon { background: none !important; color: var(--texte) !important; -webkit-background-clip: initial !important; background-clip: initial !important; }
+
+#modale-regles { background: rgba(3, 5, 8, 0.82) !important; }
+.modale {
+  background: linear-gradient(180deg, #1c2530, #10161d) !important; color: var(--texte-doux) !important;
+  border: 2px solid #3a4652 !important; border-radius: 6px !important;
+}
+.modale h2 { color: var(--texte) !important; }
+.modale h3 { color: #8cc4f5 !important; text-transform: uppercase; letter-spacing: 0.06em; }
+.modale .accent, .modale td:first-child { color: var(--texte) !important; }
+
+/* Annonces propres au jeu (MENTEUR !, VRAI / MENSONGE, BANG) en lettres pochoir. */
+.annonce-mt .gros { font-family: var(--police-titre) !important; font-weight: 700 !important; text-transform: uppercase; }
+.annonce-mt .petit { font-family: var(--police) !important; border-radius: 4px !important; }
+
+@media (max-width: 760px), (pointer: coarse) {
+  #panneau { border-radius: 8px 8px 0 0 !important; border-width: 2px 0 0 0 !important; }
+}

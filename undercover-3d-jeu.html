@@ -188,8 +188,8 @@
   }
 
   /* Grande annonce pour toute la table (ÉLIMINÉ, le rôle, ÉGALITÉ, la victoire) */
-  .annonce-uc { position: fixed; left: 12px; right: 12px; top: calc(14vh + env(safe-area-inset-top)); z-index: 60; text-align: center; pointer-events: none; }
-  .annonce-uc .gros { font: 900 clamp(40px, 12vw, 84px)/1.05 'Outfit', system-ui, sans-serif; letter-spacing: 0.03em; color: var(--c);
+  .annonce-uc { position: fixed; left: calc(var(--zone-gauche, 0px) + 8px); right: calc(var(--zone-droite, 0px) + 8px); top: calc(var(--haut-libre, 14vh) + 6px); z-index: 60; text-align: center; pointer-events: none; }
+  .annonce-uc .gros { font: 900 clamp(32px, 11vmin, 84px)/1.05 'Outfit', system-ui, sans-serif; letter-spacing: 0.03em; color: var(--c);
     text-shadow: 0 0 26px var(--c), 0 6px 22px rgba(0, 0, 0, 0.85); animation: uc-pop 0.45s cubic-bezier(.2, 1.6, .4, 1) both; }
   .annonce-uc .petit { display: inline-block; margin-top: 12px; padding: 7px 16px; border-radius: 999px; background: rgba(0, 0, 0, 0.6);
     border: 1px solid var(--c); color: #fff; font: 700 clamp(17px, 5vw, 22px)/1.25 'Outfit', system-ui, sans-serif; animation: uc-monte 0.4s 0.15s both; }

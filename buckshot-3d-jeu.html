@@ -434,7 +434,7 @@ function zoneLibre() {
   const visible = (r) => r.width > 0 && r.height > 0;
   const milieu = (r) => r.right > L * 0.25 && r.left < L * 0.75;
   let haut = 0, bas = H, gauche = 0, droite = L;
-  ['bandeau', 'joueurs', 'btn-regles'].forEach(id => {
+  ['bandeau', 'joueurs', 'btn-regles', 'onglet-enquete'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     const r = el.getBoundingClientRect();
@@ -453,6 +453,11 @@ function zoneLibre() {
     }
   }
   haut += 4; bas -= 4; gauche += 4; droite -= 4;
+  // Les grandes annonces se placent juste sous le haut de l'écran.
+  const racine = document.documentElement.style;
+  racine.setProperty('--haut-libre', Math.round(haut) + 'px');
+  racine.setProperty('--zone-gauche', Math.round(gauche) + 'px');
+  racine.setProperty('--zone-droite', Math.round(L - droite) + 'px');
   // Garde-fous : jamais moins d'un tiers de l'écran pour la table.
   if (bas - haut < H * 0.34) bas = Math.min(H, haut + H * 0.34);
   if (droite - gauche < L * 0.4) droite = Math.min(L, gauche + L * 0.4);
