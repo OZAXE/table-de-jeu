@@ -26,4 +26,5 @@ Une nouvelle page de jeu doit appeler `Soiree.memoriser`, `Soiree.traiterMessage
 Enquête (`enquete.html`) et Bingo de soirée (`bingo.html`) tournent pendant toute la soirée, à côté
 des jeux de table. Ils parlent au serveur par `/ws-soiree` (le Bingo avec `?page=bingo`), jamais par
 la place à une table. Dans chaque jeu, `commun/soiree.js` ajoute leurs onglets 🔍 et 🎯 sur le bord
-gauche (🎯 seulement si un bingo existe dans la soirée) ; ils s'ouvrent dans un calque plein écran.
+gauche, chacun seulement si son jeu existe dans la soirée (revérifié toutes les 30 s) ;
+ils s'ouvrent dans un calque plein écran.
