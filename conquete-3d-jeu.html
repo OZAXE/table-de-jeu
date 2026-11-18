@@ -244,7 +244,7 @@
     <p class="note">Selon la vitesse : ×1,5 en Flash, ×1,25 en Express, ×0,75 en Marathon.</p>
 
     <h3>Le temps</h3>
-    <p>Chaque tour a un minuteur. À zéro, le serveur redéploie tes pions à ta place et passe au suivant. Négociez à voix haute : la carte est visible de tous, « attaque-le, pas moi » fait partie du jeu.</p>
+    <p>La partie dure un nombre de tours conseillé selon le nombre de joueurs (en Soirée : 10 à 2-3 joueurs, 9 à 4, 8 à 5-6, 7 à 7-8 ; moitié en Flash), que l'hôte peut changer. Chaque tour a un minuteur. À zéro, le serveur redéploie tes pions à ta place et passe au suivant. Négociez à voix haute : la carte est visible de tous, « attaque-le, pas moi » fait partie du jeu.</p>
 
     <div id="regles-catalogue"><p class="note">Les races et les pouvoirs de la partie s'affichent ici une fois la partie lancée.</p></div>
 
@@ -295,13 +295,20 @@ const TERRAINS = {
   montagne: { nom: 'montagne', couleur: 0xa3a6ad, falaise: 0x5f5a55, h: 0.12, icone: '🏔️' },
 };
 const MARQUES = { mine: { nom: 'mine', icone: '⛏️' }, source: { nom: 'source magique', icone: '🔮' } };
+// Copie de conquete_config.json (le serveur fait foi : sans « tours », il prend le conseillé).
 const VITESSES = {
-  flash:    { titre: 'Flash',    tours: 4,  minuteur: 40, mult: '×1,5' },
-  express:  { titre: 'Express',  tours: 6,  minuteur: 45, mult: '×1,25' },
-  soiree:   { titre: 'Soirée',   tours: 8,  minuteur: 60, mult: '×1' },
-  marathon: { titre: 'Marathon', tours: 10, minuteur: 90, mult: '×0,75' },
+  flash:    { titre: 'Flash',    facteur: 0.5,  minuteur: 40, mult: '×1,5' },
+  express:  { titre: 'Express',  facteur: 0.75, minuteur: 45, mult: '×1,25' },
+  soiree:   { titre: 'Soirée',   facteur: 1,    minuteur: 60, mult: '×1' },
+  marathon: { titre: 'Marathon', facteur: 1.25, minuteur: 90, mult: '×0,75' },
 };
-const TOURS_CHOIX = [3, 4, 5, 6, 8, 10, 12];
+// Tours par joueur en Soirée selon le nombre de joueurs (règle Realms : 10 à 2-3, 9 à 4, 8 à 5-6 ; 7 à 7-8)
+const TOURS_JOUEURS = { 2: 10, 3: 10, 4: 9, 5: 8, 6: 8, 7: 7, 8: 7 };
+const TOURS_MIN = 3, TOURS_MAX = 15;
+function toursConseilles(n, vitesse) {
+  const base = TOURS_JOUEURS[Math.min(8, Math.max(2, n))];
+  return Math.max(TOURS_MIN, Math.min(TOURS_MAX, Math.floor(base * VITESSES[vitesse].facteur + 0.5)));
+}
 const JOUEURS_MIN = 2;
 const JOUEURS_MAX = 8;
 const ECHELLE = 0.42;       // unités de carte du serveur -> unités de la scène
@@ -554,7 +561,7 @@ function matMer() {
 const matLac = new THREE.MeshStandardMaterial({ map: (() => { const m = matMer(); return m.map; })(), roughness: 0.25, metalness: 0.1, color: 0xbfe6ff });
 const matHautFond = new THREE.MeshBasicMaterial({ color: 0x6fc3d2, transparent: true, opacity: 0.55, depthWrite: false });
 const matLisere = new THREE.MeshStandardMaterial({ color: 0xf2e7c9, roughness: 0.7 });
-poserTable();
+poserTable(true);   // en salle d attente : la mer, en attendant la carte
 
 // =====================================================================
 // ÉTIQUETTES (sprites dessinés)
@@ -1715,6 +1722,7 @@ function vitesseConseillee(n) { return n >= 7 ? 'flash' : 'soiree'; }
 function messageDemarrer() {
   const n = (etat ? etat.joueurs.length : joueursSalon.length) || 2;
   const m = { type: 'sw_demarrer', vitesse: vitesseChoisie || vitesseConseillee(n), aleatoire: aleatoireChoisi, vengeance: vengeanceChoisie };
+  // Sans choix de l'hôte, le serveur prend le nombre de tours conseillé pour ce nombre de joueurs
   if (toursChoisis) m.tours = toursChoisis;
   return m;
 }
@@ -2006,29 +2014,37 @@ function blocReglage(n) {
   const v = vitesseChoisie || vitesseConseillee(n);
   const modes = document.createElement('div');
   modes.className = 'modes';
+  const nj = Math.max(2, n);
   Object.entries(VITESSES).forEach(([cle, x]) => {
     const m = document.createElement('div');
     m.className = 'mode' + (cle === v ? ' choisi' : '');
-    m.innerHTML = '<b>' + x.titre + '</b><span>' + x.tours + ' tours · ' + x.minuteur + ' s · gorgées ' + x.mult + '</span>';
+    m.innerHTML = '<b>' + x.titre + '</b><span>' + toursConseilles(nj, cle) + ' tours · ' + x.minuteur + ' s · gorgées ' + x.mult + '</span>';
     m.addEventListener('click', () => { vitesseChoisie = cle; toursChoisis = null; panneauAttente(); });
     modes.appendChild(m);
   });
   d.appendChild(modes);
+  // Nombre de tours : conseillé selon les joueurs et la vitesse, modifiable par l'hôte
+  const conseil = toursConseilles(nj, v);
+  const tours = toursChoisis || conseil;
   const r = rangee();
   r.style.alignItems = 'center';
   const lib = document.createElement('span');
   lib.className = 'aide';
   lib.textContent = 'Tours chacun :';
-  const sel = document.createElement('select');
-  TOURS_CHOIX.forEach(t => {
-    const o = document.createElement('option');
-    o.value = t; o.textContent = t + (t === VITESSES[v].tours ? ' (vitesse)' : '');
-    if ((toursChoisis || VITESSES[v].tours) === t) o.selected = true;
-    sel.appendChild(o);
-  });
-  sel.addEventListener('change', () => { toursChoisis = Number(sel.value); });
-  r.append(lib, sel);
+  const moins = bouton('−', 'sombre petit', () => { toursChoisis = Math.max(TOURS_MIN, tours - 1); panneauAttente(); });
+  moins.disabled = tours <= TOURS_MIN;
+  const val = document.createElement('b');
+  val.textContent = tours;
+  val.style.minWidth = '24px';
+  val.style.fontSize = '18px';
+  const plus = bouton('+', 'sombre petit', () => { toursChoisis = Math.min(TOURS_MAX, tours + 1); panneauAttente(); });
+  plus.disabled = tours >= TOURS_MAX;
+  r.append(lib, moins, val, plus);
+  if (toursChoisis && toursChoisis !== conseil) r.appendChild(bouton('Conseillé (' + conseil + ')', 'sombre petit', () => { toursChoisis = null; panneauAttente(); }));
   d.appendChild(r);
+  const duree = Math.round(tours * nj * VITESSES[v].minuteur / 60);
+  d.appendChild(aide((toursChoisis && toursChoisis !== conseil ? 'Réglage perso. ' : 'Conseillé pour ' + nj + ' joueurs. ')
+    + 'Au plus ' + duree + ' min (si chacun utilise tout son minuteur), souvent moins.'));
   const r2 = rangee();
   r2.style.marginTop = '6px';
   const caseA = document.createElement('label');
