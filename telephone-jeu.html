@@ -182,6 +182,17 @@ const VAL = {}; [...B64].forEach((c, i) => { VAL[c] = i; });
 const TAILLE_MAX_MESSAGE = 15500;   // le serveur refuse au-delà de 16 Ko
 const NOMS_VITESSES = { flash: 'Flash', normal: 'Normal', long: 'Long' };
 const NOMS_SOURCES = { libre: 'Libre', banque: 'Banque', mixte: 'Mixte' };
+const NOMS_MODES = { normal: 'Normal', knockoff: 'Knock-Off', speedrun: 'Speedrun' };
+const AIDE_MODES = {
+  normal: 'On écrit, on dessine, on décrit, on dessine… chaque album passe par tout le monde.',
+  knockoff: 'Tout le monde dessine la même phrase, puis chacun recopie DE MÉMOIRE le dessin reçu, vu quelques secondes. De moins en moins de temps à chaque copie.',
+  speedrun: 'Comme Normal, mais avec des minuteurs très courts (8 à 15 s par dessin) et moins d’étapes. Les albums sont distribués au hasard.',
+};
+// Étapes par album : bornes et valeur par défaut selon le mode (comme le serveur).
+function bornesEtapes(mode, n) {
+  const maxi = Math.max(1, mode === 'knockoff' ? n : n - 1);
+  return { maxi, defaut: mode === 'speedrun' ? Math.min(maxi, 4) : maxi };
+}
 const RAISONS = {
   retard: 'pas envoyé à temps',
   meilleur_album: 'meilleur moment de l’album',
@@ -460,9 +471,12 @@ function recevoir(msg) {
           traits: msg.nature === 'dessin' && Array.isArray(msg.brouillon) ? dessinDepuisServeur(msg.brouillon) : [],
           texte: typeof msg.brouillon === 'string' ? msg.brouillon : (msg.prerempli && msg.suggestion) || '',
           couleur: 0, epaisseur: 1, gomme: false, efface: null,
+          // Knock-Off : le modèle ne reste à l'écran que le temps du visionnage.
+          finVision: msg.copie && msg.modele ? Date.now() + (msg.vision || 0) * 1000 : 0,
         };
       } else {
         travail.envoye = travail.envoye || msg.envoye;
+        if (msg.copie) travail.finVision = msg.modele ? Math.min(travail.finVision || Infinity, Date.now() + (msg.vision || 0) * 1000) : 0;
       }
       rendre(true);
       break;
@@ -521,7 +535,7 @@ function cleEcran() {
   const p = etat.phase;
   if (p === 'etape') {
     const envoye = (travail && travail.etape === etat.etape && travail.envoye) || (joue() && etat.prets && etat.prets[MOI]);
-    return `etape:${etat.etape}:${envoye ? 'attente:' + etat.prets.join() : 'travail:' + (tache && tache.etape)}:${joue()}`;
+    return `etape:${etat.etape}:${envoye ? 'attente:' + etat.prets.join() : 'travail:' + (tache && tache.etape) + (enVision() ? ':vision' : '')}:${joue()}`;
   }
   if (p === 'pret') return 'pret:' + etat.hote;
   if (p === 'revelation' || p === 'resultat_album') {
@@ -556,7 +570,8 @@ function rendre(forcer) {
 }
 
 // --- Salle d'attente et réglages ---
-const reglages = Object.assign({ vitesse: 'normal', source: 'libre', etapes: null }, lireLocal('telephone.reglages', {}));
+const reglages = Object.assign({ mode: 'normal', vitesse: 'normal', source: 'libre', etapes: null }, lireLocal('telephone.reglages', {}));
+if (!NOMS_MODES[reglages.mode]) reglages.mode = 'normal';
 
 function groupeChoix(titre, options, cle, noms) {
   const ligne = el('div', { class: 'ligne' });
@@ -577,36 +592,38 @@ function ecranSalle() {
   vue.append(carteJ);
   if (!ws || MOI === null) return;
 
-  const maxEtapes = Math.max(1, n - 1);
+  const { maxi: maxEtapes, defaut } = bornesEtapes(reglages.mode, n);
   if (reglages.etapes !== null && reglages.etapes > maxEtapes) reglages.etapes = null;
   const etapes = el('div', { class: 'ligne' },
     el('button', { class: 'petit', text: '−', 'aria-label': 'Moins d’étapes', onclick: () => {
-      const v = reglages.etapes === null ? maxEtapes : reglages.etapes;
+      const v = reglages.etapes === null ? defaut : reglages.etapes;
       reglages.etapes = Math.max(1, v - 1); rendre(true);
     } }),
     el('span', { style: 'flex:1;text-align:center;font-weight:700',
-      text: reglages.etapes === null ? `Toutes (${maxEtapes})` : `${reglages.etapes} étape${reglages.etapes > 1 ? 's' : ''}` }),
+      text: reglages.etapes === null ? (defaut === maxEtapes ? `Toutes (${maxEtapes})` : `Par défaut (${defaut})`)
+        : `${reglages.etapes} étape${reglages.etapes > 1 ? 's' : ''}` }),
     el('button', { class: 'petit', text: '+', 'aria-label': 'Plus d’étapes', onclick: () => {
-      const v = reglages.etapes === null ? maxEtapes : reglages.etapes + 1;
-      reglages.etapes = v >= maxEtapes ? null : v; rendre(true);
+      const v = reglages.etapes === null ? defaut + 1 : reglages.etapes + 1;
+      reglages.etapes = Math.min(v, maxEtapes); rendre(true);
     } }));
   const lancer = el('button', { class: 'principal large', text: 'Lancer la partie',
-    onclick: () => Soiree.lancer(JEU, o => envoyer({ type: 'td_demarrer', mode: 'normal', vitesse: reglages.vitesse,
+    onclick: () => Soiree.lancer(JEU, o => envoyer({ type: 'td_demarrer', mode: reglages.mode, vitesse: reglages.vitesse,
       source: reglages.source, etapes: reglages.etapes, ...o })) });
   lancer.disabled = n < 3 || n > 8;
   vue.append(el('div', { class: 'carte' },
     el('h2', { text: 'Réglages' }),
-    groupeChoix('Mode', ['normal'], 'mode', { normal: 'Normal' }),
-    el('p', { class: 'pale', text: 'Knock-Off et Speedrun arrivent bientôt.' }),
+    groupeChoix('Mode', ['normal', 'knockoff', 'speedrun'], 'mode', NOMS_MODES),
+    el('p', { class: 'pale', text: AIDE_MODES[reglages.mode] }),
     groupeChoix('Vitesse', ['flash', 'normal', 'long'], 'vitesse', NOMS_VITESSES),
-    groupeChoix('Phrases de départ', ['libre', 'banque', 'mixte'], 'source', NOMS_SOURCES),
-    el('p', { class: 'pale', text: { libre: 'Chacun écrit la sienne (avec une idée au besoin).', banque: 'Le jeu tire une phrase pour chaque album.', mixte: 'Une phrase de la banque, que chacun peut modifier.' }[reglages.source] }),
+    reglages.mode === 'knockoff'
+      ? [el('div', { class: 'etiquette', text: 'Phrase de départ' }), el('p', { class: 'pale', text: 'Tirée de la banque, la même pour tout le monde.' })]
+      : [groupeChoix('Phrases de départ', ['libre', 'banque', 'mixte'], 'source', NOMS_SOURCES),
+         el('p', { class: 'pale', text: { libre: 'Chacun écrit la sienne (avec une idée au besoin).', banque: 'Le jeu tire une phrase pour chaque album.', mixte: 'Une phrase de la banque, que chacun peut modifier.' }[reglages.source] })],
     el('div', { class: 'etiquette', text: 'Étapes par album' }), etapes,
     el('div', { style: 'margin-top:16px' }, lancer),
     n < 3 ? el('p', { class: 'pale', text: `Encore ${3 - n} joueur${3 - n > 1 ? 's' : ''} pour lancer.` })
       : n > 8 ? el('p', { class: 'pale', text: 'Plus de 8 joueurs : ouvrez une deuxième table.' })
       : el('p', { class: 'pale', text: 'Celui qui lance devient l’hôte : c’est lui qui fera défiler la révélation.' })));
-  reglages.mode = 'normal';
 }
 
 // --- Étapes ---
@@ -624,7 +641,8 @@ function ecranEtape() {
   if (!joue()) return ecranSpectateur();
   const envoye = (travail && travail.etape === etat.etape && travail.envoye) || etat.prets[MOI];
   if (envoye || !tache || tache.etape !== etat.etape || !travail) return ecranAttente();
-  const titre = `Étape ${etat.etape + (etat.source === 'banque' ? 0 : 1)} sur ${etat.nb_etapes + (etat.source === 'banque' ? 0 : 1)}`;
+  const titre = (etat.mode !== 'normal' ? NOMS_MODES[etat.mode] + ' · ' : '')
+    + `Étape ${etat.etape + (etat.source === 'banque' ? 0 : 1)} sur ${etat.nb_etapes + (etat.source === 'banque' ? 0 : 1)}`;
   if (travail.nature === 'phrase') {
     const champ = el('input', { type: 'text', id: 'champ-texte', maxlength: (etat.regles || {}).texte_max || 80,
       placeholder: 'Une phrase drôle ou absurde…', autocomplete: 'off', enterkeyhint: 'done' });
@@ -640,6 +658,27 @@ function ecranEtape() {
         el('span', { class: 'pale', style: 'flex:1' }, 'Idée : ', el('span', { id: 'suggestion', text: tache.suggestion || '' })),
         el('button', { class: 'petit', text: '🎲 Autre idée', onclick: () => envoyer({ type: 'td_suggestion' }) })),
       el('div', { style: 'margin-top:14px' }, el('button', { class: 'principal large', text: 'Valider', onclick: () => valider(false) }))));
+  } else if (travail.nature === 'dessin' && enVision()) {
+    // Knock-Off : on regarde le modèle quelques secondes, puis il disparaît.
+    const traits = dessinDepuisServeur(tache.modele);
+    const modele = canevasLecture(traits);
+    modele.className = 'toile lecture';
+    modele.dataset.traits = JSON.stringify(traits);
+    vue.append(el('div', { class: 'carte' },
+      el('div', { class: 'consigne' }, el('div', { class: 'quoi' },
+        el('div', { class: 'petit-titre', text: titre + ' · mémorise' }),
+        el('div', { class: 'phrase', text: 'Mémorise ce dessin !' })),
+        el('span', { class: 'minuteur urgent', id: 'vision', text: '' })),
+      modele,
+      el('p', { class: 'pale', text: 'Il va disparaître : tu devras le redessiner de mémoire.' })));
+    majVision();
+  } else if (travail.nature === 'dessin' && tache.copie) {
+    vue.append(el('div', { class: 'carte' },
+      el('div', { class: 'consigne' }, el('div', { class: 'quoi' },
+        el('div', { class: 'petit-titre', text: titre + ' · copie' }),
+        el('div', { class: 'phrase', text: 'Redessine-le de mémoire' })), minuteurEl()),
+      zoneDessin(),
+      el('div', { style: 'margin-top:12px' }, el('button', { class: 'principal large', text: 'Valider ma copie', onclick: () => valider(false) }))));
   } else if (travail.nature === 'dessin') {
     vue.append(el('div', { class: 'carte' },
       el('div', { class: 'consigne' }, el('div', { class: 'quoi' },
@@ -667,6 +706,14 @@ function ecranEtape() {
   majMinuteur();
 }
 
+function enVision() {
+  return !!(travail && tache && tache.copie && tache.modele && travail.finVision && Date.now() < travail.finVision);
+}
+function majVision() {
+  const v = $('#vision');
+  if (v && travail) v.textContent = Math.max(0, Math.ceil((travail.finVision - Date.now()) / 1000)) + ' s';
+}
+
 function contenuTravail() {
   return travail.nature === 'dessin' ? dessinPourServeur(travail.traits) : (travail.texte || '').trim();
 }
@@ -689,6 +736,9 @@ setInterval(() => {
 // Minuteur : à zéro, la page envoie d'elle-même ce qui est prêt.
 setInterval(() => {
   majMinuteur();
+  majVision();
+  // Fin du visionnage : le modèle disparaît, place à la copie.
+  if (ecranCourant.endsWith(':vision:true') && !enVision()) rendre(true);
   if (etat && etat.phase === 'etape' && travail && !travail.envoye && finLocale && Date.now() >= finLocale
       && tache && tache.etape === etat.etape) valider(true);
 }, 250);
@@ -849,7 +899,8 @@ function ecranFin() {
       podium.append(el('h2', { text: '🤔 Le plus mal compris', style: 'margin-top:14px' }));
       f.mal_compris.forEach(([a, k]) => {
         const avant = galerie[a][k - 1];
-        if (avant) podium.append(el('p', { class: 'pale', text: 'Il fallait dessiner : « ' + avant.contenu + ' »' }));
+        if (avant && avant.type === 'texte') podium.append(el('p', { class: 'pale', text: 'Il fallait dessiner : « ' + avant.contenu + ' »' }));
+        else if (avant) podium.append(el('p', { class: 'pale', text: 'Il fallait copier :' }), carteContribution(avant));
         podium.append(carteContribution(galerie[a][k]));
       });
     }
@@ -865,7 +916,7 @@ function ecranFin() {
   vue.append(el('div', { class: 'carte' }, el('h2', { text: '🍺 Gorgées de la partie' }),
     el('table', { class: 'gorgees' }, el('thead', null, el('tr', null, el('th', { text: 'Joueur' }), el('th', { text: 'Bues', style: 'text-align:right' }),
       el('th', { text: 'Distribuées', style: 'text-align:right' }), el('th', { text: 'Retards', style: 'text-align:right' }))), tbody)));
-  if (galerie && (etat.resultats || []).length) {
+  if (galerie && (etat.resultats || []).length && etat.mode !== 'knockoff') {
     const albums = el('div', { class: 'carte' }, el('h2', { text: '📚 Les albums' }));
     etat.resultats.forEach(r => {
       const al = galerie[r.album];
@@ -875,7 +926,7 @@ function ecranFin() {
     vue.append(albums);
   }
   vue.append(el('div', { class: 'commandes' },
-    el('button', { class: 'principal', text: 'Rejouer', onclick: () => Soiree.lancer(JEU, o => envoyer({ type: 'td_demarrer', mode: 'normal',
+    el('button', { class: 'principal', text: 'Rejouer', onclick: () => Soiree.lancer(JEU, o => envoyer({ type: 'td_demarrer', mode: etat.mode,
       vitesse: etat.vitesse, source: etat.source, etapes: reglages.etapes, ...o })) }),
     el('button', { text: 'Tous les jeux', onclick: () => { location.href = 'index.html'; } })));
 }
