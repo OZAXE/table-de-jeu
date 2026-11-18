@@ -12,7 +12,9 @@ les pages appellent le serveur publié sur Render (`Soiree.SERVEURS` dans `commu
 ## Le projet
 Site des jeux de soirée (application installable « SHIELD »), publié depuis `main`.
 Chaque jeu en ligne est une page `*-3d-jeu.html` (Three.js) : kinito, beerbattle, buckshot,
-picolopoly, menteur (affiché « Cal 12 »), casino, undercover. Les pages `*-en-ligne.html`
+picolopoly, menteur (affiché « Cal 12 »), casino, undercover. Exception : le Gribouillophone
+(jeu de dessin, identifiant `telephone`) est une page 2D, `telephone-jeu.html`, sans Three.js ni `da/`.
+Les pages `*-en-ligne.html`
 sont les anciennes versions : elles ne chargent pas `commun/soiree.js`.
 Le serveur multijoueur est le dépôt `kinito-serveur` (son README décrit tous les messages).
 

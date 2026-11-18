@@ -31,7 +31,7 @@
     menteur:    { titre: 'Cal 12',     page: 'menteur-3d-jeu.html',    icone: '⚓' },
     casino:     { titre: 'Casino',     page: 'casino-3d-jeu.html',     icone: '🎰' },
     undercover: { titre: 'Undercover', page: 'undercover-3d-jeu.html', icone: '🕵️' },
-    telephone:  { titre: 'Téléphone Dessiné', page: 'telephone-jeu.html', icone: '📞' },
+    telephone:  { titre: 'Gribouillophone', page: 'telephone-jeu.html', icone: '🖍️' },
   };
 
   function lire(cle) {
