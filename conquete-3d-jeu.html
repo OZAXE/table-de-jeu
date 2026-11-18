@@ -363,7 +363,7 @@ spot.position.set(0, 7, 0.8);
 spot.target.position.set(0, 0, 0);
 scene.add(spot, spot.target);
 
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 60);
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 90);
 
 // La carte tient dans la zone libre de l'écran (da/cadrage.js) ; le joueur
 // peut ensuite zoomer (pincement, molette) et la déplacer au doigt.
@@ -808,6 +808,14 @@ function construireCarte(carte) {
     ile.z0 = Math.min(ile.z0, y * ECHELLE); ile.z1 = Math.max(ile.z1, y * ECHELLE);
   }));
   poserTable(true);
+  // Lumière et ombres à la taille de l'île (de 18 à 66 régions selon le nombre de joueurs)
+  const demi = Math.max(bornes.l, bornes.h) + 0.6;
+  Object.assign(soleil.shadow.camera, { left: -demi, right: demi, top: demi, bottom: -demi, far: 12 + demi * 2 });
+  soleil.position.set(-1.8 * demi / 4, 5 + demi * 0.4, 2.6 * demi / 4);
+  soleil.shadow.camera.updateProjectionMatrix();
+  spot.position.set(0, 4 + demi * 1.1, 0.6);
+  spot.distance = 10 + demi * 3;
+  spot.angle = Math.min(1.1, Math.atan(demi * 1.15 / spot.position.y));
   const avant = [];
   carte.regions.forEach(info => {
     const t = TERRAINS[info.terrain] || TERRAINS.plaine;
@@ -875,6 +883,7 @@ function construireCarte(carte) {
     groupeCarte.add(lac);
   });
   groupeCarte.add(creerDecors(avant));
+  echelleEtiquettes = 0;
   recentrer();
   majCamera(true);
 }
@@ -942,7 +951,7 @@ function vueModifiee() {
   document.getElementById('btn-centrer').classList.remove('cache');
   vue.x = THREE.MathUtils.clamp(vue.x, -(ile.x1 - ile.x0) / 2, (ile.x1 - ile.x0) / 2);
   vue.z = THREE.MathUtils.clamp(vue.z, -(ile.z1 - ile.z0) / 2, (ile.z1 - ile.z0) / 2);
-  vue.zoom = THREE.MathUtils.clamp(vue.zoom, 0.25, 1.6);
+  vue.zoom = THREE.MathUtils.clamp(vue.zoom, 0.15, 1.6);
   majCamera();
 }
 function versMonde(dxPx, dyPx) {
@@ -1965,7 +1974,7 @@ function panneauAttente() {
   const p = ouvrirPanneau('Salle d’attente');
   const invite = document.createElement('p');
   invite.className = 'invitation-soiree';
-  invite.textContent = 'De 2 à 8 joueurs (idéal : 3 à 6). La carte s’adapte au nombre de joueurs. Le QR de la soirée est sur l’accueil.';
+  invite.textContent = 'De 2 à 8 joueurs (idéal : 3 à 6). Une carte par nombre de joueurs : 18 régions à 2, 9 de plus par joueur, 66 à 8. Le QR de la soirée est sur l’accueil.';
   p.appendChild(invite);
   const liste = document.createElement('div');
   liste.className = 'liste-attente';
@@ -2042,6 +2051,7 @@ function blocReglage(n) {
 // BOUCLE DE RENDU
 // =====================================================================
 const clock = new THREE.Clock();
+let echelleEtiquettes = 0;
 function boucle() {
   requestAnimationFrame(boucle);
   const dt = Math.min(clock.getDelta(), 0.1);
@@ -2050,6 +2060,17 @@ function boucle() {
   camera.position.lerp(POS, 0.14);
   camCible.lerp(CIBLE, 0.14);
   camera.lookAt(camCible);
+  // Plus la caméra recule (grande île), moins de brume et de plus grandes étiquettes
+  const recul = camera.position.distanceTo(camCible);
+  scene.fog.density = Math.min(0.022, 0.16 / recul);
+  const grossir = THREE.MathUtils.clamp(recul / 7, 1, 2.2);
+  if (grossir !== echelleEtiquettes) {
+    echelleEtiquettes = grossir;
+    regions3d.forEach(r3 => {
+      r3.etiquette.scale.set(0.36 * grossir, 0.36 * grossir / 3, 1);
+      r3.cout.scale.set(0.46 * grossir, 0.46 * grossir * 0.4, 1);
+    });
+  }
   zone.appliquer(camera, vue.perso ? null : { points: [[ile.x0, 0.15, ile.z0], [ile.x1, 0.15, ile.z0], [ile.x0, 0, ile.z1], [ile.x1, 0, ile.z1]] },
                  { pos: POS, cible: CIBLE });
   const pulse = 0.5 + 0.5 * Math.sin(t * 4.2);
