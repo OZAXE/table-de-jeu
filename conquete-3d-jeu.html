@@ -1,0 +1,1861 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Royaumes 3D</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=2">
+<link rel="apple-touch-icon" href="icons/icon-180.png?v=2">
+<meta name="theme-color" content="#0b1410">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SHIELD">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<style>
+  :root { --accent: #e0b04a; --accent-2: #a16207; }
+  html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; background: #0b1410; overscroll-behavior: none; }
+  canvas { display: block; touch-action: none; }
+
+  #overlay { position: fixed; inset: 0; pointer-events: none; font-family: 'Outfit', system-ui, sans-serif; }
+  #vignette { position: fixed; inset: 0; pointer-events: none; }
+
+  /* --- Joueurs (classement discret) --- */
+  #joueurs { position: absolute; top: 18px; left: 18px; display: flex; flex-direction: column; gap: 6px; max-height: 70vh; overflow: hidden; }
+  .joueur { display: flex; align-items: center; gap: 8px; padding: 6px 12px; font-size: 15px; min-width: 170px; }
+  .joueur.absent { opacity: 0.45; font-style: italic; }
+  .joueur .pastille { width: 12px; height: 12px; border-radius: 50%; flex: 0 0 auto; box-shadow: 0 0 0 2px rgba(0,0,0,0.35); }
+  .joueur .nom { flex: 1 1 auto; }
+  .joueur .info { font-size: 13px; color: var(--texte-doux); white-space: nowrap; }
+
+  /* --- Bandeau du haut --- */
+  #bandeau { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); text-align: center; max-width: 52vw; }
+  #message { font-size: 21px; }
+  #rappel { font-size: 14px; margin-top: 4px; }
+  #compteur {
+    display: inline-block; margin-top: 6px; padding: 4px 14px; color: var(--texte); font-size: 14px;
+    background: var(--verre); border: 1px solid var(--bord); border-radius: 999px;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  }
+  #compteur:empty { display: none; }
+  #compteur b { color: var(--accent); }
+  #compteur .urgent { color: #ff8a8a; font-weight: 700; }
+
+  /* --- Boutons du haut --- */
+  #boutons-haut { position: absolute; top: 18px; right: 18px; display: flex; gap: 8px; pointer-events: auto; }
+  #boutons-haut button { font-size: 15px; padding: 8px 14px; }
+
+  /* --- Panneau du bas --- */
+  #panneau {
+    position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+    pointer-events: auto; padding: 12px 16px; min-width: 320px; max-width: min(760px, 94vw);
+    text-align: center; max-height: 46vh; overflow-y: auto;
+  }
+  #panneau.cache { display: none; }
+  #panneau h2 { margin: 0 0 8px; font-size: 19px; }
+  #panneau p { margin: 0 0 8px; font-size: 15px; }
+  .rangee { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  button { pointer-events: auto; font-family: 'Outfit', system-ui, sans-serif; font-weight: 700; font-size: 17px; padding: 10px 20px; cursor: pointer; }
+  button.petit { font-size: 14px; padding: 7px 13px; }
+  button.gros { font-size: 20px; padding: 13px 28px; }
+  button.choisi { outline: 3px solid var(--accent); outline-offset: 2px; }
+  button:disabled { opacity: 0.45; cursor: default; }
+  .aide { color: var(--texte-doux); font-size: 14px; margin: 4px 0; }
+  .alerte { font-size: 13px; color: #e0a05a; margin-top: 6px; }
+  .note { font-size: 12px; margin-top: 8px; color: var(--texte-doux); }
+  .cache { display: none !important; }
+
+  /* Résumé de mon peuple */
+  .mon-peuple { display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 2px 0 8px; font-size: 14px; color: var(--texte); }
+  .mon-peuple .badge { padding: 3px 10px; border-radius: 999px; border: 1px solid var(--bord); background: rgba(255,255,255,0.05); }
+  .mon-peuple .badge b { color: var(--accent); }
+
+  /* File des combinaisons */
+  .file { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0 8px; text-align: left; }
+  .combi { border: 1px solid var(--bord); border-radius: 14px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: var(--texte); display: flex; flex-direction: column; gap: 3px; }
+  .combi .titre { font-weight: 800; font-size: 15px; line-height: 1.2; }
+  .combi .ligne { font-size: 12px; color: var(--texte-doux); line-height: 1.3; }
+  .combi .chiffres { display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; }
+  .combi .chiffres span { padding: 1px 7px; border-radius: 999px; background: rgba(0,0,0,0.3); }
+  .combi .chiffres .prix { color: #ffd98a; }
+  .combi .chiffres .gain { color: #8ef0a8; }
+  .combi button { margin-top: 4px; font-size: 14px; padding: 6px 10px; }
+  .combi.trop-cher { opacity: 0.55; }
+
+  /* Région choisie */
+  .fiche { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; margin: 0 0 8px; font-size: 14px; color: var(--texte); }
+  .fiche .pastille { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+
+  /* Redéploiement */
+  .compteur-main { font-size: 18px; font-weight: 800; margin: 2px 0 6px; }
+  .compteur-main b { color: var(--accent); }
+  .reglage-region { display: inline-flex; align-items: center; gap: 10px; margin: 4px 0 8px; }
+  .reglage-region b { font-size: 22px; min-width: 28px; display: inline-block; }
+  .reglage-region button { font-size: 20px; padding: 4px 16px; }
+  .case { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--texte); cursor: pointer; pointer-events: auto; }
+
+  /* Salle d'attente */
+  .modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 6px 0 8px; }
+  .mode { pointer-events: auto; cursor: pointer; text-align: left; padding: 8px 10px; border-radius: 14px; border: 1px solid var(--bord); background: rgba(255,255,255,0.05); color: var(--texte); }
+  .mode b { display: block; font-size: 14px; margin-bottom: 2px; }
+  .mode span { font-size: 11px; color: var(--texte-doux); line-height: 1.3; display: block; }
+  .mode.choisi { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
+  select { pointer-events: auto; font-family: inherit; font-size: 15px; padding: 6px 10px; border-radius: 10px; background: #13201a; color: var(--texte); border: 1px solid var(--bord); }
+  input[type="text"] { pointer-events: auto; font-family: 'Outfit', system-ui, sans-serif; font-size: 18px; text-align: center; padding: 10px 14px; width: 210px; margin: 0 4px; }
+  input#code-salon { width: 120px; letter-spacing: 6px; text-transform: uppercase; }
+  .code-salon { font-size: 38px; letter-spacing: 8px; margin: 2px 0 6px; }
+  .liste-attente { font-size: 16px; margin: 8px 0; line-height: 1.6; }
+  .qr { display: block; margin: 10px auto 4px; width: 168px; height: 168px; }
+
+  /* Fin de partie */
+  .bilan { margin: 6px auto 10px; border-collapse: collapse; font-size: 14px; min-width: 280px; }
+  .bilan th { font-size: 11px; color: var(--texte-doux); font-weight: 600; padding: 2px 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .bilan td { padding: 4px 7px; color: var(--texte); text-align: left; border-bottom: 1px solid var(--bord); }
+  .bilan td.n { text-align: right; color: var(--accent); font-weight: 700; white-space: nowrap; }
+  .bilan tr.gagnant td:first-child { color: #ffd98a; }
+
+  /* Réactions */
+  .reactions { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; margin-top: 6px; }
+  .reactions button { font-size: 20px; padding: 4px 8px; background: rgba(255,255,255,0.06) !important; }
+  .bulle-reaction { position: fixed; z-index: 70; pointer-events: none; font: 700 15px 'Outfit', system-ui, sans-serif; color: #fff;
+    display: flex; flex-direction: column; align-items: center; animation: monte-reac 2.6s ease-out forwards; text-shadow: 0 2px 8px rgba(0,0,0,0.8); }
+  .bulle-reaction .e { font-size: 38px; line-height: 1; }
+  @keyframes monte-reac { 0% { opacity: 0; transform: translateY(20px) scale(0.6); } 15% { opacity: 1; transform: translateY(0) scale(1.1); } 100% { opacity: 0; transform: translateY(-170px) scale(1); } }
+
+  /* Modales (règles, journal) */
+  .fond-modale { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-start; justify-content: center; padding: 20px; overflow-y: auto; pointer-events: auto; }
+  .fond-modale.cache { display: none; }
+  .modale { padding: 20px; max-width: 520px; width: 100%; margin: auto; line-height: 1.5; }
+  .modale h2 { font-size: 22px; margin: 0 0 12px; text-align: center; }
+  .modale h3 { font-size: 16px; margin: 14px 0 6px; }
+  .modale p { margin: 0 0 8px; font-size: 14px; }
+  .modale ul { margin: 0 0 8px 18px; font-size: 14px; padding: 0; }
+  .modale li { margin-bottom: 4px; }
+  .modale table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 13px; }
+  .modale td { padding: 4px 6px; text-align: left; border-bottom: 1px solid var(--bord); vertical-align: top; }
+  .modale td:first-child { white-space: nowrap; color: var(--texte); }
+  .journal-liste { text-align: left; font-size: 14px; }
+  .journal-liste div { padding: 5px 2px; border-bottom: 1px solid var(--bord); color: var(--texte); }
+  .journal-liste div .pastille { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+
+  /* Grande annonce */
+  .annonce-sw { position: fixed; left: calc(var(--zone-gauche, 0px) + 8px); right: calc(var(--zone-droite, 0px) + 8px); top: calc(var(--haut-libre, 14vh) + 6px); z-index: 60; text-align: center; pointer-events: none; }
+  .annonce-sw .gros { font: 900 clamp(30px, 10vmin, 76px)/1.05 'Outfit', system-ui, sans-serif; letter-spacing: 0.02em; color: var(--c);
+    text-shadow: 0 0 24px var(--c), 0 6px 22px rgba(0, 0, 0, 0.85); animation: sw-pop 0.45s cubic-bezier(.2, 1.6, .4, 1) both; }
+  .annonce-sw .petit { display: inline-block; margin-top: 10px; padding: 7px 16px; border-radius: 999px; background: rgba(0, 0, 0, 0.62);
+    border: 1px solid var(--c); color: #fff; font: 700 clamp(15px, 4.5vw, 20px)/1.25 'Outfit', system-ui, sans-serif; animation: sw-monte 0.4s 0.15s both; }
+  .annonce-sw.sort { animation: sw-sort 0.35s ease-in forwards; }
+  @keyframes sw-pop { from { opacity: 0; transform: scale(2.1) rotate(-5deg); } to { opacity: 1; transform: none; } }
+  @keyframes sw-monte { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes sw-sort { to { opacity: 0; transform: translateY(-16px) scale(0.92); } }
+  @media (prefers-reduced-motion: reduce) { .annonce-sw .gros, .annonce-sw .petit, .bulle-reaction { animation: none; } }
+
+  /* ================= Téléphones ================= */
+  @media (max-width: 760px), (pointer: coarse) {
+    #joueurs { flex-direction: row; flex-wrap: wrap; gap: 4px; justify-content: center; }
+    .joueur { padding: 3px 9px; font-size: 12px; min-width: 0; gap: 5px; }
+    .joueur .info { font-size: 11px; }
+    #message { font-size: 17px; }
+    #rappel { font-size: 12px; }
+    #compteur { font-size: 11px; padding: 2px 9px; margin-top: 3px; white-space: nowrap; }
+    #boutons-haut { top: 10px; right: 10px; gap: 5px; }
+    #boutons-haut button { font-size: 13px; padding: 6px 10px; }
+    #panneau {
+      bottom: 0; left: 0; right: 0; transform: none; width: 100%; max-width: none; min-width: 0; box-sizing: border-box;
+      padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px)); max-height: 46vh;
+    }
+    #panneau h2 { font-size: 16px; margin-bottom: 5px; }
+    #panneau p { font-size: 13px; margin-bottom: 6px; }
+    button { font-size: 15px; padding: 8px 13px; }
+    button.gros { font-size: 18px; padding: 11px 22px; }
+    .file { grid-template-columns: 1fr; gap: 6px; }
+    .modes { grid-template-columns: 1fr 1fr; }
+    input[type="text"] { width: 160px; font-size: 16px; }
+    input#code-salon { width: 104px; }
+    .code-salon { font-size: 30px; letter-spacing: 6px; }
+    .modale { padding: 14px; }
+  }
+  @media (max-height: 460px) { #panneau { max-height: 78vh; padding: 8px 10px; } }
+</style>
+<link rel="stylesheet" href="da/bar-moderne.css">
+<link rel="stylesheet" href="da/mise-en-page.css">
+</head>
+<body>
+
+<div id="overlay">
+  <div id="boutons-haut">
+    <button id="btn-centrer" class="sombre cache" title="Recentrer la carte">🎯</button>
+    <button id="btn-journal" class="sombre cache" title="Journal">📜</button>
+    <button id="btn-regles">Règles &#9432;</button>
+  </div>
+  <div id="joueurs"></div>
+  <div id="bandeau">
+    <div id="message">Royaumes</div>
+    <div id="rappel"></div>
+    <div id="compteur"></div>
+  </div>
+  <div id="panneau"></div>
+</div>
+<div id="vignette"></div>
+
+<div id="modale-journal" class="fond-modale cache">
+  <div class="modale">
+    <h2>Journal</h2>
+    <div id="journal-liste" class="journal-liste"></div>
+    <div class="rangee" style="margin-top:12px;"><button id="fermer-journal">Fermer</button></div>
+  </div>
+</div>
+
+<div id="modale-regles" class="fond-modale cache">
+  <div class="modale">
+    <h2>Règles de Royaumes</h2>
+    <p>Chacun dirige un <span class="accent">peuple</span> : une race et un pouvoir tirés au hasard. La carte est trop petite pour tout le monde : conquiers les régions voisines, gagne des <span class="accent">pièces</span> à chaque tour, et quand ton peuple s'essouffle, mets-le <span class="accent">en déclin</span> pour en prendre un nouveau. Le plus de pièces à la fin gagne.</p>
+
+    <h3>Ton tour</h3>
+    <ul>
+      <li><span class="accent">Pas de peuple actif ?</span> Choisis une combinaison dans la file de 6. La première est gratuite ; chaque combinaison sautée coûte 1 pièce, posée dessus (celui qui la prendra la ramasse).</li>
+      <li><span class="accent">Étendre</span> : touche une région en surbrillance pour la conquérir (touche-la deux fois pour aller vite). Tes pions sur la carte reviennent en main, sauf 1 par région. Avant ta première conquête, tu peux abandonner une région pour récupérer ses pions.</li>
+      <li><span class="accent">Déclin</span> (en début de tour) : ton peuple ne garde qu'1 pion par région et perd ses pouvoirs, mais rapporte encore 1 pièce par région. Ton ancien peuple en déclin disparaît. Le tour s'arrête là.</li>
+      <li><span class="accent">Redéploiement</span> : répartis tes pions entre tes régions (au moins 1 par région), puis valide. Tu marques tes pièces.</li>
+    </ul>
+
+    <h3>Conquérir</h3>
+    <table>
+      <tr><td>Coût</td><td>2 pions + 1 par pion adverse + 1 en montagne + 1 par fortin, modifié par les races et pouvoirs. Jamais moins de 1.</td></tr>
+      <tr><td>Où</td><td>La première région d'un peuple est au <span class="accent">bord de la carte</span> (au bord de la mer). Ensuite, une région voisine des tiennes. On n'attaque jamais ses propres régions.</td></tr>
+      <tr><td>Pertes</td><td>Le peuple actif attaqué perd 1 pion et récupère les autres en main. Un peuple en déclin perd tout.</td></tr>
+      <tr><td>🎲 Dé</td><td>Pas assez de pions ? Tente une dernière conquête avec le dé de renfort (faces 0, 0, 0, 1, 2, 3, tiré par le serveur). Réussi ou raté, tes conquêtes s'arrêtent.</td></tr>
+    </table>
+
+    <h3>Les pièces</h3>
+    <p>À la fin de ton tour : 1 pièce par région occupée (peuple actif et peuple en déclin), plus les bonus de race et de pouvoir. La partie dure un nombre de tours fixé par la vitesse. Égalité : le plus de régions, puis le sort.</p>
+
+    <h3>Les gorgées</h3>
+    <table>
+      <tr><td>Région perdue</td><td>L'ancien occupant boit 1 par région perdue (3 au plus par attaque).</td></tr>
+      <tr><td>Déclin</td><td>Le joueur distribue 2 gorgées.</td></tr>
+      <tr><td>Fin de partie</td><td>Le dernier boit 3, le vainqueur en distribue 5.</td></tr>
+      <tr><td>Vengeance (option)</td><td>Trois tours adverses d'affilée à perdre des régions : tu distribues 1.</td></tr>
+    </table>
+    <p class="note">Selon la vitesse : ×1,5 en Flash, ×1,25 en Express, ×0,75 en Marathon.</p>
+
+    <h3>Le temps</h3>
+    <p>Chaque tour a un minuteur. À zéro, le serveur redéploie tes pions à ta place et passe au suivant. Négociez à voix haute : la carte est visible de tous, « attaque-le, pas moi » fait partie du jeu.</p>
+
+    <div id="regles-catalogue"><p class="note">Les races et les pouvoirs de la partie s'affichent ici une fois la partie lancée.</p></div>
+
+    <div id="bloc-qr-regles" class="cache">
+      <h3>Inviter quelqu'un</h3>
+      <p>Salon <span class="accent" id="qr-code-salon">----</span> : fais scanner ce code, le prénom suffira.</p>
+      <canvas id="qr-regles" class="qr"></canvas>
+      <div id="qr-note-regles" class="note"></div>
+      <div class="rangee" style="margin-top:8px;"><button id="copier-lien-regles" class="sombre">Copier le lien</button></div>
+    </div>
+
+    <div class="rangee" style="margin-top:14px;">
+      <button id="fermer-regles">Fermer</button>
+      <button id="quitter-table" class="sombre cache">Quitter la table</button>
+      <button id="menu-jeux" class="sombre">🎲 Tous les jeux</button>
+    </div>
+    <p class="note" style="text-align:center;">À consommer avec modération.</p>
+  </div>
+</div>
+
+<script src="commun/soiree.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { preparerAmbiance, lisser as lisserScene, creerDecorBar, textureBois, POLICE } from './da/bar-moderne.js';
+import { modeLeger, optionsRendu, reglerRendu, surveillerFluidite } from './da/qualite.js';
+import { suivreZoneLibre } from './da/cadrage.js';
+
+const LEGER = modeLeger();
+const ACCENT = 0xe0b04a;
+
+// Couleurs des joueurs (index de place) : bien distinctes sur la carte.
+const COULEURS = ['#ef4444', '#3b82f6', '#22c55e', '#facc15', '#a855f7', '#f97316', '#14b8a6', '#ec4899'];
+const couleur = i => COULEURS[i % COULEURS.length];
+
+const TERRAINS = {
+  plaine:   { nom: 'plaine',   couleur: 0xa7c35d, h: 0.10, icone: '🌾' },
+  foret:    { nom: 'forêt',    couleur: 0x2f6b34, h: 0.13, icone: '🌲' },
+  colline:  { nom: 'colline',  couleur: 0xb79a5c, h: 0.20, icone: '⛰️' },
+  marais:   { nom: 'marais',   couleur: 0x4c6b5b, h: 0.07, icone: '🐸' },
+  montagne: { nom: 'montagne', couleur: 0x8b8e96, h: 0.34, icone: '🏔️' },
+};
+const MARQUES = { mine: { nom: 'mine', icone: '⛏️' }, source: { nom: 'source magique', icone: '🔮' } };
+const VITESSES = {
+  flash:    { titre: 'Flash',    tours: 4,  minuteur: 40, mult: '×1,5' },
+  express:  { titre: 'Express',  tours: 6,  minuteur: 45, mult: '×1,25' },
+  soiree:   { titre: 'Soirée',   tours: 8,  minuteur: 60, mult: '×1' },
+  marathon: { titre: 'Marathon', tours: 10, minuteur: 90, mult: '×0,75' },
+};
+const TOURS_CHOIX = [3, 4, 5, 6, 8, 10, 12];
+const JOUEURS_MIN = 2;
+const JOUEURS_MAX = 8;
+const ECHELLE = 0.42;       // unités de carte du serveur -> unités de la scène
+
+// =====================================================================
+// MODALES
+// =====================================================================
+const elModaleRegles = document.getElementById('modale-regles');
+const elModaleJournal = document.getElementById('modale-journal');
+document.getElementById('btn-regles').addEventListener('click', () => {
+  majQRModale();
+  majReglesCatalogue();
+  document.getElementById('quitter-table').classList.toggle('cache', !enPartie);
+  elModaleRegles.classList.remove('cache');
+});
+document.getElementById('fermer-regles').addEventListener('click', () => elModaleRegles.classList.add('cache'));
+document.getElementById('menu-jeux').addEventListener('click', () => { location.href = 'index.html'; });
+elModaleRegles.addEventListener('click', e => { if (e.target === elModaleRegles) elModaleRegles.classList.add('cache'); });
+document.getElementById('btn-journal').addEventListener('click', () => { majJournal(); elModaleJournal.classList.remove('cache'); });
+document.getElementById('fermer-journal').addEventListener('click', () => elModaleJournal.classList.add('cache'));
+elModaleJournal.addEventListener('click', e => { if (e.target === elModaleJournal) elModaleJournal.classList.add('cache'); });
+document.getElementById('btn-centrer').addEventListener('click', () => recentrer());
+document.getElementById('quitter-table').addEventListener('click', () => {
+  oublierSession();
+  if (ws) { try { ws.close(); } catch (e) { /* deja ferme */ } }
+  location.href = location.pathname;
+});
+
+// =====================================================================
+// SCÈNE / CAMÉRA / RENDU
+// =====================================================================
+const scene = new THREE.Scene();
+const renderer = new THREE.WebGLRenderer(optionsRendu());
+renderer.setSize(window.innerWidth, window.innerHeight);
+reglerRendu(renderer);
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+document.body.appendChild(renderer.domElement);
+preparerAmbiance(renderer, scene, { accent: ACCENT });
+scene.fog = new THREE.FogExp2(0x07110d, 0.035);
+const decor = creerDecorBar(scene, { accent: ACCENT, nom: 'ROYAUMES', solY: -1.2 });
+// La suspension du décor pend au-dessus d'une table ronde : ici, elle cacherait la carte.
+decor.children.forEach(o => { if (Math.abs(o.position.x) < 0.01 && Math.abs(o.position.z) < 0.01 && o.position.y > 2) o.visible = false; });
+
+scene.add(new THREE.AmbientLight(0x404048, 1.1));
+const soleil = new THREE.DirectionalLight(0xfff0d8, 2.6);
+soleil.position.set(-1.6, 5, 2.4);
+soleil.target.position.set(0, 0, 0);
+soleil.castShadow = !LEGER;
+soleil.shadow.mapSize.set(1024, 1024);
+Object.assign(soleil.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 0.5, far: 12 });
+scene.add(soleil, soleil.target);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 60);
+
+// La carte tient dans la zone libre de l'écran (da/cadrage.js) ; le joueur
+// peut ensuite zoomer (pincement, molette) et la déplacer au doigt.
+let bornes = { l: 3.4, h: 4.2 };           // demi-dimensions de la carte posée
+const vue = { x: 0, z: 0, zoom: 1, perso: false };
+const zone = suivreZoneLibre(() => {});
+const CIBLE = new THREE.Vector3();
+const POS = new THREE.Vector3();
+function directionCamera() { return zone.direction(0.8, 0.93); }
+function distanceBase() {
+  const vHalf = THREE.MathUtils.degToRad(camera.fov) / 2;
+  const hHalf = Math.atan(Math.tan(vHalf) * camera.aspect);
+  const l = bornes.l * 2 + 0.5, h = bornes.h * 2 + 0.5;
+  return Math.max(l / 2 / (Math.tan(hHalf) * zone.c.fracL), h / 2 / (Math.tan(vHalf) * zone.c.fracH * 0.92), 3);
+}
+function majCamera(instant) {
+  const d = distanceBase() * (vue.perso ? vue.zoom : zone.c.zoom);
+  CIBLE.set(vue.x, 0, vue.z);
+  POS.copy(CIBLE).addScaledVector(directionCamera(), d);
+  if (instant) { camera.position.copy(POS); camCible.copy(CIBLE); }
+}
+const camCible = new THREE.Vector3();
+majCamera(true);
+
+function recentrer() {
+  vue.x = 0; vue.z = 0; vue.zoom = 1; vue.perso = false;
+  document.getElementById('btn-centrer').classList.add('cache');
+  majCamera();
+}
+
+function redimensionner() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  zone.recalculer();
+  majCamera();
+}
+window.addEventListener('resize', redimensionner);
+window.addEventListener('orientationchange', redimensionner);
+
+// --- Table et mer ---
+const plateau = new THREE.Group();
+scene.add(plateau);
+const matTable = new THREE.MeshStandardMaterial({ map: textureBois('#4a2f1d', 2), roughness: 0.55 });
+let table = null, mer = null;
+function poserTable(avecMer) {
+  if (table) plateau.remove(table);
+  if (mer) { plateau.remove(mer); mer = null; }
+  table = new THREE.Mesh(new THREE.BoxGeometry(bornes.l * 2 + 1.6, 0.16, bornes.h * 2 + 1.6), matTable);
+  table.position.y = -0.1;
+  table.receiveShadow = true;
+  plateau.add(table);
+  if (!avecMer) return;
+  // La mer autour de la carte : les régions qui la touchent sont « au bord ».
+  mer = new THREE.Mesh(new THREE.BoxGeometry(bornes.l * 2 + 0.7, 0.04, bornes.h * 2 + 0.7),
+    new THREE.MeshStandardMaterial({ color: 0x1f5f82, roughness: 0.25, metalness: 0.1, emissive: 0x0a2a3d, emissiveIntensity: 0.5 }));
+  mer.position.y = 0.0;
+  mer.receiveShadow = true;
+  plateau.add(mer);
+}
+poserTable();
+
+// =====================================================================
+// ÉTIQUETTES (sprites dessinés)
+// =====================================================================
+function creerSprite(l = 128, h = 64, echelle = 0.32) {
+  const cv = document.createElement('canvas');
+  cv.width = l; cv.height = h;
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+  s.renderOrder = 10;
+  s.scale.set(echelle, echelle * h / l, 1);
+  s.userData = { cv, tex, texte: null };
+  return s;
+}
+function pastilleCanvas(ctx, x, y, l, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.arcTo(x + l, y, x + l, y + h, r); ctx.arcTo(x + l, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + l, y, r); ctx.closePath();
+}
+function ecrireSprite(s, texte, { fond = 'rgba(8,16,12,0.82)', encre = '#fff', bord = 'rgba(255,255,255,0.25)' } = {}) {
+  const cle = texte + fond + encre + bord;
+  if (s.userData.texte === cle) return;
+  s.userData.texte = cle;
+  const { cv, tex } = s.userData;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  if (!texte) { tex.needsUpdate = true; return; }
+  ctx.font = `800 ${Math.round(cv.height * 0.56)}px ${POLICE}`;
+  const l = Math.min(cv.width - 4, ctx.measureText(texte).width + cv.height * 0.6);
+  pastilleCanvas(ctx, (cv.width - l) / 2, 4, l, cv.height - 8, (cv.height - 8) / 2);
+  ctx.fillStyle = fond; ctx.fill();
+  ctx.lineWidth = 3; ctx.strokeStyle = bord; ctx.stroke();
+  ctx.fillStyle = encre; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(texte, cv.width / 2, cv.height / 2 + 2);
+  tex.needsUpdate = true;
+}
+function spriteEmoji(emoji, taille = 0.2) {
+  const s = creerSprite(64, 64, taille);
+  const ctx = s.userData.cv.getContext('2d');
+  ctx.font = `48px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(emoji, 32, 36);
+  s.userData.tex.needsUpdate = true;
+  return s;
+}
+
+// =====================================================================
+// LA CARTE
+// =====================================================================
+let carteCle = '';
+let regions3d = [];          // par région : { info, groupe, mesh, mat, h, cx, cz, pions, etiquette, cout, ... }
+const groupeCarte = new THREE.Group();
+plateau.add(groupeCarte);
+
+const geoPion = new THREE.CylinderGeometry(0.06, 0.066, 0.034, 18);
+const matsPions = {};
+function matPion(i, declin) {
+  const cle = i + (declin ? 'd' : 'a');
+  if (!matsPions[cle]) {
+    const c = new THREE.Color(couleur(i));
+    if (declin) c.lerp(new THREE.Color(0x777777), 0.55).multiplyScalar(0.8);
+    matsPions[cle] = new THREE.MeshStandardMaterial({ color: c, roughness: 0.35, metalness: 0.15 });
+  }
+  return matsPions[cle];
+}
+
+function retrecir(poly, cx, cy, marge) {
+  return poly.map(([x, y]) => {
+    const dx = x - cx, dy = y - cy, d = Math.hypot(dx, dy) || 1;
+    const k = Math.max(0, (d - marge) / d);
+    return [cx + dx * k, cy + dy * k];
+  });
+}
+
+function decorTerrain(terrain, rng) {
+  const g = new THREE.Group();
+  const alea = () => rng() - 0.5;
+  if (terrain === 'foret') {
+    const tronc = new THREE.MeshStandardMaterial({ color: 0x4a3020, roughness: 0.9 });
+    const feuilles = new THREE.MeshStandardMaterial({ color: 0x1f5a2a, roughness: 0.8 });
+    for (let k = 0; k < 4; k++) {
+      const a = new THREE.Group();
+      const t = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.014, 0.05, 6), tronc);
+      t.position.y = 0.025;
+      const c = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.14, 7), feuilles);
+      c.position.y = 0.11;
+      a.add(t, c);
+      a.position.set(alea() * 0.42, 0, alea() * 0.42);
+      a.scale.setScalar(0.8 + rng() * 0.5);
+      g.add(a);
+    }
+  } else if (terrain === 'montagne') {
+    const roche = new THREE.MeshStandardMaterial({ color: 0x6f727a, roughness: 0.95, flatShading: true });
+    const neige = new THREE.MeshStandardMaterial({ color: 0xf2f4f8, roughness: 0.6, flatShading: true });
+    for (let k = 0; k < 2; k++) {
+      const m = new THREE.Group();
+      const p = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.26, 6), roche);
+      p.position.y = 0.13;
+      const n = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.1, 6), neige);
+      n.position.y = 0.22;
+      m.add(p, n);
+      m.position.set(alea() * 0.3 + (k ? 0.12 : -0.12), 0, alea() * 0.25);
+      m.scale.setScalar(k ? 0.75 : 1);
+      g.add(m);
+    }
+  } else if (terrain === 'colline') {
+    const herbe = new THREE.MeshStandardMaterial({ color: 0x8f8a4a, roughness: 0.9 });
+    for (let k = 0; k < 3; k++) {
+      const b = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), herbe);
+      b.scale.y = 0.55;
+      b.position.set(alea() * 0.4, 0, alea() * 0.4);
+      g.add(b);
+    }
+  } else if (terrain === 'marais') {
+    const eau = new THREE.MeshStandardMaterial({ color: 0x2e5b66, roughness: 0.15, metalness: 0.2 });
+    const jonc = new THREE.MeshStandardMaterial({ color: 0x6b7a3a, roughness: 0.9 });
+    for (let k = 0; k < 3; k++) {
+      const f = new THREE.Mesh(new THREE.CircleGeometry(0.07 + rng() * 0.05, 14), eau);
+      f.rotation.x = -Math.PI / 2;
+      f.position.set(alea() * 0.42, 0.003, alea() * 0.42);
+      g.add(f);
+    }
+    for (let k = 0; k < 6; k++) {
+      const j = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.006, 0.07, 4), jonc);
+      j.position.set(alea() * 0.45, 0.035, alea() * 0.45);
+      g.add(j);
+    }
+  } else {
+    const ble = new THREE.MeshStandardMaterial({ color: 0xd9c46a, roughness: 0.9 });
+    for (let k = 0; k < 3; k++) {
+      const s = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.012, 0.05), ble);
+      s.position.set(alea() * 0.4, 0.006, alea() * 0.4);
+      s.rotation.y = rng() * Math.PI;
+      g.add(s);
+    }
+  }
+  return g;
+}
+
+function aleatoire(graine) {
+  let s = graine >>> 0 || 1;
+  return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+}
+
+function construireCarte(carte) {
+  while (groupeCarte.children.length) groupeCarte.remove(groupeCarte.children[0]);
+  regions3d = [];
+  bornes = { l: carte.largeur * ECHELLE / 2, h: carte.hauteur * ECHELLE / 2 };
+  poserTable(true);
+  carte.regions.forEach(info => {
+    const t = TERRAINS[info.terrain] || TERRAINS.plaine;
+    const [cx0, cy0] = info.centre;
+    const poly = retrecir(info.poly, cx0, cy0, 0.06).map(([x, y]) => [x * ECHELLE, y * ECHELLE]);
+    const cx = cx0 * ECHELLE, cz = cy0 * ECHELLE;
+    // Forme dans le plan (x, -z), extrudée vers le haut après rotation.
+    const forme = new THREE.Shape(poly.map(([x, y]) => new THREE.Vector2(x, -y)));
+    const geo = new THREE.ExtrudeGeometry(forme, { depth: t.h, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.012, bevelSegments: 1 });
+    geo.rotateX(-Math.PI / 2);
+    const mat = new THREE.MeshStandardMaterial({ color: t.couleur, roughness: 0.82, metalness: 0.02 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.castShadow = !LEGER;
+    mesh.receiveShadow = true;
+    mesh.userData.region = info.id;
+    const groupe = new THREE.Group();
+    groupe.add(mesh);
+    const deco = decorTerrain(info.terrain, aleatoire(info.id * 97 + 13));
+    deco.position.set(cx, t.h, cz);
+    deco.scale.setScalar(Math.min(1, Math.sqrt(aireDe(poly)) / 0.75));
+    groupe.add(deco);
+    if (info.marque) {
+      const m = spriteEmoji(MARQUES[info.marque].icone, 0.2);
+      m.position.set(cx - 0.2, t.h + 0.12, cz - 0.16);
+      groupe.add(m);
+      if (info.marque === 'source') {
+        const cristal = new THREE.Mesh(new THREE.OctahedronGeometry(0.045),
+          new THREE.MeshStandardMaterial({ color: 0x7dd3fc, emissive: 0x38bdf8, emissiveIntensity: 1.2, roughness: 0.2 }));
+        cristal.position.set(cx - 0.2, t.h + 0.05, cz - 0.16);
+        groupe.add(cristal);
+      }
+    }
+    const pions = new THREE.Group();
+    pions.position.set(cx + 0.06, t.h, cz + 0.08);
+    groupe.add(pions);
+    const etiquette = creerSprite(128, 64, 0.3);
+    etiquette.position.set(cx + 0.06, t.h + 0.3, cz + 0.08);
+    groupe.add(etiquette);
+    const cout = creerSprite(160, 64, 0.46);
+    cout.position.set(cx, t.h + 0.5, cz);
+    cout.visible = false;
+    groupe.add(cout);
+    const objets = new THREE.Group();
+    objets.position.set(cx, t.h, cz);
+    groupe.add(objets);
+    groupeCarte.add(groupe);
+    regions3d.push({ info, groupe, mesh, mat, h: t.h, cx, cz, pions, etiquette, cout, objets, base: new THREE.Color(t.couleur),
+                     flash: 0, souleve: 0, cle: '' });
+  });
+  lisserScene(groupeCarte, 0.2);
+  recentrer();
+  majCamera(true);
+}
+
+function aireDe(poly) {
+  let a = 0;
+  for (let k = 0; k < poly.length; k++) {
+    const [x0, y0] = poly[k], [x1, y1] = poly[(k + 1) % poly.length];
+    a += x0 * y1 - x1 * y0;
+  }
+  return Math.abs(a / 2);
+}
+
+// Pions, fortins, camps, gardiens : redessinés quand la région change.
+const matFortin = new THREE.MeshStandardMaterial({ color: 0xcfc6b0, roughness: 0.8 });
+const matToile = new THREE.MeshStandardMaterial({ color: 0xd8b26a, roughness: 0.9 });
+const matGardien = new THREE.MeshStandardMaterial({ color: 0x93c5fd, emissive: 0x3b82f6, emissiveIntensity: 0.8, roughness: 0.3 });
+function majObjetsRegion(r3, reg, nbPions, declin) {
+  const cle = [reg.j, reg.p, nbPions, reg.fortin, reg.camp, reg.gardien, declin].join(',');
+  if (r3.cle === cle) return;
+  r3.cle = cle;
+  while (r3.pions.children.length) r3.pions.remove(r3.pions.children[0]);
+  while (r3.objets.children.length) r3.objets.remove(r3.objets.children[0]);
+  if (reg.j != null) {
+    const visibles = Math.min(nbPions, 8);
+    for (let k = 0; k < visibles; k++) {
+      const p = new THREE.Mesh(geoPion, matPion(reg.j, declin));
+      p.position.y = 0.017 + k * 0.036;
+      p.castShadow = !LEGER;
+      r3.pions.add(p);
+    }
+  }
+  if (reg.fortin) {
+    const f = new THREE.Group();
+    const tour = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.16, 8), matFortin);
+    tour.position.y = 0.08;
+    const toit = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.08, 8), new THREE.MeshStandardMaterial({ color: couleur(reg.j), roughness: 0.6 }));
+    toit.position.y = 0.2;
+    f.add(tour, toit);
+    f.position.set(-0.2, 0, 0.12);
+    r3.objets.add(f);
+  }
+  if (reg.camp) {
+    const tente = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.1, 4), matToile);
+    tente.position.set(0.18, 0.05, -0.14);
+    tente.rotation.y = Math.PI / 4;
+    r3.objets.add(tente);
+  }
+  if (reg.gardien) {
+    const g = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.012, 8, 32), matGardien);
+    g.rotation.x = Math.PI / 2;
+    g.position.set(0.06, 0.02, 0.08);
+    r3.objets.add(g);
+  }
+}
+
+// =====================================================================
+// CONTRÔLES : pincement, glisser, toucher
+// =====================================================================
+const pointeurs = new Map();
+let geste = null;
+const rayon = new THREE.Raycaster();
+const souris = new THREE.Vector2();
+const el = renderer.domElement;
+
+function vueModifiee() {
+  vue.perso = true;
+  document.getElementById('btn-centrer').classList.remove('cache');
+  vue.x = THREE.MathUtils.clamp(vue.x, -bornes.l, bornes.l);
+  vue.z = THREE.MathUtils.clamp(vue.z, -bornes.h, bornes.h);
+  vue.zoom = THREE.MathUtils.clamp(vue.zoom, 0.3, 1.6);
+  majCamera();
+}
+function versMonde(dxPx, dyPx) {
+  // Déplacement au doigt : la carte suit le doigt (approximation plane).
+  const d = camera.position.distanceTo(camCible);
+  const k = 2 * d * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) / window.innerHeight;
+  return [-dxPx * k, -dyPx * k * 1.15];
+}
+el.addEventListener('pointerdown', e => {
+  el.setPointerCapture(e.pointerId);
+  pointeurs.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: performance.now() });
+  if (pointeurs.size === 1) {
+    if (!vue.perso) { vue.zoom = zone.c.zoom; }
+    geste = { type: 'toucher' };
+  } else if (pointeurs.size === 2) {
+    const [a, b] = [...pointeurs.values()];
+    geste = { type: 'pincer', d0: Math.hypot(a.x - b.x, a.y - b.y), zoom0: vue.perso ? vue.zoom : zone.c.zoom,
+              mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+  }
+});
+el.addEventListener('pointermove', e => {
+  const p = pointeurs.get(e.pointerId);
+  if (!p) return;
+  const dx = e.clientX - p.x, dy = e.clientY - p.y;
+  p.x = e.clientX; p.y = e.clientY;
+  if (!geste) return;
+  if (geste.type === 'pincer' && pointeurs.size >= 2) {
+    const [a, b] = [...pointeurs.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y);
+    vue.zoom = geste.zoom0 * geste.d0 / Math.max(20, d);
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    const [wx, wz] = versMonde(mx - geste.mx, my - geste.my);
+    vue.x += wx; vue.z += wz;
+    geste.mx = mx; geste.my = my;
+    vueModifiee();
+  } else if (pointeurs.size === 1) {
+    if (geste.type === 'toucher' && Math.hypot(p.x - p.x0, p.y - p.y0) > 9) geste.type = 'glisser';
+    if (geste.type === 'glisser') {
+      const [wx, wz] = versMonde(dx, dy);
+      vue.x += wx; vue.z += wz;
+      vueModifiee();
+    }
+  }
+});
+function finPointeur(e) {
+  const p = pointeurs.get(e.pointerId);
+  pointeurs.delete(e.pointerId);
+  if (!p) return;
+  if (geste && geste.type === 'toucher' && pointeurs.size === 0 && performance.now() - p.t0 < 600) toucher(e.clientX, e.clientY);
+  if (pointeurs.size === 0) geste = null;
+  else if (geste && geste.type === 'pincer') geste = { type: 'glisser' };
+}
+el.addEventListener('pointerup', finPointeur);
+el.addEventListener('pointercancel', e => { pointeurs.delete(e.pointerId); if (!pointeurs.size) geste = null; });
+el.addEventListener('wheel', e => {
+  e.preventDefault();
+  if (!vue.perso) vue.zoom = zone.c.zoom;
+  vue.zoom *= Math.exp(e.deltaY * 0.0012);
+  vueModifiee();
+}, { passive: false });
+
+function toucher(x, y) {
+  if (!regions3d.length) return;
+  souris.set((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
+  rayon.setFromCamera(souris, camera);
+  const t = rayon.intersectObjects(regions3d.map(r => r.mesh), false)[0];
+  if (!t) { choisirRegion(null); return; }
+  choisirRegion(t.object.userData.region);
+}
+
+// =====================================================================
+// CLIENT : messages du serveur
+// =====================================================================
+let MOI = 0;
+let mode = 'local';
+let ws = null;
+let etat = null;           // dernier sw_etat
+let cata = null;           // sw_demarree : carte, races, pouvoirs, réglage
+let selection = null;      // région choisie
+let echeanceLocale = null;
+let dernierRedeploiement = '';
+let repart = {};           // redéploiement en cours : {region: pions}
+let reserve = 0;
+let choixFin = {};         // fortin, camp, gardiens, sabotage, emissaire, declin
+let sousMode = null;       // 'sabotage'
+let vueFile = false;       // un joueur qui attend regarde la file
+
+function envoyer(msg) { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg)); }
+
+const elMessage = document.getElementById('message');
+const elRappel = document.getElementById('rappel');
+const elCompteur = document.getElementById('compteur');
+const elPanneau = document.getElementById('panneau');
+const elJoueurs = document.getElementById('joueurs');
+
+const prenom = i => (etat ? etat.joueurs[i] : (cata ? cata.joueurs[i] : '')) || '';
+const nomDe = i => i === MOI ? 'toi' : prenom(i);
+const monTour = () => etat && etat.phase === 'jeu' && etat.joueur === MOI;
+const peuple = pid => (etat && pid != null) ? etat.peuples[String(pid)] : null;
+const monActif = () => etat && etat.scores[MOI] ? peuple(etat.scores[MOI].actif) : null;
+function nomPeuple(p) {
+  if (!p || !cata) return '';
+  const r = cata.races[p.race], q = cata.pouvoirs[p.pouvoir];
+  return (r ? r.icone + ' ' + r.nom : p.race) + ' ' + (q ? q.icone + ' ' + q.nom.toLowerCase() : p.pouvoir);
+}
+
+function clientRecevoir(msg) {
+  switch (msg.type) {
+    case 'ton_index':
+      MOI = msg.index;
+      if (msg.jeton) {
+        monJeton = msg.jeton;
+        ecrireSession({ code: codeSalon, nom: monNom, jeton: monJeton, serveur: serveurChoisi, createur: estCreateur });
+      }
+      if (!enPartie) panneauAttente(); else rafraichir();
+      break;
+    case 'joueur_rejoint':
+      joueursSalon = msg.joueurs;
+      if (enPartie) elRappel.textContent = msg.nom + (msg.retour ? ' est revenu.' : ' rejoint la table.');
+      else panneauAttente();
+      break;
+    case 'joueur_parti':
+      joueursSalon = msg.joueurs;
+      if (enPartie) elRappel.textContent = msg.nom + ' a quitté la table.';
+      else panneauAttente();
+      break;
+    case 'sw_demarree': recevoirCatalogue(msg); break;
+    case 'sw_etat': appliquerEtat(msg); break;
+    case 'sw_conquete': animerConquete(msg); break;
+    case 'sw_de': animerDe(msg); break;
+    case 'sw_choix':
+      if (cata) elRappel.textContent = prenom(msg.joueur) + ' prend les ' + nomPeuple(msg) + '.';
+      break;
+    case 'sw_declin':
+      annoncer('DÉCLIN', prenom(msg.joueur) + ' met son peuple en déclin', couleur(msg.joueur), 1800);
+      break;
+    case 'sw_sabotage':
+      flashRegion(msg.region, 0xff5533);
+      break;
+    case 'sw_score':
+      if (msg.total) texteFlottantJoueur(msg.joueur, '+' + msg.total + ' 🪙');
+      break;
+    case 'sw_gorgees': annoncerGorgees(msg); break;
+    case 'sw_reaction': bulleReaction(msg); break;
+    case 'sw_fin': setTimeout(() => annoncerFin(msg.resultat), 900); break;
+    case 'erreur':
+      elRappel.textContent = msg.message;
+      if (enPartie) rafraichir();
+      else if (msg.partie_en_cours) panneauAttente();
+      break;
+  }
+}
+
+function recevoirCatalogue(msg) {
+  const cle = msg.carte.nom + '|' + msg.joueurs.join(',');
+  cata = msg;
+  enPartie = true;
+  document.getElementById('btn-journal').classList.remove('cache');
+  if (cle !== carteCle) {
+    carteCle = cle;
+    construireCarte(msg.carte);
+    selection = null;
+  }
+}
+
+function appliquerEtat(msg) {
+  const ancien = etat;
+  etat = msg;
+  enPartie = true;
+  echeanceLocale = msg.reste == null ? null : Date.now() + msg.reste * 1000;
+  // Nouveau tour : on oublie la sélection et le redéploiement local
+  if (!ancien || ancien.joueur !== msg.joueur || ancien.manche !== msg.manche || ancien.phase !== msg.phase) {
+    selection = null; sousMode = null;
+  }
+  const cle = msg.joueur + '|' + msg.manche + '|' + msg.etape;
+  if (monTour() && msg.etape === 'redeploiement' && cle !== dernierRedeploiement) {
+    dernierRedeploiement = cle;
+    preparerRedeploiement();
+  }
+  if (msg.phase === 'fin' && ancien && ancien.phase !== 'fin') selection = null;
+  majCarte();
+  majJoueurs();
+  majBandeau();
+  rafraichir();
+}
+
+// =====================================================================
+// AFFICHAGE DE LA CARTE
+// =====================================================================
+function pionsAffiches(r) {
+  const reg = etat.regions[r];
+  if (monTour() && etat.etape === 'redeploiement' && repart[r] != null) return repart[r];
+  return reg.pions;
+}
+
+function majCarte() {
+  if (!etat || !regions3d.length) return;
+  const possibles = monTour() ? etat.possibles || {} : {};
+  const actif = monActif();
+  regions3d.forEach((r3, r) => {
+    const reg = etat.regions[r];
+    if (!reg) return;
+    const p = peuple(reg.p);
+    const declin = p && p.etat === 'declin';
+    const n = pionsAffiches(r);
+    majObjetsRegion(r3, reg, n, declin);
+    // Couleur : terrain teinté par le propriétaire
+    const c = r3.base.clone();
+    if (reg.j != null) c.lerp(new THREE.Color(couleur(reg.j)), declin ? 0.25 : 0.5);
+    if (declin) c.lerp(new THREE.Color(0x666666), 0.25);
+    r3.mat.color.copy(c);
+    // Étiquette du nombre de pions
+    if (reg.j != null) {
+      ecrireSprite(r3.etiquette, String(n) + (declin ? ' 💤' : ''), { fond: declin ? 'rgba(40,40,40,0.85)' : couleur(reg.j), encre: '#fff', bord: 'rgba(0,0,0,0.35)' });
+      r3.etiquette.position.y = r3.h + 0.1 + Math.min(n, 8) * 0.036;
+      r3.etiquette.visible = true;
+    } else {
+      r3.etiquette.visible = false;
+    }
+    // Coût de conquête pour le joueur actif
+    const pos = possibles[String(r)];
+    if (pos && (etat.etape === 'action' || etat.etape === 'conquete')) {
+      const assez = pos.cout <= etat.main_dispo;
+      const de = !assez && !etat.tour.de_utilise && etat.main_dispo >= 1 && pos.cout - etat.main_dispo <= 3;
+      ecrireSprite(r3.cout, (assez ? '⚔ ' : de ? '🎲 ' : '✖ ') + pos.cout,
+        { fond: assez ? 'rgba(224,176,74,0.95)' : de ? 'rgba(234,120,40,0.92)' : 'rgba(60,60,60,0.8)', encre: assez ? '#1b1405' : '#fff' });
+      r3.cout.visible = true;
+      r3.conquerable = assez ? 2 : de ? 1 : 0;
+    } else {
+      r3.cout.visible = false;
+      r3.conquerable = 0;
+    }
+    r3.mienne = actif && reg.p === actif.id;
+  });
+}
+
+function flashRegion(r, teinte) {
+  const r3 = regions3d[r];
+  if (!r3) return;
+  r3.flash = 1;
+  r3.teinteFlash = new THREE.Color(teinte);
+}
+
+// =====================================================================
+// INTERFACE : joueurs, bandeau, panneau
+// =====================================================================
+function majJoueurs() {
+  elJoueurs.innerHTML = '';
+  if (!etat) return;
+  etat.joueurs.forEach((nom, i) => {
+    const d = document.createElement('div');
+    d.className = 'joueur' + (etat.joueur === i && etat.phase === 'jeu' ? ' actif' : '') + (etat.partis[i] ? ' absent' : '');
+    const pa = document.createElement('span');
+    pa.className = 'pastille';
+    pa.style.background = couleur(i);
+    const n = document.createElement('span');
+    n.className = 'nom';
+    n.textContent = nom + (i === MOI ? ' (toi)' : '');
+    const inf = document.createElement('span');
+    inf.className = 'info';
+    const s = etat.scores[i];
+    inf.textContent = s.pieces + ' 🪙 · ' + s.regions + ' 🗺️';
+    d.append(pa, n, inf);
+    elJoueurs.appendChild(d);
+  });
+}
+
+function majBandeau() {
+  if (!etat) return;
+  if (etat.phase === 'fin') {
+    elMessage.textContent = 'Partie terminée';
+  } else {
+    const qui = monTour() ? 'À toi de jouer' : 'À ' + prenom(etat.joueur);
+    elMessage.textContent = qui + ' · tour ' + etat.manche + '/' + etat.tours_max;
+  }
+  const dernier = etat.journal[etat.journal.length - 1];
+  if (dernier) elRappel.textContent = dernier.texte;
+  majCompteur();
+}
+
+function majCompteur() {
+  if (!etat) { elCompteur.innerHTML = ''; return; }
+  const s = etat.scores[MOI];
+  let t = s ? '<b>' + s.pieces + '</b> 🪙' : '';
+  if (etat.phase === 'jeu' && echeanceLocale) {
+    const reste = Math.max(0, Math.ceil((echeanceLocale - Date.now()) / 1000));
+    t += (t ? ' · ' : '') + '<span class="' + (reste <= 10 ? 'urgent' : '') + '">⏱ ' + reste + ' s</span>';
+  }
+  if (elCompteur.innerHTML !== t) elCompteur.innerHTML = t;
+}
+setInterval(majCompteur, 250);
+
+function cacherPanneau() { elPanneau.className = 'cache'; elPanneau.innerHTML = ''; }
+function ouvrirPanneau(titre) {
+  elPanneau.className = '';
+  elPanneau.innerHTML = '';
+  if (titre) {
+    const h = document.createElement('h2');
+    h.textContent = titre;
+    elPanneau.appendChild(h);
+  }
+  return elPanneau;
+}
+function bouton(texte, classe, onClick) {
+  const b = document.createElement('button');
+  b.textContent = texte;
+  if (classe) b.className = classe;
+  b.addEventListener('click', onClick);
+  return b;
+}
+function aide(texte) { const d = document.createElement('p'); d.className = 'aide'; d.textContent = texte; return d; }
+function rangee() { const r = document.createElement('div'); r.className = 'rangee'; return r; }
+function agir(msg) {
+  elPanneau.querySelectorAll('button').forEach(b => { b.disabled = true; });
+  envoyer(msg);
+}
+
+function blocMonPeuple() {
+  const d = document.createElement('div');
+  d.className = 'mon-peuple';
+  if (!etat || !etat.scores[MOI]) return d;
+  const p = monActif();
+  const s = etat.scores[MOI];
+  const badge = html => { const b = document.createElement('span'); b.className = 'badge'; b.innerHTML = html; d.appendChild(b); };
+  if (p) {
+    badge('<span style="color:' + couleur(MOI) + '">●</span> ' + esc(nomPeuple(p)));
+    if (monTour()) badge('<b>' + (etat.etape === 'redeploiement' ? reserve : etat.main_dispo) + '</b> en main');
+  } else {
+    badge('Pas de peuple actif');
+  }
+  s.declins.forEach(pid => { const q = peuple(pid); if (q) badge('💤 ' + esc(nomPeuple(q))); });
+  return d;
+}
+function esc(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+function blocReactions() {
+  const r = document.createElement('div');
+  r.className = 'reactions';
+  ((cata && cata.reactions) || ['👏', '😂', '😱', '🔥', '💀', '🍻']).forEach(e => {
+    r.appendChild(bouton(e, 'sombre', () => envoyer({ type: 'sw_reaction', emoji: e })));
+  });
+  return r;
+}
+
+function ficheRegion(r) {
+  const info = cata.carte.regions[r];
+  const reg = etat.regions[r];
+  const d = document.createElement('div');
+  d.className = 'fiche';
+  const t = TERRAINS[info.terrain];
+  let html = t.icone + ' ' + t.nom;
+  if (info.marque) html += ' · ' + MARQUES[info.marque].icone + ' ' + MARQUES[info.marque].nom;
+  if (info.bord) html += ' · 🌊 bord';
+  if (reg.j != null) {
+    const p = peuple(reg.p);
+    html += ' · <span class="pastille" style="background:' + couleur(reg.j) + '"></span> ' + esc(prenom(reg.j)) +
+      (p ? ' (' + esc(nomPeuple(p)) + (p.etat === 'declin' ? ', déclin' : '') + ')' : '') + ' · ' + pionsAffiches(r) + ' pion' + (pionsAffiches(r) > 1 ? 's' : '');
+  } else {
+    html += ' · libre';
+  }
+  if (reg.fortin) html += ' · 🏯';
+  if (reg.camp) html += ' · ⛺';
+  if (reg.gardien) html += ' · 🗼 gardée';
+  d.innerHTML = html;
+  return d;
+}
+
+function choisirRegion(r) {
+  if (!etat || !cata) return;
+  if (r == null) { selection = null; rafraichir(); return; }
+  // En redéploiement : toucher une de mes régions = +1 pion (si j'en ai en main)
+  if (monTour() && etat.etape === 'redeploiement') {
+    if (sousMode === 'sabotage') {
+      choixFin.sabotage = choixFin.sabotage === r ? null : r;
+      sousMode = null;
+      selection = r;
+      rafraichir();
+      return;
+    }
+    if (repart[r] != null && selection === r && reserve > 0) { repart[r]++; reserve--; majCarte(); }
+    selection = r;
+    rafraichir();
+    return;
+  }
+  // En conquête : toucher deux fois une région abordable la conquiert
+  if (monTour() && (etat.etape === 'action' || etat.etape === 'conquete') && selection === r) {
+    const pos = (etat.possibles || {})[String(r)];
+    if (pos && pos.cout <= etat.main_dispo) { agir({ type: 'sw_conquerir', region: r }); return; }
+  }
+  selection = r;
+  rafraichir();
+}
+
+function rafraichir() {
+  majCarte();
+  if (!enPartie || !etat || !cata) return;
+  if (etat.phase === 'fin') { panneauFin(); return; }
+  if (!monTour()) { panneauAttenteTour(); return; }
+  if (etat.etape === 'choix') panneauChoix();
+  else if (etat.etape === 'redeploiement') panneauRedeploiement();
+  else panneauConquete();
+}
+
+// --- Pendant le tour des autres ---
+function panneauAttenteTour() {
+  const p = ouvrirPanneau(null);
+  const ligne = document.createElement('p');
+  const etapes = { choix: 'choisit un peuple', action: 'réfléchit', conquete: 'conquiert', redeploiement: 'redéploie ses pions' };
+  ligne.innerHTML = '<span style="color:' + couleur(etat.joueur) + '">●</span> <b>' + esc(prenom(etat.joueur)) + '</b> ' + (etapes[etat.etape] || 'joue') + '…';
+  p.appendChild(ligne);
+  if (selection != null) p.appendChild(ficheRegion(selection));
+  p.appendChild(blocMonPeuple());
+  if (MOI >= etat.joueurs.length) p.appendChild(aide('Tu regardes cette partie : tu joueras à la suivante.'));
+  if (vueFile) p.appendChild(blocFile(false));
+  const r = rangee();
+  r.appendChild(bouton(vueFile ? 'Cacher la file' : '👀 La file des peuples', 'sombre petit', () => { vueFile = !vueFile; rafraichir(); }));
+  p.appendChild(r);
+  p.appendChild(blocReactions());
+}
+
+// --- Choix d'une combinaison ---
+function blocFile(jouable) {
+  const d = document.createElement('div');
+  d.className = 'file';
+  const pieces = etat.scores[MOI] ? etat.scores[MOI].pieces : 0;
+  etat.file.forEach((c, rang) => {
+    const r = cata.races[c.race], q = cata.pouvoirs[c.pouvoir];
+    const carte = document.createElement('div');
+    carte.className = 'combi' + (jouable && rang > pieces ? ' trop-cher' : '');
+    carte.innerHTML =
+      '<div class="titre">' + r.icone + ' ' + esc(r.nom) + ' ' + q.icone + ' ' + esc(q.nom.toLowerCase()) + '</div>' +
+      '<div class="chiffres"><span>' + c.pions + ' pions</span><span class="prix">' + (rang ? 'coûte ' + rang + ' 🪙' : 'gratuit') + '</span>' +
+      (c.pieces ? '<span class="gain">+' + c.pieces + ' 🪙 dessus</span>' : '') + '</div>' +
+      '<div class="ligne">' + r.icone + ' ' + esc(r.effet) + '</div>' +
+      '<div class="ligne">' + q.icone + ' ' + esc(q.effet) + '</div>';
+    if (jouable) {
+      const b = bouton(rang ? 'Prendre (' + rang + ' 🪙)' : 'Prendre', rang ? 'sombre' : '', () => agir({ type: 'sw_choisir', rang }));
+      b.disabled = rang > pieces;
+      carte.appendChild(b);
+    }
+    d.appendChild(carte);
+  });
+  return d;
+}
+function panneauChoix() {
+  const p = ouvrirPanneau('Choisis ton peuple');
+  p.appendChild(aide('Tu as ' + etat.scores[MOI].pieces + ' 🪙. Chaque combinaison sautée coûte 1 pièce, posée dessus.'));
+  p.appendChild(blocFile(true));
+}
+
+// --- Conquête ---
+function panneauConquete() {
+  const p = ouvrirPanneau(null);
+  const actif = monActif();
+  p.appendChild(blocMonPeuple());
+  const pouvoir = actif ? actif.pouvoir : '';
+  const premiere = actif && !etat.regions.some(reg => reg.p === actif.id);
+  if (selection != null) {
+    p.appendChild(ficheRegion(selection));
+    const reg = etat.regions[selection];
+    const pos = (etat.possibles || {})[String(selection)];
+    const r = rangee();
+    if (pos) {
+      const assez = pos.cout <= etat.main_dispo;
+      const b = bouton('⚔ Conquérir · ' + pos.cout + ' pion' + (pos.cout > 1 ? 's' : ''), 'gros', () => agir({ type: 'sw_conquerir', region: selection }));
+      b.disabled = !assez;
+      r.appendChild(b);
+      if (!assez && !etat.tour.de_utilise && etat.main_dispo >= 1) {
+        const manque = pos.cout - etat.main_dispo;
+        r.appendChild(bouton('🎲 Tenter le dé (il manque ' + manque + ')', '', () => agir({ type: 'sw_tenter', region: selection })));
+      }
+    }
+    if (pouvoir === 'dompteur' && !actif.dragon && reg.j !== MOI && !reg.gardien && etat.main_dispo >= 1) {
+      r.appendChild(bouton('🐉 Dragon (1 pion)', 'sombre', () => agir({ type: 'sw_dragon', region: selection })));
+    }
+    if (actif && reg.p === actif.id && etat.tour.conquetes === 0) {
+      r.appendChild(bouton('Abandonner cette région', 'sombre petit', () => agir({ type: 'sw_abandonner', region: selection })));
+    }
+    if (!pos && !(actif && reg.p === actif.id)) {
+      p.appendChild(aide(reg.j === MOI ? 'Elle est déjà à toi.' : 'Pas conquérable d’ici.'));
+    }
+    if (r.children.length) p.appendChild(r);
+  } else {
+    p.appendChild(aide(premiere
+      ? 'Entre sur la carte par une région de bord : touche une région en surbrillance.'
+      : 'Touche une région en surbrillance pour la conquérir (deux fois pour aller vite). 🎲 : possible avec le dé.'));
+  }
+  const r2 = rangee();
+  r2.style.marginTop = '6px';
+  r2.appendChild(bouton(etat.tour.conquetes ? 'Terminer mes conquêtes' : 'Ne rien conquérir', 'sombre', () => agir({ type: 'sw_fin_conquete' })));
+  if (etat.etape === 'action' && !etat.tour.choisi) {
+    r2.appendChild(bouton('💤 Passer en déclin', 'sombre', () => {
+      if (confirm('Mettre ton peuple en déclin ? Ton tour s’arrête et tu choisiras un nouveau peuple au prochain.')) agir({ type: 'sw_declin' });
+    }));
+  } else if (pouvoir === 'endurant' && etat.tour.conquetes > 0) {
+    r2.appendChild(bouton('💤 Déclin (Endurant)', 'sombre', () => agir({ type: 'sw_declin' })));
+  }
+  p.appendChild(r2);
+}
+
+// --- Redéploiement ---
+function preparerRedeploiement() {
+  const actif = monActif();
+  repart = {};
+  choixFin = { fortin: null, camp: null, gardiens: new Set(), sabotage: null, emissaire: null, declin: false };
+  if (!actif) { reserve = 0; return; }
+  etat.regions.forEach((reg, r) => {
+    if (reg.p === actif.id) {
+      repart[r] = reg.pions;
+      if (reg.gardien) choixFin.gardiens.add(r);
+    }
+  });
+  reserve = etat.main;
+  sousMode = null;
+  selection = null;
+}
+function minimumRegion(r) {
+  const actif = monActif();
+  if (etat.regions[r].camp || choixFin.camp === r) return 0;
+  if (actif && actif.race === 'nomades') {
+    const vides = Object.entries(repart).filter(([k, v]) => v === 0 && Number(k) !== r && !etat.regions[k].camp).length;
+    if (vides < 2) return 0;
+  }
+  return 1;
+}
+function repartirReste() {
+  const miennes = Object.keys(repart).map(Number);
+  if (!miennes.length) return;
+  let k = 0;
+  while (reserve > 0) { repart[miennes[k % miennes.length]]++; reserve--; k++; }
+}
+function panneauRedeploiement() {
+  const p = ouvrirPanneau('Redéploiement');
+  const actif = monActif();
+  const miennes = Object.keys(repart).map(Number);
+  const cm = document.createElement('div');
+  cm.className = 'compteur-main';
+  cm.innerHTML = miennes.length ? 'En main : <b>' + reserve + '</b> pion' + (reserve > 1 ? 's' : '') : 'Aucune région : tes pions restent en main.';
+  p.appendChild(cm);
+  if (selection != null && repart[selection] != null) {
+    p.appendChild(ficheRegion(selection));
+    const rr = document.createElement('div');
+    rr.className = 'reglage-region';
+    const moins = bouton('−', 'sombre', () => { if (repart[selection] > minimumRegion(selection)) { repart[selection]--; reserve++; rafraichir(); } });
+    moins.disabled = repart[selection] <= minimumRegion(selection);
+    const val = document.createElement('b');
+    val.textContent = repart[selection];
+    const plus = bouton('+', '', () => { if (reserve > 0) { repart[selection]++; reserve--; rafraichir(); } });
+    plus.disabled = reserve <= 0;
+    rr.append(moins, val, plus);
+    p.appendChild(rr);
+    const pw = rangee();
+    if (actif.pouvoir === 'batisseur' && !etat.regions[selection].fortin) {
+      pw.appendChild(bouton(choixFin.fortin === selection ? '🏯 Fortin ici ✓' : '🏯 Fortin ici', choixFin.fortin === selection ? 'choisi petit' : 'sombre petit',
+        () => { choixFin.fortin = choixFin.fortin === selection ? null : selection; rafraichir(); }));
+    }
+    if (actif.pouvoir === 'campeur' && !etat.regions[selection].camp) {
+      pw.appendChild(bouton(choixFin.camp === selection ? '⛺ Camp ici ✓' : '⛺ Camp ici', choixFin.camp === selection ? 'choisi petit' : 'sombre petit',
+        () => { choixFin.camp = choixFin.camp === selection ? null : selection; rafraichir(); }));
+    }
+    if (actif.pouvoir === 'gardien') {
+      const a = choixFin.gardiens.has(selection);
+      pw.appendChild(bouton(a ? '🗼 Gardien ici ✓' : '🗼 Gardien ici', a ? 'choisi petit' : 'sombre petit', () => {
+        if (a) choixFin.gardiens.delete(selection);
+        else if (choixFin.gardiens.size < 2) choixFin.gardiens.add(selection);
+        rafraichir();
+      }));
+    }
+    if (pw.children.length) p.appendChild(pw);
+  } else if (miennes.length) {
+    p.appendChild(aide('Touche une de tes régions pour la choisir, encore une fois pour y ajouter un pion.'));
+  }
+  // Pouvoirs de fin de tour
+  if (actif && actif.pouvoir === 'saboteur') {
+    const r = rangee();
+    const lib = choixFin.sabotage != null ? '💣 Cible : ' + TERRAINS[cata.carte.regions[choixFin.sabotage].terrain].nom + ' de ' + prenom(etat.regions[choixFin.sabotage].j) : '💣 Saboter une région voisine';
+    r.appendChild(bouton(sousMode === 'sabotage' ? 'Touche la région à saboter…' : lib, sousMode === 'sabotage' || choixFin.sabotage != null ? 'choisi petit' : 'sombre petit',
+      () => { sousMode = sousMode === 'sabotage' ? null : 'sabotage'; rafraichir(); }));
+    p.appendChild(r);
+  }
+  if (actif && actif.pouvoir === 'emissaire') {
+    const r = rangee();
+    const lib = document.createElement('span');
+    lib.className = 'aide';
+    lib.textContent = '🕊️ Émissaire chez :';
+    r.appendChild(lib);
+    etat.joueurs.forEach((n, k) => {
+      if (k === MOI || etat.tour.victimes[String(k)]) return;
+      r.appendChild(bouton(n, choixFin.emissaire === k ? 'choisi petit' : 'sombre petit', () => { choixFin.emissaire = choixFin.emissaire === k ? null : k; rafraichir(); }));
+    });
+    p.appendChild(r);
+  }
+  if (actif && actif.pouvoir === 'endurant' && etat.tour.conquetes > 0) {
+    const lab = document.createElement('label');
+    lab.className = 'case';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = !!choixFin.declin;
+    cb.addEventListener('change', () => { choixFin.declin = cb.checked; });
+    lab.append(cb, document.createTextNode(' 💤 Passer en déclin après ce tour (Endurant)'));
+    p.appendChild(lab);
+  }
+  const r = rangee();
+  r.style.marginTop = '6px';
+  if (reserve > 0 && miennes.length) r.appendChild(bouton('Répartir le reste', 'sombre', () => { repartirReste(); rafraichir(); }));
+  const valider = bouton('Valider et marquer', 'gros', () => {
+    const m = { type: 'sw_redeployer', pions: {} };
+    Object.entries(repart).forEach(([k, v]) => { m.pions[k] = v; });
+    if (choixFin.fortin != null) m.fortin = choixFin.fortin;
+    if (choixFin.camp != null) m.camp = choixFin.camp;
+    if (actif && actif.pouvoir === 'gardien') m.gardiens = [...choixFin.gardiens];
+    if (choixFin.sabotage != null) m.sabotage = choixFin.sabotage;
+    if (choixFin.emissaire != null) m.emissaire = choixFin.emissaire;
+    if (choixFin.declin) m.declin = true;
+    agir(m);
+  });
+  valider.disabled = reserve > 0 && miennes.length > 0;
+  r.appendChild(valider);
+  p.appendChild(r);
+}
+
+// --- Fin de partie ---
+function panneauFin() {
+  const res = etat.resultat;
+  const p = ouvrirPanneau('🏆 ' + prenom(res.gagnant) + ' règne sur la carte');
+  const t = document.createElement('table');
+  t.className = 'bilan';
+  t.innerHTML = '<tr><th></th><th>Joueur</th><th>🪙</th><th>🗺️</th><th>⚔</th><th>🍺</th></tr>';
+  res.classement.forEach((c, k) => {
+    const tr = document.createElement('tr');
+    if (k === 0) tr.className = 'gagnant';
+    tr.innerHTML = '<td>' + (k + 1) + '</td><td><span style="color:' + couleur(c.joueur) + '">●</span> ' + esc(prenom(c.joueur)) +
+      '</td><td class="n">' + c.pieces + '</td><td class="n">' + c.regions + '</td><td class="n">' + c.prises + '</td><td class="n">' + c.bu + '</td>';
+    t.appendChild(tr);
+  });
+  p.appendChild(t);
+  const g = res.gorgees.map(x => prenom(x.joueur) + (x.boit ? ' boit ' + x.boit : ' distribue ' + x.distribue)).join(' · ');
+  if (g) p.appendChild(aide(g));
+  const r = rangee();
+  if (estCreateur) {
+    r.appendChild(bouton('Rejouer', '', () => Soiree.lancer('conquete', o => envoyer({ ...messageDemarrer(), ...o }))));
+  } else {
+    p.appendChild(aide('Le créateur du salon peut relancer une partie.'));
+  }
+  r.appendChild(bouton('🎲 Tous les jeux', 'sombre', () => { location.href = 'index.html'; }));
+  p.appendChild(r);
+  p.appendChild(blocReactions());
+}
+
+// =====================================================================
+// ANIMATIONS ET ANNONCES
+// =====================================================================
+let annonceCourante = null;
+function annoncer(gros, petit, c, duree = 1800) {
+  if (annonceCourante) annonceCourante.remove();
+  const d = document.createElement('div');
+  d.className = 'annonce-sw';
+  d.style.setProperty('--c', c);
+  const g = document.createElement('div'); g.className = 'gros'; g.textContent = gros;
+  d.appendChild(g);
+  if (petit) { const s = document.createElement('div'); s.className = 'petit'; s.textContent = petit; d.appendChild(s); }
+  document.body.appendChild(d);
+  annonceCourante = d;
+  setTimeout(() => { d.classList.add('sort'); setTimeout(() => d.remove(), 400); }, duree);
+}
+
+function animerConquete(m) {
+  flashRegion(m.region, couleur(m.joueur));
+  const r3 = regions3d[m.region];
+  if (r3) r3.souleve = 1;
+  if (m.voie === 'dragon') annoncer('🐉 DRAGON', prenom(m.joueur) + ' fond sur la région', '#f97316', 1600);
+}
+
+function animerDe(m) {
+  const faces = m.faces.join(' puis ');
+  const qui = m.joueur === MOI ? 'Tu' : prenom(m.joueur);
+  annoncer('🎲 ' + m.faces[m.faces.length - 1], qui + ' : ' + faces + (m.reussi ? ' · réussi !' : ' · raté'), m.reussi ? '#4ade80' : '#f87171', 1700);
+  if (!m.reussi) flashRegion(m.region, 0x991b1b);
+}
+
+function annoncerGorgees(m) {
+  const textes = m.liste.map(x => (x.joueur === MOI ? 'Tu ' + (x.boit ? 'bois ' + x.boit : 'distribues ' + x.distribue)
+    : prenom(x.joueur) + (x.boit ? ' boit ' + x.boit : ' distribue ' + x.distribue)));
+  const moi = m.liste.find(x => x.joueur === MOI);
+  if (moi) annoncer(moi.boit ? '🍺 ' + moi.boit : '🍻 ' + moi.distribue, m.raison + ' : ' + textes.join(', '), moi.boit ? '#f59e0b' : '#22c55e', 2000);
+  else elRappel.textContent = '🍺 ' + textes.join(', ') + ' (' + m.raison + ')';
+}
+
+function annoncerFin(res) {
+  if (!res) return;
+  const g = res.gagnant;
+  annoncer(g === MOI ? 'VICTOIRE !' : prenom(g).toUpperCase(), g === MOI ? 'Tu règnes sur la carte' : 'règne sur la carte', couleur(g), 3200);
+}
+
+function texteFlottantJoueur(i, texte) {
+  const items = elJoueurs.children[i];
+  const r = items ? items.getBoundingClientRect() : { left: window.innerWidth / 2, top: 80, width: 0, height: 0 };
+  const b = document.createElement('div');
+  b.className = 'bulle-reaction';
+  b.style.left = (r.left + r.width / 2 - 20) + 'px';
+  b.style.top = (r.top + r.height + 10) + 'px';
+  b.style.animationDuration = '1.8s';
+  b.textContent = texte;
+  document.body.appendChild(b);
+  setTimeout(() => b.remove(), 1900);
+}
+
+function bulleReaction(m) {
+  const b = document.createElement('div');
+  b.className = 'bulle-reaction';
+  b.style.left = (12 + Math.random() * (window.innerWidth - 90)) + 'px';
+  b.style.top = (window.innerHeight * (0.45 + Math.random() * 0.15)) + 'px';
+  const e = document.createElement('span'); e.className = 'e'; e.textContent = m.emoji;
+  const n = document.createElement('span'); n.textContent = prenom(m.joueur);
+  n.style.color = couleur(m.joueur);
+  b.append(e, n);
+  document.body.appendChild(b);
+  setTimeout(() => b.remove(), 2700);
+}
+
+function majJournal() {
+  const l = document.getElementById('journal-liste');
+  l.innerHTML = '';
+  if (!etat) return;
+  [...etat.journal].reverse().forEach(e => {
+    const d = document.createElement('div');
+    d.innerHTML = (e.j != null ? '<span class="pastille" style="background:' + couleur(e.j) + '"></span>' : '') + esc(e.texte);
+    l.appendChild(d);
+  });
+}
+
+function majReglesCatalogue() {
+  const bloc = document.getElementById('regles-catalogue');
+  if (!cata) return;
+  const ligne = (o) => '<tr><td>' + o.icone + ' ' + esc(o.nom) + ' <span class="aide">(' + o.pions + ')</span></td><td>' + esc(o.effet) + '</td></tr>';
+  bloc.innerHTML = '<h3>Les races de la partie</h3><p class="note">Entre parenthèses : pions de base. Une combinaison a au moins 7 pions.</p><table>' +
+    Object.values(cata.races).map(ligne).join('') + '</table><h3>Les pouvoirs</h3><p class="note">Entre parenthèses : pions en plus.</p><table>' +
+    Object.values(cata.pouvoirs).map(ligne).join('') + '</table>' +
+    '<p class="note">Réglage : ' + esc(cata.reglage.titre_vitesse) + ', ' + cata.reglage.tours + ' tours chacun, ' + cata.reglage.minuteur + ' s par tour' +
+    (cata.reglage.aleatoire ? ', partie aléatoire' : '') + (cata.reglage.vengeance ? ', vengeance' : '') + '.</p>';
+}
+
+// =====================================================================
+// ACCUEIL ET SALON
+// =====================================================================
+const SERVEURS = {
+  render: { http: 'https://kinito-serveur.onrender.com', ws: 'wss://kinito-serveur.onrender.com' },
+  local:  { http: 'http://127.0.0.1:8000',               ws: 'ws://127.0.0.1:8000' },
+};
+let serveurChoisi = 'render';
+let monNom = Soiree.nom();
+let codeSalon = '';
+let estCreateur = false;
+let joueursSalon = [];
+let enPartie = false;
+let monJeton = null;
+
+// Réglage de la partie (salle d'attente)
+let vitesseChoisie = null;     // null : conseillée selon le nombre de joueurs
+let toursChoisis = null;       // null : ceux de la vitesse
+let aleatoireChoisi = false;
+let vengeanceChoisie = false;
+function vitesseConseillee(n) { return n >= 7 ? 'flash' : 'soiree'; }
+function messageDemarrer() {
+  const n = (etat ? etat.joueurs.length : joueursSalon.length) || 2;
+  const m = { type: 'sw_demarrer', vitesse: vitesseChoisie || vitesseConseillee(n), aleatoire: aleatoireChoisi, vengeance: vengeanceChoisie };
+  if (toursChoisis) m.tours = toursChoisis;
+  return m;
+}
+
+const CLE_SESSION = 'conquete3d.session';
+function lireSession() { try { return JSON.parse(localStorage.getItem(CLE_SESSION) || 'null'); } catch (e) { return null; } }
+function ecrireSession(s) { try { localStorage.setItem(CLE_SESSION, JSON.stringify(s)); } catch (e) { /* tant pis */ } }
+function oublierSession() { lienActif = false; try { localStorage.removeItem(CLE_SESSION); } catch (e) { /* tant pis */ } }
+
+function champTexte(id, placeholder, longueurMax) {
+  const i = document.createElement('input');
+  i.type = 'text'; i.id = id; i.placeholder = placeholder; i.autocomplete = 'off';
+  if (longueurMax) i.maxLength = longueurMax;
+  return i;
+}
+function afficherErreur(texte) { elRappel.textContent = texte; }
+
+function panneauAccueil() {
+  elMessage.textContent = 'Royaumes';
+  elRappel.textContent = 'Conquiers, décline, renais : la carte est trop petite pour tout le monde';
+  elCompteur.innerHTML = '';
+  const p = panneauEnLigne();
+  const s = lireSession();
+  if (s && s.code && s.jeton) {
+    const r2 = rangee();
+    r2.style.marginTop = '12px';
+    r2.appendChild(bouton('Reprendre la partie ' + s.code, 'sombre', () => {
+      monNom = s.nom; codeSalon = s.code; monJeton = s.jeton;
+      serveurChoisi = s.serveur || 'render';
+      estCreateur = !!s.createur;
+      afficherErreur('Reconnexion...');
+      seConnecter();
+    }));
+    p.appendChild(r2);
+  }
+}
+function boutonServeur() {
+  const b = bouton('', 'sombre petit', () => { serveurChoisi = serveurChoisi === 'render' ? 'local' : 'render'; majLibelleServeur(b); });
+  majLibelleServeur(b);
+  return b;
+}
+function majLibelleServeur(b) { b.textContent = serveurChoisi === 'render' ? 'Serveur : Render' : 'Serveur : local'; }
+
+function panneauRejoindreDirect(code) {
+  codeSalon = code;
+  elMessage.textContent = 'Royaumes';
+  elRappel.textContent = 'Salon ' + code;
+  const p = ouvrirPanneau('Rejoindre le salon');
+  const c = document.createElement('div');
+  c.className = 'code-salon';
+  c.textContent = code;
+  p.appendChild(c);
+  const l1 = rangee();
+  const pseudo = champTexte('pseudo', 'Ton prénom', 16);
+  pseudo.value = monNom;
+  l1.appendChild(pseudo);
+  p.appendChild(l1);
+  const l2 = rangee();
+  l2.style.marginTop = '10px';
+  l2.appendChild(bouton('Rejoindre', '', async () => {
+    if (!lireNom()) return;
+    afficherErreur('Connexion au serveur...');
+    try {
+      const rep = await fetch(SERVEURS[serveurChoisi].http + '/salon/' + codeSalon);
+      if (!(await rep.json()).existe) { afficherErreur('Ce salon n’existe plus'); return; }
+      estCreateur = false;
+      seConnecter();
+    } catch (e) { afficherErreur('Serveur injoignable.'); }
+  }));
+  p.appendChild(l2);
+  const l3 = rangee();
+  l3.style.marginTop = '12px';
+  l3.appendChild(boutonServeur());
+  l3.appendChild(bouton('Autre salon', 'sombre petit', panneauAccueil));
+  p.appendChild(l3);
+}
+
+function panneauEnLigne() {
+  const p = ouvrirPanneau('Jouer en ligne');
+  const l1 = rangee();
+  const pseudo = champTexte('pseudo', 'Ton prénom', 16);
+  pseudo.value = monNom;
+  l1.appendChild(pseudo);
+  p.appendChild(l1);
+  const l2 = rangee();
+  l2.style.marginTop = '10px';
+  l2.appendChild(bouton('Créer un salon', '', creerSalon));
+  p.appendChild(l2);
+  const l3 = rangee();
+  l3.style.marginTop = '10px';
+  l3.appendChild(champTexte('code-salon', 'CODE', 4));
+  l3.appendChild(bouton('Rejoindre', 'sombre', rejoindreSalon));
+  p.appendChild(l3);
+  const l4 = rangee();
+  l4.style.marginTop = '14px';
+  l4.appendChild(boutonServeur());
+  p.appendChild(l4);
+  const note = document.createElement('div');
+  note.className = 'note';
+  note.textContent = "Le serveur Render s'endort : la première connexion peut prendre 30 s.";
+  p.appendChild(note);
+  return p;
+}
+
+function lireNom() {
+  const champ = document.getElementById('pseudo');
+  monNom = champ ? champ.value.trim() : '';
+  if (monNom) monNom = Soiree.definirNom(monNom);
+  if (!monNom) { afficherErreur('Entre ton prénom'); return false; }
+  return true;
+}
+async function creerSalon() {
+  if (!lireNom()) return;
+  afficherErreur('Connexion au serveur...');
+  try {
+    const rep = await fetch(SERVEURS[serveurChoisi].http + '/creer-salon');
+    codeSalon = (await rep.json()).code;
+    estCreateur = true;
+    seConnecter();
+  } catch (e) { afficherErreur("Serveur injoignable. S'il dort, réessaie dans 30 s."); }
+}
+async function rejoindreSalon() {
+  if (!lireNom()) return;
+  const champ = document.getElementById('code-salon');
+  codeSalon = (champ ? champ.value : '').trim().toUpperCase();
+  if (codeSalon.length !== 4) { afficherErreur('Le code fait 4 lettres'); return; }
+  afficherErreur('Connexion au serveur...');
+  try {
+    const rep = await fetch(SERVEURS[serveurChoisi].http + '/salon/' + codeSalon);
+    if (!(await rep.json()).existe) { afficherErreur('Salon introuvable'); return; }
+    estCreateur = false;
+    seConnecter();
+  } catch (e) { afficherErreur('Serveur injoignable.'); }
+}
+
+// --- Connexion : reconnexion automatique et battement de cœur (comme les autres jeux) ---
+let lienActif = false;
+let tentativesLien = 0;
+let minuteurLien = null;
+let dernierSignal = 0;
+let cacheeDepuis = 0;
+
+function seConnecter() {
+  Soiree.memoriser(codeSalon, serveurChoisi);
+  if (!monJeton) {
+    const s = lireSession();
+    if (s && s.code === codeSalon && s.jeton) monJeton = s.jeton;
+  }
+  clearTimeout(minuteurLien);
+  minuteurLien = null;
+  lienActif = true;
+  let url = SERVEURS[serveurChoisi].ws + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom) + '?bat=1&page=conquete';
+  if (monJeton) url += '&jeton=' + encodeURIComponent(monJeton);
+  const socket = new WebSocket(url);
+  ws = socket;
+  dernierSignal = Date.now();
+  socket.onopen = () => {
+    if (ws !== socket) return;
+    if (tentativesLien > 0) afficherErreur('Reconnecté.');
+    tentativesLien = 0;
+    dernierSignal = Date.now();
+    mode = 'ligne';
+    if (!enPartie) panneauAttente();
+    Soiree.verifierJeuEnCours('conquete');
+  };
+  socket.onmessage = e => {
+    if (ws !== socket) return;
+    dernierSignal = Date.now();
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'pong') return;
+    if (Soiree.traiterMessage(msg, 'conquete')) return;
+    if (msg.type === 'remplace') { lienActif = false; panneauRemplace(); return; }
+    clientRecevoir(msg);
+  };
+  socket.onerror = () => { if (ws === socket && !lienActif) afficherErreur('Erreur de connexion au serveur'); };
+  socket.onclose = () => { if (ws === socket && lienActif) programmerReconnexion(); };
+}
+function programmerReconnexion() {
+  if (!lienActif || minuteurLien) return;
+  tentativesLien++;
+  if (tentativesLien > 14) { lienActif = false; panneauReconnexion(); return; }
+  afficherErreur('Connexion perdue, reconnexion…');
+  const delai = Math.min(1000 * tentativesLien, 5000);
+  minuteurLien = setTimeout(() => { minuteurLien = null; if (lienActif) seConnecter(); }, delai);
+}
+function verifierLien() {
+  if (!lienActif) return;
+  const absence = cacheeDepuis ? Date.now() - cacheeDepuis : 0;
+  cacheeDepuis = 0;
+  if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+    clearTimeout(minuteurLien);
+    minuteurLien = null;
+    tentativesLien = 0;
+    seConnecter();
+  } else if (ws.readyState === WebSocket.OPEN && absence > 2000) {
+    try { ws.send('{"type":"ping"}'); ws.send('{"type":"resync"}'); } catch (e) { /* elle se fermera */ }
+  }
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) cacheeDepuis = Date.now(); else verifierLien(); });
+window.addEventListener('pageshow', verifierLien);
+window.addEventListener('online', verifierLien);
+setInterval(() => {
+  if (!lienActif || !ws || ws.readyState !== WebSocket.OPEN) return;
+  try { ws.send('{"type":"ping"}'); } catch (e) { /* elle se fermera */ }
+  if (!document.hidden && Date.now() - dernierSignal > 15000) seConnecter();
+}, 5000);
+
+function panneauRemplace() {
+  elMessage.textContent = 'Partie reprise ailleurs';
+  const p = ouvrirPanneau('Tu joues sur un autre écran');
+  p.appendChild(aide('Ta place a été reprise depuis un autre onglet ou un autre téléphone, avec le même prénom.'));
+  const r = rangee();
+  r.appendChild(bouton('Reprendre ici', '', () => { cacherPanneau(); tentativesLien = 0; seConnecter(); }));
+  r.appendChild(bouton('Tous les jeux', 'sombre', () => { location.href = 'index.html'; }));
+  p.appendChild(r);
+}
+function panneauReconnexion() {
+  elMessage.textContent = 'Connexion perdue';
+  const p = ouvrirPanneau('Déconnecté');
+  p.appendChild(aide('Ta place est gardée ; en attendant, le minuteur joue ton tour. Reconnecte-toi pour la reprendre.'));
+  const r = rangee();
+  r.appendChild(bouton('Reconnecter', '', () => { cacherPanneau(); tentativesLien = 0; seConnecter(); }));
+  r.appendChild(bouton('Quitter', 'sombre', () => { enPartie = false; oublierSession(); monJeton = null; location.href = location.pathname; }));
+  p.appendChild(r);
+}
+
+const SITE_PUBLIE = 'https://ozaxe.github.io/table-de-jeu/conquete-3d-jeu.html';
+function lienSalon(code) {
+  const fichierLocal = location.protocol === 'file:';
+  const base = fichierLocal ? SITE_PUBLIE : location.origin + location.pathname;
+  return { url: base + '?salon=' + encodeURIComponent(code), repli: fichierLocal };
+}
+function majQRModale() {
+  const bloc = document.getElementById('bloc-qr-regles');
+  if (mode !== 'ligne' || !codeSalon) { bloc.className = 'cache'; return; }
+  bloc.className = '';
+  document.getElementById('qr-code-salon').textContent = codeSalon;
+  const lien = lienSalon(codeSalon);
+  const cv = document.getElementById('qr-regles');
+  const note = document.getElementById('qr-note-regles');
+  cv.style.display = 'none';
+  if (typeof QRious !== 'undefined') {
+    try {
+      new QRious({ element: cv, value: lien.url, size: 340, level: 'M', background: '#f4ebe0', foreground: '#26100e' });
+      cv.style.display = '';
+    } catch (e) { /* le code suffit */ }
+  }
+  note.textContent = enPartie ? 'Partie en cours : celui qui rejoint regarde et entre à la partie suivante. Pour quelqu’un qui s’est fait couper, ce lien lui rend sa place.' : '';
+  document.getElementById('copier-lien-regles').onclick = async () => {
+    try { await navigator.clipboard.writeText(lien.url); note.textContent = 'Lien copié : ' + lien.url; }
+    catch (e) { note.textContent = lien.url; }
+  };
+}
+
+function panneauAttente() {
+  elMessage.textContent = 'Royaumes';
+  const p = ouvrirPanneau('Salle d’attente');
+  const invite = document.createElement('p');
+  invite.className = 'invitation-soiree';
+  invite.textContent = 'De 2 à 8 joueurs (idéal : 3 à 6). La carte s’adapte au nombre de joueurs. Le QR de la soirée est sur l’accueil.';
+  p.appendChild(invite);
+  const liste = document.createElement('div');
+  liste.className = 'liste-attente';
+  liste.textContent = joueursSalon.length ? joueursSalon.map((n, i) => (i === MOI ? n + ' (toi)' : n)).join(' · ') : 'En attente de joueurs...';
+  p.appendChild(liste);
+  const n = joueursSalon.length;
+  if (estCreateur) {
+    p.appendChild(blocReglage(n));
+    const r = rangee();
+    r.style.marginTop = '6px';
+    const b = bouton('Démarrer la partie', 'gros', () => Soiree.lancer('conquete', o => envoyer({ ...messageDemarrer(), ...o })));
+    b.disabled = n < JOUEURS_MIN || n > JOUEURS_MAX;
+    r.appendChild(b);
+    p.appendChild(r);
+    if (n < JOUEURS_MIN) p.appendChild(aide('Encore ' + (JOUEURS_MIN - n) + ' joueur avant de pouvoir lancer.'));
+    else if (n > JOUEURS_MAX) {
+      const al = document.createElement('div');
+      al.className = 'alerte';
+      al.textContent = 'Vous êtes ' + n + ' : Royaumes se joue à 8 au plus. Ouvrez une deuxième table.';
+      p.appendChild(al);
+    }
+  } else {
+    p.appendChild(aide('En attente du créateur du salon (il règle la vitesse et lance la partie)...'));
+  }
+}
+
+function blocReglage(n) {
+  const d = document.createElement('div');
+  const v = vitesseChoisie || vitesseConseillee(n);
+  const modes = document.createElement('div');
+  modes.className = 'modes';
+  Object.entries(VITESSES).forEach(([cle, x]) => {
+    const m = document.createElement('div');
+    m.className = 'mode' + (cle === v ? ' choisi' : '');
+    m.innerHTML = '<b>' + x.titre + '</b><span>' + x.tours + ' tours · ' + x.minuteur + ' s · gorgées ' + x.mult + '</span>';
+    m.addEventListener('click', () => { vitesseChoisie = cle; toursChoisis = null; panneauAttente(); });
+    modes.appendChild(m);
+  });
+  d.appendChild(modes);
+  const r = rangee();
+  r.style.alignItems = 'center';
+  const lib = document.createElement('span');
+  lib.className = 'aide';
+  lib.textContent = 'Tours chacun :';
+  const sel = document.createElement('select');
+  TOURS_CHOIX.forEach(t => {
+    const o = document.createElement('option');
+    o.value = t; o.textContent = t + (t === VITESSES[v].tours ? ' (vitesse)' : '');
+    if ((toursChoisis || VITESSES[v].tours) === t) o.selected = true;
+    sel.appendChild(o);
+  });
+  sel.addEventListener('change', () => { toursChoisis = Number(sel.value); });
+  r.append(lib, sel);
+  d.appendChild(r);
+  const r2 = rangee();
+  r2.style.marginTop = '6px';
+  const caseA = document.createElement('label');
+  caseA.className = 'case';
+  const a = document.createElement('input'); a.type = 'checkbox'; a.checked = aleatoireChoisi;
+  a.addEventListener('change', () => { aleatoireChoisi = a.checked; });
+  caseA.append(a, document.createTextNode(' 🎲 Partie aléatoire (12 races, 15 pouvoirs)'));
+  const caseV = document.createElement('label');
+  caseV.className = 'case';
+  const vg = document.createElement('input'); vg.type = 'checkbox'; vg.checked = vengeanceChoisie;
+  vg.addEventListener('change', () => { vengeanceChoisie = vg.checked; });
+  caseV.append(vg, document.createTextNode(' 😤 Vengeance'));
+  r2.append(caseA, caseV);
+  d.appendChild(r2);
+  if (n >= 7 && !vitesseChoisie) d.appendChild(aide('À ' + n + ' joueurs, Flash est conseillé : l’attente entre deux tours reste courte.'));
+  return d;
+}
+
+// =====================================================================
+// BOUCLE DE RENDU
+// =====================================================================
+const clock = new THREE.Clock();
+function boucle() {
+  requestAnimationFrame(boucle);
+  const dt = Math.min(clock.getDelta(), 0.1);
+  const t = clock.elapsedTime;
+  majCamera();
+  camera.position.lerp(POS, 0.14);
+  camCible.lerp(CIBLE, 0.14);
+  camera.lookAt(camCible);
+  zone.appliquer(camera, vue.perso ? null : { points: [[-bornes.l, 0.1, -bornes.h], [bornes.l, 0.1, -bornes.h], [-bornes.l, 0, bornes.h], [bornes.l, 0, bornes.h]] },
+                 { pos: POS, cible: CIBLE });
+  const pulse = 0.5 + 0.5 * Math.sin(t * 4.2);
+  regions3d.forEach((r3, r) => {
+    let e = 0, ec = null;
+    if (r3.conquerable === 2) { e = 0.18 + pulse * 0.22; ec = ACCENT; }
+    else if (r3.conquerable === 1) { e = 0.1 + pulse * 0.12; ec = 0xea7828; }
+    if (selection === r) { e = Math.max(e, 0.35); ec = 0xffffff; }
+    if (choixFin && choixFin.sabotage === r && etat && etat.etape === 'redeploiement') { e = 0.45; ec = 0xff3b30; }
+    if (r3.flash > 0) {
+      r3.flash = Math.max(0, r3.flash - dt * 1.3);
+      e = Math.max(e, r3.flash);
+      ec = r3.teinteFlash;
+    }
+    r3.mat.emissive.set(ec || 0x000000);
+    r3.mat.emissiveIntensity = e;
+    const lev = (selection === r ? 0.04 : 0) + (r3.souleve > 0 ? Math.sin(r3.souleve * Math.PI) * 0.12 : 0);
+    if (r3.souleve > 0) r3.souleve = Math.max(0, r3.souleve - dt * 2.2);
+    r3.groupe.position.y += (lev - r3.groupe.position.y) * 0.3;
+    if (r3.cout.visible) r3.cout.position.y = r3.h + 0.5 + Math.sin(t * 3 + r) * 0.02;
+  });
+  if (decor && decor.animer) decor.animer(t);
+  renderer.render(scene, camera);
+}
+
+// =====================================================================
+// DÉMARRAGE
+// =====================================================================
+if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) serveurChoisi = 'local';
+const salonDansUrl = new URLSearchParams(location.search).get('salon');
+if (salonDansUrl && /^[A-Za-z]{4}(-[2-9])?$/.test(salonDansUrl)) {
+  if (monNom) {
+    codeSalon = salonDansUrl.toUpperCase();
+    estCreateur = true;
+    seConnecter();
+  } else {
+    panneauRejoindreDirect(salonDansUrl.toUpperCase());
+  }
+} else {
+  panneauAccueil();
+}
+// Pour les tests navigateur (lecture seule) : où tombe une région à l'écran.
+window.royaumesEssai = {
+  ecran(r) {
+    const r3 = regions3d[r];
+    if (!r3) return null;
+    const v = new THREE.Vector3(r3.cx, r3.h, r3.cz).project(camera);
+    return { x: (v.x + 1) / 2 * window.innerWidth, y: (1 - v.y) / 2 * window.innerHeight };
+  },
+  etat: () => etat,
+  moi: () => MOI,
+};
+lisserScene(scene);
+zone.mesurer();
+boucle();
+surveillerFluidite();
+</script>
+<script>
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(() => {});
+</script>
+</body>
+</html>
