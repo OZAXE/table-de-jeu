@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Téléphone Dessiné</title>
+<meta name="theme-color" content="#050a14">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=2">
+<link rel="apple-touch-icon" href="icons/icon-180.png?v=2">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --fond: #050a14;
+    --surface: rgba(255, 255, 255, 0.05);
+    --surface-forte: rgba(255, 255, 255, 0.09);
+    --bord: rgba(255, 255, 255, 0.1);
+    --texte: #f4f1ea;
+    --texte-doux: #a9b4c4;
+    --texte-pale: #6c7a8f;
+    --accent: #f5b942;
+    --accent-2: #e2703a;
+    --bon: #5cc98a;
+    --papier: #fbfaf6;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--fond); color: var(--texte); }
+  body {
+    font-family: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    min-height: 100vh; min-height: 100dvh;
+    padding: max(10px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+    overflow-x: hidden;
+  }
+  .halo { position: fixed; inset: 0; pointer-events: none; z-index: -1;
+    background: radial-gradient(420px 320px at 0% 0%, rgba(245, 185, 66, 0.12), transparent 70%),
+                radial-gradient(380px 360px at 100% 100%, rgba(226, 112, 58, 0.1), transparent 70%); }
+  main { max-width: 560px; margin: 0 auto; }
+
+  header { display: flex; align-items: center; gap: 10px; padding: 4px 0 10px; }
+  header .logo { font-size: 1.5rem; }
+  header h1 { font-size: 1.15rem; margin: 0; font-weight: 800; letter-spacing: 0.01em; flex: 1; }
+  header .table { font-size: 0.8rem; color: var(--texte-doux); background: var(--surface); border: 1px solid var(--bord);
+    padding: 4px 9px; border-radius: 999px; }
+  header a.retour { color: var(--texte-doux); text-decoration: none; font-size: 0.85rem; padding: 6px 8px; }
+  #rappel { min-height: 1.3em; color: var(--texte-doux); font-size: 0.88rem; margin: 0 0 10px; }
+
+  .carte { background: var(--surface); border: 1px solid var(--bord); border-radius: 20px; padding: 16px; margin-bottom: 12px; }
+  .carte h2 { margin: 0 0 10px; font-size: 1.1rem; }
+  .doux { color: var(--texte-doux); font-size: 0.9rem; line-height: 1.45; }
+  .pale { color: var(--texte-pale); font-size: 0.82rem; }
+  .ligne { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .ligne + .ligne { margin-top: 10px; }
+  .etiquette { font-size: 0.78rem; color: var(--texte-doux); text-transform: uppercase; letter-spacing: 0.06em; margin: 12px 0 6px; }
+
+  button { font: inherit; cursor: pointer; border: 0; border-radius: 14px; padding: 12px 16px; font-weight: 700;
+    background: var(--surface-forte); color: var(--texte); touch-action: manipulation; }
+  button:disabled { opacity: 0.45; cursor: default; }
+  button.principal { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #1b0f05; }
+  button.large { width: 100%; padding: 15px; font-size: 1.05rem; }
+  button.choix { flex: 1; padding: 10px 6px; font-weight: 600; border: 1px solid var(--bord); background: transparent; }
+  button.choix.actif { background: rgba(245, 185, 66, 0.16); border-color: var(--accent); color: var(--accent); }
+  button.petit { padding: 8px 12px; font-size: 0.88rem; font-weight: 600; }
+  input[type=text] { font: inherit; width: 100%; padding: 13px 14px; border-radius: 14px; border: 1px solid var(--bord);
+    background: rgba(0, 0, 0, 0.35); color: var(--texte); font-size: 1rem; }
+  input[type=text]:focus { outline: 2px solid var(--accent); outline-offset: 0; }
+
+  .joueurs { display: flex; flex-wrap: wrap; gap: 6px; }
+  .joueur { padding: 6px 11px; border-radius: 999px; background: var(--surface-forte); font-size: 0.9rem; }
+  .joueur.moi { outline: 1px solid var(--accent); }
+  .joueur.pret { background: rgba(92, 201, 138, 0.2); color: #b9f0cf; }
+  .joueur.parti { opacity: 0.4; text-decoration: line-through; }
+
+  /* --- Étape --- */
+  .consigne { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+  .consigne .quoi { flex: 1; }
+  .consigne .petit-titre { font-size: 0.78rem; color: var(--texte-doux); text-transform: uppercase; letter-spacing: 0.06em; }
+  .consigne .phrase { font-size: 1.25rem; font-weight: 700; line-height: 1.25; margin-top: 2px; overflow-wrap: anywhere; }
+  .minuteur { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 0.95rem; color: var(--texte-doux);
+    background: var(--surface); border: 1px solid var(--bord); border-radius: 999px; padding: 5px 10px; min-width: 52px; text-align: center; }
+  .minuteur.urgent { color: #ffb4a0; border-color: rgba(255, 120, 90, 0.5); }
+
+  .toile { display: block; width: 100%; aspect-ratio: 4 / 3; background: var(--papier); border-radius: 14px;
+    touch-action: none; user-select: none; -webkit-user-select: none; }
+  .toile.lecture { touch-action: auto; }
+  .toile-cadre { position: relative; }
+  .encre { height: 4px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); margin: 6px 2px 0; overflow: hidden; }
+  .encre span { display: block; height: 100%; background: var(--accent); width: 0; transition: width 0.2s; }
+  .outils { display: flex; gap: 6px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  .couleurs { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin-top: 10px; }
+  .pastille { aspect-ratio: 1; border-radius: 50%; border: 2px solid transparent; padding: 0; }
+  .pastille.actif { border-color: var(--texte); box-shadow: 0 0 0 2px var(--fond) inset; }
+  .outil { flex: 1; min-width: 44px; padding: 10px 4px; font-size: 1.05rem; border: 1px solid var(--bord); background: transparent; }
+  .outil.actif { border-color: var(--accent); background: rgba(245, 185, 66, 0.14); }
+  .outil .point { display: inline-block; background: var(--texte); border-radius: 50%; vertical-align: middle; }
+
+  .attente { text-align: center; padding: 26px 16px; }
+  .attente .gros { font-size: 2.4rem; }
+
+  /* --- Révélation --- */
+  .album-titre { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+  .album-titre h2 { margin: 0; flex: 1; font-size: 1.15rem; }
+  .contribution { background: var(--surface); border: 1px solid var(--bord); border-radius: 18px; padding: 12px; margin-bottom: 10px;
+    position: relative; }
+  .contribution.nouvelle { animation: entre 0.45s ease both; }
+  .contribution .texte { font-size: 1.2rem; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; padding: 4px 2px; }
+  .contribution .auteur { font-size: 0.85rem; color: var(--texte-doux); margin-top: 8px; }
+  .contribution.nouvelle .auteur { animation: entre 0.4s ease 1.3s both; }
+  .contribution.auto .auteur::after { content: ' · rempli auto'; color: var(--texte-pale); }
+  .contribution.votable { cursor: pointer; }
+  .contribution.votable:active { transform: scale(0.99); }
+  .contribution.mon-vote { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .contribution.gagnant { border-color: var(--bon); box-shadow: 0 0 0 1px var(--bon) inset; }
+  .contribution .voix { position: absolute; top: 10px; right: 10px; background: rgba(0, 0, 0, 0.55); border-radius: 999px;
+    padding: 3px 9px; font-size: 0.85rem; font-weight: 700; }
+  .contribution canvas { display: block; width: 100%; aspect-ratio: 4 / 3; background: var(--papier); border-radius: 12px; }
+  .pied { position: sticky; bottom: max(8px, env(safe-area-inset-bottom)); z-index: 5; margin-top: 8px;
+    background: rgba(5, 10, 20, 0.9); backdrop-filter: blur(8px); border: 1px solid var(--bord); border-radius: 18px; padding: 6px; }
+  .pied:empty { display: none; }
+  .pied .commandes { margin: 0 0 6px; }
+  .reactions { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+  .reactions button { padding: 8px 0; font-size: 1.35rem; background: transparent; border-radius: 12px; }
+  .reactions button:active { background: var(--surface-forte); }
+  .commandes { display: flex; gap: 8px; margin-top: 4px; }
+  .commandes button { flex: 1; }
+  .galerie { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .galerie .contribution { margin: 0; padding: 6px; }
+  .galerie .contribution .auteur { margin-top: 4px; font-size: 0.78rem; }
+
+  .podium .contribution { margin-top: 6px; }
+  table.gorgees { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  table.gorgees td, table.gorgees th { padding: 7px 4px; border-bottom: 1px solid var(--bord); text-align: left; }
+  table.gorgees th { color: var(--texte-doux); font-weight: 600; font-size: 0.8rem; }
+  table.gorgees td.n { text-align: right; font-variant-numeric: tabular-nums; }
+
+  #flottants { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 20; }
+  .flotte { position: absolute; bottom: 90px; font-size: 2rem; animation: monte 2.4s ease-out forwards; }
+  #toasts { position: fixed; left: 50%; top: max(12px, env(safe-area-inset-top)); transform: translateX(-50%); z-index: 30;
+    display: flex; flex-direction: column; gap: 6px; width: min(92vw, 440px); pointer-events: none; }
+  .toast { white-space: pre-line; background: rgba(20, 26, 40, 0.96); border: 1px solid var(--bord); border-radius: 14px; padding: 10px 14px;
+    font-size: 0.92rem; animation: entre 0.3s ease both; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); }
+  .toast.moi { border-color: var(--accent); }
+  .cache { display: none !important; }
+
+  @keyframes entre { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @keyframes monte { 0% { opacity: 0; transform: translateY(0) scale(0.6); } 15% { opacity: 1; transform: translateY(-30px) scale(1.1); }
+    100% { opacity: 0; transform: translateY(-340px) scale(1); } }
+  @media (prefers-reduced-motion: reduce) { * { animation-duration: 0.01ms !important; animation-delay: 0s !important; } }
+</style>
+</head>
+<body>
+<div class="halo" aria-hidden="true"></div>
+<main>
+  <header>
+    <span class="logo" aria-hidden="true">📞</span>
+    <h1>Téléphone Dessiné</h1>
+    <span class="table cache" id="code-table"></span>
+    <a class="retour" href="index.html">Accueil</a>
+  </header>
+  <p id="rappel"></p>
+  <div id="vue"></div>
+</main>
+<div id="flottants" aria-hidden="true"></div>
+<div id="toasts" aria-live="polite"></div>
+
+<script src="commun/soiree.js"></script>
+<script>
+'use strict';
+// =====================================================================
+// Téléphone Dessiné : on écrit, on dessine, on devine, on rit à la fin.
+// Les règles et le secret sont sur le serveur (telephone.py) : la page ne
+// reçoit que la contribution précédente de son album pendant les étapes,
+// et l'album en cours pendant la révélation.
+// =====================================================================
+const JEU = 'telephone';
+const SERVEURS = Soiree.SERVEURS;
+const PALETTE = ['#1d1d1f', '#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5', '#8e24aa', '#6d4c41'];
+const PAPIER = '#fbfaf6';
+const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+const VAL = {}; [...B64].forEach((c, i) => { VAL[c] = i; });
+const TAILLE_MAX_MESSAGE = 15500;   // le serveur refuse au-delà de 16 Ko
+const NOMS_VITESSES = { flash: 'Flash', normal: 'Normal', long: 'Long' };
+const NOMS_SOURCES = { libre: 'Libre', banque: 'Banque', mixte: 'Mixte' };
+const NOMS_MODES = { normal: 'Normal', knockoff: 'Knock-Off', speedrun: 'Speedrun' };
+const AIDE_MODES = {
+  normal: 'On écrit, on dessine, on décrit, on dessine… chaque album passe par tout le monde.',
+  knockoff: 'Tout le monde dessine la même phrase, puis chacun recopie DE MÉMOIRE le dessin reçu, vu quelques secondes. De moins en moins de temps à chaque copie.',
+  speedrun: 'Comme Normal, mais avec des minuteurs très courts (8 à 15 s par dessin) et moins d’étapes. Les albums sont distribués au hasard.',
+};
+// Étapes par album : bornes et valeur par défaut selon le mode (comme le serveur).
+function bornesEtapes(mode, n) {
+  const maxi = Math.max(1, mode === 'knockoff' ? n : n - 1);
+  return { maxi, defaut: mode === 'speedrun' ? Math.min(maxi, 4) : maxi };
+}
+const RAISONS = {
+  retard: 'pas envoyé à temps',
+  meilleur_album: 'meilleur moment de l’album',
+  meilleur_soiree: 'meilleur moment de la partie',
+  mal_compris: 'dessin le plus mal compris',
+};
+
+let serveurChoisi = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) ? 'local' : 'render';
+let monNom = Soiree.nom();
+let codeSalon = '';
+let monJeton = null;
+let MOI = null;
+let joueursSalon = [];
+let ws = null;
+
+let etat = null;        // dernier td_etat
+let tache = null;       // dernière td_tache (privée)
+let galerie = null;     // tous les albums (vote final et fin)
+let travail = null;     // ce que je prépare à l'étape en cours
+let finLocale = null;   // échéance de l'étape, en heure du téléphone
+let ecranCourant = '';
+let monVote = null;
+
+const $ = s => document.querySelector(s);
+const vue = $('#vue');
+const rappel = $('#rappel');
+
+function el(tag, attrs, ...enfants) {
+  const e = document.createElement(tag);
+  if (attrs) for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') e.className = v;
+    else if (k === 'onclick') e.addEventListener('click', v);
+    else if (k === 'text') e.textContent = v;
+    else if (v !== undefined && v !== null && v !== false) e.setAttribute(k, v === true ? '' : v);
+  }
+  enfants.flat().forEach(c => { if (c != null) e.append(c.nodeType ? c : document.createTextNode(c)); });
+  return e;
+}
+function nomJ(i) {
+  if (i === null || i === undefined) return 'la banque';
+  const n = (etat && etat.joueurs[i]) || joueursSalon[i] || '?';
+  return i === MOI ? n + ' (toi)' : n;
+}
+function joue() { return etat && MOI !== null && MOI < etat.joueurs.length; }
+function suisHote() { return etat && etat.hote === MOI; }
+function lireLocal(cle, defaut) { try { return JSON.parse(localStorage.getItem(cle)) ?? defaut; } catch (e) { return defaut; } }
+function ecrireLocal(cle, v) { try { localStorage.setItem(cle, JSON.stringify(v)); } catch (e) { /* tant pis */ } }
+
+function envoyer(msg) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) { toast('Pas de connexion, réessaie dans un instant.'); return false; }
+  try { ws.send(JSON.stringify(msg)); return true; } catch (e) { return false; }
+}
+
+function toast(texte, moi) {
+  const t = el('div', { class: 'toast' + (moi ? ' moi' : ''), text: texte });
+  const pile = $('#toasts');
+  while (pile.children.length >= 2) pile.firstElementChild.remove();
+  pile.append(t);
+  setTimeout(() => t.remove(), 4200 + 600 * (texte.split('\n').length - 1));
+}
+
+// =====================================================================
+// DESSIN : traits en coordonnées du cadre (400 x 300), encodés pour le serveur
+// =====================================================================
+function regles() {
+  return (etat && etat.regles && etat.regles.dessin) ||
+    { largeur: 400, hauteur: 300, couleurs: 8, epaisseurs: [3, 8, 18], traits_max: 200, points_max: 2500 };
+}
+const enc = v => B64[v >> 6] + B64[v & 63];
+function encoder(points) { return points.map(([x, y]) => enc(x) + enc(y)).join(''); }
+function decoder(p) {
+  const pts = [];
+  for (let k = 0; k + 3 < p.length; k += 4) {
+    pts.push([VAL[p[k]] * 64 + VAL[p[k + 1]], VAL[p[k + 2]] * 64 + VAL[p[k + 3]]]);
+  }
+  return pts;
+}
+
+// Trace une liste de traits (format serveur ou local) sur un canevas.
+function peindre(canvas, traits) {
+  const r = regles();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  const largeur = canvas.clientWidth || 300;
+  const hauteur = largeur * r.hauteur / r.largeur;
+  if (canvas.width !== Math.round(largeur * dpr)) {
+    canvas.width = Math.round(largeur * dpr);
+    canvas.height = Math.round(hauteur * dpr);
+  }
+  const ctx = canvas.getContext('2d');
+  const k = canvas.width / r.largeur;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = PAPIER;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.setTransform(k, 0, 0, k, 0, 0);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (const t of traits || []) {
+    const pts = t.pts || decoder(t.p || '');
+    if (!pts.length) continue;
+    const couleur = t.c >= PALETTE.length ? PAPIER : PALETTE[t.c];
+    const ep = r.epaisseurs[t.e] || 6;
+    ctx.strokeStyle = couleur;
+    ctx.fillStyle = couleur;
+    ctx.lineWidth = ep;
+    if (pts.length === 1) {
+      ctx.beginPath(); ctx.arc(pts[0][0], pts[0][1], ep / 2, 0, Math.PI * 2); ctx.fill();
+      continue;
+    }
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length - 1; i++) {
+      const mx = (pts[i][0] + pts[i + 1][0]) / 2, my = (pts[i][1] + pts[i + 1][1]) / 2;
+      ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
+    }
+    const der = pts[pts.length - 1];
+    ctx.lineTo(der[0], der[1]);
+    ctx.stroke();
+  }
+}
+
+function canevasLecture(traits) {
+  const c = el('canvas');
+  requestAnimationFrame(() => peindre(c, traits));
+  return c;
+}
+window.addEventListener('resize', () => {
+  document.querySelectorAll('canvas[data-traits]').forEach(c => peindre(c, JSON.parse(c.dataset.traits)));
+  if (travail && travail.toile) peindre(travail.toile, travail.traits);
+});
+
+function totalPoints(traits) { return traits.reduce((s, t) => s + t.pts.length, 0); }
+
+// Zone de dessin au doigt : le défilement est coupé pendant le tracé
+// (touch-action: none sur le canevas).
+function zoneDessin() {
+  const r = regles();
+  const toile = el('canvas', { class: 'toile', 'aria-label': 'Zone de dessin' });
+  const encre = el('span');
+  travail.toile = toile;
+  let enCours = null;
+
+  const point = ev => {
+    const b = toile.getBoundingClientRect();
+    const x = Math.round((ev.clientX - b.left) / b.width * r.largeur);
+    const y = Math.round((ev.clientY - b.top) / b.height * r.hauteur);
+    return [Math.max(0, Math.min(r.largeur, x)), Math.max(0, Math.min(r.hauteur, y))];
+  };
+  const majEncre = () => {
+    const part = Math.max(totalPoints(travail.traits) / r.points_max, travail.traits.length / r.traits_max);
+    encre.style.width = Math.min(100, part * 100) + '%';
+    encre.parentNode && (encre.parentNode.title = part >= 1 ? 'Dessin plein' : '');
+  };
+  toile.addEventListener('pointerdown', ev => {
+    if (travail.envoye) return;
+    ev.preventDefault();
+    if (travail.traits.length >= r.traits_max || totalPoints(travail.traits) >= r.points_max) {
+      toast('Plus d’encre : annule un trait ou valide ton dessin.');
+      return;
+    }
+    toile.setPointerCapture(ev.pointerId);
+    enCours = { c: travail.gomme ? r.couleurs : travail.couleur, e: travail.epaisseur, pts: [point(ev)] };
+    travail.traits.push(enCours);
+    travail.efface = null;
+    travail.modifie = true;
+    peindre(toile, travail.traits);
+  });
+  toile.addEventListener('pointermove', ev => {
+    if (!enCours) return;
+    ev.preventDefault();
+    const evs = ev.getCoalescedEvents ? ev.getCoalescedEvents() : [ev];
+    for (const e of (evs.length ? evs : [ev])) {
+      if (totalPoints(travail.traits) >= r.points_max) break;
+      const p = point(e);
+      const d = enCours.pts[enCours.pts.length - 1];
+      if (Math.hypot(p[0] - d[0], p[1] - d[1]) >= 2.5) enCours.pts.push(p);
+    }
+    peindre(toile, travail.traits);
+  });
+  const fin = () => { if (enCours) { enCours = null; majEncre(); } };
+  toile.addEventListener('pointerup', fin);
+  toile.addEventListener('pointercancel', fin);
+  toile.addEventListener('lostpointercapture', fin);
+  requestAnimationFrame(() => { peindre(toile, travail.traits); majEncre(); });
+
+  const couleurs = el('div', { class: 'couleurs' });
+  const outils = el('div', { class: 'outils' });
+  const redessinerOutils = () => {
+    couleurs.querySelectorAll('.pastille').forEach((b, i) =>
+      b.classList.toggle('actif', !travail.gomme && travail.couleur === i));
+    outils.querySelectorAll('[data-ep]').forEach(b =>
+      b.classList.toggle('actif', Number(b.dataset.ep) === travail.epaisseur));
+    gomme.classList.toggle('actif', travail.gomme);
+  };
+  PALETTE.forEach((c, i) => couleurs.append(el('button', {
+    class: 'pastille', style: 'background:' + c, 'aria-label': 'Couleur ' + (i + 1),
+    onclick: () => { travail.couleur = i; travail.gomme = false; redessinerOutils(); },
+  })));
+  r.epaisseurs.forEach((ep, i) => {
+    const taille = [6, 11, 17][i] || 8;
+    outils.append(el('button', { class: 'outil', 'data-ep': i, 'aria-label': 'Épaisseur ' + (i + 1),
+      onclick: () => { travail.epaisseur = i; redessinerOutils(); } },
+    el('span', { class: 'point', style: `width:${taille}px;height:${taille}px` })));
+  });
+  const gomme = el('button', { class: 'outil', 'aria-label': 'Gomme', text: '🧽',
+    onclick: () => { travail.gomme = !travail.gomme; redessinerOutils(); } });
+  outils.append(gomme,
+    el('button', { class: 'outil', 'aria-label': 'Annuler le dernier trait', text: '↶', onclick: () => {
+      if (travail.envoye) return;
+      if (travail.traits.length) travail.traits.pop();
+      else if (travail.efface) { travail.traits = travail.efface; travail.efface = null; }
+      travail.modifie = true;
+      peindre(toile, travail.traits); majEncre();
+    } }),
+    el('button', { class: 'outil', 'aria-label': 'Tout effacer', text: '🗑', onclick: () => {
+      if (travail.envoye || !travail.traits.length) return;
+      travail.efface = travail.traits;     // « annuler » le rattrape
+      travail.traits = [];
+      travail.modifie = true;
+      peindre(toile, travail.traits); majEncre();
+    } }));
+  redessinerOutils();
+  return el('div', null, el('div', { class: 'toile-cadre' }, toile), el('div', { class: 'encre' }, encre), couleurs, outils);
+}
+
+function dessinPourServeur(traits) {
+  const out = traits.filter(t => t.pts.length).map(t => ({ c: t.c, e: t.e, p: encoder(t.pts) }));
+  // Garde-fou : le message doit tenir dans la limite du serveur.
+  while (out.length && JSON.stringify(out).length > TAILLE_MAX_MESSAGE - 200) out.pop();
+  return out;
+}
+function dessinDepuisServeur(traits) {
+  return (traits || []).map(t => ({ c: t.c, e: t.e, pts: decoder(t.p) }));
+}
+
+// =====================================================================
+// RÉCEPTION
+// =====================================================================
+function recevoir(msg) {
+  switch (msg.type) {
+    case 'ton_index':
+      MOI = msg.index;
+      if (msg.jeton) {
+        monJeton = msg.jeton;
+        ecrireLocal('telephone.session', { code: codeSalon, nom: monNom, jeton: monJeton, serveur: serveurChoisi });
+      }
+      rendre(true);
+      break;
+    case 'joueur_rejoint':
+    case 'joueur_parti':
+      joueursSalon = msg.joueurs || joueursSalon;
+      if (etat) rappel.textContent = msg.nom + (msg.type === 'joueur_parti' ? ' a quitté la table.' : msg.retour ? ' est revenu.' : ' rejoint la table.');
+      rendre(!etat);
+      break;
+    case 'td_demarree':
+      joueursSalon = msg.joueurs;
+      etat = null; tache = null; travail = null;
+      galerie = null;
+      monVote = null;
+      rappel.textContent = '';
+      break;
+    case 'td_etat': {
+      const avant = etat;
+      if (avant && msg.version < avant.version && msg.phase === avant.phase) return;
+      etat = msg;
+      if (msg.phase === 'etape' && msg.reste !== null) finLocale = Date.now() + msg.reste * 1000;
+      if (!avant || avant.phase !== msg.phase || (avant.revelation || {}).album !== (msg.revelation || {}).album) monVote = null;
+      if (msg.phase === 'etape' && galerie) galerie = null;
+      rendre();
+      break;
+    }
+    case 'td_tache':
+      tache = msg;
+      if (!travail || travail.etape !== msg.etape) {
+        travail = {
+          etape: msg.etape, nature: msg.nature, envoye: msg.envoye, modifie: false,
+          traits: msg.nature === 'dessin' && Array.isArray(msg.brouillon) ? dessinDepuisServeur(msg.brouillon) : [],
+          texte: typeof msg.brouillon === 'string' ? msg.brouillon : (msg.prerempli && msg.suggestion) || '',
+          couleur: 0, epaisseur: 1, gomme: false, efface: null,
+          // Knock-Off : le modèle ne reste à l'écran que le temps du visionnage.
+          finVision: msg.copie && msg.modele ? Date.now() + (msg.vision || 0) * 1000 : 0,
+        };
+      } else {
+        travail.envoye = travail.envoye || msg.envoye;
+        if (msg.copie) travail.finVision = msg.modele ? Math.min(travail.finVision || Infinity, Date.now() + (msg.vision || 0) * 1000) : 0;
+      }
+      rendre(true);
+      break;
+    case 'td_suggestion':
+      if (tache) tache.suggestion = msg.suggestion;
+      if (travail && travail.etape === 0) {
+        travail.texte = msg.suggestion;
+        const champ = $('#champ-texte');
+        if (champ) champ.value = msg.suggestion;
+        const s = $('#suggestion');
+        if (s) s.textContent = msg.suggestion;
+      }
+      break;
+    case 'td_galerie':
+      galerie = msg.albums;
+      rendre(true);
+      break;
+    case 'td_gorgees':
+    {
+      // Un seul encart pour toute la liste : à la fin de partie, plusieurs
+      // annonces tombent d'un coup et ne doivent pas recouvrir le bilan.
+      const lignes = msg.liste.map(g => {
+        const qui = g.joueur === MOI ? 'Tu' : nomJ(g.joueur);
+        const verbe = g.sens === 'boit' ? (g.joueur === MOI ? 'bois' : 'boit') : (g.joueur === MOI ? 'distribues' : 'distribue');
+        return `🍺 ${qui} ${verbe} ${g.n} gorgée${g.n > 1 ? 's' : ''} (${RAISONS[g.raison] || g.raison})`;
+      });
+      const moi = msg.liste.some(g => g.joueur === MOI);
+      if (lignes.length) toast(lignes.join('\n'), moi);
+      if (moi && navigator.vibrate) navigator.vibrate(120);
+      break;
+    }
+    case 'td_reaction':
+      flotter(msg.emoji);
+      break;
+    case 'td_albums_prets':
+      if (navigator.vibrate) navigator.vibrate([60, 60, 60]);
+      break;
+    case 'erreur':
+      toast(msg.message);
+      rappel.textContent = msg.message;
+      break;
+  }
+}
+
+function flotter(emoji) {
+  const f = el('span', { class: 'flotte', text: emoji, style: `left:${8 + Math.random() * 80}%` });
+  $('#flottants').append(f);
+  setTimeout(() => f.remove(), 2500);
+}
+
+// =====================================================================
+// ÉCRANS
+// =====================================================================
+function cleEcran() {
+  if (!etat) return 'attente-salon:' + joueursSalon.join('|') + ':' + MOI;
+  const p = etat.phase;
+  if (p === 'etape') {
+    const envoye = (travail && travail.etape === etat.etape && travail.envoye) || (joue() && etat.prets && etat.prets[MOI]);
+    return `etape:${etat.etape}:${envoye ? 'attente:' + etat.prets.join() : 'travail:' + (tache && tache.etape) + (enVision() ? ':vision' : '')}:${joue()}`;
+  }
+  if (p === 'pret') return 'pret:' + etat.hote;
+  if (p === 'revelation' || p === 'resultat_album') {
+    const r = etat.revelation;
+    return `${p}:${r.album}:${r.montre}:${r.auto}:${etat.hote}`;
+  }
+  if (p === 'vote_album') return `vote_album:${etat.revelation.album}:${monVote}:${etat.a_vote.join()}`;
+  if (p === 'vote_final') return `vote_final:${!!galerie}:${JSON.stringify(monVote)}:${etat.a_vote.join()}`;
+  if (p === 'fin') return 'fin:' + !!galerie + ':' + etat.version;
+  return p;
+}
+
+function rendre(forcer) {
+  const cle = cleEcran();
+  if (!forcer && cle === ecranCourant) { majMinuteur(); return; }
+  // Ne jamais reconstruire l'écran sous le doigt ou le clavier de quelqu'un
+  // qui travaille : seul le changement d'étape (ou l'envoi) le remplace.
+  if (!forcer && travail && !travail.envoye && etat && etat.phase === 'etape' && ecranCourant.startsWith('etape:' + etat.etape + ':travail')
+      && cle.startsWith('etape:' + etat.etape + ':travail')) { majMinuteur(); return; }
+  ecranCourant = cle;
+  const code = $('#code-table');
+  if (codeSalon) { code.textContent = 'Table ' + codeSalon; code.classList.remove('cache'); }
+  vue.replaceChildren();
+  if (!etat) return ecranSalle();
+  switch (etat.phase) {
+    case 'etape': return ecranEtape();
+    case 'pret': return ecranPret();
+    case 'revelation': case 'vote_album': case 'resultat_album': return ecranRevelation();
+    case 'vote_final': return ecranVoteFinal();
+    case 'fin': return ecranFin();
+  }
+}
+
+// --- Salle d'attente et réglages ---
+const reglages = Object.assign({ mode: 'normal', vitesse: 'normal', source: 'libre', etapes: null }, lireLocal('telephone.reglages', {}));
+if (!NOMS_MODES[reglages.mode]) reglages.mode = 'normal';
+
+function groupeChoix(titre, options, cle, noms) {
+  const ligne = el('div', { class: 'ligne' });
+  options.forEach(o => ligne.append(el('button', {
+    class: 'choix' + (reglages[cle] === o ? ' actif' : ''), text: noms[o] || o,
+    onclick: () => { reglages[cle] = o; ecrireLocal('telephone.reglages', reglages); rendre(true); },
+  })));
+  return [el('div', { class: 'etiquette', text: titre }), ligne];
+}
+
+function ecranSalle() {
+  const n = joueursSalon.length;
+  const carteJ = el('div', { class: 'carte' },
+    el('h2', { text: 'Salle d’attente' }),
+    el('div', { class: 'joueurs' }, n ? joueursSalon.map((nom, i) =>
+      el('span', { class: 'joueur' + (i === MOI ? ' moi' : ''), text: nom })) : el('span', { class: 'pale', text: 'En attente de joueurs…' })),
+    el('p', { class: 'doux', text: 'Chacun écrit une phrase, puis les phrases circulent : on dessine ce qu’on lit, on décrit ce qu’on voit, sans jamais voir la phrase d’origine. À la fin, on découvre la dérive. De 3 à 8 joueurs.' }));
+  vue.append(carteJ);
+  if (!ws || MOI === null) return;
+
+  const { maxi: maxEtapes, defaut } = bornesEtapes(reglages.mode, n);
+  if (reglages.etapes !== null && reglages.etapes > maxEtapes) reglages.etapes = null;
+  const etapes = el('div', { class: 'ligne' },
+    el('button', { class: 'petit', text: '−', 'aria-label': 'Moins d’étapes', onclick: () => {
+      const v = reglages.etapes === null ? defaut : reglages.etapes;
+      reglages.etapes = Math.max(1, v - 1); rendre(true);
+    } }),
+    el('span', { style: 'flex:1;text-align:center;font-weight:700',
+      text: reglages.etapes === null ? (defaut === maxEtapes ? `Toutes (${maxEtapes})` : `Par défaut (${defaut})`)
+        : `${reglages.etapes} étape${reglages.etapes > 1 ? 's' : ''}` }),
+    el('button', { class: 'petit', text: '+', 'aria-label': 'Plus d’étapes', onclick: () => {
+      const v = reglages.etapes === null ? defaut + 1 : reglages.etapes + 1;
+      reglages.etapes = Math.min(v, maxEtapes); rendre(true);
+    } }));
+  const lancer = el('button', { class: 'principal large', text: 'Lancer la partie',
+    onclick: () => Soiree.lancer(JEU, o => envoyer({ type: 'td_demarrer', mode: reglages.mode, vitesse: reglages.vitesse,
+      source: reglages.source, etapes: reglages.etapes, ...o })) });
+  lancer.disabled = n < 3 || n > 8;
+  vue.append(el('div', { class: 'carte' },
+    el('h2', { text: 'Réglages' }),
+    groupeChoix('Mode', ['normal', 'knockoff', 'speedrun'], 'mode', NOMS_MODES),
+    el('p', { class: 'pale', text: AIDE_MODES[reglages.mode] }),
+    groupeChoix('Vitesse', ['flash', 'normal', 'long'], 'vitesse', NOMS_VITESSES),
+    reglages.mode === 'knockoff'
+      ? [el('div', { class: 'etiquette', text: 'Phrase de départ' }), el('p', { class: 'pale', text: 'Tirée de la banque, la même pour tout le monde.' })]
+      : [groupeChoix('Phrases de départ', ['libre', 'banque', 'mixte'], 'source', NOMS_SOURCES),
+         el('p', { class: 'pale', text: { libre: 'Chacun écrit la sienne (avec une idée au besoin).', banque: 'Le jeu tire une phrase pour chaque album.', mixte: 'Une phrase de la banque, que chacun peut modifier.' }[reglages.source] })],
+    el('div', { class: 'etiquette', text: 'Étapes par album' }), etapes,
+    el('div', { style: 'margin-top:16px' }, lancer),
+    n < 3 ? el('p', { class: 'pale', text: `Encore ${3 - n} joueur${3 - n > 1 ? 's' : ''} pour lancer.` })
+      : n > 8 ? el('p', { class: 'pale', text: 'Plus de 8 joueurs : ouvrez une deuxième table.' })
+      : el('p', { class: 'pale', text: 'Celui qui lance devient l’hôte : c’est lui qui fera défiler la révélation.' })));
+}
+
+// --- Étapes ---
+function minuteurEl() { return el('span', { class: 'minuteur', id: 'minuteur', text: '' }); }
+function majMinuteur() {
+  const m = $('#minuteur');
+  if (!m) return;
+  if (!etat || etat.phase !== 'etape' || !finLocale) { m.textContent = ''; return; }
+  const s = Math.max(0, Math.ceil((finLocale - Date.now()) / 1000));
+  m.textContent = s >= 60 ? Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') : s + ' s';
+  m.classList.toggle('urgent', s <= 5);
+}
+
+function ecranEtape() {
+  if (!joue()) return ecranSpectateur();
+  const envoye = (travail && travail.etape === etat.etape && travail.envoye) || etat.prets[MOI];
+  if (envoye || !tache || tache.etape !== etat.etape || !travail) return ecranAttente();
+  const titre = (etat.mode !== 'normal' ? NOMS_MODES[etat.mode] + ' · ' : '')
+    + `Étape ${etat.etape + (etat.source === 'banque' ? 0 : 1)} sur ${etat.nb_etapes + (etat.source === 'banque' ? 0 : 1)}`;
+  if (travail.nature === 'phrase') {
+    const champ = el('input', { type: 'text', id: 'champ-texte', maxlength: (etat.regles || {}).texte_max || 80,
+      placeholder: 'Une phrase drôle ou absurde…', autocomplete: 'off', enterkeyhint: 'done' });
+    champ.value = travail.texte;
+    champ.addEventListener('input', () => { travail.texte = champ.value; travail.modifie = true; });
+    champ.addEventListener('keydown', e => { if (e.key === 'Enter') valider(false); });
+    vue.append(el('div', { class: 'carte' },
+      el('div', { class: 'consigne' }, el('div', { class: 'quoi' },
+        el('div', { class: 'petit-titre', text: titre }),
+        el('div', { class: 'phrase', text: 'Écris une phrase de départ' })), minuteurEl()),
+      champ,
+      el('div', { class: 'ligne' },
+        el('span', { class: 'pale', style: 'flex:1' }, 'Idée : ', el('span', { id: 'suggestion', text: tache.suggestion || '' })),
+        el('button', { class: 'petit', text: '🎲 Autre idée', onclick: () => envoyer({ type: 'td_suggestion' }) })),
+      el('div', { style: 'margin-top:14px' }, el('button', { class: 'principal large', text: 'Valider', onclick: () => valider(false) }))));
+  } else if (travail.nature === 'dessin' && enVision()) {
+    // Knock-Off : on regarde le modèle quelques secondes, puis il disparaît.
+    const traits = dessinDepuisServeur(tache.modele);
+    const modele = canevasLecture(traits);
+    modele.className = 'toile lecture';
+    modele.dataset.traits = JSON.stringify(traits);
+    vue.append(el('div', { class: 'carte' },
+      el('div', { class: 'consigne' }, el('div', { class: 'quoi' },
+        el('div', { class: 'petit-titre', text: titre + ' · mémorise' }),
+        el('div', { class: 'phrase', text: 'Mémorise ce dessin !' })),
+        el('span', { class: 'minuteur urgent', id: 'vision', text: '' })),
+      modele,
+      el('p', { class: 'pale', text: 'Il va disparaître : tu devras le redessiner de mémoire.' })));
+    majVision();
+  } else if (travail.nature === 'dessin' && tache.copie) {
+    vue.append(el('div', { class: 'carte' },
+      el('div', { class: 'consigne' }, el('div', { class: 'quoi' },
+        el('div', { class: 'petit-titre', text: titre + ' · copie' }),
+        el('div', { class: 'phrase', text: 'Redessine-le de mémoire' })), minuteurEl()),
+      zoneDessin(),
+      el('div', { style: 'margin-top:12px' }, el('button', { class: 'principal large', text: 'Valider ma copie', onclick: () => valider(false) }))));
+  } else if (travail.nature === 'dessin') {
+    vue.append(el('div', { class: 'carte' },
+      el('div', { class: 'consigne' }, el('div', { class: 'quoi' },
+        el('div', { class: 'petit-titre', text: titre + ' · dessine' }),
+        el('div', { class: 'phrase', text: tache.modele || '…' })), minuteurEl()),
+      zoneDessin(),
+      el('div', { style: 'margin-top:12px' }, el('button', { class: 'principal large', text: 'Valider mon dessin', onclick: () => valider(false) }))));
+  } else {
+    const modele = canevasLecture(dessinDepuisServeur(tache.modele));
+    modele.className = 'toile lecture';
+    modele.dataset.traits = JSON.stringify(dessinDepuisServeur(tache.modele));
+    const champ = el('input', { type: 'text', id: 'champ-texte', maxlength: (etat.regles || {}).texte_max || 80,
+      placeholder: 'Qu’est-ce que c’est ?', autocomplete: 'off', enterkeyhint: 'done' });
+    champ.value = travail.texte;
+    champ.addEventListener('input', () => { travail.texte = champ.value; travail.modifie = true; });
+    champ.addEventListener('keydown', e => { if (e.key === 'Enter') valider(false); });
+    vue.append(el('div', { class: 'carte' },
+      el('div', { class: 'consigne' }, el('div', { class: 'quoi' },
+        el('div', { class: 'petit-titre', text: titre }),
+        el('div', { class: 'phrase', text: 'Décris ce dessin' })), minuteurEl()),
+      modele,
+      el('div', { style: 'margin-top:12px' }, champ),
+      el('div', { style: 'margin-top:12px' }, el('button', { class: 'principal large', text: 'Valider', onclick: () => valider(false) }))));
+  }
+  majMinuteur();
+}
+
+function enVision() {
+  return !!(travail && tache && tache.copie && tache.modele && travail.finVision && Date.now() < travail.finVision);
+}
+function majVision() {
+  const v = $('#vision');
+  if (v && travail) v.textContent = Math.max(0, Math.ceil((travail.finVision - Date.now()) / 1000)) + ' s';
+}
+
+function contenuTravail() {
+  return travail.nature === 'dessin' ? dessinPourServeur(travail.traits) : (travail.texte || '').trim();
+}
+
+function valider(auto) {
+  if (!travail || travail.envoye || !etat || etat.phase !== 'etape') return;
+  if (envoyer({ type: 'td_contribuer', contenu: contenuTravail(), auto: !!auto })) {
+    travail.envoye = true;
+    rendre(true);
+  }
+}
+
+// Brouillon toutes les 4 s : si le téléphone se coupe, le serveur le prend.
+setInterval(() => {
+  if (!travail || travail.envoye || !travail.modifie || !etat || etat.phase !== 'etape') return;
+  travail.modifie = false;
+  envoyer({ type: 'td_brouillon', contenu: contenuTravail() });
+}, 4000);
+
+// Minuteur : à zéro, la page envoie d'elle-même ce qui est prêt.
+setInterval(() => {
+  majMinuteur();
+  majVision();
+  // Fin du visionnage : le modèle disparaît, place à la copie.
+  if (ecranCourant.endsWith(':vision:true') && !enVision()) rendre(true);
+  if (etat && etat.phase === 'etape' && travail && !travail.envoye && finLocale && Date.now() >= finLocale
+      && tache && tache.etape === etat.etape) valider(true);
+}, 250);
+
+function ecranAttente() {
+  const prets = etat.prets.filter(Boolean).length;
+  vue.append(el('div', { class: 'carte attente' },
+    el('div', { class: 'gros', text: '⏳' }),
+    el('h2', { text: 'En attente des autres' }),
+    el('p', { class: 'doux', text: `${prets} / ${etat.joueurs.length} prêts` }),
+    minuteurEl()),
+  el('div', { class: 'carte' }, el('div', { class: 'joueurs' }, etat.joueurs.map((n, i) =>
+    el('span', { class: 'joueur' + (etat.prets[i] ? ' pret' : '') + (etat.partis[i] ? ' parti' : '') + (i === MOI ? ' moi' : ''),
+      text: (etat.prets[i] ? '✓ ' : '') + n })))));
+  majMinuteur();
+}
+
+function ecranSpectateur() {
+  vue.append(el('div', { class: 'carte attente' },
+    el('div', { class: 'gros', text: '👀' }),
+    el('h2', { text: 'Partie en cours' }),
+    el('p', { class: 'doux', text: 'Tu regardes : tu joueras à la prochaine partie. La révélation sera visible par tous.' })));
+}
+
+function ecranPret() {
+  const c = el('div', { class: 'carte attente' },
+    el('div', { class: 'gros', text: '📚' }),
+    el('h2', { text: 'Tous les albums sont prêts' }));
+  if (suisHote()) {
+    c.append(el('p', { class: 'doux', text: 'Rassemblez-vous : tu fais défiler les albums pour tout le monde.' }),
+      el('div', { class: 'ligne' },
+        el('button', { class: 'principal large', text: 'Lancer la révélation', onclick: () => envoyer({ type: 'td_reveler' }) })),
+      el('div', { class: 'ligne' },
+        el('button', { class: 'large', text: 'Révélation automatique', onclick: () => envoyer({ type: 'td_reveler', auto: true }) })));
+  } else {
+    c.append(el('p', { class: 'doux', text: `${nomJ(etat.hote)} va lancer la révélation.` }));
+  }
+  vue.append(c);
+}
+
+// --- Révélation ---
+function carteContribution(c, opts = {}) {
+  const corps = c.type === 'dessin'
+    ? (() => { const t = dessinDepuisServeur(c.contenu); const cv = canevasLecture(t); cv.dataset.traits = JSON.stringify(t); return cv; })()
+    : el('div', { class: 'texte', text: c.contenu });
+  const classes = ['contribution'];
+  if (opts.nouvelle) classes.push('nouvelle');
+  if (c.auto) classes.push('auto');
+  if (opts.votable) classes.push('votable');
+  if (opts.monVote) classes.push('mon-vote');
+  if (opts.gagnant) classes.push('gagnant');
+  const carte = el('div', { class: classes.join(' ') }, corps,
+    el('div', { class: 'auteur', text: (c.type === 'dessin' ? '✏️ ' : '💬 ') + nomJ(c.auteur) }));
+  if (opts.voix !== undefined) carte.append(el('span', { class: 'voix', text: opts.voix + ' voix' }));
+  if (opts.onclick) carte.addEventListener('click', opts.onclick);
+  return carte;
+}
+
+function barreReactions() {
+  const liste = (etat.regles && etat.regles.reactions) || [];
+  if (!joue() || !liste.length) return null;
+  return el('div', { class: 'reactions' }, liste.map(e =>
+    el('button', { text: e, 'aria-label': 'Réagir ' + e, onclick: () => envoyer({ type: 'td_reaction', emoji: e }) })));
+}
+
+function ecranRevelation() {
+  const r = etat.revelation;
+  const contribs = r.contributions;
+  const proprio = contribs.length ? contribs[0].auteur : null;
+  const phase = etat.phase;
+  vue.append(el('div', { class: 'album-titre' },
+    el('h2', { text: proprio === null ? `Album ${r.album + 1}` : `L’album de ${nomJ(proprio)}` }),
+    el('span', { class: 'pale', text: `${r.album + 1} / ${r.nb_albums}` })));
+
+  const resultat = phase === 'resultat_album' ? etat.resultat : null;
+  const liste = el('div');
+  contribs.forEach((c, k) => {
+    const opts = { nouvelle: phase === 'revelation' && k === contribs.length - 1 };
+    if (phase === 'vote_album' && joue()) {
+      const peut = c.auteur !== null && c.auteur !== MOI;
+      opts.votable = peut;
+      opts.monVote = monVote === k;
+      if (peut) opts.onclick = () => { monVote = k; envoyer({ type: 'td_voter', cible: k }); rendre(true); };
+    }
+    if (resultat) {
+      opts.voix = (resultat.votes || {})[String(k)] || 0;
+      opts.gagnant = resultat.gagnants.includes(k);
+      if (c.auteur === null) delete opts.voix;
+    }
+    liste.append(carteContribution(c, opts));
+  });
+  vue.append(liste);
+
+  if (phase === 'revelation') {
+    vue.append(el('p', { class: 'pale', text: `${r.montre} / ${r.longueur}` + (r.auto ? ' · défilement automatique' : '') }));
+  } else if (phase === 'vote_album') {
+    const nb = etat.a_vote.filter(Boolean).length;
+    vue.append(el('div', { class: 'carte' },
+      el('h2', { text: '🏆 Le meilleur moment ?' }),
+      el('p', { class: 'doux', text: joue() ? 'Touche la contribution que tu préfères (pas la tienne). Le vote est anonyme.' : 'Les joueurs votent.' }),
+      el('p', { class: 'pale', text: `${nb} vote${nb > 1 ? 's' : ''} · ${etat.reste !== null ? etat.reste + ' s' : ''}` })));
+  } else if (resultat) {
+    const g = resultat.gagnants;
+    vue.append(el('div', { class: 'carte' }, el('h2', { text: g.length ? '🏆 ' + g.map(k => nomJ(contribs[k].auteur)).join(' et ') + ' !' : 'Personne n’a voté' }),
+      el('p', { class: 'doux', text: g.length ? 'Le meilleur moment de cet album : distribue tes gorgées.' : 'Pas de gagnant pour cet album.' })));
+  }
+
+  const pied = el('div', { class: 'pied' });
+  if (suisHote() && phase !== 'vote_album') {
+    const dernier = r.album + 1 >= r.nb_albums;
+    const texte = phase === 'resultat_album' ? (dernier ? 'Vote final' : 'Album suivant')
+      : r.montre < r.longueur ? 'Suivant' : 'Passer au vote';
+    pied.append(el('div', { class: 'commandes' },
+      el('button', { class: 'principal', text: texte, onclick: () => envoyer({ type: 'td_suivant' }) }),
+      el('button', { class: 'petit', text: r.auto ? '⏸ Manuel' : '▶ Auto', onclick: () => envoyer({ type: 'td_auto', actif: !r.auto }) })));
+  } else if (phase !== 'vote_album') {
+    vue.append(el('p', { class: 'pale', text: `${nomJ(etat.hote)} fait défiler.` }));
+  }
+  const barre = barreReactions();
+  if (barre) pied.append(barre);
+  vue.append(pied);
+  const derniere = liste.lastElementChild;
+  if (derniere && phase === 'revelation') requestAnimationFrame(() => derniere.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+}
+
+// --- Vote final et fin de partie ---
+function ecranVoteFinal() {
+  const nb = etat.a_vote.filter(Boolean).length;
+  vue.append(el('div', { class: 'carte' },
+    el('h2', { text: '🤔 Le dessin le plus mal compris ?' }),
+    el('p', { class: 'doux', text: joue() ? 'Celui qui a le plus fait dérailler la chaîne (pas le tien). Son auteur boit.' : 'Les joueurs votent.' }),
+    el('p', { class: 'pale', text: `${nb} vote${nb > 1 ? 's' : ''} · ${etat.reste !== null ? etat.reste + ' s' : ''}` })));
+  if (!galerie) { vue.append(el('p', { class: 'pale', text: 'Chargement des dessins…' })); return; }
+  const grille = el('div', { class: 'galerie' });
+  for (const [a, k] of etat.candidats) {
+    const c = galerie[a][k];
+    const peut = joue() && c.auteur !== MOI;
+    const choisi = monVote && monVote[0] === a && monVote[1] === k;
+    grille.append(carteContribution(c, { votable: peut, monVote: choisi,
+      onclick: peut ? () => { monVote = [a, k]; envoyer({ type: 'td_voter', album: a, cible: k }); rendre(true); } : null }));
+  }
+  vue.append(grille);
+  const barre = barreReactions();
+  if (barre) vue.append(el('div', { class: 'pied' }, barre));
+}
+
+function ecranFin() {
+  const f = etat.final || {};
+  const n = etat.joueurs.length;
+  vue.append(el('div', { class: 'carte attente' }, el('div', { class: 'gros', text: '🎉' }), el('h2', { text: 'Fin de la partie' })));
+  if (galerie) {
+    const podium = el('div', { class: 'carte podium' });
+    if ((f.meilleurs || []).length) {
+      podium.append(el('h2', { text: `🏆 Meilleur moment de la partie (${f.voix_meilleurs} voix)` }));
+      f.meilleurs.forEach(([a, k]) => podium.append(carteContribution(galerie[a][k], { gagnant: true })));
+    }
+    if ((f.mal_compris || []).length) {
+      podium.append(el('h2', { text: '🤔 Le plus mal compris', style: 'margin-top:14px' }));
+      f.mal_compris.forEach(([a, k]) => {
+        const avant = galerie[a][k - 1];
+        if (avant && avant.type === 'texte') podium.append(el('p', { class: 'pale', text: 'Il fallait dessiner : « ' + avant.contenu + ' »' }));
+        else if (avant) podium.append(el('p', { class: 'pale', text: 'Il fallait copier :' }), carteContribution(avant));
+        podium.append(carteContribution(galerie[a][k]));
+      });
+    }
+    if (podium.childNodes.length) vue.append(podium);
+  }
+  const tbody = el('tbody');
+  for (let i = 0; i < n; i++) {
+    tbody.append(el('tr', null, el('td', { text: nomJ(i) }),
+      el('td', { class: 'n', text: String(etat.gorgees.boit[i]) }),
+      el('td', { class: 'n', text: String(etat.gorgees.distribue[i]) }),
+      el('td', { class: 'n', text: String((f.retards || [])[i] || 0) })));
+  }
+  vue.append(el('div', { class: 'carte' }, el('h2', { text: '🍺 Gorgées de la partie' }),
+    el('table', { class: 'gorgees' }, el('thead', null, el('tr', null, el('th', { text: 'Joueur' }), el('th', { text: 'Bues', style: 'text-align:right' }),
+      el('th', { text: 'Distribuées', style: 'text-align:right' }), el('th', { text: 'Retards', style: 'text-align:right' }))), tbody)));
+  if (galerie && (etat.resultats || []).length && etat.mode !== 'knockoff') {
+    const albums = el('div', { class: 'carte' }, el('h2', { text: '📚 Les albums' }));
+    etat.resultats.forEach(r => {
+      const al = galerie[r.album];
+      albums.append(el('p', { class: 'doux' },
+        el('b', { text: `« ${al[0].contenu} »` }), ' → « ' + (al.filter(c => c.type === 'texte').slice(-1)[0] || {}).contenu + ' »'));
+    });
+    vue.append(albums);
+  }
+  vue.append(el('div', { class: 'commandes' },
+    el('button', { class: 'principal', text: 'Rejouer', onclick: () => Soiree.lancer(JEU, o => envoyer({ type: 'td_demarrer', mode: etat.mode,
+      vitesse: etat.vitesse, source: etat.source, etapes: reglages.etapes, ...o })) }),
+    el('button', { text: 'Tous les jeux', onclick: () => { location.href = 'index.html'; } })));
+}
+
+// =====================================================================
+// CONNEXION (même mécanique que les autres jeux : battement toutes les 5 s,
+// reconnexion automatique, jeton pour retrouver sa place)
+// =====================================================================
+let lienActif = false, tentatives = 0, minuteurLien = null, dernierSignal = 0, cacheeDepuis = 0;
+
+function seConnecter() {
+  Soiree.memoriser(codeSalon, serveurChoisi);
+  const s = lireLocal('telephone.session', null);
+  if (!monJeton && s && s.code === codeSalon && s.nom === monNom) monJeton = s.jeton;
+  clearTimeout(minuteurLien); minuteurLien = null;
+  lienActif = true;
+  let url = SERVEURS[serveurChoisi].ws + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom) + '?bat=1&page=' + JEU;
+  if (monJeton) url += '&jeton=' + encodeURIComponent(monJeton);
+  const socket = new WebSocket(url);
+  ws = socket;
+  dernierSignal = Date.now();
+  socket.onopen = () => {
+    if (ws !== socket) return;
+    if (tentatives > 0) rappel.textContent = 'Reconnecté.';
+    tentatives = 0;
+    dernierSignal = Date.now();
+    Soiree.verifierJeuEnCours(JEU);
+    rendre(true);
+  };
+  socket.onmessage = e => {
+    if (ws !== socket) return;
+    dernierSignal = Date.now();
+    let msg; try { msg = JSON.parse(e.data); } catch (err) { return; }
+    if (msg.type === 'pong') return;
+    if (Soiree.traiterMessage(msg, JEU)) return;
+    if (msg.type === 'remplace') { lienActif = false; ecranRemplace(); return; }
+    recevoir(msg);
+  };
+  socket.onclose = () => { if (ws === socket && lienActif) reconnecterPlusTard(); };
+}
+
+function reconnecterPlusTard() {
+  if (!lienActif || minuteurLien) return;
+  tentatives++;
+  if (tentatives > 14) { lienActif = false; ecranDeconnecte(); return; }
+  rappel.textContent = 'Connexion perdue, reconnexion…';
+  minuteurLien = setTimeout(() => { minuteurLien = null; if (lienActif) seConnecter(); }, Math.min(1000 * tentatives, 5000));
+}
+
+function verifierLien() {
+  if (!lienActif) return;
+  const absence = cacheeDepuis ? Date.now() - cacheeDepuis : 0;
+  cacheeDepuis = 0;
+  if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+    clearTimeout(minuteurLien); minuteurLien = null; tentatives = 0; seConnecter();
+  } else if (ws.readyState === WebSocket.OPEN && absence > 2000) {
+    try { ws.send('{"type":"ping"}'); ws.send('{"type":"resync"}'); } catch (e) { /* elle se fermera */ }
+  }
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) cacheeDepuis = Date.now(); else verifierLien(); });
+window.addEventListener('pageshow', verifierLien);
+window.addEventListener('online', verifierLien);
+setInterval(() => {
+  if (!lienActif || !ws || ws.readyState !== WebSocket.OPEN) return;
+  try { ws.send('{"type":"ping"}'); } catch (e) { /* elle se fermera */ }
+  if (!document.hidden && Date.now() - dernierSignal > 15000) seConnecter();
+}, 5000);
+
+function ecranRemplace() {
+  ecranCourant = 'remplace';
+  vue.replaceChildren(el('div', { class: 'carte attente' },
+    el('div', { class: 'gros', text: '📱' }), el('h2', { text: 'Tu joues sur un autre écran' }),
+    el('p', { class: 'doux', text: 'Ta place a été reprise depuis un autre onglet ou téléphone, avec le même prénom.' }),
+    el('button', { class: 'principal large', text: 'Reprendre ici', onclick: () => { tentatives = 0; seConnecter(); } })));
+}
+function ecranDeconnecte() {
+  ecranCourant = 'deconnecte';
+  vue.replaceChildren(el('div', { class: 'carte attente' },
+    el('div', { class: 'gros', text: '📡' }), el('h2', { text: 'Connexion perdue' }),
+    el('p', { class: 'doux', text: 'Ta place est gardée ; en attendant, la partie avance sans toi.' }),
+    el('button', { class: 'principal large', text: 'Reconnecter', onclick: () => { tentatives = 0; seConnecter(); } })));
+}
+
+// =====================================================================
+// ENTRÉE : par le lien de la table, par la soirée en cours, ou par un code
+// =====================================================================
+function lireNomChamp() {
+  const champ = $('#prenom');
+  const nom = Soiree.definirNom(champ ? champ.value : '');
+  if (!nom) { rappel.textContent = 'Entre ton prénom.'; return false; }
+  monNom = nom;
+  return true;
+}
+
+async function rejoindre(code) {
+  if (!lireNomChamp()) return;
+  code = String(code || '').trim().toUpperCase();
+  if (!Soiree.estTable(code)) { rappel.textContent = 'Le code fait 4 lettres.'; return; }
+  rappel.textContent = 'Connexion au serveur…';
+  try {
+    const info = await Soiree.info(code, serveurChoisi);
+    if (!info.existe) { rappel.textContent = 'Table introuvable.'; return; }
+  } catch (e) { rappel.textContent = 'Serveur injoignable (il dort peut-être : réessaie dans 30 s).'; return; }
+  codeSalon = code;
+  rappel.textContent = '';
+  seConnecter();
+}
+
+async function creer() {
+  if (!lireNomChamp()) return;
+  rappel.textContent = 'Connexion au serveur…';
+  try {
+    const rep = await fetch(Soiree.http(serveurChoisi) + '/creer-salon');
+    codeSalon = (await rep.json()).code;
+    rappel.textContent = '';
+    seConnecter();
+  } catch (e) { rappel.textContent = 'Serveur injoignable (il dort peut-être : réessaie dans 30 s).'; }
+}
+
+function ecranEntree(codePropose) {
+  ecranCourant = 'entree';
+  const prenom = el('input', { type: 'text', id: 'prenom', placeholder: 'Ton prénom', maxlength: 16, autocomplete: 'given-name' });
+  prenom.value = monNom || '';
+  const code = el('input', { type: 'text', id: 'code', placeholder: 'CODE', maxlength: 6, autocomplete: 'off', style: 'text-transform:uppercase;flex:1' });
+  if (codePropose) code.value = codePropose;
+  vue.replaceChildren(el('div', { class: 'carte' },
+    el('h2', { text: 'Rejoindre la table' }),
+    el('p', { class: 'doux', text: 'On écrit, on dessine, on devine… et on rit à la révélation. De 3 à 8 joueurs, 10 à 20 minutes.' }),
+    prenom,
+    el('div', { class: 'ligne' }, code, el('button', { class: 'principal', text: 'Rejoindre', onclick: () => rejoindre(code.value) })),
+    codePropose ? null : el('div', { class: 'ligne' }, el('button', { class: 'large', text: 'Créer une table', onclick: creer })),
+    el('p', { class: 'pale', text: 'Le serveur peut mettre 30 s à se réveiller.' })));
+}
+
+(function demarrer() {
+  const dansUrl = new URLSearchParams(location.search).get('salon');
+  const soiree = Soiree.actuelle();
+  const code = dansUrl && Soiree.estTable(dansUrl.toUpperCase()) ? dansUrl.toUpperCase() : soiree && soiree.table;
+  if (soiree && soiree.serveur && !dansUrl) serveurChoisi = soiree.serveur;
+  if (code && monNom) { codeSalon = code; seConnecter(); rendre(true); }
+  else ecranEntree(code || '');
+})();
+</script>
+<script>
+  // Appli installable (PWA) : voir service-worker.js
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(() => {});
+</script>
+</body>
+</html>
