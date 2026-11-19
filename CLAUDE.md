@@ -38,6 +38,13 @@ demande confirmation (avec depuis quand et avec qui, via `/salon/{code}`) et n'a
 vérification échoue (réseau), il envoie sans ce drapeau et le serveur refuse de remplacer.
 Chaque page doit donc transmettre les options de `Soiree.lancer` à son message de démarrage.
 
+## Mode test (pseudo `Admin01`)
+`Soiree.modeTest(jeu)` (appelé par `verifierJeuEnCours`, et par l'Enquête et le Bingo) ajoute
+l'onglet 🧪 : des « joueurs test » qui sont la vraie page du jeu dans un cadre, avec
+`?siege_test=<prénom>`. Dans un tel cadre, `soiree.js` donne ce prénom et préfixe les clés du
+localStorage (`siege:<prénom>:`) pour ne pas écraser les sessions du vrai joueur.
+Test : `node tests/mode_test_navigateur.js` (dépôt serveur).
+
 ## Les jeux en parallèle (onglet « En parallèle » de l'accueil)
 Enquête (`enquete.html`) et Bingo de soirée (`bingo.html`) tournent pendant toute la soirée, à côté
 des jeux de table. Ils parlent au serveur par `/ws-soiree` (le Bingo avec `?page=bingo`), jamais par
