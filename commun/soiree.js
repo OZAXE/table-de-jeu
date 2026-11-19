@@ -15,6 +15,51 @@
 (function () {
   const CLE_NOM = 'shield.nom';
   const CLE_SOIREE = 'shield.soiree';
+
+  // ---------------- Mode test : les sièges ----------------
+  // Avec un pseudo de test (voir PSEUDOS_TEST), on peut jouer seul : chaque
+  // « joueur test » est une vraie page du jeu, ouverte dans un cadre caché
+  // avec ?siege_test=<prénom>. Ici, une telle page se donne ce prénom et
+  // range ses sessions à part : le localStorage est commun à toutes les pages
+  // du site, sans ça les joueurs test écraseraient la session du vrai joueur
+  // (et entre eux). La soirée (shield.soiree) reste lue chez le vrai joueur.
+  const SIEGE = (() => {
+    try {
+      const n = new URLSearchParams(location.search).get('siege_test');
+      return n && window.parent !== window ? String(n).replace(/\s+/g, ' ').trim().slice(0, 16) : null;
+    } catch (e) { return null; }
+  })();
+  if (SIEGE) {
+    try {
+      const pre = 'siege:' + SIEGE + ':';
+      const S = Storage.prototype, lireS = S.getItem, ecrireS = S.setItem, effacerS = S.removeItem;
+      const local = (o) => { try { return o === window.localStorage; } catch (e) { return false; } };
+      S.getItem = function (k) {
+        if (!local(this)) return lireS.call(this, k);
+        if (k === CLE_NOM) return JSON.stringify(SIEGE);
+        // Plusieurs scènes 3D sur un seul appareil : les joueurs test sont
+        // en version légère, et ne proposent pas de l'activer.
+        if (k === 'shield.leger') return 'true';
+        if (k === 'shield.leger.propose') return '1';
+        const v = lireS.call(this, pre + k);
+        // Les réglages de la soirée (shield.*) viennent du vrai joueur.
+        return v === null && /^shield\./.test(k) ? lireS.call(this, k) : v;
+      };
+      S.setItem = function (k, v) { return ecrireS.call(this, local(this) ? pre + k : k, v); };
+      S.removeItem = function (k) { return effacerS.call(this, local(this) ? pre + k : k); };
+    } catch (e) { /* pas de stockage : le prénom vient quand même de l'adresse */ }
+    // Un joueur test qu'on ne regarde pas garde la taille de l'écran (une
+    // scène 3D née dans un cadre de 0 px calcule sa caméra avec 0/0 et reste
+    // noire), mais ne dessine plus que 2 images par seconde.
+    try {
+      const raf = window.requestAnimationFrame.bind(window);
+      window.requestAnimationFrame = function (f) {
+        let cache = false;
+        try { cache = !!window.frameElement && window.frameElement.dataset.cache === '1'; } catch (e) { /* tant pis */ }
+        return cache ? setTimeout(() => raf(f), 500) : raf(f);
+      };
+    } catch (e) { /* tant pis */ }
+  }
   // Une soirée oubliée de la veille ne doit pas renvoyer dans un vieux salon.
   const DUREE_SOIREE = 18 * 3600 * 1000;
 
@@ -403,7 +448,9 @@
     },
     lienJeu(jeu, code) {
       const page = JEUX[jeu] ? JEUX[jeu].page : jeu;
-      return code ? page + '?salon=' + encodeURIComponent(code) : page;
+      const lien = code ? page + '?salon=' + encodeURIComponent(code) : page;
+      // Un joueur test qui suit la table d'un jeu à l'autre garde son prénom.
+      return SIEGE ? lien + (code ? '&' : '?') + 'siege_test=' + encodeURIComponent(SIEGE) : lien;
     },
 
     // --- Dans une page de jeu ---
@@ -437,6 +484,7 @@
     async verifierJeuEnCours(jeuPage) {
       jeuDeLaPage = jeuPage;
       Soiree.ongletsParalleles();
+      Soiree.modeTest(jeuPage);
       const s = Soiree.actuelle();
       if (!s) return;
       try {
@@ -582,6 +630,7 @@
     });
   }
   Soiree.ongletsParalleles = function () {
+    if (SIEGE) return;      // un joueur test n'a pas besoin des onglets (le vrai joueur les a)
     majOngletsParalleles();
     if (suiviParalleles) return;
     suiviParalleles = setInterval(() => { if (!document.hidden) majOngletsParalleles(); }, 30000);
@@ -590,6 +639,170 @@
   // Anciens noms, gardés pour les pages qui les appelleraient encore.
   Soiree.boutonEnquete = Soiree.ongletsParalleles;
   Soiree.boutonBingo = Soiree.ongletsParalleles;
+
+
+  // =====================================================================
+  // MODE TEST (jouer seul pour essayer un jeu)
+  //
+  // Réservé aux pseudos de PSEUDOS_TEST. Un onglet 🧪 apparaît sur le bord
+  // gauche : il ajoute des « joueurs test » (Bot 1, Bot 2...). Chacun est la
+  // vraie page du jeu, connectée au serveur sous son prénom comme un vrai
+  // téléphone, dans un cadre de cette page. On touche son nom en haut pour
+  // jouer à sa place, « Moi » pour revenir à son propre jeu. Rien à changer
+  // côté serveur : pour lui, ce sont des joueurs comme les autres.
+  // Les joueurs test sont gardés pour l'onglet (sessionStorage) : quand la
+  // table change de jeu, la nouvelle page les recrée et ils la rejoignent.
+  // =====================================================================
+  const PSEUDOS_TEST = ['admin01'];
+  const CLE_TEST = 'shield.test';
+  const SIEGES_MAX = 7;
+  const PAGES_PARALLELES = { enquete: 'enquete.html', bingo: 'bingo.html' };
+  function estPseudoTest(nom) { return PSEUDOS_TEST.includes(propre(nom).toLowerCase()); }
+  function lireTest() { try { return JSON.parse(sessionStorage.getItem(CLE_TEST) || 'null'); } catch (e) { return null; } }
+  function ecrireTest(v) { try { sessionStorage.setItem(CLE_TEST, JSON.stringify(v)); } catch (e) { /* tant pis */ } }
+
+  let test = null;      // { jeu, table, noms, cadres: {nom: iframe}, vue }
+  function lienSiege(nom) {
+    const base = PAGES_PARALLELES[test.jeu] ? PAGES_PARALLELES[test.jeu] + '?' : Soiree.lienJeu(test.jeu, test.table) + '&';
+    return base + 'siege_test=' + encodeURIComponent(nom);
+  }
+  function sauverTest() { ecrireTest({ table: test.table, noms: test.noms }); }
+  function creerCadre(nom) {
+    const c = document.createElement('iframe');
+    c.title = 'Joueur test ' + nom;
+    c.dataset.siege = nom;
+    c.src = lienSiege(nom);
+    c.dataset.cache = '1';
+    c.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;background:#000;visibility:hidden;pointer-events:none';
+    test.zone.appendChild(c);
+    test.cadres[nom] = c;
+  }
+  function ajouterSiege() {
+    if (test.noms.length >= SIEGES_MAX) return;
+    let i = 1;
+    while (test.noms.includes('Bot ' + i)) i++;
+    const nom = 'Bot ' + i;
+    test.noms.push(nom);
+    sauverTest();
+    creerCadre(nom);
+    dessinerTest();
+  }
+  function retirerSiege(nom) {
+    const c = test.cadres[nom];
+    if (c) c.remove();       // sa connexion se ferme : le serveur le voit partir
+    delete test.cadres[nom];
+    test.noms = test.noms.filter(n => n !== nom);
+    sauverTest();
+    if (test.vue === nom) test.vue = null;
+    dessinerTest();
+  }
+  function voirSiege(nom) {
+    test.vue = nom;
+    if (nom !== 'moi') test.dernier = nom;     // l'onglet 🧪 y ramènera
+    dessinerTest();
+  }
+  function puce(texte, action, actif, titre) {
+    // Pas un <button> : les thèmes des jeux imposent leur style à tous les
+    // boutons (avec !important), la barre de test doit rester lisible partout.
+    const b = document.createElement('div');
+    b.setAttribute('role', 'button');
+    b.tabIndex = 0;
+    b.textContent = texte;
+    if (titre) b.title = titre;
+    b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); action(); } });
+    b.style.cssText = 'all:initial;box-sizing:border-box;flex:0 0 auto;white-space:nowrap;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:7px 12px;cursor:pointer;' +
+      'font:700 14px Outfit, system-ui, sans-serif;' +
+      (actif ? 'background:#a7f3d0;color:#052e1c' : 'background:rgba(255,255,255,.08);color:#ecfdf5');
+    b.addEventListener('click', action);
+    return b;
+  }
+  function dessinerTest() {
+    const { voile, barre, zone, aide } = test;
+    // Le vrai joueur (« Moi ») : le calque se cache, la page du jeu reste dessous.
+    // (caché sans display:none : les cadres des joueurs test gardent leur taille)
+    const cache = test.vue === 'moi';
+    voile.style.visibility = cache ? 'hidden' : 'visible';
+    voile.style.pointerEvents = cache ? 'none' : 'auto';
+    voile.setAttribute('aria-hidden', cache ? 'true' : 'false');
+    barre.textContent = '';
+    const etiquette = document.createElement('span');
+    etiquette.textContent = '🧪 Test';
+    etiquette.style.cssText = 'all:initial;flex:0 0 auto;white-space:nowrap;font:800 14px Outfit, system-ui, sans-serif;color:#a7f3d0;margin-right:2px';
+    barre.appendChild(etiquette);
+    barre.appendChild(puce('Moi', () => voirSiege('moi'), false, 'Revenir à ta propre partie'));
+    test.noms.forEach(nom => barre.appendChild(puce(nom, () => voirSiege(nom), test.vue === nom, 'Jouer à la place de ' + nom)));
+    if (test.noms.length < SIEGES_MAX) barre.appendChild(puce('＋ Bot', ajouterSiege, false, 'Ajouter un joueur test'));
+    if (test.vue && test.vue !== 'moi') {
+      const nom = test.vue;
+      barre.appendChild(puce('Retirer ' + nom, () => retirerSiege(nom), false, 'Faire partir ce joueur test'));
+    }
+    Object.entries(test.cadres).forEach(([nom, c]) => {
+      const vu = nom === test.vue;
+      c.dataset.cache = vu ? '0' : '1';
+      // Seul le cadre regardé est visible ; les autres héritent de « hidden ».
+      c.style.visibility = vu ? 'inherit' : 'hidden';
+      c.style.pointerEvents = vu ? 'auto' : 'none';
+      c.style.zIndex = vu ? '1' : '0';
+    });
+    aide.style.display = test.vue && test.cadres[test.vue] ? 'none' : 'block';
+  }
+  function construireTest() {
+    const voile = document.createElement('div');
+    voile.id = 'mode-test';
+    voile.style.cssText = 'position:fixed;inset:0;z-index:99996;background:#02120b;display:flex;flex-direction:column;visibility:hidden;pointer-events:none';
+    const barre = document.createElement('div');
+    barre.style.cssText = 'flex:0 0 auto;display:flex;gap:6px;align-items:center;overflow-x:auto;' +
+      'padding:max(8px, env(safe-area-inset-top)) 10px 8px;background:#052e1c;border-bottom:1px solid rgba(167,243,208,.35)';
+    const zone = document.createElement('div');
+    zone.style.cssText = 'flex:1;display:flex;flex-direction:column;min-height:0;position:relative;overflow:hidden';
+    const aide = document.createElement('div');
+    aide.style.cssText = 'margin:auto;max-width:420px;padding:20px;color:#ecfdf5;font:500 15px/1.5 Outfit, system-ui, sans-serif;text-align:center';
+    aide.innerHTML = '<div style="font-size:42px">🧪</div><b style="font-size:19px">Mode test</b><br>' +
+      'Ajoute des joueurs test avec <b>＋ Bot</b> : chacun rejoint ta table comme un vrai téléphone. ' +
+      'Touche son nom pour jouer à sa place, <b>Moi</b> pour revenir à ta partie (c\'est là que tu lances le jeu).';
+    zone.appendChild(aide);
+    voile.append(barre, zone);
+    document.body.appendChild(voile);
+    const onglet = document.createElement('div');
+    onglet.id = 'onglet-test';
+    onglet.setAttribute('role', 'button');
+    onglet.tabIndex = 0;
+    onglet.setAttribute('aria-label', 'Mode test : joueurs test');
+    onglet.textContent = '🧪';
+    onglet.style.cssText = 'all:initial;position:fixed;left:0;top:calc(42% - 52px);z-index:99990;border:1px solid rgba(167,243,208,.55);' +
+      'border-left:0;border-radius:0 14px 14px 0;padding:10px 9px 10px 7px;font-size:20px;line-height:1;' +
+      'background:rgba(5,46,28,.9);color:#ecfdf5;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.4)';
+    const ouvrir = () => {
+      // Revient sur le dernier joueur test regardé, ou sur l'aide s'il n'y en a pas.
+      if (test.vue === 'moi') test.vue = test.dernier && test.cadres[test.dernier] ? test.dernier : null;
+      dessinerTest();
+    };
+    onglet.addEventListener('click', ouvrir);
+    onglet.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ouvrir(); } });
+    document.body.appendChild(onglet);
+    return { voile, barre, zone, aide, onglet };
+  }
+  // Appelé par chaque page de jeu à sa connexion (via verifierJeuEnCours),
+  // et par l'Enquête et le Bingo. Ne fait rien sans pseudo de test.
+  Soiree.modeTest = function (jeuPage) {
+    if (SIEGE || window.top !== window || !estPseudoTest(Soiree.nom())) return;
+    if (!JEUX[jeuPage] && !PAGES_PARALLELES[jeuPage]) return;
+    const s = Soiree.actuelle();
+    if (!s) return;
+    if (test) return;       // déjà en place (reconnexion de la page)
+    const garde = lireTest();
+    test = { jeu: jeuPage, table: s.table, noms: [], cadres: {}, vue: 'moi', dernier: null };
+    Object.assign(test, construireTest());
+    // Même table qu'avant (changement de jeu) : les joueurs test suivent.
+    if (garde && garde.table === s.table && Array.isArray(garde.noms)) {
+      test.noms = garde.noms.filter(n => typeof n === 'string').slice(0, SIEGES_MAX);
+      test.noms.forEach(creerCadre);
+    }
+    sauverTest();
+    dessinerTest();
+  };
+  Soiree.estPseudoTest = estPseudoTest;
+  Soiree.siegeTest = SIEGE;
 
   Soiree.confirmer = confirmer;
   Soiree.animerResultat = animerResultat;

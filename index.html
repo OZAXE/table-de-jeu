@@ -649,7 +649,14 @@
     const erreur = document.getElementById('soiree-erreur');
 
     champPrenom.value = Soiree.nom();
-    champPrenom.addEventListener('input', () => Soiree.definirNom(champPrenom.value));
+    // Pseudo de test : un repère sous le champ (l'onglet 🧪 apparaîtra dans les jeux).
+    const repereTest = document.createElement('div');
+    repereTest.textContent = '🧪 Mode test activé : dans chaque jeu, l\'onglet 🧪 ajoute des joueurs test.';
+    repereTest.style.cssText = 'margin-top:6px;font-size:13px;font-weight:600;color:#6ee7b7';
+    champPrenom.parentElement.insertAdjacentElement('afterend', repereTest);
+    const majRepereTest = () => { repereTest.style.display = Soiree.estPseudoTest(champPrenom.value) ? 'block' : 'none'; };
+    majRepereTest();
+    champPrenom.addEventListener('input', () => { Soiree.definirNom(champPrenom.value); majRepereTest(); });
 
     function prenomOk() {
       if (Soiree.definirNom(champPrenom.value)) return true;

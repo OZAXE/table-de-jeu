@@ -237,7 +237,7 @@
     const socket = new WebSocket(url);
     ws = socket;
     dernierSignal = Date.now();
-    socket.onopen = () => { if (ws !== socket) return; tentatives = 0; elErreur.textContent = ''; };
+    socket.onopen = () => { if (ws !== socket) return; tentatives = 0; elErreur.textContent = ''; if (Soiree.modeTest) Soiree.modeTest('bingo'); };
     socket.onmessage = (e) => { if (ws !== socket) return; dernierSignal = Date.now(); recevoir(JSON.parse(e.data), socket); };
     socket.onclose = () => { if (ws === socket) reconnecter(); };
   }
