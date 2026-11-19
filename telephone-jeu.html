@@ -228,7 +228,8 @@ function el(tag, attrs, ...enfants) {
     else if (k === 'text') e.textContent = v;
     else if (v !== undefined && v !== null && v !== false) e.setAttribute(k, v === true ? '' : v);
   }
-  enfants.flat().forEach(c => { if (c != null) e.append(c.nodeType ? c : document.createTextNode(c)); });
+  // flat(Infinity) : un groupe de réglages (tableau) peut être rangé dans un autre tableau.
+  enfants.flat(Infinity).forEach(c => { if (c != null) e.append(c.nodeType ? c : document.createTextNode(c)); });
   return e;
 }
 function nomJ(i) {
