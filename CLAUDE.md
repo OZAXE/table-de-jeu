@@ -38,6 +38,11 @@ demande confirmation (avec depuis quand et avec qui, via `/salon/{code}`) et n'a
 vérification échoue (réseau), il envoie sans ce drapeau et le serveur refuse de remplacer.
 Chaque page doit donc transmettre les options de `Soiree.lancer` à son message de démarrage.
 
+Serveur endormi (plan gratuit Render, 30 à 60 s de réveil) : `soiree.js` sonne le serveur
+(`GET /`) dès l'ouverture de chaque page, et les appels de l'accueil et de création de salon
+passent par `Soiree.appelReveil(url, surAttente)`, qui réessaie jusqu'à 90 s en affichant
+`Soiree.texteReveil(secondes)`. Un pingueur cron-job.org garde aussi le serveur éveillé.
+
 ## Mode test (pseudo `Admin01`)
 `Soiree.modeTest(jeu)` (appelé par `verifierJeuEnCours`, et par l'Enquête et le Bingo) ajoute
 l'onglet 🧪 : des « joueurs test » qui sont la vraie page du jeu dans un cadre, avec

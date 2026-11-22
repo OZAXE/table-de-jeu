@@ -2172,7 +2172,7 @@ function panneauEnLigne() {
   l4.style.marginTop = '14px';
   l4.appendChild(boutonServeur());
   p.appendChild(l4);
-  const note = el('div', 'note', "Le serveur Render s'endort : la première connexion peut prendre 30 s.");
+  const note = el('div', 'note', "Le serveur peut mettre une minute à se réveiller : la page patiente toute seule.");
   p.appendChild(note);
   return p;
 }
@@ -2193,12 +2193,12 @@ async function creerSalon() {
   if (!lireNom()) return;
   afficherErreur('Connexion au serveur...');
   try {
-    const rep = await fetch(SERVEURS[serveurChoisi].http + '/creer-salon');
+    const rep = await Soiree.appelReveil(SERVEURS[serveurChoisi].http + '/creer-salon', (s) => afficherErreur(Soiree.texteReveil(s)));
     codeSalon = (await rep.json()).code;
     estCreateur = true;
     seConnecter();
   } catch (e) {
-    afficherErreur("Serveur injoignable. S'il dort, réessaie dans 30 s.");
+    afficherErreur('Serveur injoignable : vérifie ta connexion et réessaie.');
   }
 }
 
