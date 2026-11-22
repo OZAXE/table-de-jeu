@@ -231,9 +231,9 @@
 
     <h3>Trois plateaux</h3>
     <table>
-      <tr><td>🌞 La Terrasse</td><td><span class="accent">Facile</span> : un raccourci, peu de pièges, pas de vol. On boit peu.</td></tr>
-      <tr><td>🍺 Le Pub</td><td><span class="accent">Moyen</span> : deux embranchements, duels, vols de pièces, échanges de place, une surprise du patron tous les 3 tours.</td></tr>
-      <tr><td>💀 La Cave</td><td><span class="accent">Difficile</span> : trois chemins, deux trappes, un videur qui rôde, des capsules qui se volent. Tout peut basculer au dernier tour.</td></tr>
+      <tr><td>🌞 La Terrasse</td><td><span class="accent">Facile</span>, un port au soleil : un raccourci, peu de pièges, pas de vol. On boit peu.</td></tr>
+      <tr><td>🍺 Le Pub</td><td><span class="accent">Moyen</span>, la ville de nuit : deux embranchements, duels, vols de pièces, échanges de place, une surprise du patron tous les 3 tours.</td></tr>
+      <tr><td>💀 La Cave</td><td><span class="accent">Difficile</span>, des caves volcaniques : trois chemins, deux trappes, un videur qui rôde, des capsules qui se volent. Tout peut basculer au dernier tour.</td></tr>
     </table>
 
     <h3>Un tour</h3>
@@ -295,6 +295,7 @@ import * as THREE from 'three';
 import { lisser as lisserScene, creerSousVerre, POLICE, quandPoliceChargee } from './da/bar-moderne.js';
 import { modeLeger, optionsRendu, reglerRendu, surveillerFluidite } from './da/qualite.js';
 import { suivreZoneLibre } from './da/cadrage.js';
+import { creerMonde } from './commun/mondes3d.js';
 import {
   FOND as FOND_SALLE, preparerAmbianceTournee, creerTableTournee, creerDecorTournee, creerTabouretTournee,
   dessinerEtiquetteTournee, quandPolicesTournee,
@@ -342,8 +343,10 @@ scene.fog = new THREE.FogExp2(FOND_SALLE, 0.07);
 const zone = suivreZoneLibre(() => { majCadrageTable(camera); camObjectifPos = CAM_POS.clone(); });
 
 const CAM_CIBLE = new THREE.Vector3(0, 0.35, 0);
-const LARGEUR_VUE = 2.3;
-const HAUTEUR_VUE = 2.1;
+// Table de bar (salle d'attente) ou monde 3D (pendant la partie) : le monde
+// règle ces deux valeurs à sa taille.
+let LARGEUR_VUE = 2.3;
+let HAUTEUR_VUE = 2.1;
 const CAM_POS = new THREE.Vector3(0, 3.0, 5.0);
 
 function distanceCadrage(cam) {
@@ -356,8 +359,10 @@ function majCadrageTable(cam) {
   const d = distanceCadrage(cam);
   const dir = zone.direction(0.56);
   CAM_POS.copy(CAM_CIBLE).addScaledVector(dir, d);
-  if (scene.fog) scene.fog.density = Math.min(FOG_DENSITE_MAX, 0.5 / d);
+  if (scene.fog) scene.fog.density = monde ? Math.min(0.03, 0.12 / d) : Math.min(FOG_DENSITE_MAX, 0.5 / d);
 }
+let monde = null;   // le monde 3D du plateau en cours (commun/mondes3d.js)
+const ECHELLE_PION_MONDE = 1.5;   // dans le décor, les pions grandissent pour rester visibles
 
 let camObjectifPos = CAM_POS.clone();
 let camObjectifCible = CAM_CIBLE.clone();
@@ -463,6 +468,48 @@ const MAT_CASE_COTE = new THREE.MeshStandardMaterial({ color: 0x1a1210, roughnes
 const MAT_CHEMIN = new THREE.MeshStandardMaterial({ color: 0xf2d9a8, roughness: 0.8, transparent: true, opacity: 0.55 });
 const MAT_FLECHE = new THREE.MeshBasicMaterial({ color: 0xffc23a });
 let tailleCase = 0.2;
+// Le monde 3D : pendant la partie, la table de bar laisse la place à une île
+// en maquette (plage, canyon du Far West, forteresse sur la lave) que le
+// chemin traverse. Sans carte (salle d'attente, ancien serveur) : la table.
+const hemiMonde = new THREE.HemisphereLight(0xffffff, 0x444444, 0);
+scene.add(hemiMonde);
+const ambianceBar = { fond: scene.background.clone(), lumiere: keyLight.color.clone(), intensite: keyLight.intensity };
+function installerMonde(carte) {
+  if (monde) { scene.remove(monde.groupe); monde.liberer(); monde = null; }
+  const actif = !!(carte && carte.id);
+  if (actif) {
+    monde = creerMonde(THREE, carte.id, carte.cases.map(c => ({ x: c.x * ECHELLE_CARTE, z: c.z * ECHELLE_CARTE, suivants: c.suivants })), { leger: LEGER });
+    scene.add(monde.groupe);
+    const a = monde.ambiance;
+    scene.background = new THREE.Color(a.ciel);
+    scene.fog.color = new THREE.Color(a.brouillard);
+    keyLight.color.set(a.lumiere);
+    keyLight.intensity = a.intensite;
+    keyLight.position.set(1.6, 4.2, 2.0);
+    hemiMonde.color.set(a.hemi[0]); hemiMonde.groundColor.set(a.hemi[1]); hemiMonde.intensity = a.hemi[2];
+    Object.assign(keyLight.shadow.camera, { left: -3.6, right: 3.6, top: 3.6, bottom: -3.6, near: 0.5, far: 12 });
+    keyLight.shadow.camera.updateProjectionMatrix();
+    LARGEUR_VUE = monde.rayon + 0.15;
+    HAUTEUR_VUE = monde.rayon * 0.95;
+  } else {
+    scene.background = ambianceBar.fond.clone();
+    scene.fog.color = ambianceBar.fond.clone();
+    keyLight.color.copy(ambianceBar.lumiere);
+    keyLight.intensity = ambianceBar.intensite;
+    keyLight.position.set(0.8, 3.4, 1.2);
+    hemiMonde.intensity = 0;
+    LARGEUR_VUE = 2.3;
+    HAUTEUR_VUE = 2.1;
+  }
+  table.visible = !actif;
+  decor.decor.visible = !actif;
+  pions.forEach(p => p.scale.setScalar(actif ? ECHELLE_PION_MONDE : 1));
+  sieges.forEach(s => { s.groupe.visible = !actif; });
+  majCadrageTable(camera);
+  camObjectifPos = CAM_POS.clone();
+  camObjectifCible = CAM_CIBLE.clone();
+}
+
 // Le plateau : une carte (cases avec coordonnées et chemins) ou, avec un ancien
 // serveur, l'anneau de cases d'origine.
 function construirePlateau(carte, types) {
@@ -473,6 +520,7 @@ function construirePlateau(carte, types) {
   while (plateauGroupe.children.length) plateauGroupe.remove(plateauGroupe.children[0]);
   const liste = carte ? carte.cases.map(c => c.type) : types;
   nbCases = liste.length;
+  installerMonde(carte);
   if (carte) {
     // La taille des cases suit la distance entre cases voisines.
     let mini = Infinity;
@@ -500,16 +548,19 @@ function construirePlateau(carte, types) {
     return { mesh: m, pos: p, type };
   });
   if (!carte) return;
-  // Les chemins entre les cases, et une flèche à chaque embranchement.
+  // Les chemins entre les cases (le monde 3D a sa propre route), et une
+  // flèche à chaque embranchement.
   carte.cases.forEach(c => {
     c.suivants.forEach(sv => {
       const a = posCase(c.id), b = posCase(sv);
       const d = a.distanceTo(b);
       const l = Math.max(0.001, d - tailleCase * 0.9);
-      const bande = new THREE.Mesh(new THREE.BoxGeometry(tailleCase * 0.22, 0.008, l), MAT_CHEMIN);
-      bande.position.set((a.x + b.x) / 2, 0.006, (a.z + b.z) / 2);
-      bande.rotation.y = Math.atan2(b.x - a.x, b.z - a.z);
-      plateauGroupe.add(bande);
+      if (!monde) {
+        const bande = new THREE.Mesh(new THREE.BoxGeometry(tailleCase * 0.22, 0.008, l), MAT_CHEMIN);
+        bande.position.set((a.x + b.x) / 2, 0.006, (a.z + b.z) / 2);
+        bande.rotation.y = Math.atan2(b.x - a.x, b.z - a.z);
+        plateauGroupe.add(bande);
+      }
       if (c.suivants.length > 1) {
         const f = new THREE.Mesh(new THREE.ConeGeometry(tailleCase * 0.16, tailleCase * 0.3, 3), MAT_FLECHE);
         const u = (tailleCase * 0.75) / Math.max(d, 0.001);
@@ -630,6 +681,7 @@ function creerPions(n) {
     [socle, corps, tete].forEach(x => { x.castShadow = true; });
     g.add(socle, corps, tete);
     g.userData.caseActuelle = 0;
+    g.scale.setScalar(monde ? ECHELLE_PION_MONDE : 1);
     scene.add(g);
     pions.push(g);
   }
@@ -701,7 +753,7 @@ function animerDeplacements(etat, instantane) {
   dep.lignes.forEach(l => {
     const i = l.joueur;
     const debutLigne = t;
-    attendre(debutLigne, () => texteFlottant(pions[i].position.clone().setY(0.1), '🎲 ' + l.de, '', '#ffffff', 0.32));
+    attendre(debutLigne, () => { pionSuivi = i; texteFlottant(pions[i].position.clone().setY(0.1), '🎲 ' + l.de, '', '#ffffff', 0.32); });
     t += 0.45;
     const enRoute = ['depart', 'capsule', 'capsule_ratee', 'fouille', 'videur'];
     l.chemin.forEach((c, k) => {
@@ -741,7 +793,7 @@ function animerDeplacements(etat, instantane) {
     });
     t += 0.2;
   });
-  attendre(t + 0.1, () => { const e = etatCourant || etat; placerPions(e); placerCapsule(e.capsule_case, false); });
+  attendre(t + 0.1, () => { pionSuivi = null; const e = etatCourant || etat; placerPions(e); placerCapsule(e.capsule_case, false); });
   return t + 0.2;
 }
 
@@ -935,6 +987,7 @@ function creerSieges(noms) {
 
     const chaise = creerTabouretTournee(dir, 2.42, -1.2);
     groupe.add(avatar, chope, etiquette, icone, chaise);
+    groupe.visible = !monde;
     scene.add(groupe);
     lisserScene(groupe);
 
@@ -1048,9 +1101,9 @@ let finAnimation = 0;         // les pions avancent : le journal attend la fin
 let toursChoisis = 10;
 // Les trois plateaux (le serveur envoie la carte complète une fois la partie lancée).
 const PLATEAUX = [
-  { id: 'terrasse', nom: 'La Terrasse', icone: '🌞', difficulte: 'Facile', texte: 'Un raccourci, peu de pièges, peu de surprises. On boit peu.' },
-  { id: 'pub', nom: 'Le Pub', icone: '🍺', difficulte: 'Moyen', texte: 'Deux embranchements, des duels, des vols de pièces.' },
-  { id: 'cave', nom: 'La Cave', icone: '💀', difficulte: 'Difficile', texte: 'Trappes, videur, capsules volées : tout peut basculer.' },
+  { id: 'terrasse', nom: 'La Terrasse', icone: '🌞', difficulte: 'Facile', texte: 'Un port au soleil. Un raccourci, peu de pièges, on boit peu.' },
+  { id: 'pub', nom: 'Le Pub', icone: '🍺', difficulte: 'Moyen', texte: 'La ville de nuit : deux embranchements, duels, vols de pièces.' },
+  { id: 'cave', nom: 'La Cave', icone: '💀', difficulte: 'Difficile', texte: 'Caves volcaniques : trappes, videur, capsules volées.' },
 ];
 let plateauChoisi = 'pub';
 const COULEURS_OPTIONS = [0x4af0ff, 0xff4ad2, 0x9cff4a, 0xffa64a];
@@ -1140,6 +1193,7 @@ function appliquerEtat(etat) {
   const mesOptions = etat.phase === 'des' && etat.options ? etat.options[MOI] : null;
   if (mesOptions && etat.choix[MOI] === undefined) marquerCases(mesOptions.map((o, k) => [o.arrivee, COULEURS_OPTIONS[k % COULEURS_OPTIONS.length]]));
   else marquerCases([]);
+  if (etat.phase !== 'deplacement') pionSuivi = null;
   if (etat.phase === 'deplacement' && nouvellePhase) {
     const instantane = !avant || avant.tour !== etat.tour || avant.phase !== 'des';
     const duree = animerDeplacements(etat, instantane);
@@ -2079,6 +2133,8 @@ function demarrerScene(noms) {
 // BOUCLE DE RENDU
 // =====================================================================
 const clock = new THREE.Clock();
+let pionSuivi = null;   // le pion que la caméra suit (monde 3D)
+const camSuivi = { pos: new THREE.Vector3(), cible: new THREE.Vector3() };
 
 function boucle() {
   requestAnimationFrame(boucle);
@@ -2118,9 +2174,20 @@ function boucle() {
     if (f.t >= f.duree) { scene.remove(f.sprite); textesFlottants.splice(i, 1); }
   }
 
-  camera.position.lerp(camObjectifPos, CAM_VITESSE);
-  camCibleActuelle.lerp(camObjectifCible, CAM_VITESSE);
-  decor.animer(t);
+  // Monde 3D : pendant qu'un pion avance, la caméra le suit de près.
+  let suit = false;
+  if (monde) {
+    monde.animer(t, dt);
+    if (pionSuivi !== null && pions[pionSuivi]) {
+      suit = true;
+      const p = pions[pionSuivi].position;
+      camSuivi.cible.set(p.x, 0.05, p.z);
+      camSuivi.pos.copy(camSuivi.cible).addScaledVector(zone.direction(0.62), 2.0);
+    }
+  }
+  camera.position.lerp(suit ? camSuivi.pos : camObjectifPos, suit ? 0.06 : CAM_VITESSE);
+  camCibleActuelle.lerp(suit ? camSuivi.cible : camObjectifCible, suit ? 0.08 : CAM_VITESSE);
+  if (!monde) decor.animer(t);
   // Plus la caméra recule, plus les prénoms grossissent (lisibles sans se toucher).
   const recul = THREE.MathUtils.clamp(camera.position.distanceTo(camCibleActuelle) / 6.2, 1, 1.4);
   sieges.forEach(st => {
@@ -2128,7 +2195,8 @@ function boucle() {
     st.etiquette.scale.set(0.9 * e * recul, 0.225 * e * recul, 1);
   });
   camera.lookAt(camCibleActuelle);
-  zone.appliquer(camera, { rayon: R_TABLE, places: R_SIEGE }, { pos: camObjectifPos, cible: camObjectifCible });
+  if (suit) zone.appliquer(camera, null);
+  else zone.appliquer(camera, monde ? { points: monde.bornes } : { rayon: R_TABLE, places: R_SIEGE }, { pos: camObjectifPos, cible: camObjectifCible });
   renderer.render(scene, camera);
 }
 
