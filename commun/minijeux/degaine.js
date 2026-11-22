@@ -1,6 +1,6 @@
 // Dégaine : touche l'écran dès que « TCHIN ! » s'affiche. 3 manches.
 // Score = somme des temps de réaction en millisecondes (le plus bas gagne).
-// Trop tôt : 1 000 ms pour la manche. Rien au bout de 2 s : 2 000 ms.
+// Trop tôt : 1 000 ms pour la manche (2 faux départs : 1 gorgée). Rien au bout de 2 s : 2 000 ms.
 import { aleatoire, creerToile, boucle, bandeau, texteCentre } from './outils.js';
 
 const MANCHES = 3, TROP_TOT = 1000, TROP_TARD = 2000;
@@ -11,13 +11,13 @@ export function jouer({ hote, graine, duree, rapporter }) {
   const toile = creerToile(hote);
   const { canvas, ctx } = toile;
   const temps = [];
-  let manche = 0, etape = 'attente', debutEtape = 0, maintenant = 0, signal = 0, dernier = '', fini = false;
+  let fauxDeparts = 0, manche = 0, etape = 'attente', debutEtape = 0, maintenant = 0, signal = 0, dernier = '', fini = false;
 
   const finir = () => {
     if (fini) return;
     fini = true;
     while (temps.length < MANCHES) temps.push(TROP_TARD);
-    rapporter(temps.reduce((a, b) => a + b, 0));
+    rapporter(temps.reduce((a, b) => a + b, 0), { gorgees: fauxDeparts >= 2 ? 1 : 0 });
   };
   const suivante = (ms, texte) => {
     temps.push(ms);
@@ -29,7 +29,7 @@ export function jouer({ hote, graine, duree, rapporter }) {
   };
   const toucher = (e) => {
     e.preventDefault();
-    if (etape === 'attente') suivante(TROP_TOT, 'Trop tôt ! +1 000 ms');
+    if (etape === 'attente') { fauxDeparts++; suivante(TROP_TOT, fauxDeparts >= 2 ? 'Encore trop tôt ! 🍺 1 gorgée' : 'Trop tôt ! +1 000 ms'); }
     else if (etape === 'signal') {
       const ms = Math.round((performance.now() - signal));
       suivante(ms, ms + ' ms');

@@ -48,6 +48,12 @@ button:active { transform: translateY(2px) !important; box-shadow: 0 1px 0 #6a3a
 button:disabled { opacity: 0.45; }
 button.sombre, button.clair { color: var(--texte) !important; background: linear-gradient(180deg, #4a2228, #2a1216) !important; border: 1px solid var(--bord) !important; box-shadow: 0 2px 0 #12070a !important; }
 button.choisi { outline: 3px solid #fff3c4 !important; }
+/* Choix du plateau : des cartes sombres, la choisie bordée d'or. */
+button.plateau-choix { color: var(--texte) !important; background: linear-gradient(180deg, #3a1a20, #1e0c10) !important; border: 2px solid var(--bord) !important; box-shadow: 0 2px 0 #12070a !important; font-weight: 600 !important; }
+button.plateau-choix.choisi { border-color: #ffc23a !important; background: linear-gradient(180deg, #5a3016, #2a1408) !important; outline: none !important; box-shadow: 0 0 0 2px #ffc23a, 0 0 18px rgba(255, 194, 58, 0.35) !important; }
+button.plateau-choix .pn { font-weight: 800; }
+/* Choix du chemin : la bordure a la couleur des cases allumées sur la table. */
+button.chemin { border-width: 3px !important; border-style: solid !important; }
 #btn-regles { background: linear-gradient(180deg, #4a2228, #2a1216) !important; color: var(--texte) !important; border: 1px solid var(--bord) !important; }
 
 .mode { border-radius: 12px !important; background: rgba(14, 6, 8, 0.55) !important; }
