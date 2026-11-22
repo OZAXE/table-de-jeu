@@ -1,0 +1,1806 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Qui de nous ? 3D</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=2">
+<link rel="apple-touch-icon" href="icons/icon-180.png?v=2">
+<meta name="theme-color" content="#07061a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SHIELD">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Bungee&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; background: #07061a; }
+  canvas { display: block; }
+
+  #overlay { position: fixed; inset: 0; pointer-events: none; font-family: 'Outfit', system-ui, sans-serif; }
+  #vignette { position: fixed; inset: 0; pointer-events: none; }
+
+  /* --- Liste des joueurs --- */
+  #joueurs { position: absolute; top: 18px; left: 18px; display: flex; flex-direction: column; gap: 6px; max-height: 70vh; overflow: hidden; }
+  .joueur {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 12px; font-size: 16px; min-width: 190px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .joueur.absent { opacity: 0.45; font-style: italic; }
+  .joueur .pastille { width: 12px; height: 12px; border-radius: 50%; flex: 0 0 auto; }
+  .joueur .nom { flex: 1 1 auto; }
+  .joueur .info { font-size: 13px; color: var(--texte-doux); white-space: nowrap; }
+
+  /* --- Bandeau du haut --- */
+  #bandeau { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); text-align: center; max-width: 52vw; }
+  #message { font-size: 21px; }
+  #rappel { font-size: 15px; margin-top: 4px; }
+  #compteur {
+    display: inline-block; margin-top: 6px; padding: 4px 14px;
+    color: var(--texte); font-size: 14px;
+    background: var(--verre); border: 1px solid var(--bord); border-radius: 999px;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  }
+  #compteur:empty { display: none; }
+  #compteur b { color: var(--accent); }
+  #compteur .chrono.urgent { color: #ff8a8a; font-weight: 700; }
+
+  /* --- Panneau du bas --- */
+  #panneau {
+    position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+    pointer-events: auto; padding: 14px 18px;
+    min-width: 320px; max-width: min(720px, 94vw); text-align: center;
+    max-height: 62vh; overflow-y: auto;
+  }
+  #panneau.cache { display: none; }
+  #panneau h2 { margin: 0 0 8px; font-size: 20px; }
+  #panneau p { margin: 0 0 10px; font-size: 16px; }
+  .rangee { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  button {
+    pointer-events: auto; font-family: 'Outfit', system-ui, sans-serif;
+    font-weight: 700; font-size: 18px; padding: 11px 22px; cursor: pointer;
+  }
+  button.petit { font-size: 14px; padding: 7px 14px; }
+  button.gros { font-size: 22px; padding: 14px 30px; letter-spacing: 0.04em; }
+  button.choisi { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  /* --- La carte --- */
+  .carte-qn { margin: 0 0 10px; }
+  .carte-qn .tete { font-family: var(--police-titre, sans-serif); font-size: 15px; letter-spacing: 0.06em; color: var(--accent-2, #ff3ca8); }
+  .carte-qn .texte { font-size: 21px; font-weight: 800; line-height: 1.3; color: var(--texte); }
+  .carte-qn .epice { display: inline-block; margin-left: 6px; padding: 1px 9px; border-radius: 999px; font-size: 12px; font-weight: 800; color: #fff; background: #d4143c; vertical-align: middle; }
+  .etape { font-size: 14px; font-weight: 700; color: var(--texte-doux); margin: 8px 0 6px; text-align: left; }
+  .choix-joueurs { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 7px; margin-bottom: 4px; }
+  .tuile {
+    pointer-events: auto; cursor: pointer; display: flex; align-items: center; gap: 7px; justify-content: center;
+    padding: 9px 8px; border-radius: 14px; border: 1px solid var(--bord); background: rgba(255,255,255,0.05);
+    color: var(--texte); font-size: 15px; font-weight: 700; user-select: none;
+  }
+  .tuile .pastille { width: 11px; height: 11px; border-radius: 50%; flex: 0 0 auto; }
+  .tuile.choisi { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 45%, transparent); }
+  .tuile.pari.choisi { border-color: var(--accent-2, #ff3ca8); background: color-mix(in srgb, var(--accent-2, #ff3ca8) 22%, transparent); box-shadow: 0 0 12px color-mix(in srgb, var(--accent-2, #ff3ca8) 45%, transparent); }
+  .mon-vote { font-size: 17px; margin: 4px 0 10px; color: var(--texte); line-height: 1.5; }
+  .mon-vote b { color: var(--accent); }
+  .mon-vote b.p { color: var(--accent-2, #ff3ca8); }
+  .compte { font-size: 14px; color: var(--texte-doux); margin-top: 8px; }
+
+  /* --- La révélation --- */
+  .designe { font-family: var(--police-titre, sans-serif); font-size: 28px; color: var(--accent-2, #ff3ca8); margin: 2px 0 8px; text-shadow: 0 0 14px rgba(255,60,168,0.6); }
+  .barres { margin: 4px auto 10px; max-width: 420px; text-align: left; }
+  .barre { display: grid; grid-template-columns: 96px 1fr 26px; align-items: center; gap: 8px; margin: 3px 0; font-size: 14px; color: var(--texte); }
+  .barre .nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .barre .fond { height: 14px; border-radius: 999px; background: rgba(255,255,255,0.07); overflow: hidden; }
+  .barre .plein { height: 100%; border-radius: 999px; }
+  .barre .n { text-align: right; font-weight: 800; }
+  .barre.top .nom { color: #ff8ccc; font-weight: 800; }
+  .bilan { margin: 6px auto 10px; border-collapse: collapse; font-size: 15px; min-width: 280px; }
+  .bilan td, .bilan th { padding: 4px 8px; color: var(--texte); text-align: left; border-bottom: 1px solid var(--bord); }
+  .bilan th { font-size: 12px; font-weight: 600; color: var(--texte-doux); }
+  .bilan td.n { text-align: right; white-space: nowrap; }
+  .bilan td.pts { color: var(--accent); font-weight: 700; }
+  .bilan tr.moi td { background: rgba(60, 232, 255, 0.1); }
+  .bilan tr.gagnant td:first-child { color: #ffd98a; }
+  .bilan td.ok { color: #9fe0b4; }
+  .bilan td.ko { color: #ff8a8a; }
+  .titre-soiree { font-size: 16px; margin: 6px 0 10px; color: var(--texte); }
+  .titre-soiree b { color: #ff8ccc; }
+
+  /* --- Réglages --- */
+  .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 6px 0 10px; }
+  .mode {
+    pointer-events: auto; cursor: pointer; text-align: left;
+    padding: 9px 11px; border-radius: 14px; border: 1px solid var(--bord);
+    background: rgba(255,255,255,0.05); color: var(--texte); font-size: 14px; font-weight: 600;
+  }
+  .mode.choisi { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
+  .reglage-titre { font-size: 13px; color: var(--texte-doux); margin: 8px 0 4px; }
+
+  input[type="text"] {
+    pointer-events: auto; font-family: 'Outfit', system-ui, sans-serif;
+    font-size: 18px; text-align: center; padding: 10px 14px; width: 210px; margin: 0 4px;
+  }
+  input#code-salon { width: 120px; letter-spacing: 6px; text-transform: uppercase; }
+  .code-salon { font-size: 38px; letter-spacing: 8px; margin: 2px 0 6px; }
+  .liste-attente { font-size: 17px; margin: 10px 0; line-height: 1.6; }
+  .qr { display: block; margin: 10px auto 4px; width: 168px; height: 168px; }
+  @media (max-width: 760px), (pointer: coarse) { .qr { width: 132px; height: 132px; } }
+
+  /* --- Règles --- */
+  #btn-regles { position: absolute; top: 18px; right: 18px; pointer-events: auto; font-size: 15px; padding: 8px 16px; cursor: pointer; }
+  #modale-regles {
+    position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-start; justify-content: center;
+    padding: 20px; overflow-y: auto; pointer-events: auto;
+  }
+  #modale-regles.cache { display: none; }
+  .modale { padding: 22px; max-width: 490px; width: 100%; margin: auto; line-height: 1.55; }
+  .modale h2 { font-size: 22px; margin: 0 0 12px; text-align: center; }
+  .modale h3 { font-size: 17px; margin: 16px 0 6px; }
+  .modale p { margin: 0 0 10px; font-size: 15px; }
+  .modale ul { margin: 0 0 10px 18px; font-size: 15px; padding: 0; }
+  .modale li { margin-bottom: 5px; }
+  .modale table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 14px; }
+  .modale td { padding: 5px 7px; text-align: left; border-bottom: 1px solid var(--bord); vertical-align: top; }
+  .modale td:first-child { white-space: nowrap; color: var(--texte); }
+  .modale .accent { color: var(--accent); font-weight: 700; }
+
+  .cache { display: none !important; }
+  .note { font-size: 12px; margin-top: 10px; }
+  .alerte { font-size: 13px; color: #e0a05a; margin-top: 8px; }
+
+  /* ================= Téléphones ================= */
+  @media (max-width: 760px), (pointer: coarse) {
+    #joueurs { top: 88px; left: 8px; right: 8px; flex-direction: row; flex-wrap: wrap; gap: 4px; justify-content: center; }
+    .joueur { padding: 3px 9px; font-size: 13px; min-width: 0; gap: 5px; }
+    .joueur .info { font-size: 11px; }
+    #bandeau { top: 12px; max-width: calc(100vw - 130px); left: 8px; transform: none; text-align: left; }
+    #message { font-size: 17px; }
+    #rappel { font-size: 12px; }
+    #compteur { font-size: 11px; padding: 2px 9px; margin-top: 3px; white-space: nowrap; }
+    #btn-regles { top: 10px; right: 10px; font-size: 13px; padding: 6px 12px; }
+    #panneau {
+      bottom: 0; left: 0; right: 0; transform: none; width: 100%; max-width: none; min-width: 0; box-sizing: border-box;
+      padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px)); max-height: 62vh;
+    }
+    #panneau h2 { font-size: 17px; margin-bottom: 6px; }
+    #panneau p { font-size: 14px; margin-bottom: 8px; }
+    button { font-size: 15px; padding: 9px 14px; }
+    button.gros { font-size: 19px; padding: 12px 24px; }
+    .rangee { gap: 7px; }
+      .carte-qn .texte { font-size: 18px; }
+    .designe { font-size: 22px; }
+    .choix-joueurs { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 5px; }
+    .tuile { font-size: 14px; padding: 8px 6px; }
+    .barre { grid-template-columns: 80px 1fr 22px; }
+    .bilan { font-size: 13px; min-width: 0; width: 100%; }
+    .bilan td, .bilan th { padding: 3px 5px; }
+    .modes { grid-template-columns: 1fr 1fr; }
+    input[type="text"] { width: 160px; font-size: 16px; }
+    input#code-salon { width: 104px; }
+    .code-salon { font-size: 30px; letter-spacing: 6px; }
+    .modale { padding: 16px; }
+    .modale h2 { font-size: 19px; }
+    .modale p, .modale ul { font-size: 14px; }
+  }
+  @media (max-height: 460px) {
+    #joueurs { top: 80px; }
+    #panneau { max-height: 78vh; padding: 8px 10px; }
+  }
+
+  /* Grande annonce pour toute la table (question, dans le mille, victoire) */
+  .annonce-qn { position: fixed; left: calc(var(--zone-gauche, 0px) + 8px); right: calc(var(--zone-droite, 0px) + 8px); top: calc(var(--haut-libre, 14vh) + 6px); z-index: 60; text-align: center; pointer-events: none; }
+  .annonce-qn .gros { font: 900 clamp(30px, 10vmin, 78px)/1.05 'Outfit', system-ui, sans-serif; letter-spacing: 0.02em; color: var(--c);
+    text-shadow: 0 0 26px var(--c), 0 6px 22px rgba(0, 0, 0, 0.85); animation: qn-pop 0.45s cubic-bezier(.2, 1.6, .4, 1) both; }
+  .annonce-qn .petit { display: inline-block; margin-top: 12px; padding: 7px 16px; border-radius: 999px; background: rgba(0, 0, 0, 0.6);
+    border: 1px solid var(--c); color: #fff; font: 700 clamp(16px, 5vw, 22px)/1.25 'Outfit', system-ui, sans-serif; animation: qn-monte 0.4s 0.15s both; }
+  .annonce-qn.sort { animation: qn-sort 0.35s ease-in forwards; }
+  .flash-qn { position: fixed; inset: 0; z-index: 59; pointer-events: none; background: var(--c); animation: qn-flash 0.7s ease-out forwards; }
+  @keyframes qn-pop { from { opacity: 0; transform: scale(2.2) rotate(-6deg); } to { opacity: 1; transform: none; } }
+  @keyframes qn-monte { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes qn-sort { to { opacity: 0; transform: translateY(-16px) scale(0.92); } }
+  @keyframes qn-flash { 0% { opacity: 0.5; } 100% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .annonce-qn .gros, .annonce-qn .petit { animation: none; } .flash-qn { display: none; } }
+</style>
+<!-- Direction artistique commune « bar moderne », thème « plateau » (jeu télé en direct). -->
+<link rel="stylesheet" href="da/bar-moderne.css">
+<link rel="stylesheet" href="da/themes/plateau.css">
+<link rel="stylesheet" href="da/mise-en-page.css">
+</head>
+<body>
+
+<div id="overlay">
+  <button id="btn-regles">Règles &#9432;</button>
+  <div id="joueurs"></div>
+  <div id="bandeau">
+    <div id="message">Qui de nous ?</div>
+    <div id="rappel"></div>
+    <div id="compteur"></div>
+  </div>
+  <div id="panneau"></div>
+</div>
+<div id="vignette"></div>
+
+<div id="modale-regles" class="cache">
+  <div class="modale">
+    <h2>Règles de Qui de nous ?</h2>
+    <p>Une carte par manche : <span class="accent">« Qui de nous… finit la soirée en dansant sur une table ? »</span> Chacun désigne <span class="accent">en secret</span> sur son téléphone le joueur qui colle le mieux à la carte (jamais soi-même).</p>
+
+    <h3>Le vote</h3>
+    <ul>
+      <li>Tu désignes un joueur, puis tu <span class="accent">paries</span> sur celui que la table va le plus désigner (toi compris : tu peux parier contre toi).</li>
+      <li>Tu as <span class="accent">25 secondes</span>, et tu peux changer d'avis tant que tout le monde n'a pas voté.</li>
+      <li>Votes <span class="accent">anonymes</span> par défaut : on voit combien chacun a reçu de votes, pas qui a voté pour qui. En mode « à découvert », tout se voit.</li>
+      <li>Une partie se joue en 5, 10 ou 15 cartes, avec le paquet Gentil, Épicé ou un mélange des deux.</li>
+    </ul>
+
+    <h3>Les gorgées et les points</h3>
+    <table>
+      <tr><td>👉 Le plus désigné</td><td>Il boit <span class="accent">2 gorgées</span> (tous en cas d'égalité).</td></tr>
+      <tr><td>🔮 Bon pari</td><td><span class="accent">+1 point</span>.</td></tr>
+      <tr><td>Mauvais pari</td><td>1 gorgée.</td></tr>
+      <tr><td>Pas de vote</td><td>1 gorgée.</td></tr>
+      <tr><td>Fin de partie</td><td>Le meilleur devin (le plus de points) gagne, le dernier boit 2 gorgées. Le plus désigné de la partie reçoit le titre de la soirée 👑.</td></tr>
+    </table>
+
+    <div id="bloc-qr-regles" class="cache">
+      <h3>Inviter quelqu'un</h3>
+      <p>Salon <span class="accent" id="qr-code-salon">----</span> : fais scanner ce code, le prénom suffira.</p>
+      <canvas id="qr-regles" class="qr"></canvas>
+      <div id="qr-note-regles" class="note"></div>
+      <div class="rangee" style="margin-top:8px;">
+        <button id="copier-lien-regles" class="sombre">Copier le lien</button>
+      </div>
+    </div>
+
+    <div class="rangee" style="margin-top:14px;">
+      <button id="fermer-regles">Fermer</button>
+      <button id="quitter-table" class="sombre cache">Quitter la table</button>
+      <button id="menu-jeux" class="sombre">🎲 Tous les jeux</button>
+    </div>
+    <p class="note" style="text-align:center;">À consommer avec modération.</p>
+  </div>
+</div>
+
+<script src="commun/soiree.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { lisser as lisserScene, creerSousVerre, POLICE, quandPoliceChargee } from './da/bar-moderne.js';
+import { modeLeger, optionsRendu, reglerRendu, surveillerFluidite } from './da/qualite.js';
+import { suivreZoneLibre } from './da/cadrage.js';
+import {
+  FOND as FOND_SALLE, preparerAmbiancePlateau, creerTablePlateau, creerDecorPlateau, creerTabouretPlateau,
+  dessinerEtiquettePlateau, quandPolicesPlateau,
+} from './da/themes/plateau.js';
+
+// Version légère (interrupteur de l'accueil) : même salle, moins de détails.
+const LEGER = modeLeger();
+
+const ACCENT = 0x3ce8ff;   // cyan du plateau
+
+const elModaleRegles = document.getElementById('modale-regles');
+document.getElementById('btn-regles').addEventListener('click', () => {
+  majQRModale();
+  document.getElementById('quitter-table').classList.toggle('cache', !enPartie);
+  elModaleRegles.classList.remove('cache');
+});
+document.getElementById('fermer-regles').addEventListener('click', () => elModaleRegles.classList.add('cache'));
+document.getElementById('menu-jeux').addEventListener('click', () => { location.href = 'index.html'; });
+elModaleRegles.addEventListener('click', e => { if (e.target === elModaleRegles) elModaleRegles.classList.add('cache'); });
+document.getElementById('quitter-table').addEventListener('click', () => {
+  oublierSession();
+  if (ws) { try { ws.close(); } catch (e) { /* deja ferme */ } }
+  location.href = location.pathname;
+});
+
+// =====================================================================
+// CONSTANTES DE LA SCÈNE
+// =====================================================================
+const R_TABLE = 2.0;
+const R_FEUTRE = 1.78;
+const R_SIEGE = 1.55;    // sous-verre et chope de chaque joueur
+const VERRE_PLEIN = 10;  // repère visuel des gorgées
+const CAM_VITESSE = 0.12;
+
+const PAQUETS = {
+  gentil:  '😇 Gentil',
+  epice:   '🌶️ Épicé',
+  melange: '🎲 Mélange',
+};
+const MANCHES = [5, 10, 15];
+
+// =====================================================================
+// SCÈNE / CAMÉRA / RENDU (même cadrage que les autres tables rondes)
+// =====================================================================
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(FOND_SALLE);
+scene.fog = new THREE.FogExp2(FOND_SALLE, 0.07);
+
+// La table tient dans la zone libre de l'écran (da/cadrage.js).
+const zone = suivreZoneLibre(() => { majCadrageTable(camera); camObjectifPos = CAM_POS.clone(); });
+
+const CAM_CIBLE = new THREE.Vector3(0, 0.35, 0);
+const LARGEUR_VUE = 2.3;
+const HAUTEUR_VUE = 2.1;
+const CAM_POS = new THREE.Vector3(0, 3.0, 5.0);
+
+function distanceCadrage(cam) {
+  const vHalf = THREE.MathUtils.degToRad(cam.fov) / 2;
+  const hHalf = Math.atan(Math.tan(vHalf) * cam.aspect);
+  return Math.max(LARGEUR_VUE / (Math.tan(hHalf) * zone.c.fracL), HAUTEUR_VUE / (Math.tan(vHalf) * zone.c.fracH), 4.2) * zone.c.zoom;
+}
+const FOG_DENSITE_MAX = 0.07;
+function majCadrageTable(cam) {
+  const d = distanceCadrage(cam);
+  const dir = zone.direction(0.56);
+  CAM_POS.copy(CAM_CIBLE).addScaledVector(dir, d);
+  if (scene.fog) scene.fog.density = Math.min(FOG_DENSITE_MAX, 0.5 / d);
+}
+
+let camObjectifPos = CAM_POS.clone();
+let camObjectifCible = CAM_CIBLE.clone();
+const camCibleActuelle = CAM_CIBLE.clone();
+
+const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.1, 40);
+majCadrageTable(camera);
+camObjectifPos = CAM_POS.clone();
+camera.position.copy(CAM_POS);
+camera.lookAt(camCibleActuelle);
+
+const renderer = new THREE.WebGLRenderer(optionsRendu());
+renderer.setSize(window.innerWidth, window.innerHeight);
+reglerRendu(renderer);
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+document.body.appendChild(renderer.domElement);
+
+function redimensionner() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  zone.recalculer();
+  majCadrageTable(camera);
+  camObjectifPos = CAM_POS.clone();
+  camObjectifCible = CAM_CIBLE.clone();
+}
+window.addEventListener('resize', redimensionner);
+window.addEventListener('orientationchange', redimensionner);
+
+scene.add(new THREE.AmbientLight(0x2a2a24, 1.0));
+const keyLight = new THREE.DirectionalLight(0xffd6a8, 3.0);
+keyLight.position.set(0.8, 3.4, 1.2);
+keyLight.target.position.set(0, 0.3, 0);
+keyLight.castShadow = !LEGER;
+keyLight.shadow.mapSize.set(1024, 1024);
+Object.assign(keyLight.shadow.camera, { left: -3.4, right: 3.4, top: 3.4, bottom: -3.4, near: 0.5, far: 9 });
+scene.add(keyLight, keyLight.target);
+preparerAmbiancePlateau(renderer, scene, { leger: LEGER });
+
+const { groupe: table } = creerTablePlateau(R_TABLE, { rayonFeutre: R_FEUTRE, leger: LEGER });
+scene.add(table);
+
+const decor = creerDecorPlateau(scene, { nom: 'Qui de nous ?', solY: -1.2, leger: LEGER });
+
+// =====================================================================
+// LES JETONS DE VOTE : chaque vote file vers le joueur désigné et s'empile
+// devant lui. Votes anonymes : jetons dorés qui jaillissent du centre ;
+// à découvert : jetons à la couleur du votant, qui partent de sa place.
+// =====================================================================
+const jetons = [];
+const GEO_JETON = new THREE.CylinderGeometry(0.085, 0.085, 0.03, 28);
+const MAT_JETON_OR = new THREE.MeshStandardMaterial({ color: 0xffd25a, metalness: 0.75, roughness: 0.25, emissive: 0x5a3a00, emissiveIntensity: 0.35 });
+const matsJeton = {};
+function matJeton(i) {
+  if (!matsJeton[i]) matsJeton[i] = new THREE.MeshStandardMaterial({ color: COULEURS[i % COULEURS.length], roughness: 0.3, metalness: 0.25, emissive: COULEURS[i % COULEURS.length], emissiveIntensity: 0.15 });
+  return matsJeton[i];
+}
+function viderJetons() {
+  jetons.forEach(j => scene.remove(j));
+  jetons.length = 0;
+  sieges.forEach(s => { s.halo.visible = false; });
+}
+function pileDevant(j) {
+  const s = sieges[j];
+  return s ? s.dir.clone().multiplyScalar(R_SIEGE * 0.55) : new THREE.Vector3();
+}
+function dureeRevelation(res) {
+  const total = res ? res.compte.reduce((a, b) => a + b, 0) : 0;
+  return 0.22 * total + 1.3;
+}
+
+function animerRevelation(etat, instantane) {
+  const res = etat.resultat;
+  viderJetons();
+  if (!res) return;
+  // Qui a voté pour qui (à découvert), sinon des jetons sans propriétaire.
+  const parCible = res.compte.map(() => []);
+  if (res.votes) res.votes.forEach(v => parCible[v.cible].push(v.joueur));
+  else res.compte.forEach((n, j) => { for (let k = 0; k < n; k++) parCible[j].push(null); });
+  // Le moins désigné d'abord, le plus désigné en dernier (suspense).
+  const ordre = res.compte.map((n, j) => j).filter(j => res.compte[j] > 0).sort((a, b) => res.compte[a] - res.compte[b]);
+  let k = 0;
+  ordre.forEach(j => {
+    const pile = pileDevant(j);
+    parCible[j].forEach((votant, h) => {
+      const jeton = new THREE.Mesh(GEO_JETON, votant === null ? MAT_JETON_OR : matJeton(votant));
+      jeton.castShadow = true;
+      const arrivee = new THREE.Vector3(pile.x + (h % 2 ? 0.012 : -0.012), 0.017 + h * 0.032, pile.z);
+      const sv = votant === null ? null : sieges[votant];
+      const depart = sv ? new THREE.Vector3(sv.base.x, 0.35, sv.base.z) : new THREE.Vector3(0, 0.05, 0);
+      scene.add(jeton);
+      jetons.push(jeton);
+      if (instantane) { jeton.position.copy(arrivee); return; }
+      jeton.position.copy(depart);
+      jeton.visible = false;
+      attendre(0.22 * k++, () => {
+        jeton.visible = true;
+        animer(0.5, an => {
+          const t = lisser(an.t / an.duree);
+          jeton.position.lerpVectors(depart, arrivee, t);
+          jeton.position.y += Math.sin(t * Math.PI) * 0.6;
+          jeton.rotation.x = t * Math.PI * 2;
+        }, () => { jeton.position.copy(arrivee); jeton.rotation.set(0, 0, 0); });
+      });
+    });
+  });
+  // Puis les projecteurs s'allument sur le ou les plus désignés.
+  const allumer = () => res.designes.forEach(j => { if (sieges[j]) sieges[j].halo.visible = true; });
+  if (instantane) allumer(); else attendre(0.22 * k + 0.6, allumer);
+}
+
+// =====================================================================
+// =====================================================================
+// ÉTIQUETTES ET ICÔNES (sprites face caméra)
+// =====================================================================
+function dessinerEtiquette(ctx, texte, actif, absent) {
+  dessinerEtiquettePlateau(ctx, texte, { actif, absent });
+}
+function creerEtiquette(texte) {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 128;
+  dessinerEtiquette(c.getContext('2d'), texte, false, false);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+  sprite.renderOrder = 10;
+  sprite.scale.set(0.9, 0.225, 1);
+  return sprite;
+}
+function majEtiquette(sprite, texte, actif, absent) {
+  const cle = texte + '|' + actif + '|' + absent;
+  if (sprite.userData.cle === cle) return;
+  sprite.userData.cle = cle;
+  sprite.userData.dernier = [texte, actif, absent];
+  dessinerEtiquette(sprite.material.map.image.getContext('2d'), texte, actif, absent);
+  sprite.material.map.needsUpdate = true;
+}
+quandPolicesPlateau(() => sieges.forEach(st => {
+  const d = st.etiquette.userData.dernier;
+  st.etiquette.userData.cle = null;
+  if (d) majEtiquette(st.etiquette, ...d); else majEtiquette(st.etiquette, st.nom, false, false);
+}));
+quandPoliceChargee(() => sieges.forEach(st => {
+  const d = st.etiquette.userData.dernier;
+  st.etiquette.userData.cle = null;
+  if (d) majEtiquette(st.etiquette, ...d); else majEtiquette(st.etiquette, st.nom, false, false);
+}));
+
+// Petite icône au-dessus d'un siège (✔ a voté, 👉 désigné, 🔮 bon pari, 🍺 boit).
+function creerIcone(taille) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false }));
+  sp.scale.set(taille, taille, 1);
+  sp.renderOrder = 12;
+  sp.userData.symbole = undefined;
+  return sp;
+}
+function majIcone(sp, symbole) {
+  if (sp.userData.symbole === symbole) return;
+  sp.userData.symbole = symbole;
+  sp.visible = !!symbole;
+  if (!symbole) return;
+  const ctx = sp.material.map.image.getContext('2d');
+  ctx.clearRect(0, 0, 128, 128);
+  ctx.fillStyle = 'rgba(10, 8, 30, 0.8)';
+  ctx.beginPath(); ctx.arc(64, 64, 58, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#3ce8ff'; ctx.lineWidth = 5; ctx.stroke();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '68px serif';
+  ctx.fillText(symbole, 64, 70);
+  sp.material.map.needsUpdate = true;
+}
+
+const textesFlottants = [];
+function creerSpriteTexte(gros, petit, couleur) {
+  const c = document.createElement('canvas');
+  c.width = 1024; c.height = 512;
+  const ctx = c.getContext('2d');
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = '#000';
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 6;
+  ctx.fillStyle = couleur;
+  let taille = 230;
+  ctx.font = `800 ${taille}px ${POLICE}`;
+  while (ctx.measureText(gros).width > 980 && taille > 80) { taille -= 10; ctx.font = `800 ${taille}px ${POLICE}`; }
+  ctx.fillText(gros, 512, petit ? 200 : 256);
+  if (petit) {
+    ctx.fillStyle = '#f4ebe0';
+    let t2 = 74;
+    ctx.font = `600 ${t2}px ${POLICE}`;
+    while (ctx.measureText(petit).width > 1000 && t2 > 36) { t2 -= 4; ctx.font = `600 ${t2}px ${POLICE}`; }
+    ctx.fillText(petit, 512, 400);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false }));
+  sp.renderOrder = 999;
+  return sp;
+}
+function texteFlottant(position, gros, petit, couleur, echelle) {
+  const sp = creerSpriteTexte(String(gros), petit || '', couleur || '#ffdca0');
+  const e = echelle || 0.5;
+  sp.scale.set(e * 2, e, 1);
+  sp.position.copy(position);
+  sp.position.y += 0.5;
+  scene.add(sp);
+  textesFlottants.push({ sprite: sp, t: 0, duree: 1.8, depart: sp.position.clone() });
+}
+
+// Grande annonce HTML, la même pour tous les joueurs.
+let annonceQn = null, minuteurAnnonce = null;
+function annoncer(gros, petit, couleur, duree, opts = {}) {
+  if (annonceQn) annonceQn.remove();
+  clearTimeout(minuteurAnnonce);
+  const a = document.createElement('div');
+  a.className = 'annonce-qn';
+  a.style.setProperty('--c', couleur || '#f4f1ea');
+  const g = document.createElement('div'); g.className = 'gros'; g.textContent = gros; a.appendChild(g);
+  if (petit) { const p = document.createElement('div'); p.className = 'petit'; p.textContent = petit; a.appendChild(p); }
+  if (opts.flash) {
+    const f = document.createElement('div'); f.className = 'flash-qn'; f.style.setProperty('--c', couleur);
+    document.body.appendChild(f); setTimeout(() => f.remove(), 800);
+  }
+  if (opts.vibrer) { try { if (navigator.vibrate) navigator.vibrate(opts.vibrer); } catch (e) { /* pas de vibreur */ } }
+  document.body.appendChild(a);
+  annonceQn = a;
+  minuteurAnnonce = setTimeout(() => { a.classList.add('sort'); setTimeout(() => { a.remove(); if (annonceQn === a) annonceQn = null; }, 380); }, (duree || 1.8) * 1000);
+}
+
+// =====================================================================
+
+// =====================================================================
+// SIÈGES : sous-verre, chope, étiquette, icône, tabouret, projecteur
+// Chacun se voit au premier plan : dire les prénoms, jamais « à gauche ».
+// =====================================================================
+const COULEURS = [0x4a7ec2, 0xc25a4a, 0x5aa86a, 0xb58ac2, 0xc2a44a, 0x4ab0b5, 0xd9823a, 0xd46a9e];
+const sieges = [];
+
+function creerChope() {
+  const g = new THREE.Group();
+  const verre = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.11, 0.095, 0.27, 40, 1, true),
+    new THREE.MeshPhysicalMaterial({ color: 0xe6f3f8, roughness: 0.08, metalness: 0, side: THREE.DoubleSide, transparent: true, opacity: 0.32, clearcoat: 1, clearcoatRoughness: 0.05 })
+  );
+  verre.position.y = 0.135;
+  const fond = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.095, 0.095, 0.014, 40),
+    new THREE.MeshPhysicalMaterial({ color: 0xdfeef7, roughness: 0.22, transparent: true, opacity: 0.55 })
+  );
+  fond.position.y = 0.007;
+  const biere = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.097, 0.09, 1, 40),
+    new THREE.MeshPhysicalMaterial({ color: 0xe0961c, roughness: 0.18, emissive: 0x6a3a05, emissiveIntensity: 0.25 })
+  );
+  const mousse = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.099, 0.099, 0.026, 40),
+    new THREE.MeshStandardMaterial({ color: 0xfaf3e4, roughness: 0.75 })
+  );
+  g.add(verre, fond, biere, mousse);
+  g.userData = { biere, mousse };
+  return g;
+}
+
+function dirSiege(i, n) {
+  // Un spectateur (index hors table) regarde depuis le siège 0.
+  const base = MOI < n ? MOI : 0;
+  const angle = ((((i - base) % n) + n) % n) / n * Math.PI * 2;
+  return new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
+}
+
+function creerSieges(noms) {
+  sieges.forEach(s => scene.remove(s.groupe));
+  sieges.length = 0;
+  const n = noms.length;
+  const echelle = n > 7 ? 0.85 : 1;
+  for (let i = 0; i < n; i++) {
+    const dir = dirSiege(i, n);
+    const groupe = new THREE.Group();
+    const base = dir.clone().multiplyScalar(R_SIEGE);
+    const avatar = creerSousVerre(COULEURS[i % COULEURS.length]);
+    avatar.position.set(base.x, 0, base.z);
+    avatar.scale.setScalar(echelle);
+    const chope = creerChope();
+    chope.position.set(base.x, 0.014, base.z);
+    chope.scale.setScalar(echelle);
+
+    const etiquette = creerEtiquette(noms[i]);
+    etiquette.position.set(base.x, 0.6, base.z);
+    etiquette.scale.set(0.9 * echelle, 0.225 * echelle, 1);
+
+    const icone = creerIcone(0.24 * echelle);
+    icone.position.set(base.x, 0.86, base.z);
+    majIcone(icone, null);
+
+    const chaise = creerTabouretPlateau(dir, 2.42, -1.2, COULEURS[i % COULEURS.length]);
+    // Douche de lumière sur le joueur désigné (cachée hors révélation).
+    const halo = new THREE.Mesh(new THREE.ConeGeometry(0.42, 2.6, 28, 1, true), new THREE.MeshBasicMaterial({
+      color: 0xff3ca8, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+    halo.position.set(base.x, 1.3, base.z);
+    halo.visible = false;
+    groupe.add(avatar, chope, etiquette, icone, chaise, halo);
+    scene.add(groupe);
+    lisserScene(groupe);
+
+    sieges.push({ index: i, nom: noms[i], groupe, avatar, chope, etiquette, icone, halo, dir, base, niveau: 0, objectif: 0 });
+    // La bière est un cylindre d'une unité étiré par le bas : sans ce premier
+    // dessin, les chopes de la salle d'attente montraient une colonne orange.
+    dessinerChope(sieges[sieges.length - 1]);
+  }
+}
+
+function dessinerChope(s) {
+  const h = Math.max(0.001, s.niveau * 0.24);
+  const { biere, mousse } = s.chope.userData;
+  biere.scale.y = h;
+  biere.position.y = 0.012 + h / 2;
+  mousse.position.y = 0.012 + h + 0.012;
+  mousse.visible = s.niveau > 0.02;
+}
+function niveauGorgees(g) { return Math.min(1, g / VERRE_PLEIN); }
+
+function majSurbrillance() {
+  const etat = etatCourant;
+  sieges.forEach((s, i) => {
+    const absent = etat && etat.partis && etat.partis[i];
+    s.avatar.userData.materiaux.forEach(m => {
+      m.emissive = new THREE.Color(0x000000);
+      m.transparent = !!absent;
+      m.opacity = absent ? 0.35 : 1;
+    });
+  });
+}
+
+// =====================================================================
+// =====================================================================
+// ANIMATIONS ET FILE D'ATTENTE
+// =====================================================================
+const animations = [];
+function animer(duree, maj, fin) { animations.push({ t: 0, duree, maj, fin }); }
+function lisser(k) { return k < 0 ? 0 : k > 1 ? 1 : k * k * (3 - 2 * k); }
+function attendre(duree, apres) { animer(duree, null, apres); }
+
+function encaisser(i) {
+  const s = sieges[i];
+  if (!s) return;
+  const corps = s.chope;
+  const base = corps.position.clone();
+  animer(0.5, an => {
+    const k = an.t / an.duree;
+    const amp = (1 - k) * 0.035;
+    corps.position.set(base.x + Math.sin(an.t * 46) * amp, base.y, base.z + Math.cos(an.t * 39) * amp);
+  }, () => { corps.position.copy(base); });
+}
+
+const fileActions = [];
+let pompeActive = false;
+function quandLibre(fn, delai) { fileActions.push({ fn, delai: delai || 0 }); pomper(); }
+function pomper() {
+  if (pompeActive || fileActions.length === 0) return;
+  pompeActive = true;
+  (function patienter() {
+    if (animations.length > 0) { setTimeout(patienter, 80); return; }
+    const tache = fileActions.shift();
+    setTimeout(() => {
+      try { tache.fn(); } catch (e) { console.error(e); }
+      pompeActive = false;
+      pomper();
+    }, tache.delai);
+  })();
+}
+
+// =====================================================================
+
+// =====================================================================
+// CLIENT : messages du serveur
+// =====================================================================
+let MOI = 0;
+let mode = 'local';   // devient 'ligne' à la connexion (lu par le QR des règles)
+let ws = null;
+
+function envoyerIntention(index, msg) {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+}
+
+const elMessage = document.getElementById('message');
+const elRappel = document.getElementById('rappel');
+const elCompteur = document.getElementById('compteur');
+const elPanneau = document.getElementById('panneau');
+const elJoueurs = document.getElementById('joueurs');
+
+let etatCourant = null;
+let monVote = null;          // { cible, pari } envoyé pour la carte en cours (le serveur le garde secret)
+let cleVote = '';            // la carte de ce vote (manche et texte) : une nouvelle carte efface le choix
+let enEdition = false;       // je change un vote déjà envoyé
+let choixCible = null;       // sélection en cours (survit aux rafraîchissements)
+let choixPari = null;
+let clePanneau = '';
+let echeanceLocale = null;
+let finAnimation = 0;         // les jetons volent : on garde le bilan pour la fin
+
+// Réglage de la partie (salle d'attente et fin de partie).
+let manchesChoisies = 10;
+let paquetChoisi = 'gentil';
+let anonymeChoisi = true;
+
+function nomDe(i) {
+  if (i === MOI) return 'toi';
+  return etatCourant ? etatCourant.joueurs[i] : '';
+}
+function prenom(i) { return etatCourant ? etatCourant.joueurs[i] : ''; }
+function cleCarte(etat) { return etat && etat.carte ? etat.manche + '|' + etat.carte.texte : ''; }
+function couleurCss(i) { return '#' + COULEURS[i % COULEURS.length].toString(16).padStart(6, '0'); }
+
+function clientRecevoir(msg) {
+  switch (msg.type) {
+    case 'ton_index':
+      MOI = msg.index;
+      if (msg.jeton) {
+        monJeton = msg.jeton;
+        ecrireSession({ code: codeSalon, nom: monNom, jeton: monJeton, serveur: serveurChoisi, createur: estCreateur });
+      }
+      if (!enPartie) panneauAttente();
+      break;
+    case 'joueur_rejoint':
+      joueursSalon = msg.joueurs;
+      if (enPartie) elRappel.textContent = msg.nom + (msg.retour ? ' est revenu.' : ' rejoint la table.');
+      else panneauAttente();
+      break;
+    case 'joueur_parti':
+      joueursSalon = msg.joueurs;
+      if (enPartie) elRappel.textContent = msg.nom + ' a quitté la table.';
+      else panneauAttente();
+      break;
+    case 'qn_demarree':
+      quandLibre(() => demarrerScene(msg.joueurs));
+      break;
+    case 'qn_etat':
+      quandLibre(() => appliquerEtat(msg));
+      break;
+    case 'qn_vote':
+      quandLibre(() => {
+        MOI = msg.index;
+        monVote = { cible: msg.cible, pari: msg.pari };
+        cleVote = cleCarte(etatCourant);
+        enEdition = false;
+        choixCible = msg.cible; choixPari = msg.pari;
+        rafraichirPanneau(true);
+      });
+      break;
+    case 'erreur':
+      elRappel.textContent = msg.message;
+      if (enPartie && !fileActions.length) rafraichirPanneau(true);
+      break;
+  }
+}
+
+// =====================================================================
+// APPLICATION DE L'ÉTAT
+// =====================================================================
+function appliquerEtat(etat) {
+  const avant = etatCourant;
+  const n = etat.joueurs.length;
+  if (!sieges.length || n !== sieges.length || moiDeLaTable !== MOI) {
+    if (!enPartie) demarrerScene(etat.joueurs);
+    else construireTable(etat.joueurs);
+  }
+  etatCourant = etat;
+  echeanceLocale = etat.delai === null || etat.delai === undefined ? null : Date.now() + etat.delai * 1000;
+  if (PAQUETS[etat.paquet]) paquetChoisi = etat.paquet;
+  if (typeof etat.anonyme === 'boolean') anonymeChoisi = etat.anonyme;
+  if (MANCHES.includes(etat.nb_manches)) manchesChoisies = etat.nb_manches;
+
+  // Nouvelle carte : mon vote d'avant ne compte plus. (Une page qui reçoit
+  // deux fois le début de partie garde la sélection en cours.)
+  if (etat.phase === 'vote' && cleVote !== cleCarte(etat)) {
+    monVote = null; enEdition = false; choixCible = null; choixPari = null; cleVote = cleCarte(etat);
+  }
+  const nouvellePhase = !avant || avant.phase !== etat.phase || avant.manche !== etat.manche;
+
+  if (etat.phase === 'vote' && nouvellePhase) {
+    viderJetons();
+    annoncer('Carte ' + etat.manche + ' / ' + etat.nb_manches, etat.carte && etat.carte.paquet === 'epice' ? '🌶️ Épicée' : 'Qui de nous…', '#3ce8ff', 1.6);
+  }
+  if (etat.phase === 'revelation' && nouvellePhase) {
+    // Une page qui arrive en pleine révélation pose tout sans animation.
+    const instantane = !avant || avant.manche !== etat.manche;
+    animerRevelation(etat, instantane);
+    const duree = dureeRevelation(etat.resultat);
+    finAnimation = instantane ? 0 : Date.now() + duree * 1000;
+    if (!instantane) attendre(duree, () => annoncerManche(etat));
+  }
+
+  if (etat.phase === 'fin' && nouvellePhase) viderJetons();
+  sieges.forEach((s, i) => { s.objectif = niveauGorgees(etat.gorgees[i] || 0); });
+  majEcran(etat);
+  majSurbrillance();
+  majIcones(etat);
+  majListeJoueurs(etat);
+  majBandeau(etat);
+  majCompteur();
+  rafraichirPanneau(nouvellePhase);
+}
+
+function annoncerManche(etat) {
+  const res = etat.resultat;
+  if (!res) return;
+  const designes = res.designes;
+  const pari = res.paris.find(p => p.joueur === MOI);
+  if (designes.includes(MOI)) {
+    annoncer('👉 C’EST TOI !', 'La table t’a désigné : ' + res.boit[MOI] + ' gorgée' + (res.boit[MOI] > 1 ? 's' : ''), '#ff3ca8', 2.6, { flash: true, vibrer: [80, 50, 160] });
+    encaisser(MOI);
+  } else if (designes.length) {
+    const qui = designes.map(j => prenom(j)).join(', ');
+    const sousTitre = pari ? (pari.bon ? '🔮 Bien vu : +1 point' : '❌ Mauvais pari : 1 gorgée') : (res.sans_vote.includes(MOI) ? '⏱ Pas de vote : 1 gorgée' : '');
+    annoncer('👉 ' + qui, sousTitre, pari && pari.bon ? '#9fe0b4' : '#3ce8ff', 2.2, pari && pari.bon ? { vibrer: 60 } : {});
+  } else {
+    annoncer('Personne n’a voté', '1 gorgée chacun', '#ff8a6a', 2.0);
+  }
+  res.boit.forEach((b, j) => { if (b && j !== MOI) encaisser(j); });
+}
+
+function majEcran(etat) {
+  const reste = finAnimation - Date.now();
+  if (etat.phase === 'revelation' && reste > 0) {
+    setTimeout(() => { if (etatCourant) majEcran(etatCourant); }, reste + 50);
+    return;
+  }
+  if (etat.phase === 'vote' && etat.carte) {
+    decor.ecrireEcran({ titre: 'Qui de nous…', lignes: [etat.carte.texte + ' ?'],
+      bas: 'Carte ' + etat.manche + ' / ' + etat.nb_manches + (etat.carte.paquet === 'epice' ? ' · épicée' : '') });
+  } else if (etat.phase === 'revelation' && etat.carte && etat.resultat) {
+    const d = etat.resultat.designes;
+    decor.ecrireEcran({ titre: d.length ? d.map(j => etat.joueurs[j]).join(' & ') : 'Personne !',
+      lignes: [etat.carte.texte], bas: d.length ? (d.length > 1 ? 'Ex aequo : ' : '') + etat.resultat.compte[d[0]] + ' vote' + (etat.resultat.compte[d[0]] > 1 ? 's' : '') : '' });
+  } else if (etat.phase === 'fin' && etat.final) {
+    const top = etat.final.classement.slice(0, 3).map((j, k) => ['🥇', '🥈', '🥉'][k] + ' ' + etat.joueurs[j] + ' : ' + etat.points[j] + ' pts');
+    decor.ecrireEcran({ titre: 'Meilleurs devins', lignes: top,
+      bas: etat.final.titre.length ? '👑 Titre de la soirée : ' + etat.final.titre.map(j => etat.joueurs[j]).join(', ') : '' });
+  }
+}
+
+function majIcones(etat) {
+  sieges.forEach((s, i) => {
+    let sym = null;
+    if (etat.phase === 'vote' && etat.a_vote[i]) sym = '✔️';
+    else if (etat.phase === 'revelation' && etat.resultat && Date.now() >= finAnimation) {
+      if (etat.resultat.designes.includes(i)) sym = '👉';
+      else if (etat.resultat.paris.some(p => p.joueur === i && p.bon)) sym = '🔮';
+      else if (etat.resultat.boit[i]) sym = '🍺';
+    } else if (etat.phase === 'fin' && etat.final) {
+      if (etat.final.gagnants.includes(i)) sym = '🏆';
+      else if (etat.final.titre.includes(i)) sym = '👑';
+    }
+    majIcone(s.icone, sym);
+  });
+  if (etat.phase === 'revelation' && finAnimation > Date.now()) {
+    setTimeout(() => { if (etatCourant === etat) majIcones(etat); }, finAnimation - Date.now() + 60);
+  }
+}
+
+// =====================================================================
+// BANDEAU, COMPTEUR, LISTE DES JOUEURS
+// =====================================================================
+function majBandeau(etat) {
+  const n = etat.joueurs.length;
+  if (MOI >= n) elMessage.textContent = 'Tu regardes la partie';
+  else if (etat.phase === 'fin') elMessage.textContent = 'Fin de l’émission';
+  else if (etat.phase === 'vote') elMessage.textContent = '🗳️ Carte ' + etat.manche + ' / ' + etat.nb_manches;
+  else elMessage.textContent = '👉 Verdict';
+  elRappel.textContent = etat.message || '';
+}
+
+function presents(etat) { return etat.joueurs.map((_, i) => i).filter(i => !etat.partis[i]); }
+
+function majCompteur() {
+  const etat = etatCourant;
+  if (!etat || !enPartie || etat.phase === 'fin') { elCompteur.innerHTML = ''; return; }
+  const parts = [];
+  const pr = presents(etat);
+  if (etat.phase === 'vote') parts.push('Votes <b>' + pr.filter(i => etat.a_vote[i]).length + ' / ' + pr.length + '</b>');
+  if (echeanceLocale) {
+    const s = Math.max(0, Math.round((echeanceLocale - Date.now()) / 1000));
+    parts.push('<span class="chrono' + (s <= 8 && etat.phase === 'vote' ? ' urgent' : '') + '">⏱ ' + s + ' s</span>');
+  }
+  elCompteur.innerHTML = parts.join(' · ');
+}
+setInterval(majCompteur, 1000);
+
+function majListeJoueurs(etat) {
+  elJoueurs.innerHTML = '';
+  etat.joueurs.forEach((nom, i) => {
+    const d = document.createElement('div');
+    d.className = 'joueur' + (etat.partis[i] ? ' absent' : '');
+    const p = document.createElement('span');
+    p.className = 'pastille';
+    p.style.background = couleurCss(i);
+    const nm = document.createElement('span');
+    nm.className = 'nom';
+    nm.textContent = (etat.phase === 'vote' && etat.a_vote[i] ? '✔️ ' : '') + nom + (i === MOI ? ' (toi)' : '');
+    const inf = document.createElement('span');
+    inf.className = 'info';
+    inf.textContent = '🔮 ' + etat.points[i] + ' · 🍺 ' + etat.gorgees[i];
+    inf.title = 'bons paris · gorgées bues';
+    d.append(p, nm, inf);
+    elJoueurs.appendChild(d);
+  });
+  etat.joueurs.forEach((nom, i) => {
+    if (!sieges[i]) return;
+    majEtiquette(sieges[i].etiquette, nom + ' · ' + etat.points[i], false, etat.partis[i]);
+  });
+}
+
+// =====================================================================
+// PANNEAUX D'INTERFACE
+// =====================================================================
+function cacherPanneau() { elPanneau.className = 'cache'; elPanneau.innerHTML = ''; clePanneau = ''; }
+function boutonMenuJeux() { return bouton('🎲 Tous les jeux', 'sombre', () => { location.href = 'index.html'; }); }
+function bouton(texte, classe, onClick) {
+  const b = document.createElement('button');
+  b.textContent = texte;
+  if (classe) b.className = classe;
+  b.addEventListener('click', onClick);
+  return b;
+}
+function ouvrirPanneau(titre) {
+  elPanneau.className = '';
+  elPanneau.innerHTML = '';
+  if (titre) {
+    const h = document.createElement('h2');
+    h.textContent = titre;
+    elPanneau.appendChild(h);
+  }
+  return elPanneau;
+}
+function aide(texte) {
+  const d = document.createElement('p');
+  d.className = 'aide';
+  d.textContent = texte;
+  return d;
+}
+function rangee() {
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  return r;
+}
+// Envoie une intention et gèle le panneau : l'état suivant le reconstruira.
+function agir(msg) {
+  elPanneau.querySelectorAll('button').forEach(b => { b.disabled = true; });
+  envoyerIntention(MOI, msg);
+}
+
+// Le panneau n'est reconstruit que s'il change de forme : sinon une
+// sélection en cours sautait à chaque vote d'un autre.
+function rafraichirPanneau(forcer) {
+  if (!enPartie || !etatCourant) return;
+  const etat = etatCourant;
+  const cle = [etat.phase, etat.manche, MOI >= etat.joueurs.length, JSON.stringify(monVote), enEdition,
+    etat.phase === 'vote' ? etat.partis.join() : '',
+    etat.phase === 'revelation' ? etat.suivants[MOI] : '', etat.phase === 'fin' ? joueursProchainePartie(etat) : ''].join('|');
+  if (!forcer && cle === clePanneau) { majPanneauLeger(etat); return; }
+  const memePhase = clePanneau.split('|').slice(0, 2).join('|') === cle.split('|').slice(0, 2).join('|');
+  const defile = elPanneau.scrollTop;
+  clePanneau = cle;
+  if (memePhase) requestAnimationFrame(() => { elPanneau.scrollTop = defile; });
+  if (MOI >= etat.joueurs.length) { panneauSpectateur(etat); return; }
+  if (etat.phase === 'vote') { panneauVote(etat); return; }
+  if (etat.phase === 'revelation') { panneauRevelation(etat); return; }
+  if (etat.phase === 'fin') { panneauFin(etat); return; }
+}
+
+function majPanneauLeger(etat) {
+  const c = elPanneau.querySelector('.compte');
+  if (!c) return;
+  const pr = presents(etat);
+  if (etat.phase === 'vote') c.textContent = pr.filter(i => etat.a_vote[i]).length + ' / ' + pr.length + ' ont voté';
+  else if (etat.phase === 'revelation') c.textContent = pr.filter(i => etat.suivants[i]).length + ' / ' + pr.length + ' prêts pour la suite';
+}
+
+function blocCarte(carte) {
+  const d = document.createElement('div');
+  d.className = 'carte-qn';
+  const t = document.createElement('div');
+  t.className = 'tete';
+  t.textContent = 'QUI DE NOUS…';
+  if (carte.paquet === 'epice') {
+    const e = document.createElement('span');
+    e.className = 'epice';
+    e.textContent = '🌶️ épicée';
+    t.appendChild(e);
+  }
+  const x = document.createElement('div');
+  x.className = 'texte';
+  x.textContent = carte.texte + ' ?';
+  d.append(t, x);
+  return d;
+}
+
+function tuileJoueur(etat, i, choisi, classe, onClick) {
+  const b = document.createElement('div');
+  b.className = 'tuile ' + classe + (choisi ? ' choisi' : '');
+  b.setAttribute('role', 'button');
+  b.dataset.joueur = String(i);
+  const p = document.createElement('span');
+  p.className = 'pastille';
+  p.style.background = couleurCss(i);
+  const n = document.createElement('span');
+  n.textContent = etat.joueurs[i] + (i === MOI ? ' (moi)' : '');
+  b.append(p, n);
+  b.addEventListener('click', onClick);
+  return b;
+}
+
+function panneauVote(etat) {
+  const p = ouvrirPanneau('');
+  if (!etat.carte) return;
+  p.appendChild(blocCarte(etat.carte));
+  if (monVote && !enEdition) {
+    const m = document.createElement('div');
+    m.className = 'mon-vote';
+    m.innerHTML = 'Tu désignes <b></b><br>Tu paries sur <b class="p"></b>';
+    const bs = m.querySelectorAll('b');
+    bs[0].textContent = prenom(monVote.cible);
+    bs[1].textContent = monVote.pari === MOI ? 'toi' : prenom(monVote.pari);
+    p.appendChild(m);
+    const r = rangee();
+    r.appendChild(bouton('✏️ Changer', 'sombre petit', () => { enEdition = true; rafraichirPanneau(true); }));
+    p.appendChild(r);
+  } else {
+    // Toucher une tuile met à jour la sélection sur place : reconstruire le
+    // panneau le ramènerait en haut (et le doigt tomberait à côté).
+    let bv = null;
+    const marquer = (grille, i) => grille.querySelectorAll('.tuile').forEach(t => t.classList.toggle('choisi', t.dataset.joueur === String(i)));
+    const majBouton = () => {
+      const e = etatCourant;
+      if (bv) bv.disabled = !(choixCible !== null && choixPari !== null && choixCible !== MOI && !(e && e.partis[choixCible]));
+    };
+    const e1 = document.createElement('div');
+    e1.className = 'etape';
+    e1.textContent = '1. Je désigne…';
+    p.appendChild(e1);
+    const g1 = document.createElement('div');
+    g1.className = 'choix-joueurs';
+    presents(etat).filter(i => i !== MOI).forEach(i => {
+      g1.appendChild(tuileJoueur(etat, i, choixCible === i, 'cible', () => { choixCible = i; marquer(g1, i); majBouton(); }));
+    });
+    p.appendChild(g1);
+    const e2 = document.createElement('div');
+    e2.className = 'etape';
+    e2.textContent = '2. Je parie que la table désignera le plus…';
+    p.appendChild(e2);
+    const g2 = document.createElement('div');
+    g2.className = 'choix-joueurs';
+    presents(etat).forEach(i => {
+      g2.appendChild(tuileJoueur(etat, i, choixPari === i, 'pari', () => { choixPari = i; marquer(g2, i); majBouton(); }));
+    });
+    p.appendChild(g2);
+    const r = rangee();
+    r.style.marginTop = '8px';
+    bv = bouton('Valider mon vote', 'gros', () => agir({ type: 'qn_voter', cible: choixCible, pari: choixPari }));
+    majBouton();
+    r.appendChild(bv);
+    if (enEdition) r.appendChild(bouton('Annuler', 'sombre', () => { enEdition = false; choixCible = monVote.cible; choixPari = monVote.pari; rafraichirPanneau(true); }));
+    p.appendChild(r);
+  }
+  const c = document.createElement('div');
+  c.className = 'compte';
+  p.appendChild(c);
+  majPanneauLeger(etat);
+}
+
+function barresVotes(etat) {
+  const res = etat.resultat;
+  const d = document.createElement('div');
+  d.className = 'barres';
+  const haut = Math.max(1, ...res.compte);
+  res.compte.map((n, j) => j).filter(j => res.compte[j] > 0 || !etat.partis[j])
+    .sort((a, b) => res.compte[b] - res.compte[a] || a - b).forEach(j => {
+      const l = document.createElement('div');
+      l.className = 'barre' + (res.designes.includes(j) ? ' top' : '');
+      const nm = document.createElement('span');
+      nm.className = 'nom';
+      nm.textContent = etat.joueurs[j] + (j === MOI ? ' (toi)' : '');
+      const f = document.createElement('div');
+      f.className = 'fond';
+      const pl = document.createElement('div');
+      pl.className = 'plein';
+      pl.style.width = (100 * res.compte[j] / haut) + '%';
+      pl.style.background = couleurCss(j);
+      f.appendChild(pl);
+      const n = document.createElement('span');
+      n.className = 'n';
+      n.textContent = String(res.compte[j]);
+      l.append(nm, f, n);
+      d.appendChild(l);
+    });
+  return d;
+}
+
+function tableauManche(etat) {
+  const res = etat.resultat;
+  const t = document.createElement('table');
+  t.className = 'bilan';
+  const tete = document.createElement('tr');
+  const avecVotes = !!res.votes;
+  (avecVotes ? ['', 'A voté', 'Pari', '🍺'] : ['', 'Pari', '🍺']).forEach(h => { const th = document.createElement('th'); th.textContent = h; tete.appendChild(th); });
+  t.appendChild(tete);
+  etat.joueurs.forEach((nom, j) => {
+    const pari = res.paris.find(p => p.joueur === j);
+    const vote = avecVotes ? res.votes.find(v => v.joueur === j) : null;
+    if (!pari && !res.sans_vote.includes(j) && !res.boit[j]) return;
+    const tr = document.createElement('tr');
+    tr.className = j === MOI ? 'moi' : '';
+    const cells = [[(res.designes.includes(j) ? '👉 ' : '') + nom + (j === MOI ? ' (toi)' : '')]];
+    if (avecVotes) cells.push([vote ? etat.joueurs[vote.cible] : '·']);
+    cells.push(pari ? [(pari.bon ? '✓ ' : '✗ ') + etat.joueurs[pari.pari], pari.bon ? 'ok' : 'ko'] : ['pas de vote', 'ko']);
+    cells.push([res.boit[j] ? String(res.boit[j]) : '', 'n']);
+    cells.forEach(([txt, cl]) => { const td = document.createElement('td'); td.textContent = txt; if (cl) td.className = cl; tr.appendChild(td); });
+    t.appendChild(tr);
+  });
+  return t;
+}
+
+function panneauRevelation(etat) {
+  const reste = finAnimation - Date.now();
+  if (reste > 0) {
+    const p = ouvrirPanneau('🥁 Dépouillement…');
+    if (etat.carte) p.appendChild(blocCarte(etat.carte));
+    setTimeout(() => rafraichirPanneau(true), reste + 50);
+    return;
+  }
+  const p = ouvrirPanneau('');
+  if (!etat.carte || !etat.resultat) return;
+  const res = etat.resultat;
+  p.appendChild(blocCarte(etat.carte));
+  const d = document.createElement('div');
+  d.className = 'designe';
+  d.textContent = res.designes.length ? '👉 ' + res.designes.map(j => j === MOI ? 'Toi' : etat.joueurs[j]).join(' & ') : 'Personne !';
+  p.appendChild(d);
+  p.appendChild(barresVotes(etat));
+  p.appendChild(tableauManche(etat));
+  if (!res.votes) p.appendChild(aide('Votes anonymes : on ne saura pas qui a voté pour qui.'));
+  const r = rangee();
+  const derniere = etat.manche >= etat.nb_manches;
+  const bt = bouton(etat.suivants[MOI] ? 'En attente des autres…' : derniere ? 'Voir le classement ▶' : 'Carte suivante ▶', '',
+    () => agir({ type: 'qn_suivant' }));
+  bt.disabled = !!etat.suivants[MOI];
+  r.appendChild(bt);
+  p.appendChild(r);
+  const c = document.createElement('div');
+  c.className = 'compte';
+  p.appendChild(c);
+  majPanneauLeger(etat);
+}
+
+function panneauFin(etat) {
+  const f = etat.final || { classement: [], gagnants: [], derniers: [], titre: [] };
+  const titre = f.gagnants.length === 1 && f.gagnants[0] === MOI ? 'Tu gagnes !'
+    : f.gagnants.map(j => nomDe(j)).join(', ') + (f.gagnants.length > 1 ? ' gagnent !' : ' gagne !');
+  const p = ouvrirPanneau('🏆 ' + titre);
+  const t = document.createElement('table');
+  t.className = 'bilan';
+  const tete = document.createElement('tr');
+  ['', '🔮 Points', '👉 Désigné', '🍺 bues'].forEach(h => { const th = document.createElement('th'); th.textContent = h; tete.appendChild(th); });
+  t.appendChild(tete);
+  f.classement.forEach((j, k) => {
+    const tr = document.createElement('tr');
+    tr.className = (j === MOI ? 'moi ' : '') + (f.gagnants.includes(j) ? 'gagnant' : '');
+    [[(['🥇 ', '🥈 ', '🥉 '][k] || (k + 1) + '. ') + etat.joueurs[j] + (j === MOI ? ' (toi)' : '')],
+     [String(etat.points[j]), 'n pts'], [String(etat.designations[j]), 'n'], [String(etat.gorgees[j]), 'n']].forEach(([txt, cl]) => {
+      const td = document.createElement('td'); td.textContent = txt; if (cl) td.className = cl; tr.appendChild(td);
+    });
+    t.appendChild(tr);
+  });
+  p.appendChild(t);
+  if (f.titre && f.titre.length) {
+    const ts = document.createElement('div');
+    ts.className = 'titre-soiree';
+    ts.innerHTML = '👑 Titre de la soirée : <b></b>';
+    ts.querySelector('b').textContent = f.titre.map(j => j === MOI ? 'toi' : etat.joueurs[j]).join(', ') + ' (' + etat.designations[f.titre[0]] + ' désignations)';
+    p.appendChild(ts);
+  }
+  if (f.derniers.length) {
+    const qui = f.derniers.map(d => d.joueur);
+    const n = f.derniers[0].boit;
+    p.appendChild(aide('🍺 ' + (qui.length === 1 && qui[0] === MOI ? 'Tu es dernier : tu bois ' + n + ' gorgées.'
+      : qui.map(j => nomDe(j)).join(', ') + ' : dernier' + (qui.length > 1 ? 's, boivent ' : ', boit ') + n + ' gorgées.')));
+  }
+  p.appendChild(aide('Une autre ? Ceux qui sont arrivés en cours de partie s’assoient.'));
+  const n = joueursProchainePartie(etat);
+  p.appendChild(blocReglage(() => rafraichirPanneau(true)));
+  if (n < JOUEURS_MIN) p.appendChild(aide('Il faut au moins ' + JOUEURS_MIN + ' joueurs présents pour rejouer.'));
+  else if (n > JOUEURS_MAX) {
+    const al = document.createElement('div');
+    al.className = 'alerte';
+    al.textContent = 'Vous êtes ' + n + ' : Qui de nous ? se joue à ' + JOUEURS_MAX + ' au plus.';
+    p.appendChild(al);
+  }
+  const rg = rangee();
+  const b = bouton('Rejouer', '', () => agir(messageDemarrer()));
+  b.disabled = n < JOUEURS_MIN || n > JOUEURS_MAX;
+  rg.appendChild(b);
+  rg.appendChild(boutonMenuJeux());
+  p.appendChild(rg);
+}
+
+function panneauSpectateur(etat) {
+  const p = ouvrirPanneau('Spectateur');
+  if (etat.carte && etat.phase !== 'fin') p.appendChild(blocCarte(etat.carte));
+  p.appendChild(aide('La partie a commencé sans toi : tu la suis en direct, et tu t’assois à la suivante.'));
+  const r = rangee();
+  r.appendChild(bouton('Quitter le salon', 'sombre', () => {
+    enPartie = false; oublierSession(); monJeton = null;
+    if (ws) { try { ws.close(); } catch (e) { /* deja ferme */ } }
+    location.href = location.pathname;
+  }));
+  p.appendChild(r);
+}
+
+// --- Réglage : nombre de cartes, paquet, votes anonymes ou non ---
+function joueursProchainePartie(etat) {
+  const absents = (etat.partis || []).filter(Boolean).length;
+  return Math.max(0, (joueursSalon.length || etat.joueurs.length) - absents);
+}
+function messageDemarrer() {
+  return { type: 'qn_demarrer', manches: manchesChoisies, paquet: paquetChoisi, anonyme: anonymeChoisi };
+}
+
+function blocReglage(redessiner) {
+  const d = document.createElement('div');
+  const titre = texte => { const t = document.createElement('div'); t.className = 'reglage-titre'; t.textContent = texte; d.appendChild(t); };
+  const tuiles = (options, actuel, choisir) => {
+    const g = document.createElement('div');
+    g.className = 'modes';
+    options.forEach(([valeur, nom]) => {
+      // Une tuile, pas un <button> : le style commun des boutons l'écraserait.
+      const b = document.createElement('div');
+      b.className = 'mode' + (valeur === actuel ? ' choisi' : '');
+      b.setAttribute('role', 'button');
+      b.textContent = nom;
+      b.addEventListener('click', () => { choisir(valeur); redessiner(); });
+      g.appendChild(b);
+    });
+    d.appendChild(g);
+  };
+  titre('Nombre de cartes');
+  const rm = rangee();
+  MANCHES.forEach(m => {
+    rm.appendChild(bouton(String(m), 'sombre petit' + (m === manchesChoisies ? ' choisi' : ''), () => { manchesChoisies = m; redessiner(); }));
+  });
+  d.appendChild(rm);
+  titre('Paquet');
+  tuiles(Object.entries(PAQUETS), paquetChoisi, v => { paquetChoisi = v; });
+  titre('Votes');
+  tuiles([[true, '🙈 Anonymes'], [false, '👀 À découvert']], anonymeChoisi, v => { anonymeChoisi = v; });
+  return d;
+}
+
+// =====================================================================
+// ACCUEIL ET SALON
+// =====================================================================
+const SERVEURS = {
+  render: { http: 'https://kinito-serveur.onrender.com', ws: 'wss://kinito-serveur.onrender.com' },
+  local:  { http: 'http://127.0.0.1:8000',               ws: 'ws://127.0.0.1:8000' },
+};
+let serveurChoisi = 'render';
+
+let monNom = Soiree.nom();   // prénom de la soirée, saisi une seule fois
+let codeSalon = '';
+let estCreateur = false;
+let joueursSalon = [];
+let enPartie = false;
+let monJeton = null;
+
+const JOUEURS_MIN = 3;
+const JOUEURS_MAX = 8;
+
+// Le jeton permet de retrouver sa place après une coupure ou un rechargement.
+const CLE_SESSION = 'quidenous3d.session';
+
+function lireSession() {
+  try { return JSON.parse(localStorage.getItem(CLE_SESSION) || 'null'); }
+  catch (e) { return null; }
+}
+function ecrireSession(s) {
+  try { localStorage.setItem(CLE_SESSION, JSON.stringify(s)); } catch (e) { /* tant pis */ }
+}
+function oublierSession() {
+  lienActif = false;
+  try { localStorage.removeItem(CLE_SESSION); } catch (e) { /* tant pis */ }
+}
+
+function champTexte(id, placeholder, longueurMax) {
+  const i = document.createElement('input');
+  i.type = 'text';
+  i.id = id;
+  i.placeholder = placeholder;
+  i.autocomplete = 'off';
+  if (longueurMax) i.maxLength = longueurMax;
+  return i;
+}
+
+function afficherErreur(texte) { elRappel.textContent = texte; }
+
+function panneauAccueil() {
+  elMessage.textContent = 'Qui de nous ?';
+  elRappel.textContent = 'Une carte, un vote secret : le plus désigné boit';
+  elCompteur.innerHTML = '';
+  const p = panneauEnLigne();
+
+  const s = lireSession();
+  if (s && s.code && s.jeton) {
+    const r2 = rangee();
+    r2.style.marginTop = '12px';
+    r2.appendChild(bouton('Reprendre la partie ' + s.code, 'sombre', () => {
+      monNom = s.nom; codeSalon = s.code; monJeton = s.jeton;
+      serveurChoisi = s.serveur || 'render';
+      // Le créateur garde son bouton « Démarrer » après une coupure : sinon
+      // plus personne ne pouvait lancer la partie.
+      estCreateur = !!s.createur;
+      afficherErreur('Reconnexion...');
+      seConnecter();
+    }));
+    p.appendChild(r2);
+  }
+}
+
+function boutonServeur() {
+  const b = bouton('', 'sombre petit', () => {
+    serveurChoisi = serveurChoisi === 'render' ? 'local' : 'render';
+    majLibelleServeur(b);
+  });
+  majLibelleServeur(b);
+  return b;
+}
+
+function panneauRejoindreDirect(code) {
+  codeSalon = code;
+  elMessage.textContent = 'Qui de nous ?';
+  elRappel.textContent = 'Salon ' + code;
+  const p = ouvrirPanneau('Rejoindre le salon');
+
+  const c = document.createElement('div');
+  c.className = 'code-salon';
+  c.textContent = code;
+  p.appendChild(c);
+
+  const l1 = rangee();
+  const pseudo = champTexte('pseudo', 'Ton prénom', 16);
+  pseudo.value = monNom;
+  l1.appendChild(pseudo);
+  p.appendChild(l1);
+
+  const l2 = rangee();
+  l2.style.marginTop = '10px';
+  l2.appendChild(bouton('Rejoindre', '', async () => {
+    if (!lireNom()) return;
+    afficherErreur('Connexion au serveur...');
+    try {
+      const rep = await fetch(SERVEURS[serveurChoisi].http + '/salon/' + codeSalon);
+      if (!(await rep.json()).existe) { afficherErreur('Ce salon n’existe plus'); return; }
+      estCreateur = false;
+      seConnecter();
+    } catch (e) {
+      afficherErreur('Serveur injoignable.');
+    }
+  }));
+  p.appendChild(l2);
+
+  const l3 = rangee();
+  l3.style.marginTop = '12px';
+  l3.appendChild(boutonServeur());
+  l3.appendChild(bouton('Autre salon', 'sombre petit', panneauAccueil));
+  p.appendChild(l3);
+}
+
+function panneauEnLigne() {
+  const p = ouvrirPanneau('Jouer en ligne');
+
+  const l1 = rangee();
+  const pseudo = champTexte('pseudo', 'Ton prénom', 16);
+  pseudo.value = monNom;
+  l1.appendChild(pseudo);
+  p.appendChild(l1);
+
+  const l2 = rangee();
+  l2.style.marginTop = '10px';
+  l2.appendChild(bouton('Créer un salon', '', creerSalon));
+  p.appendChild(l2);
+
+  const l3 = rangee();
+  l3.style.marginTop = '10px';
+  l3.appendChild(champTexte('code-salon', 'CODE', 4));
+  l3.appendChild(bouton('Rejoindre', 'sombre', rejoindreSalon));
+  p.appendChild(l3);
+
+  const l4 = rangee();
+  l4.style.marginTop = '14px';
+  l4.appendChild(boutonServeur());
+  p.appendChild(l4);
+
+  const note = document.createElement('div');
+  note.className = 'note';
+  note.textContent = "Le serveur Render s'endort : la première connexion peut prendre 30 s.";
+  p.appendChild(note);
+  return p;
+}
+
+function majLibelleServeur(b) {
+  b.textContent = serveurChoisi === 'render' ? 'Serveur : Render' : 'Serveur : local';
+}
+
+function lireNom() {
+  const champ = document.getElementById('pseudo');
+  monNom = champ ? champ.value.trim() : '';
+  if (monNom) monNom = Soiree.definirNom(monNom);
+  if (!monNom) { afficherErreur('Entre ton prénom'); return false; }
+  return true;
+}
+
+async function creerSalon() {
+  if (!lireNom()) return;
+  afficherErreur('Connexion au serveur...');
+  try {
+    const rep = await fetch(SERVEURS[serveurChoisi].http + '/creer-salon');
+    codeSalon = (await rep.json()).code;
+    estCreateur = true;
+    seConnecter();
+  } catch (e) {
+    afficherErreur("Serveur injoignable. S'il dort, réessaie dans 30 s.");
+  }
+}
+
+async function rejoindreSalon() {
+  if (!lireNom()) return;
+  const champ = document.getElementById('code-salon');
+  codeSalon = (champ ? champ.value : '').trim().toUpperCase();
+  if (codeSalon.length !== 4) { afficherErreur('Le code fait 4 lettres'); return; }
+  afficherErreur('Connexion au serveur...');
+  try {
+    const rep = await fetch(SERVEURS[serveurChoisi].http + '/salon/' + codeSalon);
+    if (!(await rep.json()).existe) { afficherErreur('Salon introuvable'); return; }
+    estCreateur = false;
+    seConnecter();
+  } catch (e) {
+    afficherErreur('Serveur injoignable.');
+  }
+}
+
+// --- Connexion au serveur : reconnexion automatique et battement de cœur ---
+// (même mécanique que les autres jeux : battement toutes les 5 s, reconnexion
+// automatique, resynchronisation au retour sur la page)
+let lienActif = false;
+let tentativesLien = 0;
+let minuteurLien = null;
+let dernierSignal = 0;
+let cacheeDepuis = 0;
+
+function seConnecter() {
+  Soiree.memoriser(codeSalon, serveurChoisi);
+  if (!monJeton) {
+    const s = lireSession();
+    if (s && s.code === codeSalon && s.jeton) monJeton = s.jeton;
+  }
+
+  clearTimeout(minuteurLien);
+  minuteurLien = null;
+  lienActif = true;
+  let url = SERVEURS[serveurChoisi].ws + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom) + '?bat=1&page=quidenous';
+  if (monJeton) url += '&jeton=' + encodeURIComponent(monJeton);
+  const socket = new WebSocket(url);
+  ws = socket;
+  dernierSignal = Date.now();
+  socket.onopen = () => {
+    if (ws !== socket) return;
+    if (tentativesLien > 0) afficherErreur('Reconnecté.');
+    tentativesLien = 0;
+    dernierSignal = Date.now();
+    mode = 'ligne';
+    if (!enPartie) panneauAttente();
+    Soiree.verifierJeuEnCours('quidenous');
+  };
+  socket.onmessage = e => {
+    if (ws !== socket) return;
+    dernierSignal = Date.now();
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'pong') return;
+    if (Soiree.traiterMessage(msg, 'quidenous')) return;
+    if (msg.type === 'remplace') { lienActif = false; panneauRemplace(); return; }
+    clientRecevoir(msg);
+  };
+  socket.onerror = () => { if (ws === socket && !lienActif) afficherErreur('Erreur de connexion au serveur'); };
+  socket.onclose = () => { if (ws === socket && lienActif) programmerReconnexion(); };
+}
+
+function programmerReconnexion() {
+  if (!lienActif || minuteurLien) return;
+  tentativesLien++;
+  if (tentativesLien > 14) { lienActif = false; panneauReconnexion(); return; }
+  afficherErreur('Connexion perdue, reconnexion…');
+  const delai = Math.min(1000 * tentativesLien, 5000);
+  minuteurLien = setTimeout(() => { minuteurLien = null; if (lienActif) seConnecter(); }, delai);
+}
+
+function verifierLien() {
+  if (!lienActif) return;
+  const absence = cacheeDepuis ? Date.now() - cacheeDepuis : 0;
+  cacheeDepuis = 0;
+  if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+    clearTimeout(minuteurLien);
+    minuteurLien = null;
+    tentativesLien = 0;
+    seConnecter();
+  } else if (ws.readyState === WebSocket.OPEN && absence > 2000) {
+    try { ws.send('{"type":"ping"}'); ws.send('{"type":"resync"}'); } catch (e) { /* elle se fermera */ }
+  }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) cacheeDepuis = Date.now(); else verifierLien();
+});
+window.addEventListener('pageshow', verifierLien);
+window.addEventListener('online', verifierLien);
+
+setInterval(() => {
+  if (!lienActif || !ws || ws.readyState !== WebSocket.OPEN) return;
+  try { ws.send('{"type":"ping"}'); } catch (e) { /* elle se fermera */ }
+  if (!document.hidden && Date.now() - dernierSignal > 15000) seConnecter();
+}, 5000);
+
+function panneauRemplace() {
+  elMessage.textContent = 'Partie reprise ailleurs';
+  const p = ouvrirPanneau('Tu joues sur un autre écran');
+  const t = document.createElement('p');
+  t.textContent = 'Ta place a été reprise depuis un autre onglet ou un autre téléphone, avec le même prénom.';
+  p.appendChild(t);
+  const r = rangee();
+  r.appendChild(bouton('Reprendre ici', '', () => { cacherPanneau(); tentativesLien = 0; seConnecter(); }));
+  r.appendChild(bouton('Tous les jeux', 'sombre', () => { location.href = 'index.html'; }));
+  p.appendChild(r);
+}
+
+function panneauReconnexion() {
+  elMessage.textContent = 'Connexion perdue';
+  const p = ouvrirPanneau('Déconnecté');
+  p.appendChild(aide('Ta place est gardée ; en attendant, la table avance sans toi. Reconnecte-toi pour la reprendre.'));
+  const r = rangee();
+  r.appendChild(bouton('Reconnecter', '', () => { cacherPanneau(); tentativesLien = 0; seConnecter(); }));
+  r.appendChild(bouton('Quitter', 'sombre', () => {
+    enPartie = false; oublierSession(); monJeton = null; location.href = location.pathname;
+  }));
+  p.appendChild(r);
+}
+
+const SITE_PUBLIE = 'https://ozaxe.github.io/table-de-jeu/quidenous-3d-jeu.html';
+
+function lienSalon(code) {
+  const fichierLocal = location.protocol === 'file:';
+  const base = fichierLocal ? SITE_PUBLIE : location.origin + location.pathname;
+  return { url: base + '?salon=' + encodeURIComponent(code), repli: fichierLocal };
+}
+
+function majQRModale() {
+  const bloc = document.getElementById('bloc-qr-regles');
+  if (!bloc) return;
+  if (mode !== 'ligne' || !codeSalon) { bloc.className = 'cache'; return; }
+  bloc.className = '';
+  document.getElementById('qr-code-salon').textContent = codeSalon;
+
+  const lien = lienSalon(codeSalon);
+  const cv = document.getElementById('qr-regles');
+  const note = document.getElementById('qr-note-regles');
+
+  cv.style.display = 'none';
+  if (typeof QRious !== 'undefined') {
+    try {
+      new QRious({ element: cv, value: lien.url, size: 340, level: 'M',
+                   background: '#f4ebe0', foreground: '#26100e' });
+      cv.style.display = '';
+    } catch (e) { /* pas de QR : le code à 4 lettres suffit */ }
+  }
+
+  const avertissements = [];
+  if (lien.repli) {
+    avertissements.push('Ce QR mène au site en ligne : la page est ouverte en fichier local, il n’y a pas d’adresse à partager.');
+    if (serveurChoisi === 'local') avertissements.push('Tu joues sur le serveur local : ceux qui scannent arriveront sur le serveur en ligne.');
+  }
+  if (enPartie) {
+    avertissements.push('Partie en cours : celui qui rejoint regarde et entre à la partie suivante. Pour quelqu’un qui s’est fait couper, ce lien lui rend sa place.');
+  }
+  note.textContent = avertissements.join(' ');
+
+  document.getElementById('copier-lien-regles').onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(lien.url);
+      note.textContent = 'Lien copié : ' + lien.url;
+    } catch (e) {
+      note.textContent = lien.url;
+    }
+  };
+}
+
+
+function panneauAttente() {
+  const p = ouvrirPanneau('Salle d’attente');
+  const invite = document.createElement('p');
+  invite.className = 'invitation-soiree';
+  invite.textContent = 'De 3 à 8 joueurs : une carte « Qui de nous… » par manche, chacun désigne un joueur en secret sur son téléphone. Le QR de la soirée est sur l’accueil.';
+  p.appendChild(invite);
+
+  const liste = document.createElement('div');
+  liste.className = 'liste-attente';
+  liste.textContent = joueursSalon.length
+    ? joueursSalon.map((n, i) => (i === MOI ? n + ' (toi)' : n)).join(' · ')
+    : 'En attente de joueurs...';
+  p.appendChild(liste);
+
+  if (estCreateur) {
+    const n = joueursSalon.length;
+    p.appendChild(blocReglage(panneauAttente));
+    const r = rangee();
+    r.style.marginTop = '6px';
+    const trop = n > JOUEURS_MAX;
+    const b = bouton('Démarrer la partie', '', () => Soiree.lancer('quidenous', o => envoyerIntention(MOI, { ...messageDemarrer(), ...o })));
+    b.disabled = n < JOUEURS_MIN || trop;
+    r.appendChild(b);
+    p.appendChild(r);
+    if (n < JOUEURS_MIN) {
+      p.appendChild(aide('Encore ' + (JOUEURS_MIN - n) + ' joueur' + (JOUEURS_MIN - n > 1 ? 's' : '') + ' avant de pouvoir lancer.'));
+    } else if (trop) {
+      const al = document.createElement('div');
+      al.className = 'alerte';
+      al.textContent = 'Vous êtes ' + n + ' : Qui de nous ? se joue à ' + JOUEURS_MAX + ' au plus. Ouvrez une deuxième table.';
+      p.appendChild(al);
+    }
+  } else {
+    p.appendChild(aide('En attente du créateur du salon (il choisit le paquet)...'));
+  }
+}
+
+// =====================================================================
+// MISE EN PLACE DE LA TABLE
+// =====================================================================
+let moiDeLaTable = -1;
+
+function construireTable(noms) {
+  creerSieges(noms);
+  const etat = etatCourant;
+  sieges.forEach((s, i) => {
+    const g = etat && etat.gorgees ? etat.gorgees[i] || 0 : 0;
+    s.niveau = s.objectif = niveauGorgees(g);
+    dessinerChope(s);
+  });
+  moiDeLaTable = MOI;
+}
+
+function demarrerScene(noms) {
+  enPartie = true;
+  etatCourant = null;
+  finAnimation = 0;
+  cacherPanneau();
+  viderJetons();
+  construireTable(noms);
+  camObjectifPos = CAM_POS.clone();
+  camObjectifCible = CAM_CIBLE.clone();
+}
+
+// =====================================================================
+// BOUCLE DE RENDU
+// =====================================================================
+const clock = new THREE.Clock();
+
+function boucle() {
+  requestAnimationFrame(boucle);
+  const rattrapage = fileActions.length > 3 ? 4 : 1;
+  const dt = Math.min(clock.getDelta(), 0.1) * rattrapage;
+
+  for (let i = animations.length - 1; i >= 0; i--) {
+    const a = animations[i];
+    a.t += dt;
+    if (a.maj) a.maj(a);
+    if (a.t >= a.duree) {
+      animations.splice(i, 1);
+      if (a.fin) a.fin();
+    }
+  }
+
+  sieges.forEach(s => {
+    if (Math.abs(s.niveau - s.objectif) > 0.001) {
+      s.niveau += (s.objectif - s.niveau) * 0.09;
+      dessinerChope(s);
+    }
+  });
+
+  const t = clock.elapsedTime;
+  sieges.forEach(s => { if (s.icone.visible) s.icone.position.y = 0.86 + Math.sin(t * 3 + s.index) * 0.03; });
+  sieges.forEach(s => { if (s.halo.visible) s.halo.material.opacity = 0.14 + Math.sin(t * 4) * 0.04; });
+
+  for (let i = textesFlottants.length - 1; i >= 0; i--) {
+    const f = textesFlottants[i];
+    f.t += dt;
+    const k = f.t / f.duree;
+    f.sprite.position.y = f.depart.y + k * 0.45;
+    f.sprite.material.opacity = k < 0.1 ? k / 0.1 : Math.max(0, Math.min(1, (1 - k) / 0.45));
+    if (f.t >= f.duree) { scene.remove(f.sprite); textesFlottants.splice(i, 1); }
+  }
+
+  camera.position.lerp(camObjectifPos, CAM_VITESSE);
+  camCibleActuelle.lerp(camObjectifCible, CAM_VITESSE);
+  decor.animer(t);
+  // Plus la caméra recule, plus les prénoms grossissent (lisibles sans se toucher).
+  const recul = THREE.MathUtils.clamp(camera.position.distanceTo(camCibleActuelle) / 6.2, 1, 1.4);
+  sieges.forEach(st => {
+    const e = sieges.length > 7 ? 0.85 : 1;
+    st.etiquette.scale.set(0.9 * e * recul, 0.225 * e * recul, 1);
+  });
+  camera.lookAt(camCibleActuelle);
+  zone.appliquer(camera, { rayon: R_TABLE, places: R_SIEGE }, { pos: camObjectifPos, cible: camObjectifCible });
+  renderer.render(scene, camera);
+}
+
+// =====================================================================
+// DÉMARRAGE
+// =====================================================================
+// Quelques places vides dès l'accueil : la table a l'air prête.
+creerSieges(['', '', '', '', '', '']);
+sieges.forEach(s => { s.etiquette.visible = false; });
+
+if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) serveurChoisi = 'local';
+
+const salonDansUrl = new URLSearchParams(location.search).get('salon');
+if (salonDansUrl && /^[A-Za-z]{4}(-[2-9])?$/.test(salonDansUrl)) {
+  if (monNom) {
+    codeSalon = salonDansUrl.toUpperCase();
+    estCreateur = true;
+    seConnecter();
+  } else {
+    panneauRejoindreDirect(salonDansUrl.toUpperCase());
+  }
+} else {
+  panneauAccueil();
+}
+lisserScene(scene);
+zone.mesurer();
+boucle();
+surveillerFluidite();
+</script>
+<script>
+  // Appli installable (PWA) : voir service-worker.js
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(() => {});
+</script>
+</body>
+</html>
