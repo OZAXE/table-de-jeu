@@ -1,0 +1,67 @@
+/* =====================================================================
+   Thème « Veillée » (Loup-Garou) : la place du hameau, la nuit.
+   Bleu nuit, parchemin, lueur de bougie ambrée, cire rouge sang.
+   Titres : Cinzel. Texte : Outfit.
+   ===================================================================== */
+:root {
+  --accent: #ffb347;
+  --accent-2: #e0413a;
+  --fond: #060a18;
+  --verre: rgba(14, 18, 34, 0.92);
+  --verre-fort: rgba(10, 12, 24, 0.97);
+  --bord: rgba(255, 179, 71, 0.35);
+  --texte: #f6eedc;
+  --texte-doux: #cfc3a8;
+  --texte-pale: #8f8670;
+  --police: Outfit, 'Segoe UI', system-ui, sans-serif;
+  --police-titre: Cinzel, 'Times New Roman', serif;
+}
+html, body { background: var(--fond) !important; }
+#overlay, button, input, .modale, #panneau { font-family: var(--police) !important; }
+#message, #panneau h2, .modale h2, .code-salon { font-family: var(--police-titre) !important; font-weight: 700 !important; letter-spacing: 0.03em; }
+#message { color: var(--texte) !important; text-shadow: 0 0 14px rgba(255, 150, 60, 0.55), 0 2px 10px rgba(0, 0, 0, 0.9) !important; }
+#rappel { color: var(--texte-doux) !important; }
+#compteur { background: rgba(10, 12, 24, 0.92) !important; border: 1px solid var(--bord) !important; }
+
+.joueur {
+  background: linear-gradient(180deg, #1e2440, #11152a) !important; color: var(--texte) !important;
+  border: 1px solid rgba(255, 179, 71, 0.45) !important; border-radius: 10px !important;
+  box-shadow: 0 0 10px rgba(255, 150, 60, 0.12), 0 3px 8px rgba(0, 0, 0, 0.45) !important;
+}
+.joueur .info { color: var(--texte-doux) !important; }
+.joueur.mort { opacity: 0.55; text-decoration: line-through; text-decoration-color: rgba(224, 65, 58, 0.7); }
+
+#panneau {
+  background: linear-gradient(180deg, rgba(24, 28, 52, 0.97), rgba(10, 12, 24, 0.98)) !important;
+  border: 2px solid rgba(255, 179, 71, 0.55) !important; border-radius: 18px !important;
+  box-shadow: 0 0 24px rgba(255, 150, 60, 0.16), 0 18px 40px rgba(0, 0, 0, 0.65) !important;
+}
+#panneau h2 { color: var(--accent) !important; text-shadow: 0 0 12px rgba(255, 150, 60, 0.45); }
+#panneau p, .aide { color: var(--texte-doux) !important; }
+
+button {
+  font-family: var(--police) !important; font-weight: 800 !important; color: #fff6e6 !important;
+  background: linear-gradient(180deg, #c8382f, #861a14) !important; border: 1px solid #ffb38a !important; border-radius: 12px !important;
+  box-shadow: 0 0 14px rgba(224, 65, 58, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+}
+button:active { transform: translateY(2px) scale(0.98) !important; }
+button:disabled { opacity: 0.45; }
+button.sombre, button.clair { color: var(--texte) !important; background: linear-gradient(180deg, #252b4a, #151a30) !important; border: 1px solid var(--bord) !important; box-shadow: 0 0 10px rgba(255, 150, 60, 0.1) !important; }
+button.choisi { outline: 3px solid var(--accent) !important; }
+#btn-regles { background: linear-gradient(180deg, #252b4a, #151a30) !important; color: var(--texte) !important; border: 1px solid var(--bord) !important; }
+
+.mode { border-radius: 12px !important; background: rgba(6, 8, 18, 0.55) !important; }
+.mode.choisi { border-color: var(--accent) !important; background: rgba(255, 179, 71, 0.16) !important; }
+input[type="text"] { background: rgba(4, 6, 14, 0.6) !important; border: 1px solid var(--bord) !important; border-radius: 10px !important; color: var(--texte) !important; }
+.code-salon { background: none !important; color: var(--accent) !important; -webkit-background-clip: initial !important; background-clip: initial !important; }
+
+#modale-regles { background: rgba(2, 3, 10, 0.86) !important; }
+.modale { background: linear-gradient(180deg, #1c2140, #0d1022) !important; color: var(--texte) !important; border: 2px solid rgba(255, 179, 71, 0.55) !important; border-radius: 18px !important; }
+.modale h2 { color: var(--accent) !important; }
+.modale h3 { color: #ff8a7a !important; font-family: var(--police-titre); font-weight: 700 !important; }
+
+.annonce-lg .gros { font-family: var(--police-titre) !important; font-weight: 700 !important; }
+
+@media (max-width: 760px), (pointer: coarse) {
+  #panneau { border-radius: 18px 18px 0 0 !important; border-width: 2px 0 0 0 !important; }
+}

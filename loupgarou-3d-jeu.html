@@ -1,0 +1,1900 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Loup-Garou 3D</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=2">
+<link rel="apple-touch-icon" href="icons/icon-180.png?v=2">
+<meta name="theme-color" content="#060a18">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SHIELD">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Cinzel:wght@700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; background: #060a18; }
+  canvas { display: block; }
+
+  #overlay { position: fixed; inset: 0; pointer-events: none; font-family: 'Outfit', system-ui, sans-serif; }
+  #vignette { position: fixed; inset: 0; pointer-events: none; transition: background 1.2s; }
+  body.nuit #vignette { background: radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(0,4,20,0.55) 100%); }
+
+  /* --- Liste des joueurs --- */
+  #joueurs { position: absolute; top: 18px; left: 18px; display: flex; flex-direction: column; gap: 6px; max-height: 70vh; overflow: hidden; }
+  .joueur {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 12px; font-size: 16px; min-width: 170px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .joueur.absent { opacity: 0.45; font-style: italic; }
+  .joueur .pastille { width: 12px; height: 12px; border-radius: 50%; flex: 0 0 auto; }
+  .joueur .nom { flex: 1 1 auto; }
+  .joueur .info { font-size: 13px; color: var(--texte-doux); white-space: nowrap; }
+
+  /* --- Bandeau du haut --- */
+  #bandeau { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); text-align: center; max-width: 52vw; }
+  #message { font-size: 22px; }
+  #rappel { font-size: 15px; margin-top: 4px; }
+  #compteur {
+    display: inline-block; margin-top: 6px; padding: 4px 14px;
+    color: var(--texte); font-size: 14px;
+    background: var(--verre); border: 1px solid var(--bord); border-radius: 999px;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  }
+  #compteur:empty { display: none; }
+  #compteur b { color: var(--accent); }
+  #compteur .chrono.urgent { color: #ff8a8a; font-weight: 700; }
+
+  /* --- Panneau du bas --- */
+  #panneau {
+    position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+    pointer-events: auto; padding: 14px 18px;
+    min-width: 320px; max-width: min(720px, 94vw); text-align: center;
+    max-height: 62vh; overflow-y: auto;
+  }
+  #panneau.cache { display: none; }
+  #panneau h2 { margin: 0 0 8px; font-size: 20px; }
+  #panneau p { margin: 0 0 10px; font-size: 16px; }
+  .rangee { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  button {
+    pointer-events: auto; font-family: 'Outfit', system-ui, sans-serif;
+    font-weight: 700; font-size: 18px; padding: 11px 22px; cursor: pointer;
+  }
+  button.petit { font-size: 14px; padding: 7px 14px; }
+  button.gros { font-size: 22px; padding: 14px 30px; letter-spacing: 0.04em; }
+  button.choisi { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  /* --- Carte de rôle (cachée tant qu'on ne la touche pas : les voisins regardent) --- */
+  .carte-role {
+    pointer-events: auto; cursor: pointer; user-select: none; position: relative;
+    margin: 2px auto 10px; max-width: 420px; padding: 12px 14px; border-radius: 16px;
+    background: linear-gradient(160deg, #f2e2bc, #cfb27a); color: #2a1a0a; text-align: left;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.5), inset 0 0 0 2px rgba(107,74,36,0.6);
+  }
+  .carte-role .tete { display: flex; align-items: center; gap: 12px; }
+  .carte-role .icone { font-size: 40px; line-height: 1; }
+  .carte-role .nom-role { font-family: var(--police-titre, serif); font-size: 22px; font-weight: 700; }
+  .carte-role .camp { font-size: 13px; font-weight: 700; opacity: 0.75; }
+  .carte-role .texte { font-size: 14px; margin-top: 6px; line-height: 1.4; }
+  .carte-role .meute { font-size: 14px; margin-top: 6px; font-weight: 700; color: #7c1712; }
+  .carte-role.loup { background: linear-gradient(160deg, #e9b7a8, #b8584a); }
+  .carte-role.cachee .contenu { filter: blur(9px); opacity: 0.6; }
+  .carte-role .voile-role { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; color: #2a1a0a; }
+  .carte-role.cachee .voile-role { display: flex; }
+  .mini-role { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 700;
+    background: rgba(255,179,71,0.12); border: 1px solid var(--bord); color: var(--texte); cursor: pointer; pointer-events: auto; margin-bottom: 8px; user-select: none; }
+
+  .consigne { font-size: 16px; color: var(--texte); margin: 4px 0 8px; line-height: 1.4; }
+  .consigne b { color: var(--accent); }
+  .choix-joueurs { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 7px; margin-bottom: 6px; }
+  .tuile {
+    pointer-events: auto; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; justify-content: center;
+    padding: 9px 8px; border-radius: 12px; border: 1px solid var(--bord); background: rgba(255,255,255,0.05);
+    color: var(--texte); font-size: 15px; font-weight: 700; user-select: none; min-height: 40px;
+  }
+  .tuile .ligne { display: flex; align-items: center; gap: 7px; }
+  .tuile .pastille { width: 11px; height: 11px; border-radius: 50%; flex: 0 0 auto; }
+  .tuile .marques { font-size: 12px; font-weight: 600; color: #ff9a8a; min-height: 0; }
+  .tuile.choisi { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 45%, transparent); }
+  .tuile.interdit { opacity: 0.35; pointer-events: none; }
+  .tuile.blanc { font-style: italic; color: var(--texte-doux); }
+  .fait { font-size: 17px; margin: 6px 0 10px; color: var(--texte); line-height: 1.5; }
+  .fait b { color: var(--accent); }
+  .compte { font-size: 14px; color: var(--texte-doux); margin-top: 8px; }
+  .vision { margin: 6px auto 10px; padding: 8px 12px; border-radius: 12px; background: rgba(150,120,255,0.12); border: 1px solid rgba(180,160,255,0.45); font-size: 16px; color: var(--texte); max-width: 420px; }
+  .vision b { color: #d8c8ff; }
+  .visions { font-size: 13px; color: var(--texte-doux); margin: 4px 0 8px; line-height: 1.6; }
+  .fantome { font-size: 14px; color: var(--texte-doux); margin: 4px auto 8px; max-width: 460px; }
+  .liste-roles { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin: 6px 0 8px; }
+  .liste-roles span { padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,0.06); border: 1px solid var(--bord); font-size: 13px; color: var(--texte); }
+  .liste-roles span.loup { border-color: rgba(224,65,58,0.7); color: #ffb0a6; }
+  .liste-roles span.mort { opacity: 0.5; text-decoration: line-through; }
+
+  /* --- Annonces (aube, verdict) --- */
+  .mort-ligne { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 6px 0; font-size: 18px; color: var(--texte); }
+  .mort-ligne .ic { font-size: 26px; }
+  .mort-ligne .cause { font-size: 13px; color: var(--texte-doux); }
+  .grand { font-family: var(--police-titre, serif); font-size: 26px; color: var(--accent-2, #e0413a); margin: 2px 0 8px; text-shadow: 0 0 14px rgba(224,65,58,0.5); }
+  .bilan { margin: 6px auto 10px; border-collapse: collapse; font-size: 15px; min-width: 280px; }
+  .bilan td, .bilan th { padding: 4px 8px; color: var(--texte); text-align: left; border-bottom: 1px solid var(--bord); }
+  .bilan th { font-size: 12px; font-weight: 600; color: var(--texte-doux); }
+  .bilan td.n { text-align: right; white-space: nowrap; }
+  .bilan tr.moi td { background: rgba(255, 179, 71, 0.1); }
+  .bilan tr.gagnant td:first-child { color: #ffd98a; }
+  .bilan tr.mort td:first-child { opacity: 0.65; }
+  .bilan td.ko { color: #ff8a8a; }
+
+  /* --- Réglages --- */
+  .modes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 6px 0 10px; }
+  .mode {
+    pointer-events: auto; cursor: pointer; text-align: left;
+    padding: 9px 11px; border-radius: 12px; border: 1px solid var(--bord);
+    background: rgba(255,255,255,0.05); color: var(--texte); font-size: 14px; font-weight: 600;
+  }
+  .mode small { display: block; font-weight: 500; color: var(--texte-doux); font-size: 12px; margin-top: 2px; }
+  .mode.choisi { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
+  .reglage-titre { font-size: 13px; color: var(--texte-doux); margin: 8px 0 4px; }
+  .compo { font-size: 14px; color: var(--texte); margin: 6px 0 4px; }
+
+  input[type="text"] {
+    pointer-events: auto; font-family: 'Outfit', system-ui, sans-serif;
+    font-size: 18px; text-align: center; padding: 10px 14px; width: 210px; margin: 0 4px;
+  }
+  input#code-salon { width: 120px; letter-spacing: 6px; text-transform: uppercase; }
+  .code-salon { font-size: 38px; letter-spacing: 8px; margin: 2px 0 6px; }
+  .liste-attente { font-size: 17px; margin: 10px 0; line-height: 1.6; }
+  .qr { display: block; margin: 10px auto 4px; width: 168px; height: 168px; }
+  @media (max-width: 760px), (pointer: coarse) { .qr { width: 132px; height: 132px; } }
+
+  /* --- Règles --- */
+  #btn-regles { position: absolute; top: 18px; right: 18px; pointer-events: auto; font-size: 15px; padding: 8px 16px; cursor: pointer; }
+  #modale-regles {
+    position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-start; justify-content: center;
+    padding: 20px; overflow-y: auto; pointer-events: auto;
+  }
+  #modale-regles.cache { display: none; }
+  .modale { padding: 22px; max-width: 500px; width: 100%; margin: auto; line-height: 1.55; }
+  .modale h2 { font-size: 22px; margin: 0 0 12px; text-align: center; }
+  .modale h3 { font-size: 17px; margin: 16px 0 6px; }
+  .modale p { margin: 0 0 10px; font-size: 15px; }
+  .modale ul { margin: 0 0 10px 18px; font-size: 15px; padding: 0; }
+  .modale li { margin-bottom: 5px; }
+  .modale table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 14px; }
+  .modale td { padding: 5px 7px; text-align: left; border-bottom: 1px solid var(--bord); vertical-align: top; }
+  .modale td:first-child { white-space: nowrap; color: var(--texte); }
+  .modale .accent { color: var(--accent); font-weight: 700; }
+
+  .cache { display: none !important; }
+  .note { font-size: 12px; margin-top: 10px; }
+  .alerte { font-size: 13px; color: #e0a05a; margin-top: 8px; }
+
+  /* ================= Téléphones ================= */
+  @media (max-width: 760px), (pointer: coarse) {
+    #joueurs { top: 88px; left: 8px; right: 8px; flex-direction: row; flex-wrap: wrap; gap: 4px; justify-content: center; }
+    .joueur { padding: 3px 9px; font-size: 13px; min-width: 0; gap: 5px; }
+    .joueur .info { font-size: 11px; }
+    #bandeau { top: 12px; max-width: calc(100vw - 130px); left: 8px; transform: none; text-align: left; }
+    #message { font-size: 17px; }
+    #rappel { font-size: 12px; }
+    #compteur { font-size: 11px; padding: 2px 9px; margin-top: 3px; white-space: nowrap; }
+    #btn-regles { top: 10px; right: 10px; font-size: 13px; padding: 6px 12px; }
+    #panneau {
+      bottom: 0; left: 0; right: 0; transform: none; width: 100%; max-width: none; min-width: 0; box-sizing: border-box;
+      padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px)); max-height: 62vh;
+    }
+    #panneau h2 { font-size: 17px; margin-bottom: 6px; }
+    #panneau p { font-size: 14px; margin-bottom: 8px; }
+    button { font-size: 15px; padding: 9px 14px; }
+    button.gros { font-size: 19px; padding: 12px 24px; }
+    .rangee { gap: 7px; }
+    .carte-role .icone { font-size: 32px; }
+    .carte-role .nom-role { font-size: 19px; }
+    .consigne { font-size: 15px; }
+    .grand { font-size: 21px; }
+    .choix-joueurs { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 5px; }
+    .tuile { font-size: 14px; padding: 8px 6px; }
+    .bilan { font-size: 13px; min-width: 0; width: 100%; }
+    .bilan td, .bilan th { padding: 3px 5px; }
+    input[type="text"] { width: 160px; font-size: 16px; }
+    input#code-salon { width: 104px; }
+    .code-salon { font-size: 30px; letter-spacing: 6px; }
+    .modale { padding: 16px; }
+    .modale h2 { font-size: 19px; }
+    .modale p, .modale ul { font-size: 14px; }
+  }
+  @media (max-height: 460px) {
+    #joueurs { top: 80px; }
+    #panneau { max-height: 78vh; padding: 8px 10px; }
+  }
+
+  /* Grande annonce pour toute la table (nuit, aube, verdict, victoire) */
+  .annonce-lg { position: fixed; left: calc(var(--zone-gauche, 0px) + 8px); right: calc(var(--zone-droite, 0px) + 8px); top: calc(var(--haut-libre, 14vh) + 6px); z-index: 60; text-align: center; pointer-events: none; }
+  .annonce-lg .gros { font: 700 clamp(28px, 9vmin, 72px)/1.05 'Outfit', system-ui, sans-serif; letter-spacing: 0.02em; color: var(--c);
+    text-shadow: 0 0 26px var(--c), 0 6px 22px rgba(0, 0, 0, 0.85); animation: lg-pop 0.5s cubic-bezier(.2, 1.4, .4, 1) both; }
+  .annonce-lg .petit { display: inline-block; margin-top: 12px; padding: 7px 16px; border-radius: 999px; background: rgba(0, 0, 0, 0.6);
+    border: 1px solid var(--c); color: #fff; font: 700 clamp(15px, 4.6vw, 21px)/1.25 'Outfit', system-ui, sans-serif; animation: lg-monte 0.4s 0.15s both; }
+  .annonce-lg.sort { animation: lg-sort 0.35s ease-in forwards; }
+  .flash-lg { position: fixed; inset: 0; z-index: 59; pointer-events: none; background: var(--c); animation: lg-flash 0.8s ease-out forwards; }
+  @keyframes lg-pop { from { opacity: 0; transform: scale(1.8); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+  @keyframes lg-monte { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes lg-sort { to { opacity: 0; transform: translateY(-16px) scale(0.92); } }
+  @keyframes lg-flash { 0% { opacity: 0.45; } 100% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .annonce-lg .gros, .annonce-lg .petit { animation: none; } .flash-lg { display: none; } }
+</style>
+<!-- Direction artistique commune « bar moderne », thème « veillée » (place du hameau, la nuit). -->
+<link rel="stylesheet" href="da/bar-moderne.css">
+<link rel="stylesheet" href="da/themes/veillee.css">
+<link rel="stylesheet" href="da/mise-en-page.css">
+</head>
+<body class="nuit">
+
+<div id="overlay">
+  <button id="btn-regles">Règles &#9432;</button>
+  <div id="joueurs"></div>
+  <div id="bandeau">
+    <div id="message">Loup-Garou</div>
+    <div id="rappel"></div>
+    <div id="compteur"></div>
+  </div>
+  <div id="panneau"></div>
+</div>
+<div id="vignette"></div>
+
+<div id="modale-regles" class="cache">
+  <div class="modale">
+    <h2>Règles du Loup-Garou</h2>
+    <p>Des loups-garous se cachent parmi les habitants du hameau. Chaque nuit, ils dévorent quelqu'un ; chaque jour, le village débat et <span class="accent">élimine un suspect au vote</span>. Pas besoin de meneur : ton téléphone fait le conteur.</p>
+
+    <h3>Les deux camps</h3>
+    <ul>
+      <li>🐺 <span class="accent">Les loups</span> gagnent dès qu'ils sont au moins aussi nombreux que les autres vivants.</li>
+      <li>🏡 <span class="accent">Le village</span> gagne quand il n'y a plus aucun loup.</li>
+      <li>Ton rôle reste caché : touche ta carte pour la voir, retouche pour la cacher.</li>
+    </ul>
+
+    <h3>Les rôles</h3>
+    <table>
+      <tr><td>🐺 Loup-Garou</td><td>Chaque nuit, la meute choisit sa victime. Les loups se connaissent et voient en direct le choix des autres : il faut se mettre d'accord.</td></tr>
+      <tr><td>🧑‍🌾 Villageois</td><td>Pas de pouvoir, seulement ta voix au vote et ton flair.</td></tr>
+      <tr><td>🔮 Cartomancienne</td><td>Chaque nuit, découvre le rôle d'un joueur.</td></tr>
+      <tr><td>🛡️ Videur</td><td>Chaque nuit, protège un joueur des loups (toi compris), jamais le même deux nuits de suite.</td></tr>
+      <tr><td>🌿 Herboriste</td><td>Une potion de soin (sauve la victime des loups) et une potion de poison, une fois chacune dans la partie.</td></tr>
+      <tr><td>🏹 Braconnier</td><td>Quand il meurt, il emporte un joueur de son choix.</td></tr>
+    </table>
+
+    <h3>Une nuit, un jour</h3>
+    <ul>
+      <li><span class="accent">La nuit</span>, tout le monde touche un joueur sur son téléphone, pour que personne ne se trahisse : les pouvoirs agissent, les autres désignent leur suspect (le <span class="accent">flair</span>, compté à la fin).</li>
+      <li><span class="accent">À l'aube</span>, on découvre les morts et leur rôle. Les morts deviennent des fantômes : ils voient tout, mais ne disent plus rien.</li>
+      <li><span class="accent">Le jour</span>, débattez à voix haute puis votez en secret (ou blanc). Le plus désigné est éliminé, sauf égalité. On voit ensuite qui a voté quoi.</li>
+    </ul>
+
+    <h3>Les gorgées</h3>
+    <table>
+      <tr><td>🌙 Mort la nuit</td><td><span class="accent">2 gorgées</span>.</td></tr>
+      <tr><td>⚖️ Éliminé au vote</td><td>2 gorgées, <span class="accent">3</span> pour un loup démasqué.</td></tr>
+      <tr><td>😬 Innocent éliminé</td><td>Chacun de ses accusateurs boit 1.</td></tr>
+      <tr><td>🏹 Abattu</td><td>2 gorgées.</td></tr>
+      <tr><td>Fin de partie</td><td>Tout le camp perdant boit 2 gorgées.</td></tr>
+    </table>
+
+    <h3>Le conteur</h3>
+    <p>Une seule personne peut activer la voix du conteur : son téléphone annonce la nuit, l'aube et les morts à voix haute.</p>
+    <div class="rangee"><button id="btn-voix" class="sombre petit">🔇 Voix du conteur : non</button></div>
+
+    <div id="bloc-qr-regles" class="cache">
+      <h3>Inviter quelqu'un</h3>
+      <p>Salon <span class="accent" id="qr-code-salon">----</span> : fais scanner ce code, le prénom suffira.</p>
+      <canvas id="qr-regles" class="qr"></canvas>
+      <div id="qr-note-regles" class="note"></div>
+      <div class="rangee" style="margin-top:8px;">
+        <button id="copier-lien-regles" class="sombre">Copier le lien</button>
+      </div>
+    </div>
+
+    <div class="rangee" style="margin-top:14px;">
+      <button id="fermer-regles">Fermer</button>
+      <button id="quitter-table" class="sombre cache">Quitter la table</button>
+      <button id="menu-jeux" class="sombre">🎲 Tous les jeux</button>
+    </div>
+    <p class="note" style="text-align:center;">À consommer avec modération.</p>
+  </div>
+</div>
+
+<script src="commun/soiree.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { lisser as lisserScene, POLICE, quandPoliceChargee } from './da/bar-moderne.js';
+import { modeLeger, optionsRendu, reglerRendu, surveillerFluidite } from './da/qualite.js';
+import { suivreZoneLibre } from './da/cadrage.js';
+import {
+  FOND_NUIT, preparerAmbianceVeillee, creerTableVeillee, creerDecorVeillee, creerTabouretVeillee,
+  creerBougie, allumerBougie, creerTombe, dessinerEtiquetteVeillee, quandPolicesVeillee,
+} from './da/themes/veillee.js';
+
+// Version légère (interrupteur de l'accueil) : même place, moins de détails.
+const LEGER = modeLeger();
+
+const elModaleRegles = document.getElementById('modale-regles');
+document.getElementById('btn-regles').addEventListener('click', () => {
+  majQRModale();
+  document.getElementById('quitter-table').classList.toggle('cache', !enPartie);
+  elModaleRegles.classList.remove('cache');
+});
+document.getElementById('fermer-regles').addEventListener('click', () => elModaleRegles.classList.add('cache'));
+document.getElementById('menu-jeux').addEventListener('click', () => { location.href = 'index.html'; });
+elModaleRegles.addEventListener('click', e => { if (e.target === elModaleRegles) elModaleRegles.classList.add('cache'); });
+document.getElementById('quitter-table').addEventListener('click', () => {
+  oublierSession();
+  if (ws) { try { ws.close(); } catch (e) { /* deja ferme */ } }
+  location.href = location.pathname;
+});
+
+// =====================================================================
+// LES RÔLES (mêmes identifiants que loupgarou.py côté serveur)
+// =====================================================================
+const ROLES = {
+  loup:           { nom: 'Loup-Garou',     icone: '🐺', camp: 'Camp des loups',
+                    texte: 'Chaque nuit, avec ta meute, choisis un habitant à dévorer. Le jour, fonds-toi dans la foule et accuse les autres.' },
+  villageois:     { nom: 'Villageois',     icone: '🧑‍🌾', camp: 'Camp du village',
+                    texte: 'Aucun pouvoir, sauf ta voix : démasque les loups au vote du jour. La nuit, désigne ton suspect, ton flair compte à la fin.' },
+  cartomancienne: { nom: 'Cartomancienne', icone: '🔮', camp: 'Camp du village',
+                    texte: 'Chaque nuit, tire les cartes d’un joueur : tu découvres son rôle. À toi de guider le village sans te faire repérer.' },
+  videur:         { nom: 'Videur',         icone: '🛡️', camp: 'Camp du village',
+                    texte: 'Chaque nuit, protège un joueur des loups (toi compris). Jamais le même deux nuits de suite.' },
+  herboriste:     { nom: 'Herboriste',     icone: '🌿', camp: 'Camp du village',
+                    texte: 'Une potion de soin pour sauver la victime des loups, une potion de poison pour éliminer qui tu veux. Une fois chacune.' },
+  braconnier:     { nom: 'Braconnier',     icone: '🏹', camp: 'Camp du village',
+                    texte: 'Si tu meurs, de nuit comme de jour, tu emportes un joueur de ton choix avec toi.' },
+};
+const SPECIAUX = ['cartomancienne', 'videur', 'herboriste', 'braconnier'];
+const SPECIAUX_DES = { cartomancienne: 4, videur: 6, herboriste: 7, braconnier: 8 };
+const SEUILS_LOUPS = [6, 10, 13];
+const CAUSES = { devore: 'dévoré par les loups', empoisonne: 'empoisonné', abattu: 'abattu par le Braconnier', elimine: 'éliminé par le village' };
+function nomRole(r) { return ROLES[r] ? ROLES[r].nom : '?'; }
+function iconeRole(r) { return ROLES[r] ? ROLES[r].icone : '❔'; }
+
+// Même calcul que lg_composition côté serveur (aperçu de la salle d'attente).
+function loupsMax(n) { return Math.max(1, Math.floor((n - 1) / 2)); }
+function composition(n, loups, speciaux) {
+  let nb = loups === null ? 1 + SEUILS_LOUPS.filter(s => n > s).length : loups;
+  nb = Math.max(1, Math.min(nb, loupsMax(n)));
+  let choisis = speciaux === null ? SPECIAUX.filter(r => n >= SPECIAUX_DES[r]) : SPECIAUX.filter(r => speciaux.includes(r));
+  choisis = choisis.slice(0, Math.max(0, n - nb));
+  const c = { loup: nb };
+  choisis.forEach(r => { c[r] = 1; });
+  const vill = n - nb - choisis.length;
+  if (vill > 0) c.villageois = vill;
+  return c;
+}
+const PLURIELS = { loup: 'Loups-Garous', villageois: 'Villageois' };
+function texteComposition(c) {
+  return Object.entries(c).map(([r, k]) => iconeRole(r) + ' ' + (k > 1 ? k + ' ' + (PLURIELS[r] || nomRole(r) + 's') : nomRole(r))).join(' · ');
+}
+
+// =====================================================================
+// CONSTANTES DE LA SCÈNE
+// =====================================================================
+const R_TABLE = 2.0;
+const R_FEUTRE = 1.78;
+const R_SIEGE = 1.55;
+const CAM_VITESSE = 0.12;
+
+// =====================================================================
+// SCÈNE / CAMÉRA / RENDU (même cadrage que les autres tables rondes)
+// =====================================================================
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(FOND_NUIT);
+scene.fog = new THREE.FogExp2(FOND_NUIT, 0.05);
+
+const zone = suivreZoneLibre(() => { majCadrageTable(camera); camObjectifPos = CAM_POS.clone(); });
+
+const CAM_CIBLE = new THREE.Vector3(0, 0.35, 0);
+const LARGEUR_VUE = 2.3;
+const HAUTEUR_VUE = 2.1;
+const CAM_POS = new THREE.Vector3(0, 3.0, 5.0);
+
+function distanceCadrage(cam) {
+  const vHalf = THREE.MathUtils.degToRad(cam.fov) / 2;
+  const hHalf = Math.atan(Math.tan(vHalf) * cam.aspect);
+  return Math.max(LARGEUR_VUE / (Math.tan(hHalf) * zone.c.fracL), HAUTEUR_VUE / (Math.tan(vHalf) * zone.c.fracH), 4.2) * zone.c.zoom;
+}
+const FOG_DENSITE_MAX = 0.05;
+function majCadrageTable(cam) {
+  const d = distanceCadrage(cam);
+  const dir = zone.direction(0.56);
+  CAM_POS.copy(CAM_CIBLE).addScaledVector(dir, d);
+  if (scene.fog) scene.fog.density = Math.min(FOG_DENSITE_MAX, 0.36 / d);
+}
+
+let camObjectifPos = CAM_POS.clone();
+let camObjectifCible = CAM_CIBLE.clone();
+const camCibleActuelle = CAM_CIBLE.clone();
+
+const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.1, 60);
+majCadrageTable(camera);
+camObjectifPos = CAM_POS.clone();
+camera.position.copy(CAM_POS);
+camera.lookAt(camCibleActuelle);
+
+const renderer = new THREE.WebGLRenderer(optionsRendu());
+renderer.setSize(window.innerWidth, window.innerHeight);
+reglerRendu(renderer);
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+document.body.appendChild(renderer.domElement);
+
+function redimensionner() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  zone.recalculer();
+  majCadrageTable(camera);
+  camObjectifPos = CAM_POS.clone();
+  camObjectifCible = CAM_CIBLE.clone();
+}
+window.addEventListener('resize', redimensionner);
+window.addEventListener('orientationchange', redimensionner);
+
+scene.add(new THREE.AmbientLight(0x1a2030, 1.0));
+preparerAmbianceVeillee(renderer, scene, { leger: LEGER });
+
+const { groupe: table, lanterne } = creerTableVeillee(R_TABLE, { rayonFeutre: R_FEUTRE, leger: LEGER });
+scene.add(table);
+
+const decor = creerDecorVeillee(scene, { nom: 'Avis du village', solY: -1.2, leger: LEGER });
+
+// =====================================================================
+// JETONS DE VOTE (au verdict, chaque vote file de la place du votant vers
+// celle du joueur désigné et s'empile devant lui)
+// =====================================================================
+const jetons = [];
+const GEO_JETON = new THREE.CylinderGeometry(0.075, 0.075, 0.028, 24);
+const matsJeton = {};
+function matJeton(i) {
+  if (!matsJeton[i]) matsJeton[i] = new THREE.MeshStandardMaterial({ color: COULEURS[i % COULEURS.length], roughness: 0.4, metalness: 0.2, emissive: COULEURS[i % COULEURS.length], emissiveIntensity: 0.15 });
+  return matsJeton[i];
+}
+function viderJetons() {
+  jetons.forEach(j => scene.remove(j));
+  jetons.length = 0;
+  sieges.forEach(s => { s.halo.visible = false; });
+}
+function pileDevant(j) {
+  const s = sieges[j];
+  return s ? s.dir.clone().multiplyScalar(R_SIEGE * 0.62) : new THREE.Vector3();
+}
+function dureeVotes(annonce) { return annonce ? 0.2 * annonce.votes.filter(v => v.cible !== null).length + 1.2 : 0; }
+function animerVotes(annonce, instantane) {
+  viderJetons();
+  if (!annonce || !annonce.votes) return;
+  const parCible = {};
+  annonce.votes.forEach(v => { if (v.cible !== null) (parCible[v.cible] = parCible[v.cible] || []).push(v.joueur); });
+  const ordre = Object.keys(parCible).map(Number).sort((a, b) => parCible[a].length - parCible[b].length);
+  let k = 0;
+  ordre.forEach(j => {
+    const pile = pileDevant(j);
+    parCible[j].forEach((votant, h) => {
+      const jeton = new THREE.Mesh(GEO_JETON, matJeton(votant));
+      jeton.castShadow = true;
+      const arrivee = new THREE.Vector3(pile.x + (h % 2 ? 0.01 : -0.01), 0.016 + h * 0.03, pile.z);
+      const sv = sieges[votant];
+      const depart = sv ? new THREE.Vector3(sv.base.x, 0.35, sv.base.z) : new THREE.Vector3(0, 0.05, 0);
+      scene.add(jeton);
+      jetons.push(jeton);
+      if (instantane) { jeton.position.copy(arrivee); return; }
+      jeton.position.copy(depart);
+      jeton.visible = false;
+      attendre(0.2 * k++, () => {
+        jeton.visible = true;
+        animer(0.5, an => {
+          const t = lisser(an.t / an.duree);
+          jeton.position.lerpVectors(depart, arrivee, t);
+          jeton.position.y += Math.sin(t * Math.PI) * 0.55;
+          jeton.rotation.x = t * Math.PI * 2;
+        }, () => { jeton.position.copy(arrivee); jeton.rotation.set(0, 0, 0); });
+      });
+    });
+  });
+  const allumer = () => { if (annonce.elimine !== null && sieges[annonce.elimine]) sieges[annonce.elimine].halo.visible = true; };
+  if (instantane) allumer(); else attendre(0.2 * k + 0.5, allumer);
+}
+
+// =====================================================================
+// ÉTIQUETTES ET ICÔNES (sprites face caméra)
+// =====================================================================
+function creerEtiquette(texte) {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 128;
+  dessinerEtiquetteVeillee(c.getContext('2d'), texte, { actif: false, absent: false });
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+  sprite.renderOrder = 10;
+  sprite.scale.set(0.9, 0.225, 1);
+  return sprite;
+}
+function majEtiquette(sprite, texte, actif, absent) {
+  const cle = texte + '|' + actif + '|' + absent;
+  if (sprite.userData.cle === cle) return;
+  sprite.userData.cle = cle;
+  sprite.userData.dernier = [texte, actif, absent];
+  dessinerEtiquetteVeillee(sprite.material.map.image.getContext('2d'), texte, { actif, absent });
+  sprite.material.map.needsUpdate = true;
+}
+function redessinerEtiquettes() {
+  sieges.forEach(st => {
+    const d = st.etiquette.userData.dernier;
+    st.etiquette.userData.cle = null;
+    if (d) majEtiquette(st.etiquette, ...d); else majEtiquette(st.etiquette, st.nom, false, false);
+  });
+}
+quandPolicesVeillee(redessinerEtiquettes);
+quandPoliceChargee(redessinerEtiquettes);
+
+function creerIcone(taille) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false }));
+  sp.scale.set(taille, taille, 1);
+  sp.renderOrder = 12;
+  sp.userData.symbole = undefined;
+  return sp;
+}
+function majIcone(sp, symbole) {
+  if (sp.userData.symbole === symbole) return;
+  sp.userData.symbole = symbole;
+  sp.visible = !!symbole;
+  if (!symbole) return;
+  const ctx = sp.material.map.image.getContext('2d');
+  ctx.clearRect(0, 0, 128, 128);
+  ctx.fillStyle = 'rgba(10, 12, 28, 0.82)';
+  ctx.beginPath(); ctx.arc(64, 64, 58, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#ffb347'; ctx.lineWidth = 5; ctx.stroke();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '66px serif';
+  ctx.fillText(symbole, 64, 70);
+  sp.material.map.needsUpdate = true;
+}
+
+// Grande annonce HTML.
+let annonceEl = null, minuteurAnnonce = null;
+function annoncer(gros, petit, couleur, duree, opts = {}) {
+  if (annonceEl) annonceEl.remove();
+  clearTimeout(minuteurAnnonce);
+  const a = document.createElement('div');
+  a.className = 'annonce-lg';
+  a.style.setProperty('--c', couleur || '#f6eedc');
+  const g = document.createElement('div'); g.className = 'gros'; g.textContent = gros; a.appendChild(g);
+  if (petit) { const p = document.createElement('div'); p.className = 'petit'; p.textContent = petit; a.appendChild(p); }
+  if (opts.flash) {
+    const f = document.createElement('div'); f.className = 'flash-lg'; f.style.setProperty('--c', couleur);
+    document.body.appendChild(f); setTimeout(() => f.remove(), 900);
+  }
+  if (opts.vibrer) { try { if (navigator.vibrate) navigator.vibrate(opts.vibrer); } catch (e) { /* pas de vibreur */ } }
+  document.body.appendChild(a);
+  annonceEl = a;
+  minuteurAnnonce = setTimeout(() => { a.classList.add('sort'); setTimeout(() => { a.remove(); if (annonceEl === a) annonceEl = null; }, 380); }, (duree || 1.8) * 1000);
+}
+
+// La voix du conteur (une seule personne l'active à la table).
+let voix = false;
+try { voix = localStorage.getItem('loupgarou.voix') === '1'; } catch (e) { /* tant pis */ }
+const btnVoix = document.getElementById('btn-voix');
+function majBoutonVoix() { btnVoix.textContent = voix ? '🔊 Voix du conteur : oui' : '🔇 Voix du conteur : non'; }
+majBoutonVoix();
+btnVoix.addEventListener('click', () => {
+  voix = !voix;
+  try { localStorage.setItem('loupgarou.voix', voix ? '1' : '0'); } catch (e) { /* tant pis */ }
+  majBoutonVoix();
+  if (voix) conter('Le conteur est prêt.');
+  else try { speechSynthesis.cancel(); } catch (e) { /* pas de synthèse */ }
+});
+function conter(texte) {
+  if (!voix || !texte || typeof speechSynthesis === 'undefined') return;
+  try {
+    const u = new SpeechSynthesisUtterance(texte);
+    u.lang = 'fr-FR';
+    u.rate = 0.95;
+    u.pitch = 0.85;
+    speechSynthesis.speak(u);
+  } catch (e) { /* pas de synthèse */ }
+}
+
+// =====================================================================
+// SIÈGES : bougie, étiquette, icône, tabouret, halo, pierre tombale
+// =====================================================================
+const COULEURS = [0x4a7ec2, 0xc25a4a, 0x5aa86a, 0xb58ac2, 0xc2a44a, 0x4ab0b5, 0xd9823a, 0xd46a9e, 0x8a9a4a, 0x6a6ad4, 0xc27a9a, 0x4ac28a, 0xb0b0b0, 0xd4b46a, 0x7a4ac2];
+const sieges = [];
+
+function dirSiege(i, n) {
+  const base = MOI < n ? MOI : 0;
+  const angle = ((((i - base) % n) + n) % n) / n * Math.PI * 2;
+  return new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
+}
+function echelleSieges(n) { return n > 10 ? 0.7 : n > 7 ? 0.85 : 1; }
+
+function creerSieges(noms) {
+  sieges.forEach(s => scene.remove(s.groupe));
+  sieges.length = 0;
+  const n = noms.length;
+  const echelle = echelleSieges(n);
+  for (let i = 0; i < n; i++) {
+    const dir = dirSiege(i, n);
+    const groupe = new THREE.Group();
+    const base = dir.clone().multiplyScalar(R_SIEGE);
+    const bougie = creerBougie();
+    bougie.position.set(base.x, 0.01, base.z);
+    bougie.scale.setScalar(echelle);
+    // Pastille de couleur du joueur sous la bougie.
+    const pastille = new THREE.Mesh(new THREE.CircleGeometry(0.11, 24), new THREE.MeshStandardMaterial({ color: COULEURS[i % COULEURS.length], roughness: 0.6 }));
+    pastille.rotation.x = -Math.PI / 2;
+    pastille.position.set(base.x, 0.012, base.z);
+    pastille.scale.setScalar(echelle);
+
+    const etiquette = creerEtiquette(noms[i]);
+    etiquette.position.set(base.x, 0.6, base.z);
+    etiquette.scale.set(0.9 * echelle, 0.225 * echelle, 1);
+
+    const icone = creerIcone(0.24 * echelle);
+    icone.position.set(base.x, 0.86, base.z);
+    majIcone(icone, null);
+
+    const chaise = creerTabouretVeillee(dir, 2.42, -1.2);
+    const halo = new THREE.Mesh(new THREE.ConeGeometry(0.42, 2.6, 28, 1, true), new THREE.MeshBasicMaterial({
+      color: 0xe0413a, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+    halo.position.set(base.x, 1.3, base.z);
+    halo.visible = false;
+    groupe.add(pastille, bougie, etiquette, icone, chaise, halo);
+    scene.add(groupe);
+    lisserScene(groupe);
+    sieges.push({ index: i, nom: noms[i], groupe, bougie, etiquette, icone, halo, dir, base, echelle, tombe: null, roleTombe: null });
+  }
+}
+
+// Un mort : sa bougie s'éteint et une petite pierre tombale sort de la table.
+function poserTombe(i, role, instantane) {
+  const s = sieges[i];
+  if (!s || s.roleTombe === role) return;
+  if (s.tombe) s.groupe.remove(s.tombe);
+  allumerBougie(s.bougie, false);
+  const t = creerTombe(iconeRole(role));
+  const p = s.dir.clone().multiplyScalar(R_SIEGE * 0.78);
+  t.position.set(p.x, 0, p.z);
+  t.rotation.y = Math.atan2(s.dir.x, s.dir.z);
+  t.scale.setScalar(s.echelle);
+  s.groupe.add(t);
+  s.tombe = t;
+  s.roleTombe = role;
+  if (instantane) return;
+  t.scale.setScalar(0.001);
+  animer(0.7, an => { const k = lisser(an.t / an.duree); t.scale.setScalar(Math.max(0.001, k * s.echelle)); t.position.y = (1 - k) * -0.1; },
+    () => { t.scale.setScalar(s.echelle); t.position.y = 0; });
+}
+function leverTombe(i) {
+  const s = sieges[i];
+  if (!s) return;
+  if (s.tombe) s.groupe.remove(s.tombe);
+  s.tombe = null; s.roleTombe = null;
+  allumerBougie(s.bougie, true);
+}
+
+// =====================================================================
+// ANIMATIONS ET FILE D'ATTENTE
+// =====================================================================
+const animations = [];
+function animer(duree, maj, fin) { animations.push({ t: 0, duree, maj, fin }); }
+function lisser(k) { return k < 0 ? 0 : k > 1 ? 1 : k * k * (3 - 2 * k); }
+function attendre(duree, apres) { animer(duree, null, apres); }
+
+const fileActions = [];
+let pompeActive = false;
+function quandLibre(fn, delai) { fileActions.push({ fn, delai: delai || 0 }); pomper(); }
+function pomper() {
+  if (pompeActive || fileActions.length === 0) return;
+  pompeActive = true;
+  (function patienter() {
+    if (animations.length > 0) { setTimeout(patienter, 80); return; }
+    const tache = fileActions.shift();
+    setTimeout(() => {
+      try { tache.fn(); } catch (e) { console.error(e); }
+      pompeActive = false;
+      pomper();
+    }, tache.delai);
+  })();
+}
+
+// =====================================================================
+// CLIENT : messages du serveur
+// =====================================================================
+let MOI = 0;
+let mode = 'local';
+let ws = null;
+
+function envoyerIntention(index, msg) {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+}
+
+const elMessage = document.getElementById('message');
+const elRappel = document.getElementById('rappel');
+const elCompteur = document.getElementById('compteur');
+const elPanneau = document.getElementById('panneau');
+const elJoueurs = document.getElementById('joueurs');
+
+let etatCourant = null;
+let secret = null;            // ma vue secrète (lg_secret) : rôle, meute, visions...
+let roleVisible = false;      // carte de rôle découverte (on la cache par défaut : les voisins regardent)
+let choix = null;             // tuile touchée, pas encore validée
+let cleChoix = '';            // la nuit ou le jour de ce choix
+let choixPoison = null;       // Herboriste
+let choixSoin = false;
+let enEdition = false;        // je change mon vote du jour
+let clePanneau = '';
+let echeanceLocale = null;
+let finAnimation = 0;
+
+// Réglage de la partie (salle d'attente et fin de partie).
+let loupsChoisis = null;      // null = automatique
+let speciauxChoisis = null;   // null = automatique selon le nombre de joueurs
+
+function prenom(i) { return etatCourant ? etatCourant.joueurs[i] : ''; }
+function nomDe(i) { return i === MOI ? 'toi' : prenom(i); }
+function couleurCss(i) { return '#' + COULEURS[i % COULEURS.length].toString(16).padStart(6, '0'); }
+function vivantsDe(etat) { return etat.joueurs.map((_, i) => i).filter(i => etat.vivants[i]); }
+function moiVivant() { return etatCourant && MOI < etatCourant.joueurs.length && etatCourant.vivants[MOI]; }
+function monRole() { return secret && secret.index === MOI ? secret.role : null; }
+function fantome() { return secret && secret.index === MOI && Array.isArray(secret.tous_roles); }
+function cleMoment(etat) { return etat.phase + '|' + etat.nuit + '|' + etat.jour; }
+
+function clientRecevoir(msg) {
+  switch (msg.type) {
+    case 'ton_index':
+      MOI = msg.index;
+      if (msg.jeton) {
+        monJeton = msg.jeton;
+        ecrireSession({ code: codeSalon, nom: monNom, jeton: monJeton, serveur: serveurChoisi, createur: estCreateur });
+      }
+      if (!enPartie) panneauAttente();
+      break;
+    case 'joueur_rejoint':
+      joueursSalon = msg.joueurs;
+      if (enPartie) elRappel.textContent = msg.nom + (msg.retour ? ' est revenu.' : ' rejoint la table.');
+      else panneauAttente();
+      break;
+    case 'joueur_parti':
+      joueursSalon = msg.joueurs;
+      if (enPartie) elRappel.textContent = msg.nom + ' a quitté la table.';
+      else panneauAttente();
+      break;
+    case 'lg_demarree':
+      quandLibre(() => demarrerScene(msg.joueurs));
+      break;
+    case 'lg_etat':
+      quandLibre(() => appliquerEtat(msg));
+      break;
+    case 'lg_secret':
+      quandLibre(() => appliquerSecret(msg));
+      break;
+    case 'lg_vision':
+      quandLibre(() => {
+        annoncer('🔮 ' + prenom(msg.cible), 'est ' + (msg.role === 'loup' ? 'un Loup-Garou !' : nomRole(msg.role)), msg.role === 'loup' ? '#e0413a' : '#c8b8ff', 2.6, { vibrer: 60 });
+      });
+      break;
+    case 'erreur':
+      elRappel.textContent = msg.message;
+      if (enPartie && !fileActions.length) rafraichirPanneau(true);
+      break;
+  }
+}
+
+// =====================================================================
+// APPLICATION DE L'ÉTAT
+// =====================================================================
+function appliquerEtat(etat) {
+  const avant = etatCourant;
+  const n = etat.joueurs.length;
+  if (!sieges.length || n !== sieges.length || moiDeLaTable !== MOI) {
+    if (!enPartie) demarrerScene(etat.joueurs);
+    else construireTable(etat.joueurs);
+  }
+  etatCourant = etat;
+  echeanceLocale = etat.delai === null || etat.delai === undefined ? null : Date.now() + etat.delai * 1000;
+  if (cleChoix !== cleMoment(etat)) { choix = null; choixPoison = null; choixSoin = false; enEdition = false; cleChoix = cleMoment(etat); }
+  const nouvellePhase = !avant || avant.phase !== etat.phase || avant.nuit !== etat.nuit || avant.jour !== etat.jour;
+  const instantane = !avant;
+
+  // Nuit ou jour : le ciel, la vignette.
+  const nuit = etat.phase === 'nuit' || etat.phase === 'potion' || etat.phase === 'role';
+  decor.regler(nuit ? 1 : 0);
+  document.body.classList.toggle('nuit', nuit);
+
+  // Les morts : bougie éteinte, pierre tombale à leur rôle.
+  etat.joueurs.forEach((_, i) => {
+    if (etat.vivants[i]) leverTombe(i);
+    else poserTombe(i, etat.roles[i], instantane);
+  });
+
+  if (nouvellePhase && !instantane) annoncerPhase(avant, etat);
+  if (etat.phase === 'verdict' && nouvellePhase) {
+    animerVotes(etat.annonce, instantane);
+    finAnimation = instantane ? 0 : Date.now() + dureeVotes(etat.annonce) * 1000;
+  } else if (nouvellePhase && etat.phase !== 'tir') {
+    viderJetons();
+    finAnimation = 0;
+  }
+  majEcran(etat);
+  majIcones(etat);
+  majListeJoueurs(etat);
+  majBandeau(etat);
+  majCompteur();
+  rafraichirPanneau(nouvellePhase);
+}
+
+function appliquerSecret(v) {
+  const avant = secret;
+  secret = v;
+  if (v.index !== MOI) MOI = v.index;
+  // Un mort découvre la vérité.
+  if (avant && avant.vivant && !v.vivant) roleVisible = true;
+  if (etatCourant) { majIcones(etatCourant); majListeJoueurs(etatCourant); }
+  rafraichirPanneau(false);
+}
+
+function annoncerPhase(avant, etat) {
+  const a = etat.annonce;
+  if (etat.phase === 'nuit') {
+    annoncer('🌙 Nuit ' + etat.nuit, 'Le village s’endort…', '#9ab8ff', 2.2);
+    conter('La nuit tombe sur le hameau. Chacun touche un joueur sur son téléphone.');
+  } else if (etat.phase === 'potion') {
+    conter('La nuit continue.');
+  } else if (etat.phase === 'aube' && a && avant && avant.phase !== 'tir') {
+    if (!a.morts.length) {
+      annoncer('☀️ Jour ' + etat.jour, 'Personne n’est mort cette nuit !', '#ffd98a', 2.4);
+      conter('Le jour se lève. Miracle, personne n’est mort cette nuit.');
+    } else {
+      const moiMort = a.morts.some(m => m.joueur === MOI);
+      annoncer(moiMort ? '💀 Tu es mort' : '☀️ Jour ' + etat.jour,
+        a.morts.map(m => prenom(m.joueur) + ' (' + nomRole(m.role) + ')').join(', '), '#e0413a', 2.8,
+        { flash: true, vibrer: moiMort ? [100, 60, 220] : 80 });
+      conter('Le jour se lève. ' + a.morts.map(m => prenom(m.joueur) + ', ' + nomRole(m.role) + ', ' + CAUSES[m.cause]).join('. ') + '.');
+    }
+  } else if (etat.phase === 'tir') {
+    annoncer('🏹 ' + prenom(etat.tireur), etat.tireur === MOI ? 'À toi de tirer !' : 'Le Braconnier vise…', '#ffb347', 2.2, etat.tireur === MOI ? { vibrer: [80, 40, 80] } : {});
+    conter(prenom(etat.tireur) + ' était le Braconnier. Il emporte quelqu’un avec lui.');
+  } else if ((etat.phase === 'aube' || etat.phase === 'verdict') && avant && avant.phase === 'tir' && a && a.tir) {
+    const c = a.tir.cible;
+    if (c === null) annoncer('🏹 Raté', prenom(a.tir.tireur) + ' n’a pas tiré', '#ffb347', 2.0);
+    else {
+      annoncer(c === MOI ? '💀 Abattu !' : '🏹 ' + prenom(c), nomRole(etatCourant.roles[c]), '#e0413a', 2.6, { flash: true, vibrer: c === MOI ? [100, 60, 220] : 60 });
+      conter(prenom(a.tir.tireur) + ' abat ' + prenom(c) + ', ' + nomRole(etatCourant.roles[c]) + '.');
+    }
+  } else if (etat.phase === 'debat') {
+    annoncer('⚖️ Le village débat', 'Discutez, puis votez', '#ffb347', 2.0);
+    conter('Débattez à voix haute, puis votez.');
+  } else if (etat.phase === 'verdict' && a) {
+    const duree = dureeVotes(a);
+    attendre(duree, () => {
+      if (a.elimine === null) {
+        annoncer(a.egalite ? '⚖️ Égalité' : '⚖️ Personne', 'Personne n’est éliminé', '#ffd98a', 2.2);
+        conter(a.egalite ? 'Égalité. Le village n’arrive pas à trancher.' : 'Pas de majorité. Personne n’est éliminé.');
+      } else {
+        const r = etat.roles[a.elimine];
+        annoncer(a.elimine === MOI ? '💀 Éliminé !' : '⚖️ ' + prenom(a.elimine), (r === 'loup' ? '🐺 C’était un loup !' : iconeRole(r) + ' ' + nomRole(r)), r === 'loup' ? '#9fe0b4' : '#e0413a', 2.8, { flash: true, vibrer: 80 });
+        conter('Le village élimine ' + prenom(a.elimine) + '. C’était ' + (r === 'loup' ? 'un loup-garou !' : nomRole(r) + '.'));
+      }
+    });
+  } else if (etat.phase === 'fin' && etat.final) {
+    const v = etat.final.vainqueur;
+    const gagne = etat.final.gagnants.includes(MOI);
+    annoncer(v === 'loups' ? '🐺 Les loups gagnent' : '🏡 Le village gagne', MOI < etat.joueurs.length ? (gagne ? 'Victoire !' : 'Défaite : 2 gorgées') : '', v === 'loups' ? '#e0413a' : '#9fe0b4', 3.2, { flash: true, vibrer: gagne ? [60, 40, 60, 40, 160] : 200 });
+    conter(v === 'loups' ? 'Les loups ont dévoré le village.' : 'Le village est sauvé, il n’y a plus aucun loup.');
+  }
+}
+
+function majEcran(etat) {
+  const comp = texteComposition(etat.composition || {});
+  if (etat.phase === 'role') decor.ecrireEcran({ titre: 'Avis du village', lignes: ['Des loups rôdent', 'parmi nous…'], bas: comp });
+  else if (etat.phase === 'nuit' || etat.phase === 'potion') decor.ecrireEcran({ titre: 'Nuit ' + etat.nuit, lignes: ['Le village dort.', 'Les loups veillent…'], bas: comp });
+  else if ((etat.phase === 'aube' || etat.phase === 'tir') && etat.annonce) {
+    const m = etat.annonce.morts;
+    decor.ecrireEcran({ titre: 'Jour ' + etat.jour, lignes: m.length ? m.map(x => '✝ ' + etat.joueurs[x.joueur] + ' : ' + nomRole(x.role)) : ['Personne n’est mort', 'cette nuit !'], bas: vivantsDe(etat).length + ' habitants en vie' });
+  } else if (etat.phase === 'debat') decor.ecrireEcran({ titre: 'Jour ' + etat.jour, lignes: ['Qui est le loup ?', 'Débattez, puis votez.'], bas: vivantsDe(etat).length + ' habitants en vie' });
+  else if (etat.phase === 'verdict' && etat.annonce) {
+    const e = etat.annonce.elimine;
+    decor.ecrireEcran({ titre: 'Verdict', lignes: e === null ? ['Personne n’est éliminé'] : [etat.joueurs[e] + ' est éliminé', nomRole(etat.roles[e])], bas: '' });
+  } else if (etat.phase === 'fin' && etat.final) {
+    decor.ecrireEcran({ titre: etat.final.vainqueur === 'loups' ? 'Les loups gagnent' : 'Le village gagne',
+      lignes: [etat.final.gagnants.map(j => etat.joueurs[j]).join(', ')], bas: 'Fin de la partie' });
+  }
+}
+
+function majIcones(etat) {
+  const n = etat.joueurs.length;
+  const fan = fantome() || etat.phase === 'fin';
+  const tous = fan ? (secret && secret.tous_roles) || etat.roles : null;
+  const loups = secret && secret.loups ? secret.loups : [];
+  sieges.forEach((s, i) => {
+    let sym = null;
+    if (!etat.vivants[i]) sym = null;                       // la pierre tombale dit tout
+    else if (etat.phase === 'role' && etat.prets[i]) sym = '✔️';
+    else if (etat.phase === 'debat' && etat.a_vote[i]) sym = '✔️';
+    else if (tous && tous[i]) sym = iconeRole(tous[i]);
+    else if (monRole() === 'loup' && loups.includes(i) && i !== MOI) sym = '🐺';
+    majIcone(s.icone, sym);
+    if (i < n) majEtiquette(s.etiquette, etat.joueurs[i], etat.phase === 'tir' && etat.tireur === i, !etat.vivants[i] || etat.partis[i]);
+  });
+}
+
+// =====================================================================
+// BANDEAU, COMPTEUR, LISTE DES JOUEURS
+// =====================================================================
+function majBandeau(etat) {
+  const n = etat.joueurs.length;
+  const titres = { role: '🃏 Les rôles', nuit: '🌙 Nuit ' + etat.nuit, potion: '🌙 Nuit ' + etat.nuit, aube: '☀️ Jour ' + etat.jour,
+    tir: '🏹 Le Braconnier', debat: '⚖️ Jour ' + etat.jour, verdict: '⚖️ Verdict', fin: 'Fin de la partie' };
+  elMessage.textContent = MOI >= n ? 'Tu regardes la partie' : titres[etat.phase] || 'Loup-Garou';
+  elRappel.textContent = etat.message || '';
+}
+
+function majCompteur() {
+  const etat = etatCourant;
+  if (!etat || !enPartie || etat.phase === 'fin') { elCompteur.innerHTML = ''; return; }
+  const parts = [];
+  if (etat.attente && etat.attente.total && ['role', 'nuit', 'debat'].includes(etat.phase)) {
+    const libelle = { role: 'Prêts', nuit: 'Ont agi', debat: 'Votes' }[etat.phase];
+    parts.push(libelle + ' <b>' + etat.attente.fait + ' / ' + etat.attente.total + '</b>');
+  }
+  if (echeanceLocale) {
+    const s = Math.max(0, Math.round((echeanceLocale - Date.now()) / 1000));
+    parts.push('<span class="chrono' + (s <= 10 && ['nuit', 'debat', 'tir', 'potion'].includes(etat.phase) ? ' urgent' : '') + '">⏱ ' + s + ' s</span>');
+  }
+  elCompteur.innerHTML = parts.join(' · ');
+}
+setInterval(majCompteur, 1000);
+
+function majListeJoueurs(etat) {
+  elJoueurs.innerHTML = '';
+  const fan = fantome() || etat.phase === 'fin';
+  const tous = fan ? (secret && secret.tous_roles) || etat.roles : null;
+  const loups = secret && secret.loups ? secret.loups : [];
+  etat.joueurs.forEach((nom, i) => {
+    const d = document.createElement('div');
+    d.className = 'joueur' + (etat.partis[i] ? ' absent' : '') + (!etat.vivants[i] ? ' mort' : '');
+    const p = document.createElement('span');
+    p.className = 'pastille';
+    p.style.background = couleurCss(i);
+    const nm = document.createElement('span');
+    nm.className = 'nom';
+    const coche = (etat.phase === 'debat' && etat.a_vote[i]) || (etat.phase === 'role' && etat.prets[i]) ? '✔️ ' : '';
+    nm.textContent = coche + nom + (i === MOI ? ' (toi)' : '');
+    const inf = document.createElement('span');
+    inf.className = 'info';
+    let role = '';
+    if (!etat.vivants[i]) role = '💀' + iconeRole(etat.roles[i]);
+    else if (tous) role = iconeRole(tous[i]);
+    else if (monRole() === 'loup' && loups.includes(i)) role = '🐺';
+    inf.textContent = (role ? role + ' · ' : '') + '🍺 ' + etat.gorgees[i];
+    inf.title = 'gorgées bues';
+    d.append(p, nm, inf);
+    elJoueurs.appendChild(d);
+  });
+}
+
+// =====================================================================
+// PANNEAUX D'INTERFACE
+// =====================================================================
+function cacherPanneau() { elPanneau.className = 'cache'; elPanneau.innerHTML = ''; clePanneau = ''; }
+function boutonMenuJeux() { return bouton('🎲 Tous les jeux', 'sombre', () => { location.href = 'index.html'; }); }
+function bouton(texte, classe, onClick) {
+  const b = document.createElement('button');
+  b.textContent = texte;
+  if (classe) b.className = classe;
+  b.addEventListener('click', onClick);
+  return b;
+}
+function ouvrirPanneau(titre) {
+  elPanneau.className = '';
+  elPanneau.innerHTML = '';
+  if (titre) {
+    const h = document.createElement('h2');
+    h.textContent = titre;
+    elPanneau.appendChild(h);
+  }
+  return elPanneau;
+}
+function aide(texte) {
+  const d = document.createElement('p');
+  d.className = 'aide';
+  d.textContent = texte;
+  return d;
+}
+function rangee() {
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  return r;
+}
+function div(classe, texte) {
+  const d = document.createElement('div');
+  d.className = classe;
+  if (texte !== undefined) d.textContent = texte;
+  return d;
+}
+function agir(msg) {
+  elPanneau.querySelectorAll('button').forEach(b => { b.disabled = true; });
+  envoyerIntention(MOI, msg);
+}
+
+function rafraichirPanneau(forcer) {
+  if (!enPartie || !etatCourant) return;
+  const etat = etatCourant;
+  const s = secret && secret.index === MOI ? secret : null;
+  const cle = [etat.phase, etat.nuit, etat.jour, MOI >= etat.joueurs.length, s ? s.role : '', s ? s.vivant : '',
+    s ? JSON.stringify(s.action) : '', s ? JSON.stringify(s.vote) : '', s && s.meute ? JSON.stringify(s.meute) : '',
+    s && s.visions ? s.visions.length : '', s ? JSON.stringify(s.potions) + s.victime + s.potion_faite : '', enEdition, roleVisible,
+    etat.tireur, etat.suivants[MOI], etat.vivants.join(), etat.partis.join(), etat.phase === 'fin' ? joueursProchainePartie(etat) : ''].join('|');
+  if (!forcer && cle === clePanneau) { majPanneauLeger(etat); return; }
+  const memePhase = clePanneau.split('|').slice(0, 3).join('|') === cle.split('|').slice(0, 3).join('|');
+  const defile = elPanneau.scrollTop;
+  clePanneau = cle;
+  if (memePhase) requestAnimationFrame(() => { elPanneau.scrollTop = defile; });
+  if (MOI >= etat.joueurs.length) { panneauSpectateur(etat); return; }
+  if (etat.phase === 'fin') { panneauFin(etat); return; }
+  if (!s) { ouvrirPanneau('Un instant…'); return; }
+  if (etat.phase === 'role') { panneauRole(etat, s); return; }
+  if (!s.vivant && etat.phase !== 'tir' && etat.phase !== 'aube' && etat.phase !== 'verdict') { panneauFantome(etat, s); return; }
+  if (etat.phase === 'nuit') { panneauNuit(etat, s); return; }
+  if (etat.phase === 'potion') { panneauPotion(etat, s); return; }
+  if (etat.phase === 'aube' || etat.phase === 'verdict') { panneauAnnonce(etat, s); return; }
+  if (etat.phase === 'tir') { panneauTir(etat, s); return; }
+  if (etat.phase === 'debat') { panneauDebat(etat, s); return; }
+}
+function majPanneauLeger(etat) {
+  const c = elPanneau.querySelector('.compte');
+  if (!c) return;
+  if (etat.phase === 'debat' || etat.phase === 'nuit' || etat.phase === 'role') {
+    c.textContent = etat.attente.fait + ' / ' + etat.attente.total + (etat.phase === 'debat' ? ' ont voté' : etat.phase === 'role' ? ' sont prêts' : ' ont agi');
+  } else if (etat.phase === 'aube' || etat.phase === 'verdict') {
+    const pr = etat.joueurs.map((_, i) => i).filter(i => !etat.partis[i]);
+    c.textContent = pr.filter(i => etat.suivants[i]).length + ' / ' + pr.length + ' prêts pour la suite';
+  }
+}
+
+// --- Ma carte de rôle (touchée = découverte, retouchée = cachée) ---
+function carteRole(s, grande) {
+  const r = ROLES[s.role] || ROLES.villageois;
+  if (!grande && !roleVisible) {
+    const m = div('mini-role', '🃏 Voir mon rôle');
+    m.addEventListener('click', () => { roleVisible = true; rafraichirPanneau(true); });
+    return m;
+  }
+  if (!grande) {
+    const m = div('mini-role', r.icone + ' ' + r.nom + ' · cacher');
+    m.addEventListener('click', () => { roleVisible = false; rafraichirPanneau(true); });
+    return m;
+  }
+  const c = div('carte-role' + (s.role === 'loup' ? ' loup' : '') + (roleVisible ? '' : ' cachee'));
+  const contenu = div('contenu');
+  const tete = div('tete');
+  tete.append(div('icone', r.icone));
+  const t = div('');
+  t.append(div('nom-role', r.nom), div('camp', r.camp));
+  tete.append(t);
+  contenu.append(tete, div('texte', r.texte));
+  if (s.role === 'loup' && s.loups) {
+    const autres = s.loups.filter(j => j !== MOI);
+    contenu.append(div('meute', autres.length ? '🐺 Ta meute : ' + autres.map(prenom).join(', ') : '🐺 Tu es le seul loup.'));
+  }
+  c.append(contenu, div('voile-role', '👆 Touche pour voir ton rôle (cache ton écran)'));
+  c.addEventListener('click', () => { roleVisible = !roleVisible; rafraichirPanneau(true); });
+  return c;
+}
+
+function tuileJoueur(etat, i, opts) {
+  const b = document.createElement('div');
+  b.className = 'tuile' + (opts.choisi ? ' choisi' : '') + (opts.interdit ? ' interdit' : '');
+  b.setAttribute('role', 'button');
+  b.dataset.joueur = String(i);
+  const l = div('ligne');
+  const p = document.createElement('span');
+  p.className = 'pastille';
+  p.style.background = couleurCss(i);
+  const n = document.createElement('span');
+  n.textContent = etat.joueurs[i] + (i === MOI ? ' (moi)' : '');
+  l.append(p, n);
+  b.append(l);
+  if (opts.marques) b.append(div('marques', opts.marques));
+  if (!opts.interdit && opts.clic) b.addEventListener('click', opts.clic);
+  return b;
+}
+// Grille de joueurs avec une sélection sur place (pas de reconstruction : le doigt ne tombe pas à côté).
+function grille(etat, joueurs, actuel, surChoix, optsJoueur) {
+  const g = div('choix-joueurs');
+  joueurs.forEach(i => {
+    const o = optsJoueur ? optsJoueur(i) : {};
+    g.appendChild(tuileJoueur(etat, i, Object.assign({ choisi: actuel === i }, o, {
+      clic: () => { g.querySelectorAll('.tuile').forEach(t => t.classList.toggle('choisi', t.dataset.joueur === String(i))); surChoix(i); },
+    })));
+  });
+  return g;
+}
+
+function panneauRole(etat, s) {
+  const p = ouvrirPanneau('Ton rôle');
+  p.appendChild(carteRole(s, true));
+  p.appendChild(aide('Dans cette partie : ' + texteComposition(etat.composition)));
+  const r = rangee();
+  const b = bouton(etat.prets[MOI] ? 'En attente des autres…' : 'Je suis prêt', 'gros', () => { roleVisible = false; agir({ type: 'lg_pret' }); });
+  b.disabled = !!etat.prets[MOI];
+  r.appendChild(b);
+  p.appendChild(r);
+  p.appendChild(div('compte'));
+  majPanneauLeger(etat);
+}
+
+function panneauNuit(etat, s) {
+  const p = ouvrirPanneau('');
+  p.appendChild(carteRole(s, false));
+  const vivants = vivantsDe(etat);
+  const role = s.role;
+  const consigne = div('consigne');
+  p.appendChild(consigne);
+  const valider = (msg, libelle) => {
+    const r = rangee();
+    r.style.marginTop = '6px';
+    const b = bouton(libelle, 'gros', () => agir(msg()));
+    b.disabled = choix === null;
+    r.appendChild(b);
+    return { r, b };
+  };
+  if (role === 'loup') {
+    consigne.innerHTML = '🐺 <b>Choisis la victime</b> avec ta meute. Vous devez tomber d’accord.';
+    const proies = vivants.filter(i => !(s.loups || []).includes(i));
+    const marques = {};
+    Object.entries(s.meute || {}).forEach(([l, c]) => { (marques[c] = marques[c] || []).push(Number(l) === MOI ? 'toi' : prenom(Number(l))); });
+    if (choix === null && s.action !== null && s.action !== undefined) choix = s.action;
+    const v = valider(() => ({ type: 'lg_nuit', cible: choix }), s.action !== null && s.action !== undefined ? 'Changer pour ce choix' : 'Valider');
+    p.appendChild(grille(etat, proies, choix, i => { choix = i; v.b.disabled = i === s.action; },
+      i => ({ marques: marques[i] ? '🐺 ' + marques[i].join(', ') : '' })));
+    if (s.action !== null && s.action !== undefined) v.b.disabled = choix === s.action;
+    p.appendChild(v.r);
+    const choixMeute = new Set(Object.values(s.meute || {}));
+    const nbLoups = (s.loups || []).filter(j => etat.vivants[j] && !etat.partis[j]).length;
+    p.appendChild(aide(Object.keys(s.meute || {}).length >= nbLoups && choixMeute.size === 1 ? '✔️ La meute est d’accord. On attend que la nuit passe…'
+      : 'Pas d’accord à la fin de la nuit : le choix le plus suivi l’emporte (égalité : le sort).'));
+  } else if (role === 'cartomancienne' && s.action === null) {
+    consigne.innerHTML = '🔮 <b>Tire les cartes</b> d’un joueur : tu découvriras son rôle.';
+    const v = valider(() => ({ type: 'lg_nuit', cible: choix }), 'Révéler son rôle');
+    p.appendChild(grille(etat, vivants.filter(i => i !== MOI), choix, i => { choix = i; v.b.disabled = false; }));
+    p.appendChild(v.r);
+  } else if (role === 'cartomancienne') {
+    const vis = (s.visions || []).filter(x => x.nuit === etat.nuit)[0];
+    if (vis) {
+      const d = div('vision');
+      d.innerHTML = '🔮 <b></b> est <b></b>';
+      const bs = d.querySelectorAll('b');
+      bs[0].textContent = prenom(vis.cible);
+      bs[1].textContent = iconeRole(vis.role) + ' ' + nomRole(vis.role);
+      p.appendChild(d);
+    }
+    p.appendChild(aide('Les cartes ont parlé. Attends que la nuit passe…'));
+  } else if (role === 'videur') {
+    consigne.innerHTML = '🛡️ <b>Protège un joueur</b> des loups cette nuit (toi compris).';
+    if (choix === null && s.action !== null && s.action !== undefined) choix = s.action;
+    const v = valider(() => ({ type: 'lg_nuit', cible: choix }), s.action !== null && s.action !== undefined ? 'Changer de protégé' : 'Protéger');
+    p.appendChild(grille(etat, vivants, choix, i => { choix = i; v.b.disabled = i === s.action; },
+      i => (i === s.dernier_protege ? { interdit: true, marques: 'déjà protégé hier' } : {})));
+    if (s.action !== null && s.action !== undefined) v.b.disabled = true;
+    p.appendChild(v.r);
+  } else {
+    consigne.innerHTML = '👀 <b>Qui soupçonnes-tu ?</b> Ton flair est compté à la fin de la partie.';
+    if (choix === null && s.action !== null && s.action !== undefined) choix = s.action;
+    const v = valider(() => ({ type: 'lg_nuit', cible: choix }), s.action !== null && s.action !== undefined ? 'Changer de suspect' : 'Je le soupçonne');
+    p.appendChild(grille(etat, vivants.filter(i => i !== MOI), choix, i => { choix = i; v.b.disabled = i === s.action; }));
+    if (s.action !== null && s.action !== undefined) v.b.disabled = true;
+    p.appendChild(v.r);
+  }
+  if (role === 'cartomancienne' && (s.visions || []).length) {
+    const anciennes = s.visions.filter(x => x.nuit !== etat.nuit);
+    if (anciennes.length) p.appendChild(div('visions', 'Tes visions : ' + anciennes.map(x => prenom(x.cible) + ' ' + iconeRole(x.role)).join(' · ')));
+  }
+  if (s.action !== null && s.action !== undefined && role !== 'cartomancienne') {
+    const f = div('fait');
+    f.innerHTML = '✔️ C’est noté : <b></b>';
+    f.querySelector('b').textContent = prenom(s.action);
+    p.appendChild(f);
+  }
+  p.appendChild(div('compte'));
+  majPanneauLeger(etat);
+}
+
+function panneauPotion(etat, s) {
+  const p = ouvrirPanneau('');
+  p.appendChild(carteRole(s, false));
+  if (s.role !== 'herboriste' || !s.vivant || s.potion_faite) {
+    p.appendChild(div('consigne', '🌙 La nuit continue… Garde les yeux sur ton écran.'));
+    return;
+  }
+  const pot = s.potions || {};
+  const c = div('consigne');
+  c.innerHTML = s.victime === null ? '🌿 Cette nuit, <b>personne</b> n’a été attaqué.' : '🌿 Les loups ont attaqué <b></b>.';
+  if (s.victime !== null) c.querySelector('b').textContent = s.victime === MOI ? 'toi' : prenom(s.victime);
+  p.appendChild(c);
+  const r1 = rangee();
+  let bSoin = null;
+  if (s.victime !== null && pot.soin) {
+    bSoin = bouton(choixSoin ? '✔️ Je le soigne' : '💚 Soigner', 'sombre' + (choixSoin ? ' choisi' : ''), () => { choixSoin = !choixSoin; rafraichirPanneau(true); });
+    r1.appendChild(bSoin);
+  } else if (!pot.soin) {
+    p.appendChild(aide('Ta potion de soin est déjà utilisée.'));
+  }
+  p.appendChild(r1);
+  if (pot.poison) {
+    p.appendChild(div('consigne', '☠️ Empoisonner quelqu’un ? (touche un joueur, ou laisse vide)'));
+    const g = grille(etat, vivantsDe(etat).filter(i => i !== MOI), choixPoison, i => {
+      choixPoison = choixPoison === i ? null : i;
+      g.querySelectorAll('.tuile').forEach(t => t.classList.toggle('choisi', t.dataset.joueur === String(choixPoison)));
+    });
+    p.appendChild(g);
+  } else {
+    p.appendChild(aide('Ta potion de poison est déjà utilisée.'));
+  }
+  const r = rangee();
+  r.style.marginTop = '6px';
+  r.appendChild(bouton('Valider', 'gros', () => agir({ type: 'lg_potion', soin: choixSoin, poison: choixPoison })));
+  r.appendChild(bouton('Ne rien faire', 'sombre', () => agir({ type: 'lg_potion', soin: false, poison: null })));
+  p.appendChild(r);
+}
+
+function lignesMorts(etat, morts) {
+  const d = div('');
+  morts.forEach(m => {
+    const l = div('mort-ligne');
+    l.append(div('ic', iconeRole(m.role)));
+    const t = div('');
+    const nom = document.createElement('div');
+    nom.textContent = (m.joueur === MOI ? 'Toi' : prenom(m.joueur)) + ' : ' + nomRole(m.role);
+    t.append(nom, div('cause', CAUSES[m.cause] + (m.boit ? ' · 🍺 ' + m.boit : '')));
+    l.append(t);
+    d.appendChild(l);
+  });
+  return d;
+}
+
+function panneauAnnonce(etat, s) {
+  const a = etat.annonce || { morts: [] };
+  const reste = finAnimation - Date.now();
+  if (etat.phase === 'verdict' && reste > 0) {
+    ouvrirPanneau('🥁 Dépouillement…');
+    setTimeout(() => rafraichirPanneau(true), reste + 60);
+    return;
+  }
+  const p = ouvrirPanneau('');
+  if (s.vivant) p.appendChild(carteRole(s, false));
+  if (etat.phase === 'aube') {
+    const morts = a.morts.filter(m => m.cause !== 'abattu');
+    p.appendChild(div('grand', morts.length ? '☀️ Cette nuit…' : '☀️ Personne n’est mort !'));
+    p.appendChild(lignesMorts(etat, morts));
+  } else {
+    p.appendChild(div('grand', a.elimine === null ? (a.egalite ? '⚖️ Égalité : personne' : '⚖️ Personne n’est éliminé') : '⚖️ Le village a tranché'));
+    const elim = a.morts.filter(m => m.cause === 'elimine');
+    p.appendChild(lignesMorts(etat, elim));
+    // Qui a voté quoi.
+    const t = document.createElement('table');
+    t.className = 'bilan';
+    const tete = document.createElement('tr');
+    ['', 'A voté', ''].forEach(h => { const th = document.createElement('th'); th.textContent = h; tete.appendChild(th); });
+    t.appendChild(tete);
+    a.votes.forEach(v => {
+      const tr = document.createElement('tr');
+      tr.className = v.joueur === MOI ? 'moi' : '';
+      const accuse = a.accusateurs.find(x => x.joueur === v.joueur);
+      [[prenom(v.joueur) + (v.joueur === MOI ? ' (toi)' : '')], [v.cible === null ? 'blanc' : prenom(v.cible)], [accuse ? '🍺 ' + accuse.boit : '', accuse ? 'n ko' : 'n']].forEach(([txt, cl]) => {
+        const td = document.createElement('td'); td.textContent = txt; if (cl) td.className = cl; tr.appendChild(td);
+      });
+      t.appendChild(tr);
+    });
+    p.appendChild(t);
+    if (a.accusateurs.length) p.appendChild(aide('😬 Un innocent : chacun de ses accusateurs boit ' + a.accusateurs[0].boit + '.'));
+  }
+  if (a.tir) {
+    if (a.tir.cible === null) p.appendChild(aide('🏹 ' + prenom(a.tir.tireur) + ' n’a pas tiré.'));
+    else p.appendChild(lignesMorts(etat, a.morts.filter(m => m.cause === 'abattu')));
+  }
+  if (!s.vivant) p.appendChild(div('fantome', '👻 Tu es mort : tu vois maintenant tous les rôles. Motus jusqu’à la fin !'));
+  const r = rangee();
+  const bt = bouton(etat.suivants[MOI] ? 'En attente des autres…' : etat.phase === 'aube' ? 'Au débat ▶' : 'La nuit tombe ▶', '', () => agir({ type: 'lg_suivant' }));
+  bt.disabled = !!etat.suivants[MOI];
+  r.appendChild(bt);
+  p.appendChild(r);
+  p.appendChild(div('compte'));
+  majPanneauLeger(etat);
+}
+
+function panneauTir(etat, s) {
+  const p = ouvrirPanneau('');
+  if (etat.tireur !== MOI) {
+    if (s.vivant) p.appendChild(carteRole(s, false));
+    p.appendChild(div('grand', '🏹 ' + prenom(etat.tireur) + ' vise…'));
+    p.appendChild(aide('Le Braconnier, en mourant, emporte quelqu’un avec lui.'));
+    return;
+  }
+  p.appendChild(div('grand', '🏹 Tu es mort, Braconnier'));
+  p.appendChild(div('consigne', 'Emporte un joueur avec toi :'));
+  const r = rangee();
+  r.style.marginTop = '6px';
+  const b = bouton('Tirer', 'gros', () => agir({ type: 'lg_tir', cible: choix }));
+  b.disabled = choix === null;
+  p.appendChild(grille(etat, vivantsDe(etat), choix, i => { choix = i; b.disabled = false; }));
+  r.appendChild(b);
+  p.appendChild(r);
+}
+
+function panneauDebat(etat, s) {
+  const p = ouvrirPanneau('');
+  p.appendChild(carteRole(s, false));
+  const vote = s.vote;
+  if (vote && !enEdition) {
+    const f = div('fait');
+    f.innerHTML = vote.cible === null ? '🗳️ Tu votes <b>blanc</b>' : '🗳️ Tu votes contre <b></b>';
+    if (vote.cible !== null) f.querySelector('b').textContent = prenom(vote.cible);
+    p.appendChild(f);
+    const r = rangee();
+    r.appendChild(bouton('✏️ Changer', 'sombre petit', () => { enEdition = true; choix = vote.cible; rafraichirPanneau(true); }));
+    p.appendChild(r);
+  } else {
+    p.appendChild(div('consigne', '⚖️ Débattez à voix haute, puis vote contre le joueur à éliminer.'));
+    const r = rangee();
+    r.style.marginTop = '6px';
+    const b = bouton('Voter', 'gros', () => agir({ type: 'lg_voter', cible: choix }));
+    b.disabled = choix === null;
+    p.appendChild(grille(etat, vivantsDe(etat).filter(i => i !== MOI), choix, i => { choix = i; b.disabled = false; }));
+    r.appendChild(b);
+    r.appendChild(bouton('Vote blanc', 'sombre', () => agir({ type: 'lg_voter', cible: null })));
+    if (enEdition) r.appendChild(bouton('Annuler', 'sombre', () => { enEdition = false; rafraichirPanneau(true); }));
+    p.appendChild(r);
+  }
+  p.appendChild(aide('Le plus désigné est éliminé, sauf égalité. Les votes sont révélés au verdict.'));
+  p.appendChild(div('compte'));
+  majPanneauLeger(etat);
+}
+
+function listeRoles(etat, roles) {
+  const d = div('liste-roles');
+  etat.joueurs.forEach((nom, i) => {
+    const sp = document.createElement('span');
+    sp.className = (roles[i] === 'loup' ? 'loup' : '') + (!etat.vivants[i] ? ' mort' : '');
+    sp.textContent = iconeRole(roles[i]) + ' ' + nom + (i === MOI ? ' (toi)' : '');
+    d.appendChild(sp);
+  });
+  return d;
+}
+
+function panneauFantome(etat, s) {
+  const p = ouvrirPanneau('👻 Tu es un fantôme');
+  p.appendChild(div('fantome', 'Tu vois tous les rôles, mais tu ne dis plus rien : ni grimace, ni indice !'));
+  if (s.tous_roles) p.appendChild(listeRoles(etat, s.tous_roles));
+  if (etat.phase === 'nuit') p.appendChild(aide('🌙 Les vivants jouent leur nuit…'));
+  else if (etat.phase === 'potion') p.appendChild(aide('🌙 La nuit continue…'));
+  else if (etat.phase === 'debat') p.appendChild(aide('⚖️ Les vivants débattent et votent.'));
+  p.appendChild(div('compte'));
+  majPanneauLeger(etat);
+}
+
+function panneauFin(etat) {
+  const f = etat.final || { vainqueur: 'village', gagnants: [], perdants: [], roles: [], flair: [], meilleur_flair: [] };
+  const gagne = f.gagnants.includes(MOI);
+  const p = ouvrirPanneau((f.vainqueur === 'loups' ? '🐺 Les loups gagnent' : '🏡 Le village gagne') + (MOI < etat.joueurs.length ? (gagne ? ' : bravo !' : '') : ''));
+  const t = document.createElement('table');
+  t.className = 'bilan';
+  const tete = document.createElement('tr');
+  ['', 'Rôle', '👀 Flair', '🍺 bues'].forEach(h => { const th = document.createElement('th'); th.textContent = h; tete.appendChild(th); });
+  t.appendChild(tete);
+  const ordre = etat.joueurs.map((_, i) => i).sort((a, b) => (f.gagnants.includes(b) - f.gagnants.includes(a)) || a - b);
+  ordre.forEach(j => {
+    const tr = document.createElement('tr');
+    tr.className = (j === MOI ? 'moi ' : '') + (f.gagnants.includes(j) ? 'gagnant ' : '') + (!etat.vivants[j] ? 'mort' : '');
+    [[(f.gagnants.includes(j) ? '🏆 ' : '') + (etat.vivants[j] ? '' : '💀 ') + etat.joueurs[j] + (j === MOI ? ' (toi)' : '')],
+     [iconeRole(f.roles[j]) + ' ' + nomRole(f.roles[j])], [String(f.flair[j] || 0), 'n'], [String(etat.gorgees[j]), 'n']].forEach(([txt, cl]) => {
+      const td = document.createElement('td'); td.textContent = txt; if (cl) td.className = cl; tr.appendChild(td);
+    });
+    t.appendChild(tr);
+  });
+  p.appendChild(t);
+  if (f.meilleur_flair && f.meilleur_flair.length) {
+    p.appendChild(aide('👀 Meilleur flair : ' + f.meilleur_flair.map(j => nomDe(j)).join(', ') + ' (' + f.flair[f.meilleur_flair[0]] + ' nuit' + (f.flair[f.meilleur_flair[0]] > 1 ? 's' : '') + ' à soupçonner un loup).'));
+  }
+  if (f.perdants.length) p.appendChild(aide('🍺 Le camp perdant boit ' + f.perdants[0].boit + ' gorgées chacun.'));
+  p.appendChild(aide('Une autre ? Ceux qui sont arrivés en cours de partie s’assoient.'));
+  const n = joueursProchainePartie(etat);
+  p.appendChild(blocReglage(n, () => rafraichirPanneau(true)));
+  if (n < JOUEURS_MIN) p.appendChild(aide('Il faut au moins ' + JOUEURS_MIN + ' joueurs présents pour rejouer.'));
+  else if (n > JOUEURS_MAX) {
+    const al = div('alerte', 'Vous êtes ' + n + ' : le Loup-Garou se joue à ' + JOUEURS_MAX + ' au plus.');
+    p.appendChild(al);
+  }
+  const rg = rangee();
+  const b = bouton('Rejouer', '', () => agir(messageDemarrer()));
+  b.disabled = n < JOUEURS_MIN || n > JOUEURS_MAX;
+  rg.appendChild(b);
+  rg.appendChild(boutonMenuJeux());
+  p.appendChild(rg);
+}
+
+function panneauSpectateur(etat) {
+  const p = ouvrirPanneau('Spectateur');
+  p.appendChild(aide('La partie a commencé sans toi : tu la suis en direct (sans voir les rôles), et tu t’assois à la suivante.'));
+  const r = rangee();
+  r.appendChild(bouton('Quitter le salon', 'sombre', () => {
+    enPartie = false; oublierSession(); monJeton = null;
+    if (ws) { try { ws.close(); } catch (e) { /* deja ferme */ } }
+    location.href = location.pathname;
+  }));
+  p.appendChild(r);
+}
+
+// --- Réglage : nombre de loups, rôles spéciaux ---
+function joueursProchainePartie(etat) {
+  const absents = (etat.partis || []).filter(Boolean).length;
+  return Math.max(0, (joueursSalon.length || etat.joueurs.length) - absents);
+}
+function messageDemarrer() {
+  const m = { type: 'lg_demarrer' };
+  if (loupsChoisis !== null) m.loups = loupsChoisis;
+  if (speciauxChoisis !== null) m.speciaux = speciauxChoisis;
+  return m;
+}
+function blocReglage(n, redessiner) {
+  const d = document.createElement('div');
+  const titre = texte => { d.appendChild(div('reglage-titre', texte)); };
+  titre('Loups');
+  const rl = rangee();
+  [[null, 'Auto'], [1, '1'], [2, '2'], [3, '3'], [4, '4']].forEach(([v, nom]) => {
+    const b = bouton(nom, 'sombre petit' + (v === loupsChoisis ? ' choisi' : ''), () => { loupsChoisis = v; redessiner(); });
+    if (v !== null && n >= JOUEURS_MIN && v > loupsMax(n)) b.disabled = true;
+    rl.appendChild(b);
+  });
+  d.appendChild(rl);
+  titre('Rôles spéciaux');
+  const g = div('modes');
+  const actifs = speciauxChoisis === null ? SPECIAUX.filter(r => n >= SPECIAUX_DES[r]) : speciauxChoisis;
+  SPECIAUX.forEach(r => {
+    const b = div('mode' + (actifs.includes(r) ? ' choisi' : ''));
+    b.setAttribute('role', 'button');
+    b.textContent = ROLES[r].icone + ' ' + ROLES[r].nom;
+    const sm = document.createElement('small');
+    sm.textContent = actifs.includes(r) ? 'dans la partie' : 'absent';
+    b.appendChild(sm);
+    b.addEventListener('click', () => {
+      const base = speciauxChoisis === null ? actifs.slice() : speciauxChoisis.slice();
+      speciauxChoisis = base.includes(r) ? base.filter(x => x !== r) : SPECIAUX.filter(x => base.includes(x) || x === r);
+      redessiner();
+    });
+    g.appendChild(b);
+  });
+  d.appendChild(g);
+  const rr = rangee();
+  rr.appendChild(bouton('Rôles automatiques', 'sombre petit' + (speciauxChoisis === null && loupsChoisis === null ? ' choisi' : ''), () => { speciauxChoisis = null; loupsChoisis = null; redessiner(); }));
+  d.appendChild(rr);
+  if (n >= JOUEURS_MIN) d.appendChild(div('compo', 'À ' + n + ' : ' + texteComposition(composition(n, loupsChoisis, speciauxChoisis))));
+  return d;
+}
+
+// =====================================================================
+// ACCUEIL ET SALON
+// =====================================================================
+const SERVEURS = {
+  render: { http: 'https://kinito-serveur.onrender.com', ws: 'wss://kinito-serveur.onrender.com' },
+  local:  { http: 'http://127.0.0.1:8000',               ws: 'ws://127.0.0.1:8000' },
+};
+let serveurChoisi = 'render';
+let monNom = Soiree.nom();
+let codeSalon = '';
+let estCreateur = false;
+let joueursSalon = [];
+let enPartie = false;
+let monJeton = null;
+const JOUEURS_MIN = 4;
+const JOUEURS_MAX = 15;
+const CLE_SESSION = 'loupgarou3d.session';
+function lireSession() {
+  try { return JSON.parse(localStorage.getItem(CLE_SESSION) || 'null'); }
+  catch (e) { return null; }
+}
+function ecrireSession(s) {
+  try { localStorage.setItem(CLE_SESSION, JSON.stringify(s)); } catch (e) { /* tant pis */ }
+}
+function oublierSession() {
+  lienActif = false;
+  try { localStorage.removeItem(CLE_SESSION); } catch (e) { /* tant pis */ }
+}
+function champTexte(id, placeholder, longueurMax) {
+  const i = document.createElement('input');
+  i.type = 'text';
+  i.id = id;
+  i.placeholder = placeholder;
+  i.autocomplete = 'off';
+  if (longueurMax) i.maxLength = longueurMax;
+  return i;
+}
+function afficherErreur(texte) { elRappel.textContent = texte; }
+function panneauAccueil() {
+  elMessage.textContent = 'Loup-Garou';
+  elRappel.textContent = 'Des loups se cachent parmi vous. La nuit ils dévorent, le jour le village vote.';
+  elCompteur.innerHTML = '';
+  const p = panneauEnLigne();
+  const s = lireSession();
+  if (s && s.code && s.jeton) {
+    const r2 = rangee();
+    r2.style.marginTop = '12px';
+    r2.appendChild(bouton('Reprendre la partie ' + s.code, 'sombre', () => {
+      monNom = s.nom; codeSalon = s.code; monJeton = s.jeton;
+      serveurChoisi = s.serveur || 'render';
+      estCreateur = !!s.createur;
+      afficherErreur('Reconnexion...');
+      seConnecter();
+    }));
+    p.appendChild(r2);
+  }
+}
+function boutonServeur() {
+  const b = bouton('', 'sombre petit', () => {
+    serveurChoisi = serveurChoisi === 'render' ? 'local' : 'render';
+    majLibelleServeur(b);
+  });
+  majLibelleServeur(b);
+  return b;
+}
+function panneauRejoindreDirect(code) {
+  codeSalon = code;
+  elMessage.textContent = 'Loup-Garou';
+  elRappel.textContent = 'Salon ' + code;
+  const p = ouvrirPanneau('Rejoindre le salon');
+  const c = div('code-salon', code);
+  p.appendChild(c);
+  const l1 = rangee();
+  const pseudo = champTexte('pseudo', 'Ton prénom', 16);
+  pseudo.value = monNom;
+  l1.appendChild(pseudo);
+  p.appendChild(l1);
+  const l2 = rangee();
+  l2.style.marginTop = '10px';
+  l2.appendChild(bouton('Rejoindre', '', async () => {
+    if (!lireNom()) return;
+    afficherErreur('Connexion au serveur...');
+    try {
+      const rep = await fetch(SERVEURS[serveurChoisi].http + '/salon/' + codeSalon);
+      if (!(await rep.json()).existe) { afficherErreur('Ce salon n’existe plus'); return; }
+      estCreateur = false;
+      seConnecter();
+    } catch (e) {
+      afficherErreur('Serveur injoignable.');
+    }
+  }));
+  p.appendChild(l2);
+  const l3 = rangee();
+  l3.style.marginTop = '12px';
+  l3.appendChild(boutonServeur());
+  l3.appendChild(bouton('Autre salon', 'sombre petit', panneauAccueil));
+  p.appendChild(l3);
+}
+function panneauEnLigne() {
+  const p = ouvrirPanneau('Jouer en ligne');
+  const l1 = rangee();
+  const pseudo = champTexte('pseudo', 'Ton prénom', 16);
+  pseudo.value = monNom;
+  l1.appendChild(pseudo);
+  p.appendChild(l1);
+  const l2 = rangee();
+  l2.style.marginTop = '10px';
+  l2.appendChild(bouton('Créer un salon', '', creerSalon));
+  p.appendChild(l2);
+  const l3 = rangee();
+  l3.style.marginTop = '10px';
+  l3.appendChild(champTexte('code-salon', 'CODE', 4));
+  l3.appendChild(bouton('Rejoindre', 'sombre', rejoindreSalon));
+  p.appendChild(l3);
+  const l4 = rangee();
+  l4.style.marginTop = '14px';
+  l4.appendChild(boutonServeur());
+  p.appendChild(l4);
+  p.appendChild(div('note', "Le serveur Render s'endort : la première connexion peut prendre 30 s."));
+  return p;
+}
+function majLibelleServeur(b) {
+  b.textContent = serveurChoisi === 'render' ? 'Serveur : Render' : 'Serveur : local';
+}
+function lireNom() {
+  const champ = document.getElementById('pseudo');
+  monNom = champ ? champ.value.trim() : '';
+  if (monNom) monNom = Soiree.definirNom(monNom);
+  if (!monNom) { afficherErreur('Entre ton prénom'); return false; }
+  return true;
+}
+async function creerSalon() {
+  if (!lireNom()) return;
+  afficherErreur('Connexion au serveur...');
+  try {
+    const rep = await fetch(SERVEURS[serveurChoisi].http + '/creer-salon');
+    codeSalon = (await rep.json()).code;
+    estCreateur = true;
+    seConnecter();
+  } catch (e) {
+    afficherErreur("Serveur injoignable. S'il dort, réessaie dans 30 s.");
+  }
+}
+async function rejoindreSalon() {
+  if (!lireNom()) return;
+  const champ = document.getElementById('code-salon');
+  codeSalon = (champ ? champ.value : '').trim().toUpperCase();
+  if (codeSalon.length !== 4) { afficherErreur('Le code fait 4 lettres'); return; }
+  afficherErreur('Connexion au serveur...');
+  try {
+    const rep = await fetch(SERVEURS[serveurChoisi].http + '/salon/' + codeSalon);
+    if (!(await rep.json()).existe) { afficherErreur('Salon introuvable'); return; }
+    estCreateur = false;
+    seConnecter();
+  } catch (e) {
+    afficherErreur('Serveur injoignable.');
+  }
+}
+// --- Connexion au serveur : reconnexion automatique et battement de cœur ---
+let lienActif = false;
+let tentativesLien = 0;
+let minuteurLien = null;
+let dernierSignal = 0;
+let cacheeDepuis = 0;
+function seConnecter() {
+  Soiree.memoriser(codeSalon, serveurChoisi);
+  if (!monJeton) {
+    const s = lireSession();
+    if (s && s.code === codeSalon && s.jeton) monJeton = s.jeton;
+  }
+  clearTimeout(minuteurLien);
+  minuteurLien = null;
+  lienActif = true;
+  let url = SERVEURS[serveurChoisi].ws + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom) + '?bat=1&page=loupgarou';
+  if (monJeton) url += '&jeton=' + encodeURIComponent(monJeton);
+  const socket = new WebSocket(url);
+  ws = socket;
+  dernierSignal = Date.now();
+  socket.onopen = () => {
+    if (ws !== socket) return;
+    if (tentativesLien > 0) afficherErreur('Reconnecté.');
+    tentativesLien = 0;
+    dernierSignal = Date.now();
+    mode = 'ligne';
+    if (!enPartie) panneauAttente();
+    Soiree.verifierJeuEnCours('loupgarou');
+  };
+  socket.onmessage = e => {
+    if (ws !== socket) return;
+    dernierSignal = Date.now();
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'pong') return;
+    if (Soiree.traiterMessage(msg, 'loupgarou')) return;
+    if (msg.type === 'remplace') { lienActif = false; panneauRemplace(); return; }
+    clientRecevoir(msg);
+  };
+  socket.onerror = () => { if (ws === socket && !lienActif) afficherErreur('Erreur de connexion au serveur'); };
+  socket.onclose = () => { if (ws === socket && lienActif) programmerReconnexion(); };
+}
+function programmerReconnexion() {
+  if (!lienActif || minuteurLien) return;
+  tentativesLien++;
+  if (tentativesLien > 14) { lienActif = false; panneauReconnexion(); return; }
+  afficherErreur('Connexion perdue, reconnexion…');
+  const delai = Math.min(1000 * tentativesLien, 5000);
+  minuteurLien = setTimeout(() => { minuteurLien = null; if (lienActif) seConnecter(); }, delai);
+}
+function verifierLien() {
+  if (!lienActif) return;
+  const absence = cacheeDepuis ? Date.now() - cacheeDepuis : 0;
+  cacheeDepuis = 0;
+  if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+    clearTimeout(minuteurLien);
+    minuteurLien = null;
+    tentativesLien = 0;
+    seConnecter();
+  } else if (ws.readyState === WebSocket.OPEN && absence > 2000) {
+    try { ws.send('{"type":"ping"}'); ws.send('{"type":"resync"}'); } catch (e) { /* elle se fermera */ }
+  }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) cacheeDepuis = Date.now(); else verifierLien();
+});
+window.addEventListener('pageshow', verifierLien);
+window.addEventListener('online', verifierLien);
+setInterval(() => {
+  if (!lienActif || !ws || ws.readyState !== WebSocket.OPEN) return;
+  try { ws.send('{"type":"ping"}'); } catch (e) { /* elle se fermera */ }
+  if (!document.hidden && Date.now() - dernierSignal > 15000) seConnecter();
+}, 5000);
+function panneauRemplace() {
+  elMessage.textContent = 'Partie reprise ailleurs';
+  const p = ouvrirPanneau('Tu joues sur un autre écran');
+  p.appendChild(aide('Ta place a été reprise depuis un autre onglet ou un autre téléphone, avec le même prénom.'));
+  const r = rangee();
+  r.appendChild(bouton('Reprendre ici', '', () => { cacherPanneau(); tentativesLien = 0; seConnecter(); }));
+  r.appendChild(bouton('Tous les jeux', 'sombre', () => { location.href = 'index.html'; }));
+  p.appendChild(r);
+}
+function panneauReconnexion() {
+  elMessage.textContent = 'Connexion perdue';
+  const p = ouvrirPanneau('Déconnecté');
+  p.appendChild(aide('Ta place est gardée ; en attendant, la partie avance sans toi. Reconnecte-toi pour la reprendre.'));
+  const r = rangee();
+  r.appendChild(bouton('Reconnecter', '', () => { cacherPanneau(); tentativesLien = 0; seConnecter(); }));
+  r.appendChild(bouton('Quitter', 'sombre', () => {
+    enPartie = false; oublierSession(); monJeton = null; location.href = location.pathname;
+  }));
+  p.appendChild(r);
+}
+const SITE_PUBLIE = 'https://ozaxe.github.io/table-de-jeu/loupgarou-3d-jeu.html';
+function lienSalon(code) {
+  const fichierLocal = location.protocol === 'file:';
+  const base = fichierLocal ? SITE_PUBLIE : location.origin + location.pathname;
+  return { url: base + '?salon=' + encodeURIComponent(code), repli: fichierLocal };
+}
+function majQRModale() {
+  const bloc = document.getElementById('bloc-qr-regles');
+  if (!bloc) return;
+  if (mode !== 'ligne' || !codeSalon) { bloc.className = 'cache'; return; }
+  bloc.className = '';
+  document.getElementById('qr-code-salon').textContent = codeSalon;
+  const lien = lienSalon(codeSalon);
+  const cv = document.getElementById('qr-regles');
+  const note = document.getElementById('qr-note-regles');
+  cv.style.display = 'none';
+  if (typeof QRious !== 'undefined') {
+    try {
+      new QRious({ element: cv, value: lien.url, size: 340, level: 'M', background: '#f2e2bc', foreground: '#2a1a0a' });
+      cv.style.display = '';
+    } catch (e) { /* pas de QR : le code à 4 lettres suffit */ }
+  }
+  const avertissements = [];
+  if (lien.repli) {
+    avertissements.push('Ce QR mène au site en ligne : la page est ouverte en fichier local, il n’y a pas d’adresse à partager.');
+    if (serveurChoisi === 'local') avertissements.push('Tu joues sur le serveur local : ceux qui scannent arriveront sur le serveur en ligne.');
+  }
+  if (enPartie) avertissements.push('Partie en cours : celui qui rejoint regarde et entre à la partie suivante. Pour quelqu’un qui s’est fait couper, ce lien lui rend sa place.');
+  note.textContent = avertissements.join(' ');
+  document.getElementById('copier-lien-regles').onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(lien.url);
+      note.textContent = 'Lien copié : ' + lien.url;
+    } catch (e) {
+      note.textContent = lien.url;
+    }
+  };
+}
+function panneauAttente() {
+  const p = ouvrirPanneau('Salle d’attente');
+  const invite = document.createElement('p');
+  invite.className = 'invitation-soiree';
+  invite.textContent = 'De 4 à 15 joueurs (le plus drôle à partir de 6) : chacun reçoit un rôle secret sur son téléphone, le téléphone fait le conteur. Le QR de la soirée est sur l’accueil.';
+  p.appendChild(invite);
+  const liste = div('liste-attente', joueursSalon.length
+    ? joueursSalon.map((n, i) => (i === MOI ? n + ' (toi)' : n)).join(' · ')
+    : 'En attente de joueurs...');
+  p.appendChild(liste);
+  if (estCreateur) {
+    const n = joueursSalon.length;
+    p.appendChild(blocReglage(n, panneauAttente));
+    const r = rangee();
+    r.style.marginTop = '6px';
+    const trop = n > JOUEURS_MAX;
+    const b = bouton('Démarrer la partie', '', () => Soiree.lancer('loupgarou', o => envoyerIntention(MOI, { ...messageDemarrer(), ...o })));
+    b.disabled = n < JOUEURS_MIN || trop;
+    r.appendChild(b);
+    p.appendChild(r);
+    if (n < JOUEURS_MIN) {
+      p.appendChild(aide('Encore ' + (JOUEURS_MIN - n) + ' joueur' + (JOUEURS_MIN - n > 1 ? 's' : '') + ' avant de pouvoir lancer.'));
+    } else if (trop) {
+      p.appendChild(div('alerte', 'Vous êtes ' + n + ' : le Loup-Garou se joue à ' + JOUEURS_MAX + ' au plus. Ouvrez une deuxième table.'));
+    }
+  } else {
+    p.appendChild(aide('En attente du créateur du salon (il choisit les rôles)...'));
+  }
+}
+// =====================================================================
+// MISE EN PLACE DE LA TABLE
+// =====================================================================
+let moiDeLaTable = -1;
+function construireTable(noms) {
+  creerSieges(noms);
+  moiDeLaTable = MOI;
+  if (etatCourant) etatCourant.joueurs.forEach((_, i) => { if (!etatCourant.vivants[i]) poserTombe(i, etatCourant.roles[i], true); });
+}
+function demarrerScene(noms) {
+  enPartie = true;
+  etatCourant = null;
+  secret = null;
+  roleVisible = false;
+  finAnimation = 0;
+  cacherPanneau();
+  viderJetons();
+  construireTable(noms);
+  camObjectifPos = CAM_POS.clone();
+  camObjectifCible = CAM_CIBLE.clone();
+}
+// =====================================================================
+// BOUCLE DE RENDU
+// =====================================================================
+const clock = new THREE.Clock();
+function boucle() {
+  requestAnimationFrame(boucle);
+  const rattrapage = fileActions.length > 3 ? 4 : 1;
+  const dt = Math.min(clock.getDelta(), 0.1) * rattrapage;
+  for (let i = animations.length - 1; i >= 0; i--) {
+    const a = animations[i];
+    a.t += dt;
+    if (a.maj) a.maj(a);
+    if (a.t >= a.duree) {
+      animations.splice(i, 1);
+      if (a.fin) a.fin();
+    }
+  }
+  const t = clock.elapsedTime;
+  // Flammes qui vacillent.
+  const v = 1 + Math.sin(t * 12) * 0.08 + Math.sin(t * 7.7) * 0.06;
+  lanterne.flamme.scale.set(1, 1.7 * v, 1);
+  lanterne.lumiere.intensity = 2.2 * v;
+  sieges.forEach((s, k) => {
+    if (s.bougie.userData.allumee) s.bougie.userData.flamme.scale.y = 1.8 * (1 + Math.sin(t * 11 + k * 1.7) * 0.12);
+    if (s.icone.visible) s.icone.position.y = 0.86 + Math.sin(t * 3 + s.index) * 0.03;
+    if (s.halo.visible) s.halo.material.opacity = 0.14 + Math.sin(t * 4) * 0.04;
+  });
+  camera.position.lerp(camObjectifPos, CAM_VITESSE);
+  camCibleActuelle.lerp(camObjectifCible, CAM_VITESSE);
+  decor.animer(t);
+  const recul = THREE.MathUtils.clamp(camera.position.distanceTo(camCibleActuelle) / 6.2, 1, 1.4);
+  sieges.forEach(st => { st.etiquette.scale.set(0.9 * st.echelle * recul, 0.225 * st.echelle * recul, 1); });
+  camera.lookAt(camCibleActuelle);
+  zone.appliquer(camera, { rayon: R_TABLE, places: R_SIEGE }, { pos: camObjectifPos, cible: camObjectifCible });
+  renderer.render(scene, camera);
+}
+// =====================================================================
+// DÉMARRAGE
+// =====================================================================
+creerSieges(['', '', '', '', '', '', '', '']);
+sieges.forEach(s => { s.etiquette.visible = false; });
+if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) serveurChoisi = 'local';
+const salonDansUrl = new URLSearchParams(location.search).get('salon');
+if (salonDansUrl && /^[A-Za-z]{4}(-[2-9])?$/.test(salonDansUrl)) {
+  if (monNom) {
+    codeSalon = salonDansUrl.toUpperCase();
+    estCreateur = true;
+    seConnecter();
+  } else {
+    panneauRejoindreDirect(salonDansUrl.toUpperCase());
+  }
+} else {
+  panneauAccueil();
+}
+lisserScene(scene);
+zone.mesurer();
+boucle();
+surveillerFluidite();
+</script>
+<script>
+  // Appli installable (PWA) : voir service-worker.js
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(() => {});
+</script>
+</body>
+</html>
