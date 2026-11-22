@@ -85,6 +85,7 @@
     undercover: { titre: 'Undercover', page: 'undercover-3d-jeu.html', icone: '🕵️' },
     telephone:  { titre: 'Gribouillophone', page: 'telephone-jeu.html', icone: '🖍️' },
     conquete:   { titre: 'Royaumes',   page: 'conquete-3d-jeu.html',   icone: '🏰' },
+    justepinte: { titre: 'Le Juste Pinte', page: 'justepinte-3d-jeu.html', icone: '🎯' },
   };
 
   function lire(cle) {

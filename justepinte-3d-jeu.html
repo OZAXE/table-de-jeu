@@ -1,0 +1,1861 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Le Juste Pinte 3D</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=2">
+<link rel="apple-touch-icon" href="icons/icon-180.png?v=2">
+<meta name="theme-color" content="#0d1410">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SHIELD">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Bree+Serif&family=Caveat+Brush&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; background: #0d1410; }
+  canvas { display: block; }
+
+  #overlay { position: fixed; inset: 0; pointer-events: none; font-family: 'Outfit', system-ui, sans-serif; }
+  #vignette { position: fixed; inset: 0; pointer-events: none; }
+
+  /* --- Liste des joueurs --- */
+  #joueurs { position: absolute; top: 18px; left: 18px; display: flex; flex-direction: column; gap: 6px; max-height: 70vh; overflow: hidden; }
+  .joueur {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 12px; font-size: 16px; min-width: 190px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .joueur.absent { opacity: 0.45; font-style: italic; }
+  .joueur .pastille { width: 12px; height: 12px; border-radius: 50%; flex: 0 0 auto; }
+  .joueur .nom { flex: 1 1 auto; }
+  .joueur .info { font-size: 13px; color: var(--texte-doux); white-space: nowrap; }
+
+  /* --- Bandeau du haut --- */
+  #bandeau { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); text-align: center; max-width: 52vw; }
+  #message { font-size: 21px; }
+  #rappel { font-size: 15px; margin-top: 4px; }
+  #compteur {
+    display: inline-block; margin-top: 6px; padding: 4px 14px;
+    color: var(--texte); font-size: 14px;
+    background: var(--verre); border: 1px solid var(--bord); border-radius: 999px;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  }
+  #compteur:empty { display: none; }
+  #compteur b { color: var(--accent); }
+  #compteur .chrono.urgent { color: #ff8a8a; font-weight: 700; }
+
+  /* --- Panneau du bas --- */
+  #panneau {
+    position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+    pointer-events: auto; padding: 14px 18px;
+    min-width: 320px; max-width: min(720px, 94vw); text-align: center;
+    max-height: 62vh; overflow-y: auto;
+  }
+  #panneau.cache { display: none; }
+  #panneau h2 { margin: 0 0 8px; font-size: 20px; }
+  #panneau p { margin: 0 0 10px; font-size: 16px; }
+  .rangee { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  button {
+    pointer-events: auto; font-family: 'Outfit', system-ui, sans-serif;
+    font-weight: 700; font-size: 18px; padding: 11px 22px; cursor: pointer;
+  }
+  button.petit { font-size: 14px; padding: 7px 14px; }
+  button.gros { font-size: 22px; padding: 14px 30px; letter-spacing: 0.04em; }
+  button.choisi { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  /* --- La question --- */
+  .categorie { display: inline-block; padding: 3px 12px; border-radius: 999px; font-size: 13px; font-weight: 700;
+    color: #1b2a1e; background: var(--accent); margin-bottom: 8px; }
+  .question { font-size: 21px; font-weight: 700; line-height: 1.3; color: var(--texte); margin: 0 0 12px; }
+  .saisie { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 10px; }
+  .saisie .unite { font-size: 17px; color: var(--texte-doux); }
+  input#reponse { width: 180px; font-size: 26px; font-weight: 700; letter-spacing: 0.02em; }
+  .ma-reponse { font-size: 18px; margin: 4px 0 10px; color: var(--texte); }
+  .ma-reponse b { font-size: 26px; color: var(--accent); }
+  .compte { font-size: 14px; color: var(--texte-doux); margin-top: 8px; }
+
+  /* --- La révélation --- */
+  .bonne { font-size: 30px; font-weight: 800; color: var(--accent); margin: 2px 0 6px; font-family: var(--police-titre, serif); }
+  .info-q { font-size: 14px; color: var(--texte-doux); font-style: italic; margin: 0 0 8px; }
+  .bilan { margin: 6px auto 10px; border-collapse: collapse; font-size: 15px; min-width: 280px; }
+  .bilan td, .bilan th { padding: 4px 8px; color: var(--texte); text-align: left; border-bottom: 1px solid var(--bord); }
+  .bilan th { font-size: 12px; font-weight: 600; color: var(--texte-doux); }
+  .bilan td.n { text-align: right; white-space: nowrap; }
+  .bilan td.pts { color: var(--accent); font-weight: 700; }
+  .bilan tr.moi td { background: rgba(245, 192, 74, 0.1); }
+  .bilan tr.mille td:first-child { color: #9fe0b4; }
+  .bilan tr.gagnant td:first-child { color: #ffd98a; }
+
+  /* --- Réglages --- */
+  .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 6px 0 10px; }
+  .mode {
+    pointer-events: auto; cursor: pointer; text-align: left;
+    padding: 9px 11px; border-radius: 14px; border: 1px solid var(--bord);
+    background: rgba(255,255,255,0.05); color: var(--texte); font-size: 14px; font-weight: 600;
+  }
+  .mode.choisi { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
+  .reglage-titre { font-size: 13px; color: var(--texte-doux); margin: 8px 0 4px; }
+
+  input[type="text"] {
+    pointer-events: auto; font-family: 'Outfit', system-ui, sans-serif;
+    font-size: 18px; text-align: center; padding: 10px 14px; width: 210px; margin: 0 4px;
+  }
+  input#code-salon { width: 120px; letter-spacing: 6px; text-transform: uppercase; }
+  .code-salon { font-size: 38px; letter-spacing: 8px; margin: 2px 0 6px; }
+  .liste-attente { font-size: 17px; margin: 10px 0; line-height: 1.6; }
+  .qr { display: block; margin: 10px auto 4px; width: 168px; height: 168px; }
+  @media (max-width: 760px), (pointer: coarse) { .qr { width: 132px; height: 132px; } }
+
+  /* --- Règles --- */
+  #btn-regles { position: absolute; top: 18px; right: 18px; pointer-events: auto; font-size: 15px; padding: 8px 16px; cursor: pointer; }
+  #modale-regles {
+    position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-start; justify-content: center;
+    padding: 20px; overflow-y: auto; pointer-events: auto;
+  }
+  #modale-regles.cache { display: none; }
+  .modale { padding: 22px; max-width: 490px; width: 100%; margin: auto; line-height: 1.55; }
+  .modale h2 { font-size: 22px; margin: 0 0 12px; text-align: center; }
+  .modale h3 { font-size: 17px; margin: 16px 0 6px; }
+  .modale p { margin: 0 0 10px; font-size: 15px; }
+  .modale ul { margin: 0 0 10px 18px; font-size: 15px; padding: 0; }
+  .modale li { margin-bottom: 5px; }
+  .modale table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 14px; }
+  .modale td { padding: 5px 7px; text-align: left; border-bottom: 1px solid var(--bord); vertical-align: top; }
+  .modale td:first-child { white-space: nowrap; color: var(--texte); }
+  .modale .accent { color: var(--accent); font-weight: 700; }
+
+  .cache { display: none !important; }
+  .note { font-size: 12px; margin-top: 10px; }
+  .alerte { font-size: 13px; color: #e0a05a; margin-top: 8px; }
+
+  /* ================= Téléphones ================= */
+  @media (max-width: 760px), (pointer: coarse) {
+    #joueurs { top: 88px; left: 8px; right: 8px; flex-direction: row; flex-wrap: wrap; gap: 4px; justify-content: center; }
+    .joueur { padding: 3px 9px; font-size: 13px; min-width: 0; gap: 5px; }
+    .joueur .info { font-size: 11px; }
+    #bandeau { top: 12px; max-width: calc(100vw - 130px); left: 8px; transform: none; text-align: left; }
+    #message { font-size: 17px; }
+    #rappel { font-size: 12px; }
+    #compteur { font-size: 11px; padding: 2px 9px; margin-top: 3px; white-space: nowrap; }
+    #btn-regles { top: 10px; right: 10px; font-size: 13px; padding: 6px 12px; }
+    #panneau {
+      bottom: 0; left: 0; right: 0; transform: none; width: 100%; max-width: none; min-width: 0; box-sizing: border-box;
+      padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px)); max-height: 62vh;
+    }
+    #panneau h2 { font-size: 17px; margin-bottom: 6px; }
+    #panneau p { font-size: 14px; margin-bottom: 8px; }
+    button { font-size: 15px; padding: 9px 14px; }
+    button.gros { font-size: 19px; padding: 12px 24px; }
+    .rangee { gap: 7px; }
+    .question { font-size: 18px; margin-bottom: 8px; }
+    input#reponse { width: 150px; font-size: 22px; }
+    .bonne { font-size: 24px; }
+    .bilan { font-size: 13px; min-width: 0; width: 100%; }
+    .bilan td, .bilan th { padding: 3px 5px; }
+    .modes { grid-template-columns: 1fr 1fr; }
+    input[type="text"] { width: 160px; font-size: 16px; }
+    input#code-salon { width: 104px; }
+    .code-salon { font-size: 30px; letter-spacing: 6px; }
+    .modale { padding: 16px; }
+    .modale h2 { font-size: 19px; }
+    .modale p, .modale ul { font-size: 14px; }
+  }
+  @media (max-height: 460px) {
+    #joueurs { top: 80px; }
+    #panneau { max-height: 78vh; padding: 8px 10px; }
+  }
+
+  /* Grande annonce pour toute la table (question, dans le mille, victoire) */
+  .annonce-jp { position: fixed; left: calc(var(--zone-gauche, 0px) + 8px); right: calc(var(--zone-droite, 0px) + 8px); top: calc(var(--haut-libre, 14vh) + 6px); z-index: 60; text-align: center; pointer-events: none; }
+  .annonce-jp .gros { font: 900 clamp(30px, 10vmin, 78px)/1.05 'Outfit', system-ui, sans-serif; letter-spacing: 0.02em; color: var(--c);
+    text-shadow: 0 0 26px var(--c), 0 6px 22px rgba(0, 0, 0, 0.85); animation: jp-pop 0.45s cubic-bezier(.2, 1.6, .4, 1) both; }
+  .annonce-jp .petit { display: inline-block; margin-top: 12px; padding: 7px 16px; border-radius: 999px; background: rgba(0, 0, 0, 0.6);
+    border: 1px solid var(--c); color: #fff; font: 700 clamp(16px, 5vw, 22px)/1.25 'Outfit', system-ui, sans-serif; animation: jp-monte 0.4s 0.15s both; }
+  .annonce-jp.sort { animation: jp-sort 0.35s ease-in forwards; }
+  .flash-jp { position: fixed; inset: 0; z-index: 59; pointer-events: none; background: var(--c); animation: jp-flash 0.7s ease-out forwards; }
+  @keyframes jp-pop { from { opacity: 0; transform: scale(2.2) rotate(-6deg); } to { opacity: 1; transform: none; } }
+  @keyframes jp-monte { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes jp-sort { to { opacity: 0; transform: translateY(-16px) scale(0.92); } }
+  @keyframes jp-flash { 0% { opacity: 0.5; } 100% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .annonce-jp .gros, .annonce-jp .petit { animation: none; } .flash-jp { display: none; } }
+</style>
+<!-- Direction artistique commune « bar moderne », thème « pub » (quiz du jeudi). -->
+<link rel="stylesheet" href="da/bar-moderne.css">
+<link rel="stylesheet" href="da/themes/pub.css">
+<link rel="stylesheet" href="da/mise-en-page.css">
+</head>
+<body>
+
+<div id="overlay">
+  <button id="btn-regles">Règles &#9432;</button>
+  <div id="joueurs"></div>
+  <div id="bandeau">
+    <div id="message">Le Juste Pinte</div>
+    <div id="rappel"></div>
+    <div id="compteur"></div>
+  </div>
+  <div id="panneau"></div>
+</div>
+<div id="vignette"></div>
+
+<div id="modale-regles" class="cache">
+  <div class="modale">
+    <h2>Règles du Juste Pinte</h2>
+    <p>Une question à <span class="accent">réponse chiffrée</span> par manche : un degré d'alcool, une année de sortie, un nombre de bulles… Chacun tape son estimation <span class="accent">en secret</span> sur son téléphone. Personne n'est obligé de savoir : il suffit d'être plus près que les autres.</p>
+
+    <h3>Une manche</h3>
+    <ul>
+      <li>La question s'affiche, avec son unité. Tu as <span class="accent">30 secondes</span> pour répondre, et tu peux changer ta réponse tant que tout le monde n'a pas répondu.</li>
+      <li>Révélation : les jetons de chacun se posent sur la réglette, puis la bonne réponse tombe.</li>
+      <li>On est classé par <span class="accent">écart</span> à la bonne réponse. Ex aequo : même rang.</li>
+      <li>Une partie se joue en 5, 10 ou 15 questions.</li>
+    </ul>
+
+    <h3>Les points</h3>
+    <table>
+      <tr><td>Le plus proche</td><td><span class="accent">3 pts</span>, le deuxième 2, le troisième 1.</td></tr>
+      <tr><td>🎯 Dans le mille</td><td><span class="accent">+1 pt</span> : à moins de 5 % de la réponse (à un an près pour une année).</td></tr>
+    </table>
+
+    <h3>Les gorgées</h3>
+    <table>
+      <tr><td>Le plus loin</td><td>Il boit <span class="accent">2 gorgées</span>.</td></tr>
+      <tr><td>L'avant-dernier</td><td>1 gorgée, dès 5 joueurs.</td></tr>
+      <tr><td>Pas de réponse</td><td>2 gorgées.</td></tr>
+      <tr><td>🎯 Dans le mille</td><td>Il <span class="accent">distribue 3 gorgées</span> (et ne boit jamais).</td></tr>
+      <tr><td>Fin de partie</td><td>Le dernier au classement boit 3 gorgées.</td></tr>
+    </table>
+
+    <div id="bloc-qr-regles" class="cache">
+      <h3>Inviter quelqu'un</h3>
+      <p>Salon <span class="accent" id="qr-code-salon">----</span> : fais scanner ce code, le prénom suffira.</p>
+      <canvas id="qr-regles" class="qr"></canvas>
+      <div id="qr-note-regles" class="note"></div>
+      <div class="rangee" style="margin-top:8px;">
+        <button id="copier-lien-regles" class="sombre">Copier le lien</button>
+      </div>
+    </div>
+
+    <div class="rangee" style="margin-top:14px;">
+      <button id="fermer-regles">Fermer</button>
+      <button id="quitter-table" class="sombre cache">Quitter la table</button>
+      <button id="menu-jeux" class="sombre">🎲 Tous les jeux</button>
+    </div>
+    <p class="note" style="text-align:center;">À consommer avec modération.</p>
+  </div>
+</div>
+
+<script src="commun/soiree.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { lisser as lisserScene, creerSousVerre, POLICE, quandPoliceChargee } from './da/bar-moderne.js';
+import { modeLeger, optionsRendu, reglerRendu, surveillerFluidite } from './da/qualite.js';
+import { suivreZoneLibre } from './da/cadrage.js';
+import {
+  FOND as FOND_SALLE, preparerAmbiancePub, creerTablePub, creerDecorPub, creerChaisePub,
+  dessinerEtiquettePub, quandPolicesPub,
+} from './da/themes/pub.js';
+
+// Version légère (interrupteur de l'accueil) : même salle, moins de détails.
+const LEGER = modeLeger();
+
+const ACCENT = 0xf5c04a;   // ambre « pinte », comme sur l'accueil
+
+const elModaleRegles = document.getElementById('modale-regles');
+document.getElementById('btn-regles').addEventListener('click', () => {
+  majQRModale();
+  document.getElementById('quitter-table').classList.toggle('cache', !enPartie);
+  elModaleRegles.classList.remove('cache');
+});
+document.getElementById('fermer-regles').addEventListener('click', () => elModaleRegles.classList.add('cache'));
+document.getElementById('menu-jeux').addEventListener('click', () => { location.href = 'index.html'; });
+elModaleRegles.addEventListener('click', e => { if (e.target === elModaleRegles) elModaleRegles.classList.add('cache'); });
+document.getElementById('quitter-table').addEventListener('click', () => {
+  oublierSession();
+  if (ws) { try { ws.close(); } catch (e) { /* deja ferme */ } }
+  location.href = location.pathname;
+});
+
+// =====================================================================
+// CONSTANTES DE LA SCÈNE
+// =====================================================================
+const R_TABLE = 2.0;
+const R_FEUTRE = 1.78;
+const R_SIEGE = 1.55;    // sous-verre et chope de chaque joueur
+const VERRE_PLEIN = 10;  // repère visuel des gorgées
+const L_REGLE = 2.3;     // longueur utile de la réglette des réponses
+const CAM_VITESSE = 0.12;
+
+const CATEGORIES = {
+  alcool:   '🍺 Alcool et cocktails',
+  fete:     '🎉 Fête et soirées',
+  culture:  '🎬 Ciné et musique',
+  bouffe:   '🍔 Bouffe',
+  jeux:     '🎯 Jeux de bar et sport',
+  insolite: '🤯 Insolite',
+};
+const MANCHES = [5, 10, 15];
+
+// =====================================================================
+// SCÈNE / CAMÉRA / RENDU (même cadrage que les autres tables rondes)
+// =====================================================================
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(FOND_SALLE);
+scene.fog = new THREE.FogExp2(FOND_SALLE, 0.07);
+
+// La table tient dans la zone libre de l'écran (da/cadrage.js).
+const zone = suivreZoneLibre(() => { majCadrageTable(camera); camObjectifPos = CAM_POS.clone(); });
+
+const CAM_CIBLE = new THREE.Vector3(0, 0.35, 0);
+const LARGEUR_VUE = 2.3;
+const HAUTEUR_VUE = 2.1;
+const CAM_POS = new THREE.Vector3(0, 3.0, 5.0);
+
+function distanceCadrage(cam) {
+  const vHalf = THREE.MathUtils.degToRad(cam.fov) / 2;
+  const hHalf = Math.atan(Math.tan(vHalf) * cam.aspect);
+  return Math.max(LARGEUR_VUE / (Math.tan(hHalf) * zone.c.fracL), HAUTEUR_VUE / (Math.tan(vHalf) * zone.c.fracH), 4.2) * zone.c.zoom;
+}
+const FOG_DENSITE_MAX = 0.07;
+function majCadrageTable(cam) {
+  const d = distanceCadrage(cam);
+  const dir = zone.direction(0.56);
+  CAM_POS.copy(CAM_CIBLE).addScaledVector(dir, d);
+  if (scene.fog) scene.fog.density = Math.min(FOG_DENSITE_MAX, 0.5 / d);
+}
+
+let camObjectifPos = CAM_POS.clone();
+let camObjectifCible = CAM_CIBLE.clone();
+const camCibleActuelle = CAM_CIBLE.clone();
+
+const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.1, 40);
+majCadrageTable(camera);
+camObjectifPos = CAM_POS.clone();
+camera.position.copy(CAM_POS);
+camera.lookAt(camCibleActuelle);
+
+const renderer = new THREE.WebGLRenderer(optionsRendu());
+renderer.setSize(window.innerWidth, window.innerHeight);
+reglerRendu(renderer);
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+document.body.appendChild(renderer.domElement);
+
+function redimensionner() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  zone.recalculer();
+  majCadrageTable(camera);
+  camObjectifPos = CAM_POS.clone();
+  camObjectifCible = CAM_CIBLE.clone();
+}
+window.addEventListener('resize', redimensionner);
+window.addEventListener('orientationchange', redimensionner);
+
+scene.add(new THREE.AmbientLight(0x2a2a24, 1.0));
+const keyLight = new THREE.DirectionalLight(0xffd6a8, 3.0);
+keyLight.position.set(0.8, 3.4, 1.2);
+keyLight.target.position.set(0, 0.3, 0);
+keyLight.castShadow = !LEGER;
+keyLight.shadow.mapSize.set(1024, 1024);
+Object.assign(keyLight.shadow.camera, { left: -3.4, right: 3.4, top: 3.4, bottom: -3.4, near: 0.5, far: 9 });
+scene.add(keyLight, keyLight.target);
+preparerAmbiancePub(renderer, scene, { leger: LEGER });
+
+const { groupe: table } = creerTablePub(R_TABLE, { rayonFeutre: R_FEUTRE, leger: LEGER });
+scene.add(table);
+
+const decor = creerDecorPub(scene, { nom: 'Le Juste Pinte', solY: -1.2, leger: LEGER });
+
+// =====================================================================
+// LA RÉGLETTE : chaque réponse s'y pose, la bonne tombe au milieu
+// =====================================================================
+const regle = new THREE.Group();
+regle.position.set(0, 0.012, 0.05);
+scene.add(regle);
+const regleCanvas = document.createElement('canvas');
+regleCanvas.width = 1024; regleCanvas.height = 96;
+const regleTex = new THREE.CanvasTexture(regleCanvas);
+regleTex.colorSpace = THREE.SRGBColorSpace;
+function dessinerRegle(gauche, droite) {
+  const ctx = regleCanvas.getContext('2d'), L = 1024, H = 96;
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#f2d79a'); g.addColorStop(1, '#d9b46a');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, L, H);
+  ctx.strokeStyle = 'rgba(60,35,10,0.85)';
+  for (let k = 0; k <= 40; k++) {
+    const x = 32 + k * (L - 64) / 40;
+    ctx.lineWidth = k % 10 === 0 ? 4 : k % 5 === 0 ? 3 : 2;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, k % 10 === 0 ? 46 : k % 5 === 0 ? 34 : 22); ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(60,35,10,0.9)';
+  ctx.font = `700 30px ${POLICE}`;
+  ctx.textBaseline = 'alphabetic';
+  if (gauche) { ctx.textAlign = 'left'; ctx.fillText(gauche, 36, H - 14); }
+  if (droite) { ctx.textAlign = 'right'; ctx.fillText(droite, L - 36, H - 14); }
+  regleTex.needsUpdate = true;
+}
+dessinerRegle('', '');
+const MAT_REGLE_BORD = new THREE.MeshStandardMaterial({ color: 0xb8913f, roughness: 0.5 });
+const planche = new THREE.Mesh(new THREE.BoxGeometry(L_REGLE + 0.2, 0.025, 0.2),
+  [MAT_REGLE_BORD, MAT_REGLE_BORD, new THREE.MeshStandardMaterial({ map: regleTex, roughness: 0.45 }), MAT_REGLE_BORD, MAT_REGLE_BORD, MAT_REGLE_BORD]);
+planche.position.y = 0.0125;
+planche.receiveShadow = true;
+regle.add(planche);
+regle.visible = false;
+
+// Le repère de la bonne réponse : une petite pinte dorée sur un mât.
+const repere = new THREE.Group();
+const mat_or = new THREE.MeshStandardMaterial({ color: 0xffc94a, metalness: 0.8, roughness: 0.25, emissive: 0x6a4a00, emissiveIntensity: 0.4 });
+const mat_ = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.42, 8), mat_or);
+mat_.position.y = 0.21;
+const pinteOr = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.042, 0.11, 20), mat_or);
+pinteOr.position.y = 0.47;
+const mousseOr = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.052, 0.025, 20), new THREE.MeshStandardMaterial({ color: 0xfff6dc, roughness: 0.7 }));
+mousseOr.position.y = 0.535;
+repere.add(mat_, pinteOr, mousseOr);
+const etiquetteRepere = creerSpriteValeur();
+etiquetteRepere.position.y = 0.72;
+etiquetteRepere.scale.set(0.62, 0.155, 1);
+repere.add(etiquetteRepere);
+repere.visible = false;
+regle.add(repere);
+
+// Sprite de valeur (au-dessus d'un jeton ou du repère).
+function creerSpriteValeur() {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 128;
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false }));
+  sp.renderOrder = 20;
+  return sp;
+}
+function ecrireValeur(sp, texte, fond, encre) {
+  const ctx = sp.material.map.image.getContext('2d');
+  ctx.clearRect(0, 0, 512, 128);
+  ctx.font = `800 64px ${POLICE}`;
+  const l = Math.min(500, ctx.measureText(texte).width + 50);
+  ctx.fillStyle = fond;
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect((512 - l) / 2, 20, l, 88, 30); else ctx.rect((512 - l) / 2, 20, l, 88);
+  ctx.fill();
+  ctx.fillStyle = encre;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(texte, 256, 66, 480);
+  sp.material.map.needsUpdate = true;
+}
+
+const jetons = [];   // jetons posés sur la réglette (un par répondant)
+function viderRegle() {
+  jetons.forEach(j => regle.remove(j));
+  jetons.length = 0;
+  repere.visible = false;
+  regle.visible = false;
+}
+function creerJeton(i, texte) {
+  const g = new THREE.Group();
+  const couleur = COULEURS[i % COULEURS.length];
+  const disque = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.03, 28),
+    new THREE.MeshStandardMaterial({ color: couleur, roughness: 0.35, metalness: 0.2 }));
+  disque.position.y = 0.015;
+  disque.castShadow = true;
+  const sp = creerSpriteValeur();
+  ecrireValeur(sp, texte, '#' + couleur.toString(16).padStart(6, '0'), '#ffffff');
+  sp.position.y = 0.22;
+  sp.scale.set(0.64, 0.16, 1);
+  g.add(disque, sp);
+  return g;
+}
+
+// Place les réponses : la bonne au milieu, chacun selon son écart.
+// Les réponses très loin restent au bord (avec « » ») pour ne pas écraser les autres.
+function echelleRegle(res, q) {
+  const ecarts = res.lignes.map(l => l.ecart).sort((a, b) => a - b);
+  const med = ecarts.length ? ecarts[Math.floor(ecarts.length / 2)] : 0;
+  const tol = q.tolerance || 0;
+  const plafond = Math.max(med * 4, tol * 3, Math.abs(q.reponse) * 0.02, 1e-6);
+  const dans = ecarts.filter(e => e <= plafond);
+  const lim = Math.max(dans.length ? dans[dans.length - 1] : 0, tol * 2, plafond * 0.25) * 1.15;
+  return v => {
+    const k = (v - q.reponse) / lim;
+    return { x: Math.max(-1, Math.min(1, k)) * L_REGLE / 2, hors: Math.abs(k) > 1 };
+  };
+}
+
+function animerRevelation(etat, instantane) {
+  const res = etat.resultat, q = etat.question;
+  viderRegle();
+  regle.visible = true;
+  dessinerRegle('', '');
+  if (!res || !q) return;
+  const placer = echelleRegle(res, q);
+  // Rangées pour ne pas superposer deux jetons proches.
+  const rangs = [];
+  const poses = res.lignes.map(l => {
+    const p = placer(l.valeur);
+    return { l, x: p.x, hors: p.hors };
+  }).sort((a, b) => a.x - b.x);
+  poses.forEach(p => {
+    let r = 0;
+    while (rangs[r] !== undefined && p.x - rangs[r] < 0.16) r++;
+    rangs[r] = p.x;
+    p.z = [0.17, -0.17, 0.32, -0.32, 0.47, -0.47, 0.6, -0.6][r] || 0.6;
+  });
+  // Le plus loin arrive d'abord, le plus proche en dernier (suspense).
+  poses.sort((a, b) => b.l.ecart - a.l.ecart);
+  poses.forEach((p, k) => {
+    const jeton = creerJeton(p.l.joueur, (p.hors ? (p.x < 0 ? '« ' : '') : '') + texteValeur(p.l.valeur, q.unite, true) + (p.hors && p.x > 0 ? ' »' : ''));
+    regle.add(jeton);
+    jetons.push(jeton);
+    const arrivee = new THREE.Vector3(p.x, 0.025, p.z);
+    const s = sieges[p.l.joueur];
+    const depart = s ? new THREE.Vector3(s.base.x, 0.3, s.base.z - regle.position.z) : arrivee.clone().setY(1);
+    if (instantane) { jeton.position.copy(arrivee); return; }
+    jeton.position.copy(depart);
+    jeton.visible = false;
+    attendre(0.32 * k, () => {
+      jeton.visible = true;
+      animer(0.55, an => {
+        const t = lisser(an.t / an.duree);
+        jeton.position.lerpVectors(depart, arrivee, t);
+        jeton.position.y = arrivee.y + Math.sin(t * Math.PI) * 0.45;
+      }, () => jeton.position.copy(arrivee));
+    });
+  });
+  // Puis la bonne réponse tombe du plafond.
+  ecrireValeur(etiquetteRepere, '✓ ' + texteValeur(q.reponse, q.unite, true), '#ffc94a', '#1b2a1e');
+  if (instantane) { repere.position.set(0, 0.025, 0); repere.visible = true; return; }
+  attendre(0.32 * poses.length + 0.7, () => {
+    repere.visible = true;
+    animer(0.6, an => {
+      const t = an.t / an.duree;
+      repere.position.set(0, 0.025 + (1 - t * t) * 1.6, 0);
+    }, () => {
+      repere.position.set(0, 0.025, 0);
+      animer(0.3, an => { const t = an.t / an.duree; repere.scale.setScalar(1 + Math.sin(t * Math.PI) * 0.25); }, () => repere.scale.setScalar(1));
+    });
+  });
+}
+
+// =====================================================================
+// =====================================================================
+// ÉTIQUETTES ET ICÔNES (sprites face caméra)
+// =====================================================================
+function dessinerEtiquette(ctx, texte, actif, absent) {
+  dessinerEtiquettePub(ctx, texte, { actif, absent });
+}
+function creerEtiquette(texte) {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 128;
+  dessinerEtiquette(c.getContext('2d'), texte, false, false);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+  sprite.renderOrder = 10;
+  sprite.scale.set(0.9, 0.225, 1);
+  return sprite;
+}
+function majEtiquette(sprite, texte, actif, absent) {
+  const cle = texte + '|' + actif + '|' + absent;
+  if (sprite.userData.cle === cle) return;
+  sprite.userData.cle = cle;
+  sprite.userData.dernier = [texte, actif, absent];
+  dessinerEtiquette(sprite.material.map.image.getContext('2d'), texte, actif, absent);
+  sprite.material.map.needsUpdate = true;
+}
+quandPolicesPub(() => sieges.forEach(st => {
+  const d = st.etiquette.userData.dernier;
+  st.etiquette.userData.cle = null;
+  if (d) majEtiquette(st.etiquette, ...d); else majEtiquette(st.etiquette, st.nom, false, false);
+}));
+quandPoliceChargee(() => sieges.forEach(st => {
+  const d = st.etiquette.userData.dernier;
+  st.etiquette.userData.cle = null;
+  if (d) majEtiquette(st.etiquette, ...d); else majEtiquette(st.etiquette, st.nom, false, false);
+}));
+
+// Petite icône au-dessus d'un siège (✔ a répondu, 🎯 dans le mille, 🍺 boit).
+function creerIcone(taille) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false }));
+  sp.scale.set(taille, taille, 1);
+  sp.renderOrder = 12;
+  sp.userData.symbole = undefined;
+  return sp;
+}
+function majIcone(sp, symbole) {
+  if (sp.userData.symbole === symbole) return;
+  sp.userData.symbole = symbole;
+  sp.visible = !!symbole;
+  if (!symbole) return;
+  const ctx = sp.material.map.image.getContext('2d');
+  ctx.clearRect(0, 0, 128, 128);
+  ctx.fillStyle = 'rgba(8, 14, 10, 0.78)';
+  ctx.beginPath(); ctx.arc(64, 64, 58, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#f5c04a'; ctx.lineWidth = 5; ctx.stroke();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '68px serif';
+  ctx.fillText(symbole, 64, 70);
+  sp.material.map.needsUpdate = true;
+}
+
+const textesFlottants = [];
+function creerSpriteTexte(gros, petit, couleur) {
+  const c = document.createElement('canvas');
+  c.width = 1024; c.height = 512;
+  const ctx = c.getContext('2d');
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = '#000';
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 6;
+  ctx.fillStyle = couleur;
+  let taille = 230;
+  ctx.font = `800 ${taille}px ${POLICE}`;
+  while (ctx.measureText(gros).width > 980 && taille > 80) { taille -= 10; ctx.font = `800 ${taille}px ${POLICE}`; }
+  ctx.fillText(gros, 512, petit ? 200 : 256);
+  if (petit) {
+    ctx.fillStyle = '#f4ebe0';
+    let t2 = 74;
+    ctx.font = `600 ${t2}px ${POLICE}`;
+    while (ctx.measureText(petit).width > 1000 && t2 > 36) { t2 -= 4; ctx.font = `600 ${t2}px ${POLICE}`; }
+    ctx.fillText(petit, 512, 400);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false }));
+  sp.renderOrder = 999;
+  return sp;
+}
+function texteFlottant(position, gros, petit, couleur, echelle) {
+  const sp = creerSpriteTexte(String(gros), petit || '', couleur || '#ffdca0');
+  const e = echelle || 0.5;
+  sp.scale.set(e * 2, e, 1);
+  sp.position.copy(position);
+  sp.position.y += 0.5;
+  scene.add(sp);
+  textesFlottants.push({ sprite: sp, t: 0, duree: 1.8, depart: sp.position.clone() });
+}
+
+// Grande annonce HTML, la même pour tous les joueurs.
+let annonceJp = null, minuteurAnnonce = null;
+function annoncer(gros, petit, couleur, duree, opts = {}) {
+  if (annonceJp) annonceJp.remove();
+  clearTimeout(minuteurAnnonce);
+  const a = document.createElement('div');
+  a.className = 'annonce-jp';
+  a.style.setProperty('--c', couleur || '#f4f1ea');
+  const g = document.createElement('div'); g.className = 'gros'; g.textContent = gros; a.appendChild(g);
+  if (petit) { const p = document.createElement('div'); p.className = 'petit'; p.textContent = petit; a.appendChild(p); }
+  if (opts.flash) {
+    const f = document.createElement('div'); f.className = 'flash-jp'; f.style.setProperty('--c', couleur);
+    document.body.appendChild(f); setTimeout(() => f.remove(), 800);
+  }
+  if (opts.vibrer) { try { if (navigator.vibrate) navigator.vibrate(opts.vibrer); } catch (e) { /* pas de vibreur */ } }
+  document.body.appendChild(a);
+  annonceJp = a;
+  minuteurAnnonce = setTimeout(() => { a.classList.add('sort'); setTimeout(() => { a.remove(); if (annonceJp === a) annonceJp = null; }, 380); }, (duree || 1.8) * 1000);
+}
+
+// =====================================================================
+
+// =====================================================================
+// SIÈGES : sous-verre, chope, étiquette, icône, chaise
+// Chacun se voit au premier plan : dire les prénoms, jamais « à gauche ».
+// =====================================================================
+const COULEURS = [0x4a7ec2, 0xc25a4a, 0x5aa86a, 0xb58ac2, 0xc2a44a, 0x4ab0b5, 0xd9823a, 0xd46a9e];
+const sieges = [];
+
+function creerChope() {
+  const g = new THREE.Group();
+  const verre = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.11, 0.095, 0.27, 40, 1, true),
+    new THREE.MeshPhysicalMaterial({ color: 0xe6f3f8, roughness: 0.08, metalness: 0, side: THREE.DoubleSide, transparent: true, opacity: 0.32, clearcoat: 1, clearcoatRoughness: 0.05 })
+  );
+  verre.position.y = 0.135;
+  const fond = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.095, 0.095, 0.014, 40),
+    new THREE.MeshPhysicalMaterial({ color: 0xdfeef7, roughness: 0.22, transparent: true, opacity: 0.55 })
+  );
+  fond.position.y = 0.007;
+  const biere = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.097, 0.09, 1, 40),
+    new THREE.MeshPhysicalMaterial({ color: 0xe0961c, roughness: 0.18, emissive: 0x6a3a05, emissiveIntensity: 0.25 })
+  );
+  const mousse = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.099, 0.099, 0.026, 40),
+    new THREE.MeshStandardMaterial({ color: 0xfaf3e4, roughness: 0.75 })
+  );
+  g.add(verre, fond, biere, mousse);
+  g.userData = { biere, mousse };
+  return g;
+}
+
+function dirSiege(i, n) {
+  // Un spectateur (index hors table) regarde depuis le siège 0.
+  const base = MOI < n ? MOI : 0;
+  const angle = ((((i - base) % n) + n) % n) / n * Math.PI * 2;
+  return new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
+}
+
+function creerSieges(noms) {
+  sieges.forEach(s => scene.remove(s.groupe));
+  sieges.length = 0;
+  const n = noms.length;
+  const echelle = n > 7 ? 0.85 : 1;
+  for (let i = 0; i < n; i++) {
+    const dir = dirSiege(i, n);
+    const groupe = new THREE.Group();
+    const base = dir.clone().multiplyScalar(R_SIEGE);
+    const avatar = creerSousVerre(COULEURS[i % COULEURS.length]);
+    avatar.position.set(base.x, 0, base.z);
+    avatar.scale.setScalar(echelle);
+    const chope = creerChope();
+    chope.position.set(base.x, 0.014, base.z);
+    chope.scale.setScalar(echelle);
+
+    const etiquette = creerEtiquette(noms[i]);
+    etiquette.position.set(base.x, 0.6, base.z);
+    etiquette.scale.set(0.9 * echelle, 0.225 * echelle, 1);
+
+    const icone = creerIcone(0.24 * echelle);
+    icone.position.set(base.x, 0.86, base.z);
+    majIcone(icone, null);
+
+    const chaise = creerChaisePub(dir, 2.42, -1.2);
+    groupe.add(avatar, chope, etiquette, icone, chaise);
+    scene.add(groupe);
+    lisserScene(groupe);
+
+    sieges.push({ index: i, nom: noms[i], groupe, avatar, chope, etiquette, icone, dir, base, niveau: 0, objectif: 0 });
+    // La bière est un cylindre d'une unité étiré par le bas : sans ce premier
+    // dessin, les chopes de la salle d'attente montraient une colonne orange.
+    dessinerChope(sieges[sieges.length - 1]);
+  }
+}
+
+function dessinerChope(s) {
+  const h = Math.max(0.001, s.niveau * 0.24);
+  const { biere, mousse } = s.chope.userData;
+  biere.scale.y = h;
+  biere.position.y = 0.012 + h / 2;
+  mousse.position.y = 0.012 + h + 0.012;
+  mousse.visible = s.niveau > 0.02;
+}
+function niveauGorgees(g) { return Math.min(1, g / VERRE_PLEIN); }
+
+function majSurbrillance() {
+  const etat = etatCourant;
+  sieges.forEach((s, i) => {
+    const absent = etat && etat.partis && etat.partis[i];
+    s.avatar.userData.materiaux.forEach(m => {
+      m.emissive = new THREE.Color(0x000000);
+      m.transparent = !!absent;
+      m.opacity = absent ? 0.35 : 1;
+    });
+  });
+}
+
+// =====================================================================
+// =====================================================================
+// ANIMATIONS ET FILE D'ATTENTE
+// =====================================================================
+const animations = [];
+function animer(duree, maj, fin) { animations.push({ t: 0, duree, maj, fin }); }
+function lisser(k) { return k < 0 ? 0 : k > 1 ? 1 : k * k * (3 - 2 * k); }
+function attendre(duree, apres) { animer(duree, null, apres); }
+
+function encaisser(i) {
+  const s = sieges[i];
+  if (!s) return;
+  const corps = s.chope;
+  const base = corps.position.clone();
+  animer(0.5, an => {
+    const k = an.t / an.duree;
+    const amp = (1 - k) * 0.035;
+    corps.position.set(base.x + Math.sin(an.t * 46) * amp, base.y, base.z + Math.cos(an.t * 39) * amp);
+  }, () => { corps.position.copy(base); });
+}
+
+const fileActions = [];
+let pompeActive = false;
+function quandLibre(fn, delai) { fileActions.push({ fn, delai: delai || 0 }); pomper(); }
+function pomper() {
+  if (pompeActive || fileActions.length === 0) return;
+  pompeActive = true;
+  (function patienter() {
+    if (animations.length > 0) { setTimeout(patienter, 80); return; }
+    const tache = fileActions.shift();
+    setTimeout(() => {
+      try { tache.fn(); } catch (e) { console.error(e); }
+      pompeActive = false;
+      pomper();
+    }, tache.delai);
+  })();
+}
+
+// =====================================================================
+
+// =====================================================================
+// CLIENT : messages du serveur
+// =====================================================================
+let MOI = 0;
+let mode = 'local';   // devient 'ligne' à la connexion (lu par le QR des règles)
+let ws = null;
+
+function envoyerIntention(index, msg) {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+}
+
+const elMessage = document.getElementById('message');
+const elRappel = document.getElementById('rappel');
+const elCompteur = document.getElementById('compteur');
+const elPanneau = document.getElementById('panneau');
+const elJoueurs = document.getElementById('joueurs');
+
+let etatCourant = null;
+let maReponse = null;        // ma réponse à la question en cours (le serveur la garde secrete)
+let mancheReponse = 0;       // la manche de cette réponse
+let enEdition = false;       // je modifie une réponse déjà envoyée
+let brouillon = '';          // ce que je tape (survit aux rafraîchissements)
+let clePanneau = '';
+let echeanceLocale = null;
+let finAnimation = 0;         // la réglette se remplit : on garde la réponse pour la fin
+
+// Réglage de la partie (salle d'attente et fin de partie).
+let manchesChoisies = 10;
+let categoriesChoisies = Object.keys(CATEGORIES);
+
+function nomDe(i) {
+  if (i === MOI) return 'toi';
+  return etatCourant ? etatCourant.joueurs[i] : '';
+}
+function prenom(i) { return etatCourant ? etatCourant.joueurs[i] : ''; }
+
+// « 1 975 » pour une année se lit mal : les années restent sans séparateur.
+function texteNombre(v, unite) {
+  if (v === null || v === undefined) return '';
+  if (unite === 'année') return String(v);
+  return Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 3 });
+}
+function texteValeur(v, unite, court) {
+  const n = texteNombre(v, unite);
+  if (!unite || unite === 'année') return n;
+  if (unite.startsWith('e ')) return n + unite;
+  if (court && unite.length > 10) return n;
+  return n + ' ' + unite;
+}
+function lireNombre(texte) {
+  const t = String(texte || '').replace(/[\s  ]/g, '').replace(',', '.');
+  if (!t || !/^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i.test(t)) return null;
+  const v = Number(t);
+  return Number.isFinite(v) ? v : null;
+}
+
+function clientRecevoir(msg) {
+  switch (msg.type) {
+    case 'ton_index':
+      MOI = msg.index;
+      if (msg.jeton) {
+        monJeton = msg.jeton;
+        ecrireSession({ code: codeSalon, nom: monNom, jeton: monJeton, serveur: serveurChoisi, createur: estCreateur });
+      }
+      if (!enPartie) panneauAttente();
+      break;
+    case 'joueur_rejoint':
+      joueursSalon = msg.joueurs;
+      if (enPartie) elRappel.textContent = msg.nom + (msg.retour ? ' est revenu.' : ' rejoint la table.');
+      else panneauAttente();
+      break;
+    case 'joueur_parti':
+      joueursSalon = msg.joueurs;
+      if (enPartie) elRappel.textContent = msg.nom + ' a quitté la table.';
+      else panneauAttente();
+      break;
+    case 'jp_demarree':
+      quandLibre(() => demarrerScene(msg.joueurs));
+      break;
+    case 'jp_etat':
+      quandLibre(() => appliquerEtat(msg));
+      break;
+    case 'jp_reponse':
+      quandLibre(() => {
+        MOI = msg.index;
+        maReponse = msg.valeur;
+        mancheReponse = etatCourant ? etatCourant.manche : 0;
+        enEdition = false;
+        brouillon = '';
+        rafraichirPanneau(true);
+      });
+      break;
+    case 'erreur':
+      elRappel.textContent = msg.message;
+      if (enPartie && !fileActions.length) rafraichirPanneau(true);
+      break;
+  }
+}
+
+// =====================================================================
+// APPLICATION DE L'ÉTAT
+// =====================================================================
+function appliquerEtat(etat) {
+  const avant = etatCourant;
+  const n = etat.joueurs.length;
+  if (!sieges.length || n !== sieges.length || moiDeLaTable !== MOI) {
+    if (!enPartie) demarrerScene(etat.joueurs);
+    else construireTable(etat.joueurs);
+  }
+  etatCourant = etat;
+  echeanceLocale = etat.delai === null || etat.delai === undefined ? null : Date.now() + etat.delai * 1000;
+  if (etat.categories && etat.categories.length) categoriesChoisies = etat.categories.slice();
+  if (MANCHES.includes(etat.nb_manches)) manchesChoisies = etat.nb_manches;
+
+  // Nouvelle question : ma réponse d'avant ne compte plus.
+  if (etat.phase === 'question' && mancheReponse !== etat.manche) {
+    maReponse = null; enEdition = false; brouillon = '';
+  }
+  const nouvellePhase = !avant || avant.phase !== etat.phase || avant.manche !== etat.manche;
+
+  if (etat.phase === 'question' && nouvellePhase) {
+    viderRegle();
+    annoncer('Question ' + etat.manche + ' / ' + etat.nb_manches, etat.question ? CATEGORIES[etat.question.categorie] || etat.question.nom_categorie : '', '#f5c04a', 1.6);
+  }
+  if (etat.phase === 'revelation' && nouvellePhase) {
+    // Une page qui arrive en pleine révélation pose tout sans animation.
+    const instantane = !avant || avant.manche !== etat.manche;
+    animerRevelation(etat, instantane);
+    const duree = 0.32 * (etat.resultat ? etat.resultat.lignes.length : 0) + 1.4;
+    finAnimation = instantane ? 0 : Date.now() + duree * 1000;
+    if (!instantane) attendre(0.32 * (etat.resultat ? etat.resultat.lignes.length : 0) + 1.5, () => annoncerManche(etat));
+  }
+
+  if (etat.phase === 'fin' && nouvellePhase) viderRegle();
+  sieges.forEach((s, i) => { s.objectif = niveauGorgees(etat.gorgees[i] || 0); });
+  majArdoise(etat);
+  majSurbrillance();
+  majIcones(etat);
+  majListeJoueurs(etat);
+  majBandeau(etat);
+  majCompteur();
+  rafraichirPanneau(nouvellePhase);
+}
+
+function annoncerManche(etat) {
+  const res = etat.resultat;
+  if (!res) return;
+  const moi = res.lignes.find(l => l.joueur === MOI);
+  const mille = res.mille.map(m => m.joueur);
+  if (mille.includes(MOI)) {
+    annoncer('🎯 DANS LE MILLE !', 'Distribue ' + res.mille[0].distribue + ' gorgées', '#9fe0b4', 2.4, { flash: true, vibrer: [60, 40, 120] });
+  } else if (moi && moi.boit) {
+    annoncer('🍺 Tu bois ' + moi.boit, 'Trop loin cette fois', '#ff8a6a', 2.0, { vibrer: 200 });
+    encaisser(MOI);
+  } else if (res.sans_reponse.some(s => s.joueur === MOI)) {
+    annoncer('⏱ Trop tard', 'Pas de réponse : 2 gorgées', '#ff8a6a', 2.0);
+    encaisser(MOI);
+  } else if (mille.length) {
+    annoncer('🎯 ' + mille.map(j => prenom(j)).join(', '), 'Dans le mille !', '#9fe0b4', 2.0);
+  } else if (moi && moi.rang === 1) {
+    annoncer('🥇 Le plus proche', '+' + moi.points + ' points', '#f5c04a', 2.0);
+  }
+  res.lignes.forEach(l => { if (l.boit && l.joueur !== MOI) encaisser(l.joueur); });
+}
+
+function majArdoise(etat) {
+  const reste = finAnimation - Date.now();
+  if (etat.phase === 'revelation' && reste > 0) {
+    setTimeout(() => { if (etatCourant) majArdoise(etatCourant); }, reste + 50);
+    return;
+  }
+  if (etat.phase === 'question' && etat.question) {
+    decor.ecrireArdoise({ titre: 'Question ' + etat.manche + ' / ' + etat.nb_manches, lignes: [etat.question.texte],
+      bas: etat.question.unite && etat.question.unite !== 'année' ? '(en ' + etat.question.unite.replace(/^e /, '') + ')' : '' });
+  } else if (etat.phase === 'revelation' && etat.question) {
+    decor.ecrireArdoise({ titre: 'Réponse', lignes: [etat.question.texte, '→ ' + texteValeur(etat.question.reponse, etat.question.unite)],
+      bas: etat.question.info || '' });
+  } else if (etat.phase === 'fin' && etat.final) {
+    const top = etat.final.classement.slice(0, 3).map((j, k) => ['🥇', '🥈', '🥉'][k] + ' ' + etat.joueurs[j] + ' : ' + etat.points[j] + ' pts');
+    decor.ecrireArdoise({ titre: 'Classement', lignes: top, bas: 'Le dernier boit 3 !' });
+  }
+}
+
+function majIcones(etat) {
+  sieges.forEach((s, i) => {
+    let sym = null;
+    if (etat.phase === 'question' && etat.a_repondu[i]) sym = '✔️';
+    else if (etat.phase === 'revelation' && etat.resultat) {
+      if (etat.resultat.mille.some(m => m.joueur === i)) sym = '🎯';
+      else if (etat.resultat.lignes.some(l => l.joueur === i && l.boit)) sym = '🍺';
+    } else if (etat.phase === 'fin' && etat.final && etat.final.gagnants.includes(i)) sym = '🏆';
+    majIcone(s.icone, sym);
+  });
+}
+
+// =====================================================================
+// BANDEAU, COMPTEUR, LISTE DES JOUEURS
+// =====================================================================
+function majBandeau(etat) {
+  const n = etat.joueurs.length;
+  if (MOI >= n) elMessage.textContent = 'Tu regardes la partie';
+  else if (etat.phase === 'fin') elMessage.textContent = 'Fin du quiz';
+  else if (etat.phase === 'question') elMessage.textContent = '❓ Question ' + etat.manche + ' / ' + etat.nb_manches;
+  else elMessage.textContent = '✅ Réponse';
+  elRappel.textContent = etat.message || '';
+}
+
+function presents(etat) { return etat.joueurs.map((_, i) => i).filter(i => !etat.partis[i]); }
+
+function majCompteur() {
+  const etat = etatCourant;
+  if (!etat || !enPartie || etat.phase === 'fin') { elCompteur.innerHTML = ''; return; }
+  const parts = [];
+  const pr = presents(etat);
+  if (etat.phase === 'question') parts.push('Réponses <b>' + pr.filter(i => etat.a_repondu[i]).length + ' / ' + pr.length + '</b>');
+  if (echeanceLocale) {
+    const s = Math.max(0, Math.round((echeanceLocale - Date.now()) / 1000));
+    parts.push('<span class="chrono' + (s <= 10 && etat.phase === 'question' ? ' urgent' : '') + '">⏱ ' + s + ' s</span>');
+  }
+  elCompteur.innerHTML = parts.join(' · ');
+}
+setInterval(majCompteur, 1000);
+
+function majListeJoueurs(etat) {
+  elJoueurs.innerHTML = '';
+  etat.joueurs.forEach((nom, i) => {
+    const d = document.createElement('div');
+    d.className = 'joueur' + (etat.partis[i] ? ' absent' : '');
+    const p = document.createElement('span');
+    p.className = 'pastille';
+    p.style.background = '#' + COULEURS[i % COULEURS.length].toString(16).padStart(6, '0');
+    const nm = document.createElement('span');
+    nm.className = 'nom';
+    nm.textContent = (etat.phase === 'question' && etat.a_repondu[i] ? '✔️ ' : '') + nom + (i === MOI ? ' (toi)' : '');
+    const inf = document.createElement('span');
+    inf.className = 'info';
+    inf.textContent = '⭐ ' + etat.points[i] + ' · 🍺 ' + etat.gorgees[i];
+    inf.title = 'points · gorgées bues';
+    d.append(p, nm, inf);
+    elJoueurs.appendChild(d);
+  });
+  etat.joueurs.forEach((nom, i) => {
+    if (!sieges[i]) return;
+    majEtiquette(sieges[i].etiquette, nom + ' · ' + etat.points[i], false, etat.partis[i]);
+  });
+}
+
+// =====================================================================
+// PANNEAUX D'INTERFACE
+// =====================================================================
+function cacherPanneau() { elPanneau.className = 'cache'; elPanneau.innerHTML = ''; clePanneau = ''; }
+function boutonMenuJeux() { return bouton('🎲 Tous les jeux', 'sombre', () => { location.href = 'index.html'; }); }
+function bouton(texte, classe, onClick) {
+  const b = document.createElement('button');
+  b.textContent = texte;
+  if (classe) b.className = classe;
+  b.addEventListener('click', onClick);
+  return b;
+}
+function ouvrirPanneau(titre) {
+  elPanneau.className = '';
+  elPanneau.innerHTML = '';
+  if (titre) {
+    const h = document.createElement('h2');
+    h.textContent = titre;
+    elPanneau.appendChild(h);
+  }
+  return elPanneau;
+}
+function aide(texte) {
+  const d = document.createElement('p');
+  d.className = 'aide';
+  d.textContent = texte;
+  return d;
+}
+function rangee() {
+  const r = document.createElement('div');
+  r.className = 'rangee';
+  return r;
+}
+// Envoie une intention et gèle le panneau : l'état suivant le reconstruira.
+function agir(msg) {
+  elPanneau.querySelectorAll('button').forEach(b => { b.disabled = true; });
+  envoyerIntention(MOI, msg);
+}
+
+// Le panneau n'est reconstruit que s'il change de forme : sinon on perdait
+// ce que le joueur tapait à chaque réponse d'un autre.
+function rafraichirPanneau(forcer) {
+  if (!enPartie || !etatCourant) return;
+  const etat = etatCourant;
+  const cle = [etat.phase, etat.manche, MOI >= etat.joueurs.length, maReponse, enEdition,
+    etat.phase === 'revelation' ? etat.suivants[MOI] : '', etat.phase === 'fin' ? joueursProchainePartie(etat) : ''].join('|');
+  if (!forcer && cle === clePanneau) { majPanneauLeger(etat); return; }
+  clePanneau = cle;
+  if (MOI >= etat.joueurs.length) { panneauSpectateur(etat); return; }
+  if (etat.phase === 'question') { panneauQuestion(etat); return; }
+  if (etat.phase === 'revelation') { panneauRevelation(etat); return; }
+  if (etat.phase === 'fin') { panneauFin(etat); return; }
+}
+
+function majPanneauLeger(etat) {
+  const c = elPanneau.querySelector('.compte');
+  if (!c) return;
+  const pr = presents(etat);
+  if (etat.phase === 'question') c.textContent = pr.filter(i => etat.a_repondu[i]).length + ' / ' + pr.length + ' ont répondu';
+  else if (etat.phase === 'revelation') c.textContent = pr.filter(i => etat.suivants[i]).length + ' / ' + pr.length + ' prêts pour la suite';
+}
+
+function blocQuestion(q) {
+  const d = document.createElement('div');
+  const cat = document.createElement('div');
+  cat.className = 'categorie';
+  cat.textContent = CATEGORIES[q.categorie] || q.nom_categorie;
+  const t = document.createElement('div');
+  t.className = 'question';
+  t.textContent = q.texte;
+  d.append(cat, t);
+  return d;
+}
+
+function panneauQuestion(etat) {
+  const q = etat.question;
+  const p = ouvrirPanneau('');
+  if (!q) return;
+  p.appendChild(blocQuestion(q));
+  const uniteAffichee = q.unite === 'année' ? '' : q.unite.replace(/^e /, 'e ');
+  if (maReponse !== null && !enEdition) {
+    const m = document.createElement('div');
+    m.className = 'ma-reponse';
+    m.innerHTML = 'Ta réponse : <b></b>';
+    m.querySelector('b').textContent = texteValeur(maReponse, q.unite);
+    p.appendChild(m);
+    const r = rangee();
+    r.appendChild(bouton('✏️ Modifier', 'sombre petit', () => { enEdition = true; brouillon = String(maReponse).replace('.', ','); rafraichirPanneau(true); }));
+    p.appendChild(r);
+  } else {
+    const s = document.createElement('div');
+    s.className = 'saisie';
+    const champ = document.createElement('input');
+    champ.type = 'text';
+    champ.id = 'reponse';
+    champ.inputMode = 'decimal';
+    champ.autocomplete = 'off';
+    champ.placeholder = q.unite === 'année' ? 'ex. 1998' : '?';
+    champ.maxLength = 18;
+    champ.value = brouillon;
+    champ.addEventListener('input', () => { brouillon = champ.value; });
+    const valider = () => {
+      const v = lireNombre(champ.value);
+      if (v === null) { elRappel.textContent = 'Tape un nombre (12 ou 12,5).'; champ.focus(); return; }
+      agir({ type: 'jp_repondre', valeur: v });
+    };
+    champ.addEventListener('keydown', e => { if (e.key === 'Enter') valider(); });
+    s.appendChild(champ);
+    if (uniteAffichee) {
+      const u = document.createElement('span');
+      u.className = 'unite';
+      u.textContent = uniteAffichee;
+      s.appendChild(u);
+    }
+    p.appendChild(s);
+    const r = rangee();
+    r.appendChild(bouton('Valider', 'gros', valider));
+    if (enEdition) r.appendChild(bouton('Annuler', 'sombre', () => { enEdition = false; rafraichirPanneau(true); }));
+    p.appendChild(r);
+    // Le clavier ne s'ouvre pas tout seul sur téléphone (il cacherait la table) :
+    // seulement sur ordinateur.
+    if (!matchMedia('(pointer: coarse)').matches) setTimeout(() => champ.focus(), 50);
+  }
+  const c = document.createElement('div');
+  c.className = 'compte';
+  p.appendChild(c);
+  majPanneauLeger(etat);
+}
+
+function tableauManche(etat) {
+  const res = etat.resultat, q = etat.question;
+  const t = document.createElement('table');
+  t.className = 'bilan';
+  const tete = document.createElement('tr');
+  ['', 'Réponse', 'Écart', 'Pts', '🍺'].forEach(h => { const th = document.createElement('th'); th.textContent = h; tete.appendChild(th); });
+  t.appendChild(tete);
+  const ligne = (cells, classes) => {
+    const tr = document.createElement('tr');
+    tr.className = classes;
+    cells.forEach(([txt, cl]) => { const td = document.createElement('td'); td.textContent = txt; if (cl) td.className = cl; tr.appendChild(td); });
+    t.appendChild(tr);
+  };
+  res.lignes.forEach(l => {
+    const nom = (l.mille ? '🎯 ' : l.rang === 1 ? '🥇 ' : '') + etat.joueurs[l.joueur] + (l.joueur === MOI ? ' (toi)' : '');
+    ligne([[nom], [texteValeur(l.valeur, q.unite, true), 'n'], [texteNombre(l.ecart, q.unite === 'année' ? '' : q.unite), 'n'],
+      [l.points ? '+' + l.points : '', 'n pts'], [l.boit ? String(l.boit) : '', 'n']],
+      (l.joueur === MOI ? 'moi ' : '') + (l.mille ? 'mille' : ''));
+  });
+  res.sans_reponse.forEach(s => {
+    ligne([[etat.joueurs[s.joueur] + (s.joueur === MOI ? ' (toi)' : '')], ['—', 'n'], ['', 'n'], ['', 'n'], [String(s.boit), 'n']],
+      s.joueur === MOI ? 'moi' : '');
+  });
+  return t;
+}
+
+function panneauRevelation(etat) {
+  const q = etat.question;
+  const reste = finAnimation - Date.now();
+  if (reste > 0) {
+    const p = ouvrirPanneau('🥁 Les réponses tombent…');
+    if (q) p.appendChild(blocQuestion(q));
+    setTimeout(() => rafraichirPanneau(true), reste + 50);
+    return;
+  }
+  const p = ouvrirPanneau('');
+  if (!q || !etat.resultat) return;
+  p.appendChild(blocQuestion(q));
+  const b = document.createElement('div');
+  b.className = 'bonne';
+  b.textContent = texteValeur(q.reponse, q.unite);
+  p.appendChild(b);
+  if (q.info) {
+    const i = document.createElement('p');
+    i.className = 'info-q';
+    i.textContent = q.info;
+    p.appendChild(i);
+  }
+  p.appendChild(tableauManche(etat));
+  if (etat.resultat.mille.length) {
+    const qui = etat.resultat.mille.map(m => m.joueur);
+    const n = etat.resultat.mille[0].distribue;
+    p.appendChild(aide('🎯 ' + (qui.length === 1 && qui[0] === MOI ? 'Tu distribues ' + n + ' gorgées.'
+      : qui.map(j => nomDe(j)).join(', ') + (qui.length > 1 ? ' distribuent ' : ' distribue ') + n + ' gorgées.')));
+  }
+  const r = rangee();
+  const derniere = etat.manche >= etat.nb_manches;
+  const bt = bouton(etat.suivants[MOI] ? 'En attente des autres…' : derniere ? 'Voir le classement ▶' : 'Question suivante ▶', '',
+    () => agir({ type: 'jp_suivant' }));
+  bt.disabled = !!etat.suivants[MOI];
+  r.appendChild(bt);
+  p.appendChild(r);
+  const c = document.createElement('div');
+  c.className = 'compte';
+  p.appendChild(c);
+  majPanneauLeger(etat);
+}
+
+function panneauFin(etat) {
+  const f = etat.final || { classement: [], gagnants: [], derniers: [] };
+  const titre = f.gagnants.length === 1 && f.gagnants[0] === MOI ? 'Tu gagnes !'
+    : f.gagnants.map(j => nomDe(j)).join(', ') + (f.gagnants.length > 1 ? ' gagnent !' : ' gagne !');
+  const p = ouvrirPanneau('🏆 ' + titre);
+  const t = document.createElement('table');
+  t.className = 'bilan';
+  const tete = document.createElement('tr');
+  ['', 'Points', '🍺 bues'].forEach(h => { const th = document.createElement('th'); th.textContent = h; tete.appendChild(th); });
+  t.appendChild(tete);
+  f.classement.forEach((j, k) => {
+    const tr = document.createElement('tr');
+    tr.className = (j === MOI ? 'moi ' : '') + (f.gagnants.includes(j) ? 'gagnant' : '');
+    [[(['🥇 ', '🥈 ', '🥉 '][k] || (k + 1) + '. ') + etat.joueurs[j] + (j === MOI ? ' (toi)' : '')],
+     [String(etat.points[j]), 'n pts'], [String(etat.gorgees[j]), 'n']].forEach(([txt, cl]) => {
+      const td = document.createElement('td'); td.textContent = txt; if (cl) td.className = cl; tr.appendChild(td);
+    });
+    t.appendChild(tr);
+  });
+  p.appendChild(t);
+  if (f.derniers.length) {
+    const qui = f.derniers.map(d => d.joueur);
+    const n = f.derniers[0].boit;
+    p.appendChild(aide('🍺 ' + (qui.length === 1 && qui[0] === MOI ? 'Tu es dernier : tu bois ' + n + ' gorgées.'
+      : qui.map(j => nomDe(j)).join(', ') + ' : dernier' + (qui.length > 1 ? 's, boivent ' : ', boit ') + n + ' gorgées.')));
+  }
+  p.appendChild(aide('Une autre ? Ceux qui sont arrivés en cours de partie s’assoient.'));
+  const n = joueursProchainePartie(etat);
+  p.appendChild(blocReglage(() => rafraichirPanneau(true)));
+  if (n < JOUEURS_MIN) p.appendChild(aide('Il faut au moins ' + JOUEURS_MIN + ' joueurs présents pour rejouer.'));
+  else if (n > JOUEURS_MAX) {
+    const al = document.createElement('div');
+    al.className = 'alerte';
+    al.textContent = 'Vous êtes ' + n + ' : Le Juste Pinte se joue à ' + JOUEURS_MAX + ' au plus.';
+    p.appendChild(al);
+  }
+  const rg = rangee();
+  const b = bouton('Rejouer', '', () => agir(messageDemarrer()));
+  b.disabled = n < JOUEURS_MIN || n > JOUEURS_MAX;
+  rg.appendChild(b);
+  rg.appendChild(boutonMenuJeux());
+  p.appendChild(rg);
+}
+
+function panneauSpectateur(etat) {
+  const p = ouvrirPanneau('Spectateur');
+  if (etat.question && etat.phase !== 'fin') p.appendChild(blocQuestion(etat.question));
+  p.appendChild(aide('La partie a commencé sans toi : tu la suis en direct, et tu t’assois à la suivante.'));
+  const r = rangee();
+  r.appendChild(bouton('Quitter le salon', 'sombre', () => {
+    enPartie = false; oublierSession(); monJeton = null;
+    if (ws) { try { ws.close(); } catch (e) { /* deja ferme */ } }
+    location.href = location.pathname;
+  }));
+  p.appendChild(r);
+}
+
+// --- Réglage : nombre de questions et catégories ---
+function joueursProchainePartie(etat) {
+  const absents = (etat.partis || []).filter(Boolean).length;
+  return Math.max(0, (joueursSalon.length || etat.joueurs.length) - absents);
+}
+function messageDemarrer() {
+  return { type: 'jp_demarrer', manches: manchesChoisies, categories: categoriesChoisies };
+}
+
+function blocReglage(redessiner) {
+  const d = document.createElement('div');
+  const t1 = document.createElement('div');
+  t1.className = 'reglage-titre';
+  t1.textContent = 'Nombre de questions';
+  d.appendChild(t1);
+  const rm = rangee();
+  MANCHES.forEach(m => {
+    const b = bouton(String(m), 'sombre petit' + (m === manchesChoisies ? ' choisi' : ''), () => { manchesChoisies = m; redessiner(); });
+    rm.appendChild(b);
+  });
+  d.appendChild(rm);
+  const t2 = document.createElement('div');
+  t2.className = 'reglage-titre';
+  t2.textContent = 'Catégories (touche pour en retirer)';
+  d.appendChild(t2);
+  const g = document.createElement('div');
+  g.className = 'modes';
+  Object.entries(CATEGORIES).forEach(([cle, nom]) => {
+    // Une tuile, pas un <button> : le style commun des boutons l'écraserait.
+    const b = document.createElement('div');
+    const pris = categoriesChoisies.includes(cle);
+    b.className = 'mode' + (pris ? ' choisi' : '');
+    b.setAttribute('role', 'button');
+    b.textContent = nom;
+    b.addEventListener('click', () => {
+      if (pris && categoriesChoisies.length === 1) return;   // au moins une
+      categoriesChoisies = pris ? categoriesChoisies.filter(c => c !== cle) : categoriesChoisies.concat(cle);
+      redessiner();
+    });
+    g.appendChild(b);
+  });
+  d.appendChild(g);
+  return d;
+}
+
+// =====================================================================
+// ACCUEIL ET SALON
+// =====================================================================
+const SERVEURS = {
+  render: { http: 'https://kinito-serveur.onrender.com', ws: 'wss://kinito-serveur.onrender.com' },
+  local:  { http: 'http://127.0.0.1:8000',               ws: 'ws://127.0.0.1:8000' },
+};
+let serveurChoisi = 'render';
+
+let monNom = Soiree.nom();   // prénom de la soirée, saisi une seule fois
+let codeSalon = '';
+let estCreateur = false;
+let joueursSalon = [];
+let enPartie = false;
+let monJeton = null;
+
+const JOUEURS_MIN = 2;
+const JOUEURS_MAX = 8;
+
+// Le jeton permet de retrouver sa place après une coupure ou un rechargement.
+const CLE_SESSION = 'justepinte3d.session';
+
+function lireSession() {
+  try { return JSON.parse(localStorage.getItem(CLE_SESSION) || 'null'); }
+  catch (e) { return null; }
+}
+function ecrireSession(s) {
+  try { localStorage.setItem(CLE_SESSION, JSON.stringify(s)); } catch (e) { /* tant pis */ }
+}
+function oublierSession() {
+  lienActif = false;
+  try { localStorage.removeItem(CLE_SESSION); } catch (e) { /* tant pis */ }
+}
+
+function champTexte(id, placeholder, longueurMax) {
+  const i = document.createElement('input');
+  i.type = 'text';
+  i.id = id;
+  i.placeholder = placeholder;
+  i.autocomplete = 'off';
+  if (longueurMax) i.maxLength = longueurMax;
+  return i;
+}
+
+function afficherErreur(texte) { elRappel.textContent = texte; }
+
+function panneauAccueil() {
+  elMessage.textContent = 'Le Juste Pinte';
+  elRappel.textContent = 'Une question chiffrée, le plus loin boit';
+  elCompteur.innerHTML = '';
+  const p = panneauEnLigne();
+
+  const s = lireSession();
+  if (s && s.code && s.jeton) {
+    const r2 = rangee();
+    r2.style.marginTop = '12px';
+    r2.appendChild(bouton('Reprendre la partie ' + s.code, 'sombre', () => {
+      monNom = s.nom; codeSalon = s.code; monJeton = s.jeton;
+      serveurChoisi = s.serveur || 'render';
+      // Le créateur garde son bouton « Démarrer » après une coupure : sinon
+      // plus personne ne pouvait lancer la partie.
+      estCreateur = !!s.createur;
+      afficherErreur('Reconnexion...');
+      seConnecter();
+    }));
+    p.appendChild(r2);
+  }
+}
+
+function boutonServeur() {
+  const b = bouton('', 'sombre petit', () => {
+    serveurChoisi = serveurChoisi === 'render' ? 'local' : 'render';
+    majLibelleServeur(b);
+  });
+  majLibelleServeur(b);
+  return b;
+}
+
+function panneauRejoindreDirect(code) {
+  codeSalon = code;
+  elMessage.textContent = 'Le Juste Pinte';
+  elRappel.textContent = 'Salon ' + code;
+  const p = ouvrirPanneau('Rejoindre le salon');
+
+  const c = document.createElement('div');
+  c.className = 'code-salon';
+  c.textContent = code;
+  p.appendChild(c);
+
+  const l1 = rangee();
+  const pseudo = champTexte('pseudo', 'Ton prénom', 16);
+  pseudo.value = monNom;
+  l1.appendChild(pseudo);
+  p.appendChild(l1);
+
+  const l2 = rangee();
+  l2.style.marginTop = '10px';
+  l2.appendChild(bouton('Rejoindre', '', async () => {
+    if (!lireNom()) return;
+    afficherErreur('Connexion au serveur...');
+    try {
+      const rep = await fetch(SERVEURS[serveurChoisi].http + '/salon/' + codeSalon);
+      if (!(await rep.json()).existe) { afficherErreur('Ce salon n’existe plus'); return; }
+      estCreateur = false;
+      seConnecter();
+    } catch (e) {
+      afficherErreur('Serveur injoignable.');
+    }
+  }));
+  p.appendChild(l2);
+
+  const l3 = rangee();
+  l3.style.marginTop = '12px';
+  l3.appendChild(boutonServeur());
+  l3.appendChild(bouton('Autre salon', 'sombre petit', panneauAccueil));
+  p.appendChild(l3);
+}
+
+function panneauEnLigne() {
+  const p = ouvrirPanneau('Jouer en ligne');
+
+  const l1 = rangee();
+  const pseudo = champTexte('pseudo', 'Ton prénom', 16);
+  pseudo.value = monNom;
+  l1.appendChild(pseudo);
+  p.appendChild(l1);
+
+  const l2 = rangee();
+  l2.style.marginTop = '10px';
+  l2.appendChild(bouton('Créer un salon', '', creerSalon));
+  p.appendChild(l2);
+
+  const l3 = rangee();
+  l3.style.marginTop = '10px';
+  l3.appendChild(champTexte('code-salon', 'CODE', 4));
+  l3.appendChild(bouton('Rejoindre', 'sombre', rejoindreSalon));
+  p.appendChild(l3);
+
+  const l4 = rangee();
+  l4.style.marginTop = '14px';
+  l4.appendChild(boutonServeur());
+  p.appendChild(l4);
+
+  const note = document.createElement('div');
+  note.className = 'note';
+  note.textContent = "Le serveur Render s'endort : la première connexion peut prendre 30 s.";
+  p.appendChild(note);
+  return p;
+}
+
+function majLibelleServeur(b) {
+  b.textContent = serveurChoisi === 'render' ? 'Serveur : Render' : 'Serveur : local';
+}
+
+function lireNom() {
+  const champ = document.getElementById('pseudo');
+  monNom = champ ? champ.value.trim() : '';
+  if (monNom) monNom = Soiree.definirNom(monNom);
+  if (!monNom) { afficherErreur('Entre ton prénom'); return false; }
+  return true;
+}
+
+async function creerSalon() {
+  if (!lireNom()) return;
+  afficherErreur('Connexion au serveur...');
+  try {
+    const rep = await fetch(SERVEURS[serveurChoisi].http + '/creer-salon');
+    codeSalon = (await rep.json()).code;
+    estCreateur = true;
+    seConnecter();
+  } catch (e) {
+    afficherErreur("Serveur injoignable. S'il dort, réessaie dans 30 s.");
+  }
+}
+
+async function rejoindreSalon() {
+  if (!lireNom()) return;
+  const champ = document.getElementById('code-salon');
+  codeSalon = (champ ? champ.value : '').trim().toUpperCase();
+  if (codeSalon.length !== 4) { afficherErreur('Le code fait 4 lettres'); return; }
+  afficherErreur('Connexion au serveur...');
+  try {
+    const rep = await fetch(SERVEURS[serveurChoisi].http + '/salon/' + codeSalon);
+    if (!(await rep.json()).existe) { afficherErreur('Salon introuvable'); return; }
+    estCreateur = false;
+    seConnecter();
+  } catch (e) {
+    afficherErreur('Serveur injoignable.');
+  }
+}
+
+// --- Connexion au serveur : reconnexion automatique et battement de cœur ---
+// (même mécanique que les autres jeux : battement toutes les 5 s, reconnexion
+// automatique, resynchronisation au retour sur la page)
+let lienActif = false;
+let tentativesLien = 0;
+let minuteurLien = null;
+let dernierSignal = 0;
+let cacheeDepuis = 0;
+
+function seConnecter() {
+  Soiree.memoriser(codeSalon, serveurChoisi);
+  if (!monJeton) {
+    const s = lireSession();
+    if (s && s.code === codeSalon && s.jeton) monJeton = s.jeton;
+  }
+
+  clearTimeout(minuteurLien);
+  minuteurLien = null;
+  lienActif = true;
+  let url = SERVEURS[serveurChoisi].ws + '/ws/' + codeSalon + '/' + encodeURIComponent(monNom) + '?bat=1&page=justepinte';
+  if (monJeton) url += '&jeton=' + encodeURIComponent(monJeton);
+  const socket = new WebSocket(url);
+  ws = socket;
+  dernierSignal = Date.now();
+  socket.onopen = () => {
+    if (ws !== socket) return;
+    if (tentativesLien > 0) afficherErreur('Reconnecté.');
+    tentativesLien = 0;
+    dernierSignal = Date.now();
+    mode = 'ligne';
+    if (!enPartie) panneauAttente();
+    Soiree.verifierJeuEnCours('justepinte');
+  };
+  socket.onmessage = e => {
+    if (ws !== socket) return;
+    dernierSignal = Date.now();
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'pong') return;
+    if (Soiree.traiterMessage(msg, 'justepinte')) return;
+    if (msg.type === 'remplace') { lienActif = false; panneauRemplace(); return; }
+    clientRecevoir(msg);
+  };
+  socket.onerror = () => { if (ws === socket && !lienActif) afficherErreur('Erreur de connexion au serveur'); };
+  socket.onclose = () => { if (ws === socket && lienActif) programmerReconnexion(); };
+}
+
+function programmerReconnexion() {
+  if (!lienActif || minuteurLien) return;
+  tentativesLien++;
+  if (tentativesLien > 14) { lienActif = false; panneauReconnexion(); return; }
+  afficherErreur('Connexion perdue, reconnexion…');
+  const delai = Math.min(1000 * tentativesLien, 5000);
+  minuteurLien = setTimeout(() => { minuteurLien = null; if (lienActif) seConnecter(); }, delai);
+}
+
+function verifierLien() {
+  if (!lienActif) return;
+  const absence = cacheeDepuis ? Date.now() - cacheeDepuis : 0;
+  cacheeDepuis = 0;
+  if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+    clearTimeout(minuteurLien);
+    minuteurLien = null;
+    tentativesLien = 0;
+    seConnecter();
+  } else if (ws.readyState === WebSocket.OPEN && absence > 2000) {
+    try { ws.send('{"type":"ping"}'); ws.send('{"type":"resync"}'); } catch (e) { /* elle se fermera */ }
+  }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) cacheeDepuis = Date.now(); else verifierLien();
+});
+window.addEventListener('pageshow', verifierLien);
+window.addEventListener('online', verifierLien);
+
+setInterval(() => {
+  if (!lienActif || !ws || ws.readyState !== WebSocket.OPEN) return;
+  try { ws.send('{"type":"ping"}'); } catch (e) { /* elle se fermera */ }
+  if (!document.hidden && Date.now() - dernierSignal > 15000) seConnecter();
+}, 5000);
+
+function panneauRemplace() {
+  elMessage.textContent = 'Partie reprise ailleurs';
+  const p = ouvrirPanneau('Tu joues sur un autre écran');
+  const t = document.createElement('p');
+  t.textContent = 'Ta place a été reprise depuis un autre onglet ou un autre téléphone, avec le même prénom.';
+  p.appendChild(t);
+  const r = rangee();
+  r.appendChild(bouton('Reprendre ici', '', () => { cacherPanneau(); tentativesLien = 0; seConnecter(); }));
+  r.appendChild(bouton('Tous les jeux', 'sombre', () => { location.href = 'index.html'; }));
+  p.appendChild(r);
+}
+
+function panneauReconnexion() {
+  elMessage.textContent = 'Connexion perdue';
+  const p = ouvrirPanneau('Déconnecté');
+  p.appendChild(aide('Ta place est gardée ; en attendant, la table avance sans toi. Reconnecte-toi pour la reprendre.'));
+  const r = rangee();
+  r.appendChild(bouton('Reconnecter', '', () => { cacherPanneau(); tentativesLien = 0; seConnecter(); }));
+  r.appendChild(bouton('Quitter', 'sombre', () => {
+    enPartie = false; oublierSession(); monJeton = null; location.href = location.pathname;
+  }));
+  p.appendChild(r);
+}
+
+const SITE_PUBLIE = 'https://ozaxe.github.io/table-de-jeu/justepinte-3d-jeu.html';
+
+function lienSalon(code) {
+  const fichierLocal = location.protocol === 'file:';
+  const base = fichierLocal ? SITE_PUBLIE : location.origin + location.pathname;
+  return { url: base + '?salon=' + encodeURIComponent(code), repli: fichierLocal };
+}
+
+function majQRModale() {
+  const bloc = document.getElementById('bloc-qr-regles');
+  if (!bloc) return;
+  if (mode !== 'ligne' || !codeSalon) { bloc.className = 'cache'; return; }
+  bloc.className = '';
+  document.getElementById('qr-code-salon').textContent = codeSalon;
+
+  const lien = lienSalon(codeSalon);
+  const cv = document.getElementById('qr-regles');
+  const note = document.getElementById('qr-note-regles');
+
+  cv.style.display = 'none';
+  if (typeof QRious !== 'undefined') {
+    try {
+      new QRious({ element: cv, value: lien.url, size: 340, level: 'M',
+                   background: '#f4ebe0', foreground: '#26100e' });
+      cv.style.display = '';
+    } catch (e) { /* pas de QR : le code à 4 lettres suffit */ }
+  }
+
+  const avertissements = [];
+  if (lien.repli) {
+    avertissements.push('Ce QR mène au site en ligne : la page est ouverte en fichier local, il n’y a pas d’adresse à partager.');
+    if (serveurChoisi === 'local') avertissements.push('Tu joues sur le serveur local : ceux qui scannent arriveront sur le serveur en ligne.');
+  }
+  if (enPartie) {
+    avertissements.push('Partie en cours : celui qui rejoint regarde et entre à la partie suivante. Pour quelqu’un qui s’est fait couper, ce lien lui rend sa place.');
+  }
+  note.textContent = avertissements.join(' ');
+
+  document.getElementById('copier-lien-regles').onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(lien.url);
+      note.textContent = 'Lien copié : ' + lien.url;
+    } catch (e) {
+      note.textContent = lien.url;
+    }
+  };
+}
+
+
+function panneauAttente() {
+  const p = ouvrirPanneau('Salle d’attente');
+  const invite = document.createElement('p');
+  invite.className = 'invitation-soiree';
+  invite.textContent = 'De 2 à 8 joueurs : une question chiffrée par manche, chacun répond en secret sur son téléphone. Le QR de la soirée est sur l’accueil.';
+  p.appendChild(invite);
+
+  const liste = document.createElement('div');
+  liste.className = 'liste-attente';
+  liste.textContent = joueursSalon.length
+    ? joueursSalon.map((n, i) => (i === MOI ? n + ' (toi)' : n)).join(' · ')
+    : 'En attente de joueurs...';
+  p.appendChild(liste);
+
+  if (estCreateur) {
+    const n = joueursSalon.length;
+    p.appendChild(blocReglage(panneauAttente));
+    const r = rangee();
+    r.style.marginTop = '6px';
+    const trop = n > JOUEURS_MAX;
+    const b = bouton('Démarrer le quiz', '', () => Soiree.lancer('justepinte', o => envoyerIntention(MOI, { ...messageDemarrer(), ...o })));
+    b.disabled = n < JOUEURS_MIN || trop;
+    r.appendChild(b);
+    p.appendChild(r);
+    if (n < JOUEURS_MIN) {
+      p.appendChild(aide('Encore ' + (JOUEURS_MIN - n) + ' joueur' + (JOUEURS_MIN - n > 1 ? 's' : '') + ' avant de pouvoir lancer.'));
+    } else if (trop) {
+      const al = document.createElement('div');
+      al.className = 'alerte';
+      al.textContent = 'Vous êtes ' + n + ' : Le Juste Pinte se joue à ' + JOUEURS_MAX + ' au plus. Ouvrez une deuxième table.';
+      p.appendChild(al);
+    }
+  } else {
+    p.appendChild(aide('En attente du créateur du salon (il choisit les catégories)...'));
+  }
+}
+
+// =====================================================================
+// MISE EN PLACE DE LA TABLE
+// =====================================================================
+let moiDeLaTable = -1;
+
+function construireTable(noms) {
+  creerSieges(noms);
+  const etat = etatCourant;
+  sieges.forEach((s, i) => {
+    const g = etat && etat.gorgees ? etat.gorgees[i] || 0 : 0;
+    s.niveau = s.objectif = niveauGorgees(g);
+    dessinerChope(s);
+  });
+  moiDeLaTable = MOI;
+}
+
+function demarrerScene(noms) {
+  enPartie = true;
+  etatCourant = null;
+  maReponse = null;
+  mancheReponse = 0;
+  enEdition = false;
+  brouillon = '';
+  finAnimation = 0;
+  cacherPanneau();
+  viderRegle();
+  construireTable(noms);
+  camObjectifPos = CAM_POS.clone();
+  camObjectifCible = CAM_CIBLE.clone();
+}
+
+// =====================================================================
+// BOUCLE DE RENDU
+// =====================================================================
+const clock = new THREE.Clock();
+
+function boucle() {
+  requestAnimationFrame(boucle);
+  const rattrapage = fileActions.length > 3 ? 4 : 1;
+  const dt = Math.min(clock.getDelta(), 0.1) * rattrapage;
+
+  for (let i = animations.length - 1; i >= 0; i--) {
+    const a = animations[i];
+    a.t += dt;
+    if (a.maj) a.maj(a);
+    if (a.t >= a.duree) {
+      animations.splice(i, 1);
+      if (a.fin) a.fin();
+    }
+  }
+
+  sieges.forEach(s => {
+    if (Math.abs(s.niveau - s.objectif) > 0.001) {
+      s.niveau += (s.objectif - s.niveau) * 0.09;
+      dessinerChope(s);
+    }
+  });
+
+  const t = clock.elapsedTime;
+  sieges.forEach(s => { if (s.icone.visible) s.icone.position.y = 0.86 + Math.sin(t * 3 + s.index) * 0.03; });
+  if (repere.visible) pinteOr.rotation.y = t * 1.5;
+
+  for (let i = textesFlottants.length - 1; i >= 0; i--) {
+    const f = textesFlottants[i];
+    f.t += dt;
+    const k = f.t / f.duree;
+    f.sprite.position.y = f.depart.y + k * 0.45;
+    f.sprite.material.opacity = k < 0.1 ? k / 0.1 : Math.max(0, Math.min(1, (1 - k) / 0.45));
+    if (f.t >= f.duree) { scene.remove(f.sprite); textesFlottants.splice(i, 1); }
+  }
+
+  camera.position.lerp(camObjectifPos, CAM_VITESSE);
+  camCibleActuelle.lerp(camObjectifCible, CAM_VITESSE);
+  decor.animer(t);
+  // Plus la caméra recule, plus les prénoms grossissent (lisibles sans se toucher).
+  const recul = THREE.MathUtils.clamp(camera.position.distanceTo(camCibleActuelle) / 6.2, 1, 1.4);
+  sieges.forEach(st => {
+    const e = sieges.length > 7 ? 0.85 : 1;
+    st.etiquette.scale.set(0.9 * e * recul, 0.225 * e * recul, 1);
+  });
+  camera.lookAt(camCibleActuelle);
+  zone.appliquer(camera, { rayon: R_TABLE, places: R_SIEGE }, { pos: camObjectifPos, cible: camObjectifCible });
+  renderer.render(scene, camera);
+}
+
+// =====================================================================
+// DÉMARRAGE
+// =====================================================================
+// Quelques places vides dès l'accueil : la table a l'air prête.
+creerSieges(['', '', '', '', '', '']);
+sieges.forEach(s => { s.etiquette.visible = false; });
+
+if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) serveurChoisi = 'local';
+
+const salonDansUrl = new URLSearchParams(location.search).get('salon');
+if (salonDansUrl && /^[A-Za-z]{4}(-[2-9])?$/.test(salonDansUrl)) {
+  if (monNom) {
+    codeSalon = salonDansUrl.toUpperCase();
+    estCreateur = true;
+    seConnecter();
+  } else {
+    panneauRejoindreDirect(salonDansUrl.toUpperCase());
+  }
+} else {
+  panneauAccueil();
+}
+lisserScene(scene);
+zone.mesurer();
+boucle();
+surveillerFluidite();
+</script>
+<script>
+  // Appli installable (PWA) : voir service-worker.js
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(() => {});
+</script>
+</body>
+</html>
