@@ -1,0 +1,74 @@
+/* =====================================================================
+   Thème « Pub » (Le Juste Pinte) : soir de quiz dans un pub à l'anglaise.
+   Vert bouteille, chêne, laiton, ardoise et craie.
+   Titres : Bree Serif. Texte : Outfit. Craie : Caveat Brush.
+   ===================================================================== */
+:root {
+  --accent: #f5c04a;
+  --accent-2: #1f6b3e;
+  --fond: #0d1410;
+  --verre: rgba(22, 34, 26, 0.92);
+  --verre-fort: rgba(18, 28, 22, 0.97);
+  --bord: rgba(201, 162, 90, 0.38);
+  --texte: #f4ecd8;
+  --texte-doux: #cfc3a4;
+  --texte-pale: #8f8670;
+  --police: Outfit, 'Segoe UI', system-ui, sans-serif;
+  --police-titre: 'Bree Serif', Georgia, serif;
+  --police-craie: 'Caveat Brush', 'Comic Sans MS', cursive;
+}
+html, body { background: var(--fond) !important; }
+#overlay, button, input, .modale, #panneau { font-family: var(--police) !important; }
+#message, #panneau h2, .modale h2, .code-salon { font-family: var(--police-titre) !important; font-weight: 400 !important; }
+#message { color: var(--texte) !important; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9) !important; }
+#rappel { color: var(--texte-doux) !important; }
+#compteur { background: rgba(18, 28, 22, 0.92) !important; border: 1px solid var(--bord) !important; }
+
+.joueur {
+  background: linear-gradient(180deg, #f1d58c, #c9a25a) !important; color: #1b2a1e !important;
+  border: 1px solid rgba(80, 55, 20, 0.7) !important; border-radius: 10px !important;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45) !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+.joueur .info { color: #4a3a1c !important; }
+.joueur.actif { background: linear-gradient(180deg, #3fae6a, #1f6b3e) !important; color: #fff !important; border-color: #e8ffe8 !important; }
+.joueur.actif .info { color: #dfffe8 !important; }
+
+/* Panneau : ardoise encadrée de chêne. */
+#panneau {
+  background:
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.012) 0 3px, transparent 3px 9px),
+    linear-gradient(180deg, #24302a, #18211c) !important;
+  border: 6px solid #4a2c16 !important; border-radius: 10px !important;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.65), inset 0 0 0 1px rgba(201, 162, 90, 0.25) !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+#panneau h2 { color: var(--accent) !important; }
+#panneau p, .aide { color: var(--texte-doux) !important; }
+
+button {
+  font-family: var(--police) !important; font-weight: 700 !important; color: #1b2a1e !important;
+  background: linear-gradient(180deg, #f8d77a, #d9a63a) !important; border: 1px solid #7a5a1a !important; border-radius: 10px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 3px 0 #5a3e0e, 0 6px 14px rgba(0, 0, 0, 0.5) !important;
+}
+button:active { transform: translateY(2px) !important; box-shadow: 0 1px 0 #5a3e0e !important; }
+button:disabled { opacity: 0.5; }
+button.sombre, button.clair { color: var(--texte) !important; background: linear-gradient(180deg, #2f4a3a, #1d2f25) !important; border: 1px solid var(--bord) !important; box-shadow: 0 2px 0 #0a120d !important; }
+button.choisi { outline: 3px solid #fff3c4 !important; }
+#btn-regles { background: linear-gradient(180deg, #2f4a3a, #1d2f25) !important; color: var(--texte) !important; border: 1px solid var(--bord) !important; }
+
+.mode { border-radius: 10px !important; background: rgba(10, 16, 12, 0.55) !important; }
+.mode.choisi { border-color: var(--accent) !important; background: rgba(245, 192, 74, 0.18) !important; }
+input[type="text"] { background: rgba(5, 10, 7, 0.6) !important; border: 1px solid var(--bord) !important; border-radius: 8px !important; color: var(--texte) !important; }
+.code-salon { background: none !important; color: var(--accent) !important; -webkit-background-clip: initial !important; background-clip: initial !important; }
+
+#modale-regles { background: rgba(4, 6, 5, 0.82) !important; }
+.modale { background: linear-gradient(180deg, #24302a, #18211c) !important; color: var(--texte) !important; border: 6px solid #4a2c16 !important; border-radius: 10px !important; }
+.modale h2 { color: var(--accent) !important; }
+.modale h3 { color: #9fe0b4 !important; font-family: var(--police-titre); font-weight: 400 !important; }
+
+.annonce-jp .gros { font-family: var(--police-titre) !important; font-weight: 400 !important; }
+
+@media (max-width: 760px), (pointer: coarse) {
+  #panneau { border-radius: 10px 10px 0 0 !important; border-width: 5px 0 0 0 !important; }
+}
