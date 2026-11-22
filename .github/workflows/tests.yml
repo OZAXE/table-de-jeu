@@ -1,0 +1,47 @@
+# Vérifications automatiques du site : sur chaque pull request et à chaque arrivée sur main,
+# les tests navigateur du serveur (dépôt kinito-serveur, main) sont joués sur les pages de ce dépôt.
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  navigateur:
+    name: Navigateur (${{ matrix.test }}, pour info)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Pour info le temps de vérifier leur fiabilité sur GitHub : un échec s'affiche sans bloquer.
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        test: [presents_navigateur, mode_test_navigateur, menteur_annonces_navigateur, solo_navigateur,
+               undercover_navigateur, conquete_navigateur, telephone_navigateur, telephone_modes_navigateur,
+               navigateur, soiree_navigateur, enquete_navigateur]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: site
+      - name: Serveur (kinito-serveur, main)
+        uses: actions/checkout@v5
+        with:
+          repository: OZAXE/kinito-serveur
+          ref: main
+          path: serveur
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - run: pip install -r serveur/requirements.txt
+      - working-directory: serveur
+        run: npm install --no-save playwright@1.63.0 && npx playwright install --with-deps chromium
+      - run: bash serveur/tests/ci_navigateur.sh site ${{ matrix.test }}
