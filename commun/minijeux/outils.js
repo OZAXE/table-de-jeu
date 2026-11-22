@@ -3,7 +3,9 @@
 //   jouer({ hote, graine, duree, rapporter }) -> { arreter() }
 // Il dessine dans un canvas plein cadre posé dans `hote`, se joue en local
 // (même graine pour tous les téléphones : même partie pour tous) et appelle
-// rapporter(score) UNE fois, au plus tard à la fin de `duree` secondes.
+// rapporter(score, { gorgees }) UNE fois, au plus tard à la fin de `duree` secondes
+// (gorgees : petites gorgées bues pendant le jeu, jamais de cul sec ; plafonnées
+// par `gorgees_max` côté serveur).
 
 // Générateur pseudo-aléatoire déterministe (mulberry32).
 export function aleatoire(graine) {
@@ -80,4 +82,33 @@ export function texteCentre(ctx, texte, x, y, taille, couleur, graisse = 800) {
 export function point(canvas, e) {
   const r = canvas.getBoundingClientRect();
   return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
+
+// Fond dégradé vertical (haut -> bas).
+export function fond(ctx, l, h, haut, bas) {
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, haut); g.addColorStop(1, bas);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, l, h);
+}
+
+// Rectangle aux coins arrondis (rempli).
+export function pave(ctx, x, y, l, h, r, couleur) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + l, y, x + l, y + h, r);
+  ctx.arcTo(x + l, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + l, y, r);
+  ctx.closePath();
+  ctx.fillStyle = couleur;
+  ctx.fill();
+}
+
+// Un emoji centré (taille en px).
+export function emoji(ctx, e, x, y, taille) {
+  ctx.font = `${taille}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#fff';
+  ctx.fillText(e, x, y);
 }
