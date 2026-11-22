@@ -86,6 +86,7 @@
     telephone:  { titre: 'Gribouillophone', page: 'telephone-jeu.html', icone: '🖍️' },
     conquete:   { titre: 'Royaumes',   page: 'conquete-3d-jeu.html',   icone: '🏰' },
     justepinte: { titre: 'Le Juste Pinte', page: 'justepinte-3d-jeu.html', icone: '🎯' },
+    quidenous: { titre: 'Qui de nous ?', page: 'quidenous-3d-jeu.html', icone: '👉' },
   };
 
   function lire(cle) {
