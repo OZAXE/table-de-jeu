@@ -680,6 +680,9 @@
       });
     }
 
+    // Compte affiché pendant que le serveur endormi se réveille.
+    function attenteReveil(sec) { erreur.textContent = Soiree.texteReveil(sec); }
+
     function sansSoiree() {
       majLiens(null);
       contenu.textContent = '';
@@ -689,12 +692,12 @@
         if (!prenomOk()) return;
         erreur.textContent = 'Connexion au serveur…';
         try {
-          const rep = await fetch(Soiree.http(serveur) + '/creer-salon');
+          const rep = await Soiree.appelReveil(Soiree.http(serveur) + '/creer-salon', attenteReveil);
           Soiree.memoriser((await rep.json()).code, serveur);
           erreur.textContent = '';
           afficher();
         } catch (e) {
-          erreur.textContent = 'Serveur injoignable. S\'il dort, réessaie dans 30 s.';
+          erreur.textContent = 'Serveur injoignable : vérifie ta connexion et réessaie.';
         }
       });
       l1.appendChild(creer);
@@ -713,7 +716,7 @@
           // Code inconnu : soit une faute de frappe, soit une soirée oubliée
           // par un redémarrage du serveur. On la (r)ouvre : au pire, une
           // soirée vide sous ce code.
-          await fetch(Soiree.http(serveur) + '/soiree/' + c + '/rouvrir');
+          await Soiree.appelReveil(Soiree.http(serveur) + '/soiree/' + c + '/rouvrir', attenteReveil);
           Soiree.memoriser(c, serveur);
           erreur.textContent = '';
           afficher();
@@ -793,6 +796,11 @@
       l2.appendChild(quitter);
       contenu.appendChild(l2);
 
+      // Appli rouverte après une pause : le serveur s'est peut-être endormi.
+      if (!await Soiree.attendreServeur(s.serveur, (sec) => { etat.textContent = Soiree.texteReveil(sec); })) {
+        etat.textContent = 'Serveur injoignable pour le moment.';
+        return;
+      }
       let info;
       try {
         info = await Soiree.infoSoiree(s.code, s.serveur, Soiree.nom(), s.table);
@@ -977,14 +985,14 @@
       if (actuelle && actuelle.code === code) return;
       try {
         // Une soirée oubliée par un redémarrage du serveur est rouverte.
-        await fetch(Soiree.http(serveur) + '/soiree/' + code + '/rouvrir');
+        await Soiree.appelReveil(Soiree.http(serveur) + '/soiree/' + code + '/rouvrir', attenteReveil);
         Soiree.memoriser(code, serveur);
         if (!Soiree.nom()) {
           erreur.textContent = 'Bienvenue dans la soirée ' + code + ' ! Entre ton prénom pour jouer.';
           champPrenom.focus();
         }
       } catch (e) {
-        erreur.textContent = 'Serveur injoignable : réessaie dans un instant (il peut mettre 30 s à se réveiller).';
+        erreur.textContent = 'Serveur injoignable : vérifie ta connexion et réessaie.';
       }
     }
     rejoindreParLien().then(afficher);

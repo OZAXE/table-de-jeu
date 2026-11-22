@@ -63,6 +63,13 @@
   // Une soirée oubliée de la veille ne doit pas renvoyer dans un vieux salon.
   const DUREE_SOIREE = 18 * 3600 * 1000;
 
+  // Réveil du serveur endormi (voir Soiree.appelReveil) : temps total accepté,
+  // durée d'un essai, pause entre deux essais, et délai avant d'afficher le compte.
+  const REVEIL_MAX = 90 * 1000;
+  const REVEIL_ESSAI = 20 * 1000;
+  const REVEIL_PAUSE = 1500;
+  const REVEIL_SIGNALE = 2500;
+
   const SERVEURS = {
     render: { http: 'https://kinito-serveur.onrender.com', ws: 'wss://kinito-serveur.onrender.com' },
     local:  { http: 'http://127.0.0.1:8000',               ws: 'ws://127.0.0.1:8000' },
@@ -431,6 +438,53 @@
     oublier() { ecrire(CLE_SOIREE, null); },
 
     http(serveur) { return (SERVEURS[serveur] || SERVEURS.render).http; },
+
+    // --- Réveil du serveur ---
+    // Sur le plan gratuit de Render, le serveur s'endort après 15 min sans
+    // requête et met 30 à 60 s à se réveiller. Pendant ce temps, l'appel
+    // échoue ou reste suspendu : on réessaie tout seul et on affiche le compte.
+    // surAttente(secondes) n'est appelé que si l'attente dure (serveur endormi).
+    async appelReveil(url, surAttente, dureeMax) {
+      const debut = Date.now();
+      const max = dureeMax || REVEIL_MAX;
+      let minuteur = null;
+      if (surAttente) {
+        minuteur = setInterval(() => {
+          const ms = Date.now() - debut;
+          if (ms >= REVEIL_SIGNALE) surAttente(Math.round(ms / 1000));
+        }, 1000);
+      }
+      try {
+        for (;;) {
+          const reste = max - (Date.now() - debut);
+          if (reste <= 0) throw new Error('serveur injoignable');
+          const abandon = new AbortController();
+          const delai = setTimeout(() => abandon.abort(), Math.min(REVEIL_ESSAI, reste));
+          try {
+            const rep = await fetch(url, { signal: abandon.signal, cache: 'no-store' });
+            // 502/503 : la page d'attente de Render, pas encore notre serveur.
+            if (rep.status < 500) return rep;
+          } catch (e) { /* endormi ou réseau coupé : on réessaie */ }
+          finally { clearTimeout(delai); }
+          await new Promise((ok) => setTimeout(ok, REVEIL_PAUSE));
+        }
+      } finally {
+        if (minuteur) clearInterval(minuteur);
+      }
+    },
+    // Vrai quand le serveur répond (après l'avoir attendu s'il dormait).
+    async attendreServeur(serveur, surAttente) {
+      try { await Soiree.appelReveil(Soiree.http(serveur) + '/', surAttente); return true; }
+      catch (e) { return false; }
+    },
+    texteReveil(secondes) {
+      return 'Le serveur se réveille… ' + secondes + ' s (ça peut prendre une minute)';
+    },
+    // Coup de sonnette dès l'ouverture d'une page : le serveur démarre pendant
+    // qu'on tape son prénom. On n'attend pas la réponse.
+    reveiller(serveur) {
+      try { fetch(Soiree.http(serveur) + '/', { cache: 'no-store' }).catch(() => {}); } catch (e) { /* tant pis */ }
+    },
     async info(code, serveur) {
       const rep = await fetch(Soiree.http(serveur) + '/salon/' + encodeURIComponent(code));
       return rep.json();
@@ -807,4 +861,10 @@
   Soiree.confirmer = confirmer;
   Soiree.animerResultat = animerResultat;
   window.Soiree = Soiree;
+
+  // Les joueurs test (cadres) n'ont pas besoin de sonner : la vraie page l'a fait.
+  if (!SIEGE) {
+    const s = Soiree.actuelle();
+    Soiree.reveiller(s ? s.serveur : 'render');
+  }
 })();

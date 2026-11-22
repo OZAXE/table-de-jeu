@@ -1030,7 +1030,7 @@ async function rejoindre(code) {
   try {
     const info = await Soiree.info(code, serveurChoisi);
     if (!info.existe) { rappel.textContent = 'Table introuvable.'; return; }
-  } catch (e) { rappel.textContent = 'Serveur injoignable (il dort peut-être : réessaie dans 30 s).'; return; }
+  } catch (e) { rappel.textContent = 'Serveur injoignable : vérifie ta connexion et réessaie.'; return; }
   codeSalon = code;
   rappel.textContent = '';
   seConnecter();
@@ -1040,11 +1040,11 @@ async function creer() {
   if (!lireNomChamp()) return;
   rappel.textContent = 'Connexion au serveur…';
   try {
-    const rep = await fetch(Soiree.http(serveurChoisi) + '/creer-salon');
+    const rep = await Soiree.appelReveil(Soiree.http(serveurChoisi) + '/creer-salon', (s) => { rappel.textContent = Soiree.texteReveil(s); });
     codeSalon = (await rep.json()).code;
     rappel.textContent = '';
     seConnecter();
-  } catch (e) { rappel.textContent = 'Serveur injoignable (il dort peut-être : réessaie dans 30 s).'; }
+  } catch (e) { rappel.textContent = 'Serveur injoignable : vérifie ta connexion et réessaie.'; }
 }
 
 function ecranEntree(codePropose) {
@@ -1059,7 +1059,7 @@ function ecranEntree(codePropose) {
     prenom,
     el('div', { class: 'ligne' }, code, el('button', { class: 'principal', text: 'Rejoindre', onclick: () => rejoindre(code.value) })),
     codePropose ? null : el('div', { class: 'ligne' }, el('button', { class: 'large', text: 'Créer une table', onclick: creer })),
-    el('p', { class: 'pale', text: 'Le serveur peut mettre 30 s à se réveiller.' })));
+    el('p', { class: 'pale', text: 'Le serveur peut mettre une minute à se réveiller : la page patiente toute seule.' })));
 }
 
 (function demarrer() {
