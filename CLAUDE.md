@@ -4,7 +4,9 @@
 Après chaque modification demandée, sans redemander l'accord :
 1. commiter et pousser sur la branche de travail ;
 2. ouvrir une pull request vers `main` ;
-3. la fusionner dans `main` (fusion classique) dès que les vérifications passent.
+3. la fusionner dans `main` (fusion classique) dès que les vérifications passent. Les tests
+   « Navigateur » de GitHub Actions (`.github/workflows/tests.yml`, script dans `kinito-serveur`)
+   sont pour info : un échec ne bloque pas, mais le signaler.
 
 Si le serveur (dépôt `kinito-serveur`) change aussi, fusionner d'abord le serveur, puis ce dépôt :
 les pages appellent le serveur publié sur Render (`Soiree.SERVEURS` dans `commun/soiree.js`).
