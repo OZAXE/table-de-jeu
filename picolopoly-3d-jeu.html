@@ -430,10 +430,12 @@ const PP_RETOUR_DEFAUT = 2;
 // La cagnotte et la roulette ne bougent pas : ce sont des choix, pas des
 // pénalités. 'difficile' est la partie d'origine, et le défaut quand un
 // client n'envoie rien.
+// Rythme visé sur une partie d'1 h (total de la table) : difficile ~100
+// gorgées, normal ~40, facile ~30 (tests/picolopoly_rythme.py côté serveur).
 const PP_DIFFICULTES = {
-  facile: { tranche: 100, plafond: 3, depart: 'personne', miroir: 0,
-            prison: 1, echange: 0, duel: 2, cadeau: 2, sommelier: 4 },
-  normal: { tranche: 50, plafond: 4, depart: 'joueur', miroir: 0,
+  facile: { tranche: 150, plafond: 3, depart: 'personne', miroir: 0,
+            prison: 0, echange: 0, duel: 2, cadeau: 2, sommelier: 3 },
+  normal: { tranche: 50, plafond: 3, depart: 'personne', miroir: 0,
             prison: 1, echange: 1, duel: 3, cadeau: 3, sommelier: 5 },
   difficile: { tranche: 50, plafond: 5, depart: 'tous', miroir: 1,
                prison: 1, echange: 1, duel: 3, cadeau: 3, sommelier: 6 },
@@ -3801,7 +3803,7 @@ function afficherFiche(k) {
       prison: 'Simple visite, ou l’abri : en prison, aucune carte ne peut te viser.',
       parc: 'Les pelouses de Blossac, ses paons… et une cagnotte qui dort sous un banc. Taxes, amendes des cartes, sorties de prison et mises perdues '
         + 'à la roulette s’y accumulent. Arrête-toi ici pour tout rafler, contre 1 gorgée par tranche de ' + PP_CAGNOTTE_PAR_GORGEE + ' € (sans plafond).',
-      allez_prison: 'Direct en prison, ' + regleCourante().prison + ' gorgée à l’entrée.',
+      allez_prison: 'Direct en prison' + (regleCourante().prison > 0 ? ', ' + regleCourante().prison + ' gorgée à l’entrée.' : ', sans rien à boire.'),
       chance: 'Pioche une carte Chance.', caisse: 'Pioche une carte Caisse de communauté.',
     };
     corps.appendChild(aide(DESC[c.type] || ''));
@@ -4559,6 +4561,7 @@ function majReglesDifficulte() {
   ligne('Loyers, taxes, cartes', x => '1 / ' + x.tranche + ' €, max ' + x.plafond);
   ligne('Le proprio distribue', x => (x.miroir > 0 ? String(x.miroir) : 'non'));
   ligne('Départ', x => ({ tous: 'toute la table', joueur: 'celui qui passe', personne: 'personne' }[x.depart]));
+  ligne('Prison', x => (x.prison > 0 ? String(x.prison) : 'rien'));
   ligne('Toast d’échange', x => (x.echange > 0 ? 'oui' : 'non'));
   ligne('Duel / cadeau / sommelier', x => x.duel + ' / ' + x.cadeau + ' / ' + x.sommelier);
 }
