@@ -257,8 +257,9 @@
     <h3>Les camps</h3>
     <ul>
       <li>🐺 <span class="accent">Les loups</span> gagnent dès qu'ils sont au moins aussi nombreux que les autres vivants.</li>
-      <li>🏡 <span class="accent">Le village</span> gagne quand il n'y a plus aucun loup.</li>
-      <li>🤍 Le <span class="accent">Loup Blanc</span> gagne s'il reste seul, 💘 un couple loup + villageois s'il reste seul, 👼 l'Ange s'il meurt au premier tour.</li>
+      <li>🏡 <span class="accent">Le village</span> gagne quand il ne reste plus aucun ennemi (loups, vampires, solitaires).</li>
+      <li>🧛 <span class="accent">Les vampires</span> gagnent comme les loups, quand il ne reste qu'eux face au village.</li>
+      <li>🤍 Le <span class="accent">Loup Blanc</span>, 🔥 le Pyromane et 🗡️ l'Assassin gagnent s'ils restent seuls, 💘 un couple loup + villageois s'il reste seul, 👼 l'Ange s'il meurt au premier tour.</li>
       <li>Ton rôle reste caché : touche ta carte pour la voir, retouche pour la cacher.</li>
     </ul>
 
@@ -285,6 +286,9 @@
       <tr><td>👼 Ange</td><td>Gagne seul s'il meurt au premier tour (première nuit ou premier vote).</td></tr>
       <tr><td>🐕 Chien-Loup</td><td>Choisit son camp en découvrant sa carte : chien fidèle du village ou loup.</td></tr>
       <tr><td>👭 Sœurs / 👬 Frères</td><td>Deux sœurs, trois frères : ils se connaissent entre eux.</td></tr>
+      <tr><td>🧛 Vampire</td><td>Son propre camp (sur demande). Une nuit sur deux, les vampires mordent un joueur : il devient vampire en secret. Sur un loup, la morsure échoue.</td></tr>
+      <tr><td>🔥 Pyromane</td><td>Seul (sur demande). Chaque nuit, il arrose un joueur d'essence ; quand il le décide, il met le feu et tous les arrosés brûlent.</td></tr>
+      <tr><td>🗡️ Assassin</td><td>Seul (sur demande). Tue un joueur chaque nuit ; les loups ne peuvent pas le dévorer. Le Salvateur protège aussi de lui et des morsures.</td></tr>
       <tr><td>🎖️ Capitaine</td><td>Élu le premier jour (option). Sa voix compte double ; en mourant, il nomme son successeur.</td></tr>
     </table>
 
@@ -413,10 +417,16 @@ const ROLES = {
                     texte: 'Vous êtes deux sœurs et vous vous connaissez : une alliée sûre dans le village.' },
   frere:          { nom: 'Frère', icone: '👬', camp: VILLAGE,
                     texte: 'Vous êtes trois frères et vous vous connaissez : des alliés sûrs dans le village.' },
+  vampire:        { nom: 'Vampire', icone: '🧛', camp: 'Camp des vampires',
+                    texte: 'Une nuit sur deux, avec les autres vampires, mords un joueur : il devient vampire en secret. Les loups ne sont pas mordables.' },
+  pyromane:       { nom: 'Pyromane', icone: '🔥', camp: 'Seul contre tous',
+                    texte: 'Chaque nuit, arrose un joueur d’essence. Quand tu le décides, mets le feu : tous les arrosés brûlent d’un coup.' },
+  assassin:       { nom: 'Assassin', icone: '🗡️', camp: 'Seul contre tous',
+                    texte: 'Chaque nuit, tue un joueur. Les loups ne peuvent rien contre toi. Tu gagnes si tu es le dernier debout.' },
 };
 const SPECIAUX = ['cartomancienne', 'videur', 'herboriste', 'braconnier', 'cupidon', 'petite_fille', 'ancien',
   'idiot', 'corbeau', 'renard', 'enfant_sauvage', 'montreur', 'chevalier', 'bouc', 'ange',
-  'chien_loup', 'soeur', 'frere', 'infect', 'loup_blanc'];
+  'chien_loup', 'soeur', 'frere', 'infect', 'loup_blanc', 'vampire', 'pyromane', 'assassin'];
 const SPECIAUX_DES = { cartomancienne: 4, videur: 6, herboriste: 7, braconnier: 8, cupidon: 9, petite_fille: 10, ancien: 11,
   infect: 12, idiot: 13, corbeau: 14, renard: 15, enfant_sauvage: 16, loup_blanc: 17, montreur: 18, chevalier: 19, bouc: 20 };
 const LOUPS_SPECIAUX = ['infect', 'loup_blanc'];
@@ -425,9 +435,11 @@ const GROUPES = { soeur: 2, frere: 3 };
 const SEUILS_LOUPS = [6, 10, 13, 16];
 const CAPITAINE_DES = 9;
 const CAUSES = { devore: 'dévoré par les loups', empoisonne: 'empoisonné par la Sorcière', abattu: 'abattu par le Chasseur',
-  elimine: 'éliminé par le village', chagrin: 'mort de chagrin', rouille: 'tué par l’épée rouillée', bouc: 'sacrifié (Bouc Émissaire)' };
+  elimine: 'éliminé par le village', chagrin: 'mort de chagrin', rouille: 'tué par l’épée rouillée', bouc: 'sacrifié (Bouc Émissaire)',
+  brule: 'brûlé par le Pyromane', assassine: 'tué par l’Assassin' };
 const VAINQUEURS = { village: '🏡 Le village gagne', loups: '🐺 Les loups gagnent', loup_blanc: '🤍 Le Loup Blanc gagne seul',
-  amoureux: '💘 Les amoureux gagnent', ange: '👼 L’Ange gagne', personne: '🕯️ Plus personne' };
+  amoureux: '💘 Les amoureux gagnent', ange: '👼 L’Ange gagne', personne: '🕯️ Plus personne',
+  vampires: '🧛 Les vampires gagnent', pyromane: '🔥 Le Pyromane gagne seul', assassin: '🗡️ L’Assassin gagne seul' };
 function nomRole(r) { return ROLES[r] ? ROLES[r].nom : '?'; }
 function iconeRole(r) { return ROLES[r] ? ROLES[r].icone : '❔'; }
 function estRoleLoup(r) { return ROLES_LOUPS.includes(r); }
@@ -454,7 +466,7 @@ function composition(n, loups, speciaux) {
   if (vill > 0) c.villageois = vill;
   return c;
 }
-const PLURIELS = { loup: 'Loups-Garous', villageois: 'Simples Villageois', soeur: 'Sœurs', frere: 'Frères' };
+const PLURIELS = { loup: 'Loups-Garous', villageois: 'Simples Villageois', soeur: 'Sœurs', frere: 'Frères', vampire: 'Vampires' };
 function texteComposition(c) {
   return Object.entries(c).map(([r, k]) => iconeRole(r) + ' ' + (k > 1 ? k + ' ' + (PLURIELS[r] || nomRole(r) + 's') : nomRole(r))).join(' · ');
 }
@@ -839,6 +851,7 @@ function vivantsDe(etat) { return etat.joueurs.map((_, i) => i).filter(i => etat
 function moiVivant() { return etatCourant && MOI < etatCourant.joueurs.length && etatCourant.vivants[MOI]; }
 function monRole() { return secret && secret.index === MOI ? secret.role : null; }
 // Je chasse avec la meute (loup de naissance, infecté, Enfant Sauvage orphelin, Chien-Loup loup).
+function moiVampire() { return !!(secret && secret.index === MOI && secret.vivant && secret.vampires && secret.vampires.includes(MOI)); }
 function moiLoup() { return !!(secret && secret.index === MOI && secret.vivant && secret.loups && secret.loups.includes(MOI)); }
 function fantome() { return secret && secret.index === MOI && Array.isArray(secret.tous_roles); }
 function cleMoment(etat) { return etat.phase + '|' + etat.nuit + '|' + etat.jour; }
@@ -891,7 +904,8 @@ function clientRecevoir(msg) {
       break;
     case 'lg_converti':
       quandLibre(() => {
-        annoncer('🐺 Tu deviens loup', msg.cause === 'infect' ? 'L’Infect Père des Loups t’a infecté' : 'Ton modèle est mort', '#e0413a', 3.0, { flash: true, vibrer: [100, 60, 160] });
+        if (msg.cause === 'vampire') annoncer('🧛 Tu deviens vampire', 'On t’a mordu cette nuit : tu gagnes avec les vampires', '#c0264a', 3.0, { flash: true, vibrer: [100, 60, 160] });
+        else annoncer('🐺 Tu deviens loup', msg.cause === 'infect' ? 'L’Infect Père des Loups t’a infecté' : 'Ton modèle est mort', '#e0413a', 3.0, { flash: true, vibrer: [100, 60, 160] });
       });
       break;
     case 'lg_petite_fille':
@@ -1066,6 +1080,8 @@ function marqueSecrete(i) {
   if (secret.amoureux && secret.amoureux.includes(i)) return '💘';
   if (secret.famille && secret.famille.includes(i)) return iconeRole(secret.role);
   if (moiLoup() && secret.petite_fille === i) return '👧';
+  if (moiVampire() && secret.vampires.includes(i)) return '🧛';
+  if (secret.arroses && secret.arroses.includes(i)) return '⛽';
   return null;
 }
 
@@ -1244,6 +1260,12 @@ function liensSecrets(s) {
   if (s.role === 'enfant_sauvage' && s.modele !== null && s.modele !== undefined && !s.converti) l.push('🧒 Ton modèle : ' + prenom(s.modele));
   if (s.role === 'infect') l.push(s.infection ? '🦠 Ton infection est disponible.' : '🦠 Infection déjà utilisée.');
   if (s.role === 'renard' && s.renard_actif === false) l.push('🦊 Tu as perdu ton flair.');
+  if (s.vampires && s.vivant && s.vampires.includes(s.index)) {
+    const autres = s.vampires.filter(j => j !== MOI);
+    if (s.role !== 'vampire') l.push('🧛 Tu as été mordu : tu es vampire, ton ancien pouvoir est perdu.');
+    l.push(autres.length ? '🧛 Tes vampires : ' + autres.map(j => prenom(j) + (etatCourant && !etatCourant.vivants[j] ? ' ✝' : '')).join(', ') : '🧛 Tu es le seul vampire.');
+  }
+  if (s.role === 'pyromane' && s.arroses) l.push(s.arroses.length ? '⛽ Arrosés : ' + s.arroses.map(prenom).join(', ') : '⛽ Personne n’est encore arrosé.');
   if (etatCourant && etatCourant.pouvoirs_perdus && !estRoleLoup(s.role) && !['villageois', 'cupidon', 'ange', 'chien_loup', 'soeur', 'frere', 'enfant_sauvage', 'bouc'].includes(s.role)) l.push('👴 L’Ancien est mort de la main du village : tu as perdu ton pouvoir.');
   return l;
 }
@@ -1467,6 +1489,30 @@ function panneauNuit(etat, s) {
       f.querySelector('b').textContent = s.couple.map(prenom).join(' & ');
       p.appendChild(f);
     }
+  } else if (genre === 'vampire') {
+    consigne.innerHTML = '🧛 <b>Mordez un joueur</b> avec les autres vampires : il deviendra vampire à l’aube (sur un loup, la morsure échoue).';
+    const marques = {};
+    Object.entries(s.morsures || {}).forEach(([v, c]) => { (marques[c] = marques[c] || []).push(Number(v) === MOI ? 'toi' : prenom(Number(v))); });
+    const proies = vivants.filter(i => !(s.vampires || []).includes(i));
+    if (choix === null && dejaFait) choix = s.action;
+    const v = valider(() => ({ type: 'lg_nuit', cible: choix }), dejaFait ? 'Changer de proie' : 'Mordre');
+    p.appendChild(grille(etat, proies, choix, i => { choix = i; v.b.disabled = i === s.action; },
+      i => ({ marques: [marques[i] ? '🧛 ' + marques[i].join(', ') : '', marquesConnues(i)].filter(Boolean).join(' · ') })));
+    if (dejaFait) v.b.disabled = true;
+    p.appendChild(v.r);
+    p.appendChild(aide('Si vous n’êtes pas d’accord, la proie la plus mordue l’emporte (égalité : le sort). Une nuit sur deux seulement.'));
+  } else if (genre === 'pyromane') {
+    const arroses = (s.arroses || []);
+    unChoix('🔥 <b>Arrose un joueur</b> d’essence, ou mets le feu à tous les arrosés.', vivants.filter(i => i !== MOI && !arroses.includes(i)),
+      'L’arroser', 'Arroser plutôt celui-ci', i => ({ marques: marquesConnues(i) }));
+    if (s.action === 'feu') { choix = null; p.querySelectorAll('.tuile').forEach(t => t.classList.remove('choisi')); }
+    const r = rangee();
+    const bf = bouton(s.allumer ? '🔥 Le feu partira à l’aube' : '🔥 Mettre le feu (' + arroses.length + ' arrosé' + (arroses.length > 1 ? 's' : '') + ')', 'sombre', () => agir({ type: 'lg_nuit', allumer: true }));
+    bf.disabled = !arroses.length || !!s.allumer;
+    r.appendChild(bf);
+    p.appendChild(r);
+  } else if (genre === 'assassin') {
+    unChoix('🗡️ <b>Choisis ta victime</b> de la nuit.', vivants.filter(i => i !== MOI), 'La tuer', 'Changer de victime', i => ({ marques: marquesConnues(i) }));
   } else {
     const pf = s.espion;
     unChoix('👀 <b>Qui soupçonnes-tu ?</b> Ton flair est compté à la fin de la partie.' + (pf ? '<br>👧 Tu entrouvres les yeux : tu vois les cibles de la meute.' : ''),
@@ -1662,13 +1708,13 @@ function panneauDebat(etat, s, election) {
   majPanneauLeger(etat);
 }
 
-function listeRoles(etat, roles, convertis) {
+function listeRoles(etat, roles, convertis, vampires) {
   const d = div('liste-roles');
   etat.joueurs.forEach((nom, i) => {
     const sp = document.createElement('span');
     const loup = estRoleLoup(roles[i]) || (convertis && convertis[i]);
     sp.className = (loup ? 'loup' : '') + (!etat.vivants[i] ? ' mort' : '');
-    sp.textContent = iconeRole(roles[i]) + (convertis && convertis[i] && !estRoleLoup(roles[i]) ? '🐺' : '') + ' ' + nom + (i === MOI ? ' (toi)' : '');
+    sp.textContent = iconeRole(roles[i]) + (convertis && convertis[i] && !estRoleLoup(roles[i]) ? '🐺' : '') + (vampires && vampires[i] && roles[i] !== 'vampire' ? '🧛' : '') + ' ' + nom + (i === MOI ? ' (toi)' : '');
     d.appendChild(sp);
   });
   return d;
@@ -1677,7 +1723,7 @@ function listeRoles(etat, roles, convertis) {
 function panneauFantome(etat, s) {
   const p = ouvrirPanneau('👻 Tu es un fantôme');
   p.appendChild(div('fantome', 'Tu vois tous les rôles, mais tu ne dis plus rien : ni grimace, ni indice !'));
-  if (s.tous_roles) p.appendChild(listeRoles(etat, s.tous_roles, s.tous_convertis));
+  if (s.tous_roles) p.appendChild(listeRoles(etat, s.tous_roles, s.tous_convertis, s.tous_vampires));
   if (s.amoureux) p.appendChild(aide('💘 Amoureux : ' + s.amoureux.map(prenom).join(' & ')));
   if (etat.phase === 'nuit') p.appendChild(aide('🌙 Les vivants jouent leur nuit…'));
   else if (etat.phase === 'potion') p.appendChild(aide('🌙 La nuit continue…'));
@@ -1703,7 +1749,7 @@ function panneauFin(etat) {
     tr.className = (j === MOI ? 'moi ' : '') + (f.gagnants.includes(j) ? 'gagnant ' : '') + (!etat.vivants[j] ? 'mort' : '');
     const amour = f.amoureux && f.amoureux.includes(j) ? ' 💘' : '';
     [[(f.gagnants.includes(j) ? '🏆 ' : '') + (etat.vivants[j] ? '' : '💀 ') + etat.joueurs[j] + (j === MOI ? ' (toi)' : '') + amour],
-     [iconeRole(f.roles[j]) + ' ' + nomRole(f.roles[j]) + (conv[j] && !estRoleLoup(f.roles[j]) ? ' 🐺' : '')], [String(f.flair[j] || 0), 'n'], [String(etat.gorgees[j]), 'n']].forEach(([txt, cl]) => {
+     [iconeRole(f.roles[j]) + ' ' + nomRole(f.roles[j]) + (conv[j] && !estRoleLoup(f.roles[j]) ? ' 🐺' : '') + ((f.vampires || [])[j] && f.roles[j] !== 'vampire' ? ' 🧛' : '')], [String(f.flair[j] || 0), 'n'], [String(etat.gorgees[j]), 'n']].forEach(([txt, cl]) => {
       const td = document.createElement('td'); td.textContent = txt; if (cl) td.className = cl; tr.appendChild(td);
     });
     t.appendChild(tr);
