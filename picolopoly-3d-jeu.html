@@ -327,7 +327,7 @@
       <tr><td>Échange conclu</td><td id="regle-echange"></td></tr>
       <tr><td>Faillite</td><td>Cul sec.</td></tr>
       <tr><td>Parc Blossac</td><td>La cagnotte : les taxes, les amendes des cartes, les 50 € de sortie de prison et les mises perdues à la roulette s'y accumulent (son total est affiché en haut). En t'y arrêtant, tu peux la rafler contre 1 gorgée par tranche de 50 € (sans plafond). Pas d'immunité qui tienne : c'est un marché, pas une pénalité.</td></tr>
-      <tr><td>Roulette</td><td>1 gorgée par tranche de 50 € misés, bue quoi qu'il sorte.</td></tr>
+      <tr><td>Roulette</td><td>1 gorgée par lancer, quelle que soit la mise, bue quoi qu'il sorte.</td></tr>
       <tr><td>Construire</td><td>Rien.</td></tr>
     </table>
 
@@ -350,7 +350,7 @@
     <table id="tableau-difficultes"></table>
 
     <h3>🎰 La roulette</h3>
-    <p>Une vraie roulette européenne (0 à 36). Une fois par tour, avant ou après avoir lancé les dés, tu poses tes jetons sur le tapis : <span class="accent">autant de paris que tu veux</span>, par tranches de 50 €, puis tu lances la bille. Chaque tranche misée se paie aussi d'<span class="accent">une gorgée</span>, gagnant ou perdant. Comme au casino : un numéro plein paie 35 fois la mise, une douzaine ou une colonne 2 fois, rouge, noir, pair, impair, manque (1-18) ou passe (19-36) 1 fois, et la mise gagnante t'est rendue en plus. Le 0 fait perdre tous les paris sauf le plein sur le 0. Les mises perdues filent dans la cagnotte du Parc Blossac.</p>
+    <p>Une vraie roulette européenne (0 à 36). Une fois par tour, avant ou après avoir lancé les dés, tu poses tes jetons sur le tapis : <span class="accent">autant de paris que tu veux</span>, par tranches de 50 €, puis tu lances la bille. Le lancer coûte <span class="accent">une gorgée</span>, quelle que soit ta mise, gagnant ou perdant. Comme au casino : un numéro plein paie 35 fois la mise, un cheval (2 numéros voisins) 17 fois, une transversale (3 numéros d'une rangée) 11 fois, un carré (4 numéros) 8 fois, un sixain (2 rangées) 5 fois, une douzaine ou une colonne 2 fois, rouge, noir, pair, impair, manque (1-18) ou passe (19-36) 1 fois, et la mise gagnante t'est rendue en plus. Pour les mises à plusieurs numéros, passe en mode « Cheval, carré… » et touche les numéros voulus. Le 0 fait perdre tous les paris sauf ceux qui le couvrent. Les mises perdues filent dans la cagnotte du Parc Blossac.</p>
 
     <h3>Échanges</h3>
     <p>Au début de ton tour, avant de lancer, tu peux proposer un échange de propriétés (avec ou sans argent). S'il est accepté : toast collectif.</p>
@@ -447,11 +447,13 @@ const PP_DIFFICULTE_DEFAUT = 'difficile';
 const PP_CAGNOTTE_PAR_GORGEE = 50;
 const PP_MOTIFS_CAGNOTTE = ['taxe', 'carte', 'prison'];
 // Roulette (européenne, comme au casino) : un lancer par tour, autant de
-// paris qu'on veut sur le tapis, chacun par tranches de 50 €. 1 gorgée par
-// tranche misée en tout (bue quoi qu'il sorte). Les mises perdues partent
-// dans la cagnotte. Gains nets : plein 35 pour 1, douzaine et colonne 2 pour 1,
-// chances simples 1 pour 1 (la mise gagnante est rendue en plus).
+// paris qu'on veut sur le tapis, chacun par tranches de 50 €. Le lancer coûte
+// PP_ROULETTE_GORGEES gorgée(s), quelle que soit la mise (bue quoi qu'il
+// sorte). Les mises perdues partent dans la cagnotte. Gains nets : plein 35
+// pour 1, cheval 17, transversale 11, carré 8, sixain 5, douzaine et colonne
+// 2, chances simples 1 (la mise gagnante est rendue en plus).
 const PP_ROULETTE_MISE = 50;
+const PP_ROULETTE_GORGEES = 1;        // prix d'un lancer, quelle que soit la mise
 const PP_ROULETTE_ROUGES = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
 // Paris extérieurs : [gain net pour 1, test sur le numéro]. Plein (« n17 ») : 35 pour 1.
 const PP_ROULETTE_PARIS = {
@@ -475,6 +477,30 @@ const PP_ROULETTE_LIBELLES = {
   c1: 'la 1re colonne', c2: 'la 2e colonne', c3: 'la 3e colonne',
 };
 const PP_ROULETTE_PARIS_MAX = 20;     // paris différents sur un même lancer
+
+// Mises à plusieurs numéros du tapis, codées « x » + numéros croissants joints
+// par « - » (« x17-18 »). Rangée r (1 à 12) : 3r-2, 3r-1, 3r. Cheval (2 voisins),
+// transversale (une rangée, ou 0-1-2 / 0-2-3), carré (4 en carré, ou 0-1-2-3),
+// sixain (deux rangées voisines).
+function ppCombinaisonsRoulette() {
+  const combis = {};
+  const ajouter = (nums, sorte) => { combis['x' + [...nums].sort((a, b) => a - b).join('-')] = sorte; };
+  for (let n = 1; n <= 36; n++) {
+    if (n % 3 !== 0) ajouter([n, n + 1], 'cheval');
+    if (n <= 33) ajouter([n, n + 3], 'cheval');
+  }
+  for (const n of [1, 2, 3]) ajouter([0, n], 'cheval');
+  for (let r = 1; r <= 12; r++) ajouter([3 * r - 2, 3 * r - 1, 3 * r], 'transversale');
+  ajouter([0, 1, 2], 'transversale');
+  ajouter([0, 2, 3], 'transversale');
+  for (let n = 1; n <= 33; n++) if (n % 3 !== 0) ajouter([n, n + 1, n + 3, n + 4], 'carre');
+  ajouter([0, 1, 2, 3], 'carre');
+  for (let r = 1; r <= 11; r++) ajouter([0, 1, 2, 3, 4, 5].map(k => 3 * r - 2 + k), 'sixain');
+  return combis;
+}
+const PP_ROULETTE_COMBIS = ppCombinaisonsRoulette();
+const PP_ROULETTE_GAINS_COMBI = { cheval: 17, transversale: 11, carre: 8, sixain: 5 };
+const ppNumerosCombi = pari => pari.slice(1).split('-').map(Number);
 
 // Rythme
 const PP_DUREE_PARTIE = 3600;
@@ -1327,15 +1353,16 @@ function ppLever(etat, ev, i, message) {
 
 // --- Roulette ---
 // Comme au casino : un tapis, plusieurs paris par lancer. Chaque pari est un
-// code : « n0 » à « n36 » (plein), rouge, noir, pair, impair, manque (1-18),
+// code : « n0 » à « n36 » (plein), « x17-18 »... (cheval, transversale, carré,
+// sixain : PP_ROULETTE_COMBIS), rouge, noir, pair, impair, manque (1-18),
 // passe (19-36), d1 à d3 (douzaines), c1 à c3 (colonnes ; c1 = 1, 4, 7... 34).
-// Le zéro fait perdre tout sauf le plein sur 0.
+// Le zéro fait perdre tout sauf les mises qui le couvrent.
 
 const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 
 function ppPariValide(pari) {
   if (typeof pari !== 'string') return false;
-  if (own(PP_ROULETTE_PARIS, pari)) return true;
+  if (own(PP_ROULETTE_PARIS, pari) || own(PP_ROULETTE_COMBIS, pari)) return true;
   if (/^n\d+$/.test(pari)) {
     const n = parseInt(pari.slice(1), 10);
     return n >= 0 && n <= 36 && pari === 'n' + n;
@@ -1345,16 +1372,26 @@ function ppPariValide(pari) {
 
 function ppPariGagne(pari, tirage) {
   if (own(PP_ROULETTE_PARIS, pari)) return PP_ROULETTE_PARIS[pari][1](tirage);
+  if (own(PP_ROULETTE_COMBIS, pari)) return ppNumerosCombi(pari).includes(tirage);
   return parseInt(pari.slice(1), 10) === tirage;
 }
 
-// Gain net pour 1 € misé : 35 sur un plein, 2 ou 1 ailleurs.
+// Gain net pour 1 € misé : 35 sur un plein, 17 à 5 sur une combinaison, 2 ou 1 ailleurs.
 function ppGainPari(pari) {
-  return own(PP_ROULETTE_PARIS, pari) ? PP_ROULETTE_PARIS[pari][0] : 35;
+  if (own(PP_ROULETTE_PARIS, pari)) return PP_ROULETTE_PARIS[pari][0];
+  if (own(PP_ROULETTE_COMBIS, pari)) return PP_ROULETTE_GAINS_COMBI[PP_ROULETTE_COMBIS[pari]];
+  return 35;
 }
 
 function ppLibellePari(pari) {
-  return own(PP_ROULETTE_LIBELLES, pari) ? PP_ROULETTE_LIBELLES[pari] : 'le ' + pari.slice(1);
+  if (own(PP_ROULETTE_LIBELLES, pari)) return PP_ROULETTE_LIBELLES[pari];
+  if (own(PP_ROULETTE_COMBIS, pari)) {
+    const nums = pari.slice(1).split('-');
+    const sorte = PP_ROULETTE_COMBIS[pari];
+    if (sorte === 'sixain') return 'le sixain ' + nums[0] + ' à ' + nums[nums.length - 1];
+    return { cheval: 'le cheval ', transversale: 'la transversale ', carre: 'le carré ' }[sorte] + nums.join('-');
+  }
+  return 'le ' + pari.slice(1);
 }
 
 // Les paris du message, en liste [{pari, montant}]. Accepte aussi l'ancien
@@ -1383,8 +1420,8 @@ function ppMisesRoulette(message) {
 }
 
 // Un lancer par tour, avant ou après les dés, avec autant de paris qu'on veut
-// sur le tapis. Les gorgées (1 par tranche de 50 € misée en tout) sont le prix
-// d'entrée, choisi : volontaires, comme celles de la cagnotte.
+// sur le tapis. Les gorgées (PP_ROULETTE_GORGEES par lancer, quelle que soit
+// la mise) sont le prix d'entrée, choisi : volontaires, comme la cagnotte.
 function ppRoulette(etat, ev, i, message) {
   if (!ppPeutGerer(etat, i, false)) return 'La roulette ne tourne que pendant votre tour.';
   if (etat.roulette_jouee) return 'Une seule mise par tour.';
@@ -1395,7 +1432,7 @@ function ppRoulette(etat, ev, i, message) {
 
   etat.roulette_jouee = true;
   etat.argent[i] -= total;
-  ppBoire(etat, ev, [[i, Math.floor(total / PP_ROULETTE_MISE)]], 'roulette', false, true);
+  ppBoire(etat, ev, [[i, PP_ROULETTE_GORGEES]], 'roulette', false, true);
   const tirage = hasard.randint(0, 36);
   let retour = 0, perdu = 0;
   for (const m of mises) {
@@ -3357,6 +3394,10 @@ function panneauTour(e) {
 // (comme « rejouer » au casino) tant qu'on ne l'efface pas.
 const tapisRoulette = {};
 let jetonRoulette = PP_ROULETTE_MISE;
+// Mode « Cheval, carré… » : toucher un numéro le sélectionne ; dès que la
+// sélection forme une mise du tapis (PP_ROULETTE_COMBIS), on peut y poser le jeton.
+let modeCombiRoulette = false;
+let selectionRoulette = [];
 const JETONS_ROULETTE = [[50, '#2f6fb3'], [100, '#2b2622'], [200, '#7a3fb0'], [500, '#c47a0e']];
 const CASES_TAPIS = {
   manque: '1-18', passe: '19-36', pair: 'Pair', impair: 'Impair', rouge: '◆ Rouge', noir: '◆ Noir',
@@ -3367,14 +3408,20 @@ function couleurNumero(n) {
   return n === 0 ? '#2e9a55' : PP_ROULETTE_ROUGES.includes(n) ? '#d8453b' : '#2b2622';
 }
 
+function combiSelection() {
+  const cle = 'x' + [...selectionRoulette].sort((a, b) => a - b).join('-');
+  return own(PP_ROULETTE_COMBIS, cle) ? cle : null;
+}
+
 function panneauRoulette(e) {
   const t = tapisRoulette;
   const argent = e.argent[MOI];
   const totalTapis = () => Object.values(t).reduce((a, m) => a + m, 0);
   const total = totalTapis();
+  const g = PP_ROULETTE_GORGEES;
   const p = ouvrirPanneau('🎰 Faites vos jeux');
-  p.appendChild(aide('Plein 35 pour 1 · douzaine et colonne 2 pour 1 · le reste 1 pour 1. Le 0 rafle tout sauf le plein sur 0. '
-    + '1 🍺 par ' + PP_ROULETTE_MISE + ' € misés.'));
+  p.appendChild(aide('Plein 35 · cheval 17 · transversale 11 · carré 8 · sixain 5 · douzaine et colonne 2 · le reste 1 pour 1. '
+    + 'Le 0 rafle tout sauf ce qui le couvre. ' + g + ' 🍺 par lancer, quelle que soit la mise.'));
 
   const jetons = document.createElement('div');
   jetons.className = 'jetons-rl';
@@ -3390,11 +3437,41 @@ function panneauRoulette(e) {
   });
   p.appendChild(jetons);
 
+  const modes = rangee();
+  const bMode = (texte, combi) => {
+    const b = bouton(texte, modeCombiRoulette === combi ? 'petit' : 'clair petit', () => {
+      modeCombiRoulette = combi;
+      selectionRoulette = [];
+      majPanneau();
+    });
+    return b;
+  };
+  modes.appendChild(bMode('Numéro plein', false));
+  modes.appendChild(bMode('Cheval, carré…', true));
+  p.appendChild(modes);
+
+  const poser = pari => {
+    if (!t[pari] && Object.keys(t).length >= PP_ROULETTE_PARIS_MAX) { rappel(PP_ROULETTE_PARIS_MAX + ' paris au plus.', true); return false; }
+    if (totalTapis() + jetonRoulette > argent) { rappel('Pas assez d’argent pour ce jeton.', true); return false; }
+    t[pari] = (t[pari] || 0) + jetonRoulette;
+    return true;
+  };
+  // Les numéros couverts par une mise à plusieurs numéros : un liseré doré.
+  const couverts = new Set();
+  Object.keys(t).forEach(k => { if (own(PP_ROULETTE_COMBIS, k)) ppNumerosCombi(k).forEach(n => couverts.add(n)); });
+
   const caseMise = (pari, texte, classe) => {
     const c = document.createElement('div');
     c.className = 'case-rl ' + classe;
     c.textContent = texte;
     c.setAttribute('role', 'button');
+    const numero = /^n\d+$/.test(pari) ? parseInt(pari.slice(1), 10) : null;
+    if (numero !== null && couverts.has(numero)) c.style.boxShadow = 'inset 0 0 0 2px #fbbf24';
+    if (numero !== null && modeCombiRoulette && selectionRoulette.includes(numero)) {
+      c.style.outline = '3px solid #fde047';
+      c.style.outlineOffset = '-1px';
+      c.style.zIndex = '2';
+    }
     if (t[pari]) {
       const m = document.createElement('span');
       m.className = 'mise';
@@ -3402,10 +3479,14 @@ function panneauRoulette(e) {
       c.appendChild(m);
     }
     c.addEventListener('click', () => {
-      if (!t[pari] && Object.keys(t).length >= PP_ROULETTE_PARIS_MAX) { rappel(PP_ROULETTE_PARIS_MAX + ' paris au plus.', true); return; }
-      if (totalTapis() + jetonRoulette > argent) { rappel('Pas assez d’argent pour ce jeton.', true); return; }
-      t[pari] = (t[pari] || 0) + jetonRoulette;
-      majPanneau();
+      if (numero !== null && modeCombiRoulette) {
+        selectionRoulette = selectionRoulette.includes(numero)
+          ? selectionRoulette.filter(n => n !== numero)
+          : selectionRoulette.concat([numero]).slice(-6);
+        majPanneau();
+        return;
+      }
+      if (poser(pari)) majPanneau();
     });
     return c;
   };
@@ -3445,7 +3526,31 @@ function panneauRoulette(e) {
   feutre.appendChild(simples);
   p.appendChild(feutre);
 
-  const g = total / PP_ROULETTE_MISE;
+  if (modeCombiRoulette) {
+    const combi = combiSelection();
+    if (combi) {
+      const rc = rangee();
+      rc.appendChild(bouton('Poser ' + jetonRoulette + ' € sur ' + ppLibellePari(combi) + ' (' + ppGainPari(combi) + ' pour 1)', '', () => {
+        if (poser(combi)) { selectionRoulette = []; majPanneau(); }
+      }));
+      p.appendChild(rc);
+    } else {
+      p.appendChild(aide(selectionRoulette.length
+        ? 'Pas encore une mise du tapis : ' + selectionRoulette.join(', ') + '.'
+        : 'Touche 2 numéros voisins (cheval), 3 d’une rangée (transversale), 4 en carré ou 6 sur deux rangées (sixain).'));
+    }
+  }
+  // Les mises à plusieurs numéros ne se voient pas sur une case : on les liste.
+  const combisPosees = Object.keys(t).filter(k => own(PP_ROULETTE_COMBIS, k));
+  if (combisPosees.length) {
+    const liste = rangee();
+    combisPosees.forEach(k => liste.appendChild(bouton(ppLibellePari(k) + ' · ' + t[k] + ' € ✕', 'clair petit', () => {
+      delete t[k];
+      majPanneau();
+    })));
+    p.appendChild(liste);
+  }
+
   if (total > argent) p.appendChild(aide('Tu n’as plus que ' + argent + ' € : efface des jetons.'));
   else if (total) {
     const meilleur = Math.max(...Object.entries(t).map(([k, m]) => m * (ppGainPari(k) + 1)));
@@ -3458,7 +3563,7 @@ function panneauRoulette(e) {
   });
   lancer.disabled = !total || total > argent;
   r.appendChild(lancer);
-  if (total) r.appendChild(bouton('Effacer', 'clair', () => { for (const k of Object.keys(t)) delete t[k]; majPanneau(); }));
+  if (total) r.appendChild(bouton('Effacer', 'clair', () => { for (const k of Object.keys(t)) delete t[k]; selectionRoulette = []; majPanneau(); }));
   r.appendChild(bouton('Retour', 'clair', () => { vuePanneau = 'principal'; majPanneau(); }));
   p.appendChild(r);
   ajouterDelai(p);
