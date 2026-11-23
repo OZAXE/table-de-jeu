@@ -137,6 +137,9 @@
     padding: 9px 11px; border-radius: 12px; border: 1px solid var(--bord);
     background: rgba(255,255,255,0.05); color: var(--texte); font-size: 14px; font-weight: 600;
   }
+  .roles-speciaux { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+  .roles-speciaux .mode { font-size: 13px; padding: 7px 8px; }
+  .roles-speciaux .mode.loup { border-color: rgba(224,65,58,0.55); }
   .mode small { display: block; font-weight: 500; color: var(--texte-doux); font-size: 12px; margin-top: 2px; }
   .mode.choisi { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
   .reglage-titre { font-size: 13px; color: var(--texte-doux); margin: 8px 0 4px; }
@@ -251,21 +254,38 @@
     <h2>Règles du Loup-Garou</h2>
     <p>Des loups-garous se cachent parmi les habitants du hameau. Chaque nuit, ils dévorent quelqu'un ; chaque jour, le village débat et <span class="accent">élimine un suspect au vote</span>. Pas besoin de meneur : ton téléphone fait le conteur.</p>
 
-    <h3>Les deux camps</h3>
+    <h3>Les camps</h3>
     <ul>
       <li>🐺 <span class="accent">Les loups</span> gagnent dès qu'ils sont au moins aussi nombreux que les autres vivants.</li>
       <li>🏡 <span class="accent">Le village</span> gagne quand il n'y a plus aucun loup.</li>
+      <li>🤍 Le <span class="accent">Loup Blanc</span> gagne s'il reste seul, 💘 un couple loup + villageois s'il reste seul, 👼 l'Ange s'il meurt au premier tour.</li>
       <li>Ton rôle reste caché : touche ta carte pour la voir, retouche pour la cacher.</li>
     </ul>
 
     <h3>Les rôles</h3>
     <table>
       <tr><td>🐺 Loup-Garou</td><td>Chaque nuit, la meute choisit sa victime. Les loups se connaissent et voient en direct le choix des autres : il faut se mettre d'accord.</td></tr>
-      <tr><td>🧑‍🌾 Villageois</td><td>Pas de pouvoir, seulement ta voix au vote et ton flair.</td></tr>
-      <tr><td>🔮 Cartomancienne</td><td>Chaque nuit, découvre le rôle d'un joueur.</td></tr>
-      <tr><td>🛡️ Videur</td><td>Chaque nuit, protège un joueur des loups (toi compris), jamais le même deux nuits de suite.</td></tr>
-      <tr><td>🌿 Herboriste</td><td>Une potion de soin (sauve la victime des loups) et une potion de poison, une fois chacune dans la partie.</td></tr>
-      <tr><td>🏹 Braconnier</td><td>Quand il meurt, il emporte un joueur de son choix.</td></tr>
+      <tr><td>🦠 Infect Père des Loups</td><td>Loup. Une fois dans la partie, il peut infecter la victime au lieu de la tuer : elle rejoint la meute en secret.</td></tr>
+      <tr><td>🤍 Loup Blanc</td><td>Chasse avec la meute mais joue seul : une nuit sur deux, il peut dévorer un loup.</td></tr>
+      <tr><td>🧑‍🌾 Simple Villageois</td><td>Pas de pouvoir, seulement ta voix au vote et ton flair.</td></tr>
+      <tr><td>🔮 Voyante</td><td>Chaque nuit, découvre la carte d'un joueur.</td></tr>
+      <tr><td>🛡️ Salvateur</td><td>Chaque nuit, protège un joueur des loups (toi compris), jamais le même deux nuits de suite.</td></tr>
+      <tr><td>🧙‍♀️ Sorcière</td><td>Une potion de vie (sauve la victime des loups) et une potion de mort, une fois chacune dans la partie.</td></tr>
+      <tr><td>🏹 Chasseur</td><td>Quand il meurt, il emporte un joueur de son choix.</td></tr>
+      <tr><td>💘 Cupidon</td><td>La première nuit, il unit deux amoureux. Si l'un meurt, l'autre meurt de chagrin.</td></tr>
+      <tr><td>👧 Petite Fille</td><td>Espionne la meute la nuit : elle voit qui est visé, pas qui vise. Mais les loups peuvent la repérer.</td></tr>
+      <tr><td>👴 Ancien</td><td>Résiste à la première attaque des loups. Si le village le tue, tout le village perd ses pouvoirs.</td></tr>
+      <tr><td>🤪 Idiot du Village</td><td>Éliminé au vote, il est épargné et dévoilé, mais ne vote plus.</td></tr>
+      <tr><td>🐦‍⬛ Corbeau</td><td>Chaque nuit, désigne un joueur : il aura 2 voix de plus contre lui au vote du lendemain.</td></tr>
+      <tr><td>🦊 Renard</td><td>Chaque nuit, flaire un joueur et ses deux voisins : apprend s'il y a un loup parmi eux. Sinon, il perd son flair.</td></tr>
+      <tr><td>🧒 Enfant Sauvage</td><td>La première nuit, choisit un modèle. Si son modèle meurt, il devient loup.</td></tr>
+      <tr><td>🐻 Montreur d'Ours</td><td>Chaque matin, l'ours grogne si un loup est assis à côté du montreur.</td></tr>
+      <tr><td>⚔️ Chevalier à l'Épée Rouillée</td><td>S'il est dévoré, le premier loup à sa gauche meurt la nuit suivante.</td></tr>
+      <tr><td>🐐 Bouc Émissaire</td><td>En cas d'égalité au vote, c'est lui qui part.</td></tr>
+      <tr><td>👼 Ange</td><td>Gagne seul s'il meurt au premier tour (première nuit ou premier vote).</td></tr>
+      <tr><td>🐕 Chien-Loup</td><td>Choisit son camp en découvrant sa carte : chien fidèle du village ou loup.</td></tr>
+      <tr><td>👭 Sœurs / 👬 Frères</td><td>Deux sœurs, trois frères : ils se connaissent entre eux.</td></tr>
+      <tr><td>🎖️ Capitaine</td><td>Élu le premier jour (option). Sa voix compte double ; en mourant, il nomme son successeur.</td></tr>
     </table>
 
     <h3>Une nuit, un jour</h3>
@@ -280,7 +300,8 @@
       <tr><td>🌙 Mort la nuit</td><td><span class="accent">2 gorgées</span>.</td></tr>
       <tr><td>⚖️ Éliminé au vote</td><td>2 gorgées, <span class="accent">3</span> pour un loup démasqué.</td></tr>
       <tr><td>😬 Innocent éliminé</td><td>Chacun de ses accusateurs boit 1.</td></tr>
-      <tr><td>🏹 Abattu</td><td>2 gorgées.</td></tr>
+      <tr><td>🏹 Abattu par le Chasseur</td><td>2 gorgées.</td></tr>
+      <tr><td>💔 Mort de chagrin</td><td>2 gorgées.</td></tr>
       <tr><td>Fin de partie</td><td>Tout le camp perdant boit 2 gorgées.</td></tr>
     </table>
 
@@ -343,43 +364,97 @@ document.getElementById('quitter-table').addEventListener('click', () => {
 });
 
 // =====================================================================
-// LES RÔLES (mêmes identifiants que loupgarou.py côté serveur)
+// LES RÔLES (mêmes identifiants que loupgarou.py côté serveur ; noms officiels.
+// cartomancienne = Voyante, videur = Salvateur, herboriste = Sorcière, braconnier = Chasseur)
 // =====================================================================
+const LOUPS = 'Camp des loups', VILLAGE = 'Camp du village';
 const ROLES = {
-  loup:           { nom: 'Loup-Garou',     icone: '🐺', camp: 'Camp des loups',
+  loup:           { nom: 'Loup-Garou', icone: '🐺', camp: LOUPS,
                     texte: 'Chaque nuit, avec ta meute, choisis un habitant à dévorer. Le jour, fonds-toi dans la foule et accuse les autres.' },
-  villageois:     { nom: 'Villageois',     icone: '🧑‍🌾', camp: 'Camp du village',
+  infect:         { nom: 'Infect Père des Loups', icone: '🦠', camp: LOUPS,
+                    texte: 'Tu chasses avec la meute. Une fois dans la partie, tu peux infecter la victime au lieu de la tuer : elle devient loup en secret.' },
+  loup_blanc:     { nom: 'Loup Blanc', icone: '🤍', camp: 'Seul contre tous',
+                    texte: 'La meute te croit des siens. Tu chasses avec elle, mais tu gagnes seul : une nuit sur deux, tu peux dévorer un loup.' },
+  villageois:     { nom: 'Simple Villageois', icone: '🧑‍🌾', camp: VILLAGE,
                     texte: 'Aucun pouvoir, sauf ta voix : démasque les loups au vote du jour. La nuit, désigne ton suspect, ton flair compte à la fin.' },
-  cartomancienne: { nom: 'Cartomancienne', icone: '🔮', camp: 'Camp du village',
-                    texte: 'Chaque nuit, tire les cartes d’un joueur : tu découvres son rôle. À toi de guider le village sans te faire repérer.' },
-  videur:         { nom: 'Videur',         icone: '🛡️', camp: 'Camp du village',
+  cartomancienne: { nom: 'Voyante', icone: '🔮', camp: VILLAGE,
+                    texte: 'Chaque nuit, découvre la carte d’un joueur. À toi de guider le village sans te faire repérer.' },
+  videur:         { nom: 'Salvateur', icone: '🛡️', camp: VILLAGE,
                     texte: 'Chaque nuit, protège un joueur des loups (toi compris). Jamais le même deux nuits de suite.' },
-  herboriste:     { nom: 'Herboriste',     icone: '🌿', camp: 'Camp du village',
-                    texte: 'Une potion de soin pour sauver la victime des loups, une potion de poison pour éliminer qui tu veux. Une fois chacune.' },
-  braconnier:     { nom: 'Braconnier',     icone: '🏹', camp: 'Camp du village',
+  herboriste:     { nom: 'Sorcière', icone: '🧙‍♀️', camp: VILLAGE,
+                    texte: 'Une potion de vie pour sauver la victime des loups, une potion de mort pour éliminer qui tu veux. Une fois chacune.' },
+  braconnier:     { nom: 'Chasseur', icone: '🏹', camp: VILLAGE,
                     texte: 'Si tu meurs, de nuit comme de jour, tu emportes un joueur de ton choix avec toi.' },
+  cupidon:        { nom: 'Cupidon', icone: '💘', camp: VILLAGE,
+                    texte: 'La première nuit, unis deux amoureux (toi compris si tu veux). Si l’un meurt, l’autre meurt de chagrin.' },
+  petite_fille:   { nom: 'Petite Fille', icone: '👧', camp: VILLAGE,
+                    texte: 'La nuit, tu entrouvres les yeux : tu vois qui la meute vise, pas qui vise. Attention, les loups peuvent te repérer.' },
+  ancien:         { nom: 'Ancien', icone: '👴', camp: VILLAGE,
+                    texte: 'Tu résistes à la première attaque des loups. Mais si le village te tue, tout le village perd ses pouvoirs.' },
+  idiot:          { nom: 'Idiot du Village', icone: '🤪', camp: VILLAGE,
+                    texte: 'Si le village t’élimine au vote, il t’épargne en découvrant ta carte. Tu restes en vie, mais tu ne votes plus.' },
+  corbeau:        { nom: 'Corbeau', icone: '🐦‍⬛', camp: VILLAGE,
+                    texte: 'Chaque nuit, désigne un joueur : il aura 2 voix de plus contre lui au vote du lendemain.' },
+  renard:         { nom: 'Renard', icone: '🦊', camp: VILLAGE,
+                    texte: 'Chaque nuit, flaire un joueur et ses deux voisins : tu sais s’il y a un loup parmi eux. Si non, tu perds ton flair.' },
+  enfant_sauvage: { nom: 'Enfant Sauvage', icone: '🧒', camp: VILLAGE,
+                    texte: 'La première nuit, choisis un modèle. Tant qu’il vit, tu es du village ; s’il meurt, tu deviens loup.' },
+  montreur:       { nom: 'Montreur d’Ours', icone: '🐻', camp: VILLAGE,
+                    texte: 'Chaque matin, ton ours grogne si un loup est assis juste à côté de toi.' },
+  chevalier:      { nom: 'Chevalier à l’Épée Rouillée', icone: '⚔️', camp: VILLAGE,
+                    texte: 'Si les loups te dévorent, ton épée rouillée infecte le premier loup à ta gauche : il meurt la nuit suivante.' },
+  bouc:           { nom: 'Bouc Émissaire', icone: '🐐', camp: VILLAGE,
+                    texte: 'En cas d’égalité au vote, c’est toi qui pars. Le village a toujours besoin d’un coupable.' },
+  ange:           { nom: 'Ange', icone: '👼', camp: 'Seul contre tous',
+                    texte: 'Fais-toi tuer au premier tour (première nuit ou premier vote) et tu gagnes seul. Après, tu deviens Simple Villageois.' },
+  chien_loup:     { nom: 'Chien-Loup', icone: '🐕', camp: 'Village ou loups : à toi de choisir',
+                    texte: 'En découvrant ta carte, choisis : chien fidèle du village, ou loup avec la meute. Personne ne saura ton choix.' },
+  soeur:          { nom: 'Sœur', icone: '👭', camp: VILLAGE,
+                    texte: 'Vous êtes deux sœurs et vous vous connaissez : une alliée sûre dans le village.' },
+  frere:          { nom: 'Frère', icone: '👬', camp: VILLAGE,
+                    texte: 'Vous êtes trois frères et vous vous connaissez : des alliés sûrs dans le village.' },
 };
-const SPECIAUX = ['cartomancienne', 'videur', 'herboriste', 'braconnier'];
-const SPECIAUX_DES = { cartomancienne: 4, videur: 6, herboriste: 7, braconnier: 8 };
-const SEUILS_LOUPS = [6, 10, 13];
-const CAUSES = { devore: 'dévoré par les loups', empoisonne: 'empoisonné', abattu: 'abattu par le Braconnier', elimine: 'éliminé par le village' };
+const SPECIAUX = ['cartomancienne', 'videur', 'herboriste', 'braconnier', 'cupidon', 'petite_fille', 'ancien',
+  'idiot', 'corbeau', 'renard', 'enfant_sauvage', 'montreur', 'chevalier', 'bouc', 'ange',
+  'chien_loup', 'soeur', 'frere', 'infect', 'loup_blanc'];
+const SPECIAUX_DES = { cartomancienne: 4, videur: 6, herboriste: 7, braconnier: 8, cupidon: 9, petite_fille: 10, ancien: 11,
+  infect: 12, idiot: 13, corbeau: 14, renard: 15, enfant_sauvage: 16, loup_blanc: 17, montreur: 18, chevalier: 19, bouc: 20 };
+const LOUPS_SPECIAUX = ['infect', 'loup_blanc'];
+const ROLES_LOUPS = ['loup', 'infect', 'loup_blanc'];
+const GROUPES = { soeur: 2, frere: 3 };
+const SEUILS_LOUPS = [6, 10, 13, 16];
+const CAPITAINE_DES = 9;
+const CAUSES = { devore: 'dévoré par les loups', empoisonne: 'empoisonné par la Sorcière', abattu: 'abattu par le Chasseur',
+  elimine: 'éliminé par le village', chagrin: 'mort de chagrin', rouille: 'tué par l’épée rouillée', bouc: 'sacrifié (Bouc Émissaire)' };
+const VAINQUEURS = { village: '🏡 Le village gagne', loups: '🐺 Les loups gagnent', loup_blanc: '🤍 Le Loup Blanc gagne seul',
+  amoureux: '💘 Les amoureux gagnent', ange: '👼 L’Ange gagne', personne: '🕯️ Plus personne' };
 function nomRole(r) { return ROLES[r] ? ROLES[r].nom : '?'; }
 function iconeRole(r) { return ROLES[r] ? ROLES[r].icone : '❔'; }
+function estRoleLoup(r) { return ROLES_LOUPS.includes(r); }
+function nomRoleMort(m) { return nomRole(m.role) + (m.converti && !estRoleLoup(m.role) ? ' (devenu loup)' : ''); }
 
 // Même calcul que lg_composition côté serveur (aperçu de la salle d'attente).
 function loupsMax(n) { return Math.max(1, Math.floor((n - 1) / 2)); }
 function composition(n, loups, speciaux) {
   let nb = loups === null ? 1 + SEUILS_LOUPS.filter(s => n > s).length : loups;
   nb = Math.max(1, Math.min(nb, loupsMax(n)));
-  let choisis = speciaux === null ? SPECIAUX.filter(r => n >= SPECIAUX_DES[r]) : SPECIAUX.filter(r => speciaux.includes(r));
-  choisis = choisis.slice(0, Math.max(0, n - nb));
-  const c = { loup: nb };
-  choisis.forEach(r => { c[r] = 1; });
-  const vill = n - nb - choisis.length;
+  const choisis = speciaux === null ? SPECIAUX.filter(r => n >= (SPECIAUX_DES[r] || 99)) : SPECIAUX.filter(r => speciaux.includes(r));
+  const loupsSp = [];
+  choisis.forEach(r => { if (LOUPS_SPECIAUX.includes(r) && loupsSp.length < nb && !(r === 'loup_blanc' && nb < 2)) loupsSp.push(r); });
+  const c = {};
+  if (nb - loupsSp.length > 0) c.loup = nb - loupsSp.length;
+  loupsSp.forEach(r => { c[r] = 1; });
+  let pris = 0;
+  choisis.forEach(r => {
+    if (LOUPS_SPECIAUX.includes(r)) return;
+    const k = GROUPES[r] || 1;
+    if (pris + k <= n - nb) { c[r] = k; pris += k; }
+  });
+  const vill = n - nb - pris;
   if (vill > 0) c.villageois = vill;
   return c;
 }
-const PLURIELS = { loup: 'Loups-Garous', villageois: 'Villageois' };
+const PLURIELS = { loup: 'Loups-Garous', villageois: 'Simples Villageois', soeur: 'Sœurs', frere: 'Frères' };
 function texteComposition(c) {
   return Object.entries(c).map(([r, k]) => iconeRole(r) + ' ' + (k > 1 ? k + ' ' + (PLURIELS[r] || nomRole(r) + 's') : nomRole(r))).join(' · ');
 }
@@ -620,7 +695,7 @@ function conter(texte) {
 // =====================================================================
 // SIÈGES : bougie, étiquette, icône, tabouret, halo, pierre tombale
 // =====================================================================
-const COULEURS = [0x4a7ec2, 0xc25a4a, 0x5aa86a, 0xb58ac2, 0xc2a44a, 0x4ab0b5, 0xd9823a, 0xd46a9e, 0x8a9a4a, 0x6a6ad4, 0xc27a9a, 0x4ac28a, 0xb0b0b0, 0xd4b46a, 0x7a4ac2];
+const COULEURS = [0x4a7ec2, 0xc25a4a, 0x5aa86a, 0xb58ac2, 0xc2a44a, 0x4ab0b5, 0xd9823a, 0xd46a9e, 0x8a9a4a, 0x6a6ad4, 0xc27a9a, 0x4ac28a, 0xb0b0b0, 0xd4b46a, 0x7a4ac2, 0x3a9ad4, 0xe0a0c0, 0x9ad43a, 0xc26a3a, 0x5ad4c2];
 const sieges = [];
 
 function dirSiege(i, n) {
@@ -628,7 +703,7 @@ function dirSiege(i, n) {
   const angle = ((((i - base) % n) + n) % n) / n * Math.PI * 2;
   return new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
 }
-function echelleSieges(n) { return n > 10 ? 0.7 : n > 7 ? 0.85 : 1; }
+function echelleSieges(n) { return n > 15 ? 0.56 : n > 10 ? 0.7 : n > 7 ? 0.85 : 1; }
 
 function creerSieges(noms) {
   sieges.forEach(s => scene.remove(s.groupe));
@@ -742,8 +817,11 @@ let secret = null;            // ma vue secrète (lg_secret) : rôle, meute, vis
 let roleVisible = false;      // carte de rôle découverte (on la cache par défaut : les voisins regardent)
 let choix = null;             // tuile touchée, pas encore validée
 let cleChoix = '';            // la nuit ou le jour de ce choix
-let choixPoison = null;       // Herboriste
+let choixPoison = null;       // Sorcière
 let choixSoin = false;
+let choix2 = null;            // Cupidon : le second amoureux
+let choixInfecter = null;     // Infect Père des Loups (null = comme envoyé)
+let choixSolo = undefined;    // Loup Blanc (undefined = comme envoyé)
 let enEdition = false;        // je change mon vote du jour
 let clePanneau = '';
 let echeanceLocale = null;
@@ -752,6 +830,7 @@ let finAnimation = 0;
 // Réglage de la partie (salle d'attente et fin de partie).
 let loupsChoisis = null;      // null = automatique
 let speciauxChoisis = null;   // null = automatique selon le nombre de joueurs
+let capitaineChoisi = null;   // null = automatique (dès 9 joueurs)
 
 function prenom(i) { return etatCourant ? etatCourant.joueurs[i] : ''; }
 function nomDe(i) { return i === MOI ? 'toi' : prenom(i); }
@@ -759,6 +838,8 @@ function couleurCss(i) { return '#' + COULEURS[i % COULEURS.length].toString(16)
 function vivantsDe(etat) { return etat.joueurs.map((_, i) => i).filter(i => etat.vivants[i]); }
 function moiVivant() { return etatCourant && MOI < etatCourant.joueurs.length && etatCourant.vivants[MOI]; }
 function monRole() { return secret && secret.index === MOI ? secret.role : null; }
+// Je chasse avec la meute (loup de naissance, infecté, Enfant Sauvage orphelin, Chien-Loup loup).
+function moiLoup() { return !!(secret && secret.index === MOI && secret.vivant && secret.loups && secret.loups.includes(MOI)); }
 function fantome() { return secret && secret.index === MOI && Array.isArray(secret.tous_roles); }
 function cleMoment(etat) { return etat.phase + '|' + etat.nuit + '|' + etat.jour; }
 
@@ -793,8 +874,28 @@ function clientRecevoir(msg) {
       break;
     case 'lg_vision':
       quandLibre(() => {
-        annoncer('🔮 ' + prenom(msg.cible), 'est ' + (msg.role === 'loup' ? 'un Loup-Garou !' : nomRole(msg.role)), msg.role === 'loup' ? '#e0413a' : '#c8b8ff', 2.6, { vibrer: 60 });
+        annoncer('🔮 ' + prenom(msg.cible), 'est ' + (estRoleLoup(msg.role) ? nomRole(msg.role) + ' 🐺' : nomRole(msg.role)), estRoleLoup(msg.role) ? '#e0413a' : '#c8b8ff', 2.6, { vibrer: 60 });
       });
+      break;
+    case 'lg_renard':
+      quandLibre(() => {
+        annoncer('🦊 ' + msg.groupe.map(prenom).join(', '), msg.loup ? 'Il y a au moins un loup !' : 'Pas de loup… tu perds ton flair', msg.loup ? '#e0413a' : '#ffd98a', 2.8, { vibrer: 60 });
+      });
+      break;
+    case 'lg_amoureux':
+      quandLibre(() => {
+        const moiDedans = msg.amoureux.includes(MOI);
+        const autre = msg.amoureux.find(j => j !== MOI);
+        annoncer('💘 ' + (moiDedans ? 'Tu es amoureux' : 'Les amoureux'), moiDedans ? 'de ' + prenom(autre) : msg.amoureux.map(prenom).join(' & '), '#ff8ac0', 2.8, { vibrer: [60, 40, 60] });
+      });
+      break;
+    case 'lg_converti':
+      quandLibre(() => {
+        annoncer('🐺 Tu deviens loup', msg.cause === 'infect' ? 'L’Infect Père des Loups t’a infecté' : 'Ton modèle est mort', '#e0413a', 3.0, { flash: true, vibrer: [100, 60, 160] });
+      });
+      break;
+    case 'lg_petite_fille':
+      quandLibre(() => { annoncer('👧 Repérée !', prenom(msg.joueur) + ' est la Petite Fille', '#e0413a', 2.6, { vibrer: 60 }); });
       break;
     case 'erreur':
       elRappel.textContent = msg.message;
@@ -815,7 +916,7 @@ function appliquerEtat(etat) {
   }
   etatCourant = etat;
   echeanceLocale = etat.delai === null || etat.delai === undefined ? null : Date.now() + etat.delai * 1000;
-  if (cleChoix !== cleMoment(etat)) { choix = null; choixPoison = null; choixSoin = false; enEdition = false; cleChoix = cleMoment(etat); }
+  if (cleChoix !== cleMoment(etat)) { choix = null; choix2 = null; choixInfecter = null; choixSolo = undefined; choixPoison = null; choixSoin = false; enEdition = false; cleChoix = cleMoment(etat); }
   const nouvellePhase = !avant || avant.phase !== etat.phase || avant.nuit !== etat.nuit || avant.jour !== etat.jour;
   const instantane = !avant;
 
@@ -834,7 +935,7 @@ function appliquerEtat(etat) {
   if (etat.phase === 'verdict' && nouvellePhase) {
     animerVotes(etat.annonce, instantane);
     finAnimation = instantane ? 0 : Date.now() + dureeVotes(etat.annonce) * 1000;
-  } else if (nouvellePhase && etat.phase !== 'tir') {
+  } else if (nouvellePhase && etat.phase !== 'tir' && etat.phase !== 'succession') {
     viderJetons();
     finAnimation = 0;
   }
@@ -863,20 +964,24 @@ function annoncerPhase(avant, etat) {
     conter('La nuit tombe sur le hameau. Chacun touche un joueur sur son téléphone.');
   } else if (etat.phase === 'potion') {
     conter('La nuit continue.');
-  } else if (etat.phase === 'aube' && a && avant && avant.phase !== 'tir') {
+  } else if (etat.phase === 'aube' && a && avant && avant.phase !== 'tir' && avant.phase !== 'succession') {
+    const extra = (a.grogne ? ' L’ours grogne !' : '') + (a.corbeau !== null && a.corbeau !== undefined ? ' Le corbeau a désigné ' + prenom(a.corbeau) + '.' : '');
     if (!a.morts.length) {
-      annoncer('☀️ Jour ' + etat.jour, 'Personne n’est mort cette nuit !', '#ffd98a', 2.4);
-      conter('Le jour se lève. Miracle, personne n’est mort cette nuit.');
+      annoncer('☀️ Jour ' + etat.jour, 'Personne n’est mort cette nuit !' + (a.grogne ? ' 🐻 Grrr…' : ''), '#ffd98a', 2.4);
+      conter('Le jour se lève. Miracle, personne n’est mort cette nuit.' + extra);
     } else {
       const moiMort = a.morts.some(m => m.joueur === MOI);
       annoncer(moiMort ? '💀 Tu es mort' : '☀️ Jour ' + etat.jour,
-        a.morts.map(m => prenom(m.joueur) + ' (' + nomRole(m.role) + ')').join(', '), '#e0413a', 2.8,
+        a.morts.map(m => prenom(m.joueur) + ' (' + nomRoleMort(m) + ')').join(', '), '#e0413a', 2.8,
         { flash: true, vibrer: moiMort ? [100, 60, 220] : 80 });
-      conter('Le jour se lève. ' + a.morts.map(m => prenom(m.joueur) + ', ' + nomRole(m.role) + ', ' + CAUSES[m.cause]).join('. ') + '.');
+      conter('Le jour se lève. ' + a.morts.map(m => prenom(m.joueur) + ', ' + nomRoleMort(m) + ', ' + CAUSES[m.cause]).join('. ') + '.' + extra);
     }
   } else if (etat.phase === 'tir') {
-    annoncer('🏹 ' + prenom(etat.tireur), etat.tireur === MOI ? 'À toi de tirer !' : 'Le Braconnier vise…', '#ffb347', 2.2, etat.tireur === MOI ? { vibrer: [80, 40, 80] } : {});
-    conter(prenom(etat.tireur) + ' était le Braconnier. Il emporte quelqu’un avec lui.');
+    annoncer('🏹 ' + prenom(etat.tireur), etat.tireur === MOI ? 'À toi de tirer !' : 'Le Chasseur vise…', '#ffb347', 2.2, etat.tireur === MOI ? { vibrer: [80, 40, 80] } : {});
+    conter(prenom(etat.tireur) + ' était le Chasseur. Il emporte quelqu’un avec lui.');
+  } else if (etat.phase === 'succession') {
+    annoncer('🎖️ ' + prenom(etat.tireur), etat.tireur === MOI ? 'Nomme ton successeur !' : 'Le Capitaine nomme son successeur…', '#ffd98a', 2.2, etat.tireur === MOI ? { vibrer: [80, 40, 80] } : {});
+    conter(prenom(etat.tireur) + ' était le Capitaine. Il nomme son successeur.');
   } else if ((etat.phase === 'aube' || etat.phase === 'verdict') && avant && avant.phase === 'tir' && a && a.tir) {
     const c = a.tir.cible;
     if (c === null) annoncer('🏹 Raté', prenom(a.tir.tireur) + ' n’a pas tiré', '#ffb347', 2.0);
@@ -884,26 +989,48 @@ function annoncerPhase(avant, etat) {
       annoncer(c === MOI ? '💀 Abattu !' : '🏹 ' + prenom(c), nomRole(etatCourant.roles[c]), '#e0413a', 2.6, { flash: true, vibrer: c === MOI ? [100, 60, 220] : 60 });
       conter(prenom(a.tir.tireur) + ' abat ' + prenom(c) + ', ' + nomRole(etatCourant.roles[c]) + '.');
     }
+  } else if ((etat.phase === 'aube' || etat.phase === 'verdict') && avant && avant.phase === 'succession' && a && a.succession) {
+    const c = a.succession.capitaine;
+    if (c !== null) {
+      annoncer('🎖️ ' + (c === MOI ? 'Tu es Capitaine' : prenom(c)), c === MOI ? 'Ta voix compte double' : 'devient Capitaine', '#ffd98a', 2.4, c === MOI ? { vibrer: 80 } : {});
+      conter(prenom(c) + ' devient Capitaine.');
+    }
+  } else if (etat.phase === 'election') {
+    annoncer('🎖️ Élection', 'Choisissez votre Capitaine', '#ffd98a', 2.2);
+    conter('Avant de débattre, élisez votre Capitaine. Sa voix comptera double.');
   } else if (etat.phase === 'debat') {
-    annoncer('⚖️ Le village débat', 'Discutez, puis votez', '#ffb347', 2.0);
-    conter('Débattez à voix haute, puis votez.');
+    if (avant && avant.phase === 'election' && etat.capitaine !== null) {
+      annoncer('🎖️ ' + (etat.capitaine === MOI ? 'Tu es Capitaine' : prenom(etat.capitaine)), etat.capitaine === MOI ? 'Ta voix compte double' : 'est élu Capitaine', '#ffd98a', 2.4);
+      conter(prenom(etat.capitaine) + ' est élu Capitaine. Débattez à voix haute, puis votez.');
+    } else {
+      annoncer('⚖️ Le village débat', 'Discutez, puis votez', '#ffb347', 2.0);
+      conter('Débattez à voix haute, puis votez.');
+    }
   } else if (etat.phase === 'verdict' && a) {
     const duree = dureeVotes(a);
     attendre(duree, () => {
-      if (a.elimine === null) {
+      if (a.idiot !== null && a.idiot !== undefined) {
+        annoncer('🤪 ' + prenom(a.idiot), 'C’est l’Idiot du Village : épargné !', '#ffd98a', 2.8, { vibrer: 80 });
+        conter('Le village voulait éliminer ' + prenom(a.idiot) + '. Mais c’est l’Idiot du Village. Il est épargné, et ne votera plus.');
+      } else if (a.bouc !== null && a.bouc !== undefined) {
+        annoncer('🐐 ' + prenom(a.bouc), 'Égalité : le Bouc Émissaire est sacrifié', '#e0413a', 2.8, { flash: true, vibrer: 80 });
+        conter('Égalité. Le Bouc Émissaire, ' + prenom(a.bouc) + ', est sacrifié.');
+      } else if (a.elimine === null) {
         annoncer(a.egalite ? '⚖️ Égalité' : '⚖️ Personne', 'Personne n’est éliminé', '#ffd98a', 2.2);
         conter(a.egalite ? 'Égalité. Le village n’arrive pas à trancher.' : 'Pas de majorité. Personne n’est éliminé.');
       } else {
         const r = etat.roles[a.elimine];
-        annoncer(a.elimine === MOI ? '💀 Éliminé !' : '⚖️ ' + prenom(a.elimine), (r === 'loup' ? '🐺 C’était un loup !' : iconeRole(r) + ' ' + nomRole(r)), r === 'loup' ? '#9fe0b4' : '#e0413a', 2.8, { flash: true, vibrer: 80 });
-        conter('Le village élimine ' + prenom(a.elimine) + '. C’était ' + (r === 'loup' ? 'un loup-garou !' : nomRole(r) + '.'));
+        const mort = a.morts.find(m => m.joueur === a.elimine);
+        const loup = estRoleLoup(r) || (mort && mort.converti);
+        annoncer(a.elimine === MOI ? '💀 Éliminé !' : '⚖️ ' + prenom(a.elimine), loup ? '🐺 ' + (mort ? nomRoleMort(mort) : nomRole(r)) + ' !' : iconeRole(r) + ' ' + nomRole(r), loup ? '#9fe0b4' : '#e0413a', 2.8, { flash: true, vibrer: 80 });
+        conter('Le village élimine ' + prenom(a.elimine) + '. C’était ' + (mort ? nomRoleMort(mort) : nomRole(r)) + '.');
       }
     });
   } else if (etat.phase === 'fin' && etat.final) {
     const v = etat.final.vainqueur;
     const gagne = etat.final.gagnants.includes(MOI);
-    annoncer(v === 'loups' ? '🐺 Les loups gagnent' : '🏡 Le village gagne', MOI < etat.joueurs.length ? (gagne ? 'Victoire !' : 'Défaite : 2 gorgées') : '', v === 'loups' ? '#e0413a' : '#9fe0b4', 3.2, { flash: true, vibrer: gagne ? [60, 40, 60, 40, 160] : 200 });
-    conter(v === 'loups' ? 'Les loups ont dévoré le village.' : 'Le village est sauvé, il n’y a plus aucun loup.');
+    annoncer(VAINQUEURS[v] || 'Fin de la partie', MOI < etat.joueurs.length ? (gagne ? 'Victoire !' : 'Défaite : 2 gorgées') : '', v === 'village' ? '#9fe0b4' : v === 'amoureux' ? '#ff8ac0' : '#e0413a', 3.2, { flash: true, vibrer: gagne ? [60, 40, 60, 40, 160] : 200 });
+    conter(etat.message || '');
   }
 }
 
@@ -911,33 +1038,52 @@ function majEcran(etat) {
   const comp = texteComposition(etat.composition || {});
   if (etat.phase === 'role') decor.ecrireEcran({ titre: 'Avis du village', lignes: ['Des loups rôdent', 'parmi nous…'], bas: comp });
   else if (etat.phase === 'nuit' || etat.phase === 'potion') decor.ecrireEcran({ titre: 'Nuit ' + etat.nuit, lignes: ['Le village dort.', 'Les loups veillent…'], bas: comp });
-  else if ((etat.phase === 'aube' || etat.phase === 'tir') && etat.annonce) {
+  else if ((etat.phase === 'aube' || etat.phase === 'tir' || etat.phase === 'succession') && etat.annonce) {
     const m = etat.annonce.morts;
-    decor.ecrireEcran({ titre: 'Jour ' + etat.jour, lignes: m.length ? m.map(x => '✝ ' + etat.joueurs[x.joueur] + ' : ' + nomRole(x.role)) : ['Personne n’est mort', 'cette nuit !'], bas: vivantsDe(etat).length + ' habitants en vie' });
-  } else if (etat.phase === 'debat') decor.ecrireEcran({ titre: 'Jour ' + etat.jour, lignes: ['Qui est le loup ?', 'Débattez, puis votez.'], bas: vivantsDe(etat).length + ' habitants en vie' });
+    const lignes = m.length ? m.map(x => '✝ ' + etat.joueurs[x.joueur] + ' : ' + nomRoleMort(x)) : ['Personne n’est mort', 'cette nuit !'];
+    if (etat.annonce.grogne) lignes.push('🐻 L’ours grogne !');
+    decor.ecrireEcran({ titre: 'Jour ' + etat.jour, lignes, bas: vivantsDe(etat).length + ' habitants en vie' });
+  } else if (etat.phase === 'election') decor.ecrireEcran({ titre: 'Jour ' + etat.jour, lignes: ['Élection', 'du Capitaine'], bas: vivantsDe(etat).length + ' habitants en vie' });
+  else if (etat.phase === 'debat') decor.ecrireEcran({ titre: 'Jour ' + etat.jour, lignes: ['Qui est le loup ?', 'Débattez, puis votez.'], bas: vivantsDe(etat).length + ' habitants en vie' });
   else if (etat.phase === 'verdict' && etat.annonce) {
-    const e = etat.annonce.elimine;
-    decor.ecrireEcran({ titre: 'Verdict', lignes: e === null ? ['Personne n’est éliminé'] : [etat.joueurs[e] + ' est éliminé', nomRole(etat.roles[e])], bas: '' });
+    const a = etat.annonce;
+    const e = a.elimine;
+    let lignes = ['Personne n’est éliminé'];
+    if (a.idiot !== null && a.idiot !== undefined) lignes = [etat.joueurs[a.idiot] + ' est épargné', 'Idiot du Village'];
+    else if (a.bouc !== null && a.bouc !== undefined) lignes = [etat.joueurs[a.bouc] + ' est sacrifié', 'Bouc Émissaire'];
+    else if (e !== null) lignes = [etat.joueurs[e] + ' est éliminé', nomRole(etat.roles[e])];
+    decor.ecrireEcran({ titre: 'Verdict', lignes, bas: '' });
   } else if (etat.phase === 'fin' && etat.final) {
-    decor.ecrireEcran({ titre: etat.final.vainqueur === 'loups' ? 'Les loups gagnent' : 'Le village gagne',
+    decor.ecrireEcran({ titre: (VAINQUEURS[etat.final.vainqueur] || 'Fin').replace(/^\S+ /, ''),
       lignes: [etat.final.gagnants.map(j => etat.joueurs[j]).join(', ')], bas: 'Fin de la partie' });
   }
+}
+
+// Ce que je sais d'un vivant : loup de ma meute, amoureux, sœur ou frère, Petite Fille repérée.
+function marqueSecrete(i) {
+  if (!secret || secret.index !== MOI || i === MOI) return null;
+  if (moiLoup() && secret.loups.includes(i)) return '🐺';
+  if (secret.amoureux && secret.amoureux.includes(i)) return '💘';
+  if (secret.famille && secret.famille.includes(i)) return iconeRole(secret.role);
+  if (moiLoup() && secret.petite_fille === i) return '👧';
+  return null;
 }
 
 function majIcones(etat) {
   const n = etat.joueurs.length;
   const fan = fantome() || etat.phase === 'fin';
   const tous = fan ? (secret && secret.tous_roles) || etat.roles : null;
-  const loups = secret && secret.loups ? secret.loups : [];
   sieges.forEach((s, i) => {
     let sym = null;
     if (!etat.vivants[i]) sym = null;                       // la pierre tombale dit tout
     else if (etat.phase === 'role' && etat.prets[i]) sym = '✔️';
-    else if (etat.phase === 'debat' && etat.a_vote[i]) sym = '✔️';
+    else if ((etat.phase === 'debat' || etat.phase === 'election') && etat.a_vote[i]) sym = '✔️';
     else if (tous && tous[i]) sym = iconeRole(tous[i]);
-    else if (monRole() === 'loup' && loups.includes(i) && i !== MOI) sym = '🐺';
+    else if (etat.idiot_revele === i) sym = '🤪';
+    else if (marqueSecrete(i)) sym = marqueSecrete(i);
+    else if (etat.capitaine === i) sym = '🎖️';
     majIcone(s.icone, sym);
-    if (i < n) majEtiquette(s.etiquette, etat.joueurs[i], etat.phase === 'tir' && etat.tireur === i, !etat.vivants[i] || etat.partis[i]);
+    if (i < n) majEtiquette(s.etiquette, (etat.capitaine === i ? '🎖️ ' : '') + etat.joueurs[i], (etat.phase === 'tir' || etat.phase === 'succession') && etat.tireur === i, !etat.vivants[i] || etat.partis[i]);
   });
 }
 
@@ -947,7 +1093,7 @@ function majIcones(etat) {
 function majBandeau(etat) {
   const n = etat.joueurs.length;
   const titres = { role: '🃏 Les rôles', nuit: '🌙 Nuit ' + etat.nuit, potion: '🌙 Nuit ' + etat.nuit, aube: '☀️ Jour ' + etat.jour,
-    tir: '🏹 Le Braconnier', debat: '⚖️ Jour ' + etat.jour, verdict: '⚖️ Verdict', fin: 'Fin de la partie' };
+    tir: '🏹 Le Chasseur', succession: '🎖️ Le Capitaine', election: '🎖️ Élection', debat: '⚖️ Jour ' + etat.jour, verdict: '⚖️ Verdict', fin: 'Fin de la partie' };
   elMessage.textContent = MOI >= n ? 'Tu regardes la partie' : titres[etat.phase] || 'Loup-Garou';
   elRappel.textContent = etat.message || '';
 }
@@ -956,13 +1102,13 @@ function majCompteur() {
   const etat = etatCourant;
   if (!etat || !enPartie || etat.phase === 'fin') { elCompteur.innerHTML = ''; return; }
   const parts = [];
-  if (etat.attente && etat.attente.total && ['role', 'nuit', 'debat'].includes(etat.phase)) {
-    const libelle = { role: 'Prêts', nuit: 'Ont agi', debat: 'Votes' }[etat.phase];
+  if (etat.attente && etat.attente.total && ['role', 'nuit', 'debat', 'election'].includes(etat.phase)) {
+    const libelle = { role: 'Prêts', nuit: 'Ont agi', debat: 'Votes', election: 'Votes' }[etat.phase];
     parts.push(libelle + ' <b>' + etat.attente.fait + ' / ' + etat.attente.total + '</b>');
   }
   if (echeanceLocale) {
     const s = Math.max(0, Math.round((echeanceLocale - Date.now()) / 1000));
-    parts.push('<span class="chrono' + (s <= 10 && ['nuit', 'debat', 'tir', 'potion'].includes(etat.phase) ? ' urgent' : '') + '">⏱ ' + s + ' s</span>');
+    parts.push('<span class="chrono' + (s <= 10 && ['nuit', 'debat', 'election', 'tir', 'succession', 'potion'].includes(etat.phase) ? ' urgent' : '') + '">⏱ ' + s + ' s</span>');
   }
   elCompteur.innerHTML = parts.join(' · ');
 }
@@ -972,7 +1118,6 @@ function majListeJoueurs(etat) {
   elJoueurs.innerHTML = '';
   const fan = fantome() || etat.phase === 'fin';
   const tous = fan ? (secret && secret.tous_roles) || etat.roles : null;
-  const loups = secret && secret.loups ? secret.loups : [];
   etat.joueurs.forEach((nom, i) => {
     const d = document.createElement('div');
     d.className = 'joueur' + (etat.partis[i] ? ' absent' : '') + (!etat.vivants[i] ? ' mort' : '');
@@ -981,14 +1126,15 @@ function majListeJoueurs(etat) {
     p.style.background = couleurCss(i);
     const nm = document.createElement('span');
     nm.className = 'nom';
-    const coche = (etat.phase === 'debat' && etat.a_vote[i]) || (etat.phase === 'role' && etat.prets[i]) ? '✔️ ' : '';
-    nm.textContent = coche + nom + (i === MOI ? ' (toi)' : '');
+    const coche = ((etat.phase === 'debat' || etat.phase === 'election') && etat.a_vote[i]) || (etat.phase === 'role' && etat.prets[i]) ? '✔️ ' : '';
+    nm.textContent = coche + (etat.capitaine === i ? '🎖️ ' : '') + nom + (i === MOI ? ' (toi)' : '');
     const inf = document.createElement('span');
     inf.className = 'info';
     let role = '';
     if (!etat.vivants[i]) role = '💀' + iconeRole(etat.roles[i]);
     else if (tous) role = iconeRole(tous[i]);
-    else if (monRole() === 'loup' && loups.includes(i)) role = '🐺';
+    else if (etat.idiot_revele === i) role = '🤪';
+    else role = marqueSecrete(i) || '';
     inf.textContent = (role ? role + ' · ' : '') + '🍺 ' + etat.gorgees[i];
     inf.title = 'gorgées bues';
     d.append(p, nm, inf);
@@ -1046,8 +1192,10 @@ function rafraichirPanneau(forcer) {
   const s = secret && secret.index === MOI ? secret : null;
   const cle = [etat.phase, etat.nuit, etat.jour, MOI >= etat.joueurs.length, s ? s.role : '', s ? s.vivant : '',
     s ? JSON.stringify(s.action) : '', s ? JSON.stringify(s.vote) : '', s && s.meute ? JSON.stringify(s.meute) : '',
-    s && s.visions ? s.visions.length : '', s ? JSON.stringify(s.potions) + s.victime + s.potion_faite : '', enEdition, roleVisible,
-    etat.tireur, etat.suivants[MOI], etat.vivants.join(), etat.partis.join(), etat.phase === 'fin' ? joueursProchainePartie(etat) : ''].join('|');
+    s && s.visions ? s.visions.length : '', s && s.flairs ? s.flairs.length : '', s ? JSON.stringify(s.potions) + s.victime + s.potion_faite : '',
+    s ? [s.type_nuit, JSON.stringify(s.couple), JSON.stringify(s.espion), s.solo, s.infecter, s.converti, JSON.stringify(s.amoureux), s.modele, s.petite_fille, JSON.stringify(s.loups)].join(',') : '',
+    enEdition, roleVisible, etat.tireur, etat.capitaine, etat.idiot_revele, etat.suivants[MOI], etat.vivants.join(), etat.partis.join(),
+    etat.phase === 'fin' ? joueursProchainePartie(etat) : ''].join('|');
   if (!forcer && cle === clePanneau) { majPanneauLeger(etat); return; }
   const memePhase = clePanneau.split('|').slice(0, 3).join('|') === cle.split('|').slice(0, 3).join('|');
   const defile = elPanneau.scrollTop;
@@ -1057,18 +1205,19 @@ function rafraichirPanneau(forcer) {
   if (etat.phase === 'fin') { panneauFin(etat); return; }
   if (!s) { ouvrirPanneau('Un instant…'); return; }
   if (etat.phase === 'role') { panneauRole(etat, s); return; }
-  if (!s.vivant && etat.phase !== 'tir' && etat.phase !== 'aube' && etat.phase !== 'verdict') { panneauFantome(etat, s); return; }
+  if (!s.vivant && !['tir', 'succession', 'aube', 'verdict'].includes(etat.phase)) { panneauFantome(etat, s); return; }
   if (etat.phase === 'nuit') { panneauNuit(etat, s); return; }
   if (etat.phase === 'potion') { panneauPotion(etat, s); return; }
   if (etat.phase === 'aube' || etat.phase === 'verdict') { panneauAnnonce(etat, s); return; }
-  if (etat.phase === 'tir') { panneauTir(etat, s); return; }
-  if (etat.phase === 'debat') { panneauDebat(etat, s); return; }
+  if (etat.phase === 'tir' || etat.phase === 'succession') { panneauTir(etat, s); return; }
+  if (etat.phase === 'election') { panneauDebat(etat, s, true); return; }
+  if (etat.phase === 'debat') { panneauDebat(etat, s, false); return; }
 }
 function majPanneauLeger(etat) {
   const c = elPanneau.querySelector('.compte');
   if (!c) return;
-  if (etat.phase === 'debat' || etat.phase === 'nuit' || etat.phase === 'role') {
-    c.textContent = etat.attente.fait + ' / ' + etat.attente.total + (etat.phase === 'debat' ? ' ont voté' : etat.phase === 'role' ? ' sont prêts' : ' ont agi');
+  if (['debat', 'election', 'nuit', 'role'].includes(etat.phase)) {
+    c.textContent = etat.attente.fait + ' / ' + etat.attente.total + (etat.phase === 'debat' || etat.phase === 'election' ? ' ont voté' : etat.phase === 'role' ? ' sont prêts' : ' ont agi');
   } else if (etat.phase === 'aube' || etat.phase === 'verdict') {
     const pr = etat.joueurs.map((_, i) => i).filter(i => !etat.partis[i]);
     c.textContent = pr.filter(i => etat.suivants[i]).length + ' / ' + pr.length + ' prêts pour la suite';
@@ -1076,6 +1225,28 @@ function majPanneauLeger(etat) {
 }
 
 // --- Ma carte de rôle (touchée = découverte, retouchée = cachée) ---
+function liensSecrets(s) {
+  const l = [];
+  if (s.loups && s.vivant && s.loups.includes(s.index)) {
+    const autres = s.loups.filter(j => j !== MOI);
+    l.push(autres.length ? '🐺 Ta meute : ' + autres.map(j => prenom(j) + (etatCourant && !etatCourant.vivants[j] ? ' ✝' : '')).join(', ') : '🐺 Tu es le seul loup.');
+  }
+  if (s.converti && !estRoleLoup(s.role)) l.push(s.role === 'chien_loup' ? '🐕 Tu as choisi la meute : tu chasses avec les loups.' : '🐺 Tu es devenu loup : tu chasses avec la meute et gagnes avec elle.');
+  if (s.role === 'chien_loup' && !s.converti && s.chien === 'village' && etatCourant && etatCourant.phase !== 'role') l.push('🐕 Chien fidèle : tu restes au village.');
+  if (s.amoureux) {
+    if (s.amoureux.includes(MOI)) l.push('💘 Tu es amoureux de ' + prenom(s.amoureux.find(j => j !== MOI)) + ' : si l’un meurt, l’autre aussi.');
+    else l.push('💘 Tes amoureux : ' + s.amoureux.map(prenom).join(' & '));
+  }
+  if (s.famille) {
+    const autres = s.famille.filter(j => j !== MOI);
+    l.push(iconeRole(s.role) + ' ' + (s.role === 'soeur' ? 'Ta sœur : ' : 'Tes frères : ') + autres.map(prenom).join(', '));
+  }
+  if (s.role === 'enfant_sauvage' && s.modele !== null && s.modele !== undefined && !s.converti) l.push('🧒 Ton modèle : ' + prenom(s.modele));
+  if (s.role === 'infect') l.push(s.infection ? '🦠 Ton infection est disponible.' : '🦠 Infection déjà utilisée.');
+  if (s.role === 'renard' && s.renard_actif === false) l.push('🦊 Tu as perdu ton flair.');
+  if (etatCourant && etatCourant.pouvoirs_perdus && !estRoleLoup(s.role) && !['villageois', 'cupidon', 'ange', 'chien_loup', 'soeur', 'frere', 'enfant_sauvage', 'bouc'].includes(s.role)) l.push('👴 L’Ancien est mort de la main du village : tu as perdu ton pouvoir.');
+  return l;
+}
 function carteRole(s, grande) {
   const r = ROLES[s.role] || ROLES.villageois;
   if (!grande && !roleVisible) {
@@ -1084,11 +1255,12 @@ function carteRole(s, grande) {
     return m;
   }
   if (!grande) {
-    const m = div('mini-role', r.icone + ' ' + r.nom + ' · cacher');
+    const m = div('mini-role', r.icone + ' ' + r.nom + (s.converti && !estRoleLoup(s.role) ? ' 🐺' : '') + ' · cacher');
     m.addEventListener('click', () => { roleVisible = false; rafraichirPanneau(true); });
     return m;
   }
-  const c = div('carte-role' + (s.role === 'loup' ? ' loup' : '') + (roleVisible ? '' : ' cachee'));
+  const loup = estRoleLoup(s.role) || s.converti;
+  const c = div('carte-role' + (loup ? ' loup' : '') + (roleVisible ? '' : ' cachee'));
   const contenu = div('contenu');
   const tete = div('tete');
   tete.append(div('icone', r.icone));
@@ -1096,10 +1268,7 @@ function carteRole(s, grande) {
   t.append(div('nom-role', r.nom), div('camp', r.camp));
   tete.append(t);
   contenu.append(tete, div('texte', r.texte));
-  if (s.role === 'loup' && s.loups) {
-    const autres = s.loups.filter(j => j !== MOI);
-    contenu.append(div('meute', autres.length ? '🐺 Ta meute : ' + autres.map(prenom).join(', ') : '🐺 Tu es le seul loup.'));
-  }
+  liensSecrets(s).forEach(x => contenu.append(div('meute', x)));
   c.append(contenu, div('voile-role', '👆 Touche pour voir ton rôle (cache ton écran)'));
   c.addEventListener('click', () => { roleVisible = !roleVisible; rafraichirPanneau(true); });
   return c;
@@ -1133,15 +1302,23 @@ function grille(etat, joueurs, actuel, surChoix, optsJoueur) {
   });
   return g;
 }
+// Ce que je sais des joueurs, affiché sur les tuiles (meute, amoureux, famille).
+function marquesConnues(i) { const m = marqueSecrete(i); return m ? m : ''; }
 
 function panneauRole(etat, s) {
   const p = ouvrirPanneau('Ton rôle');
   p.appendChild(carteRole(s, true));
   p.appendChild(aide('Dans cette partie : ' + texteComposition(etat.composition)));
   const r = rangee();
-  const b = bouton(etat.prets[MOI] ? 'En attente des autres…' : 'Je suis prêt', 'gros', () => { roleVisible = false; agir({ type: 'lg_pret' }); });
-  b.disabled = !!etat.prets[MOI];
-  r.appendChild(b);
+  if (s.role === 'chien_loup' && !etat.prets[MOI]) {
+    p.appendChild(div('consigne', '🐕 Choisis ton camp (personne ne le saura) :'));
+    r.appendChild(bouton('🏡 Je reste au village', 'gros', () => { roleVisible = false; agir({ type: 'lg_pret', camp: 'village' }); }));
+    r.appendChild(bouton('🐺 Je rejoins les loups', 'sombre', () => { roleVisible = false; agir({ type: 'lg_pret', camp: 'loups' }); }));
+  } else {
+    const b = bouton(etat.prets[MOI] ? 'En attente des autres…' : 'Je suis prêt', 'gros', () => { roleVisible = false; agir({ type: 'lg_pret' }); });
+    b.disabled = !!etat.prets[MOI];
+    r.appendChild(b);
+  }
   p.appendChild(r);
   p.appendChild(div('compte'));
   majPanneauLeger(etat);
@@ -1151,7 +1328,8 @@ function panneauNuit(etat, s) {
   const p = ouvrirPanneau('');
   p.appendChild(carteRole(s, false));
   const vivants = vivantsDe(etat);
-  const role = s.role;
+  const genre = s.type_nuit || 'suspect';
+  const dejaFait = s.action !== null && s.action !== undefined;
   const consigne = div('consigne');
   p.appendChild(consigne);
   const valider = (msg, libelle) => {
@@ -1162,27 +1340,72 @@ function panneauNuit(etat, s) {
     r.appendChild(b);
     return { r, b };
   };
-  if (role === 'loup') {
+  const unChoix = (texte, joueurs, libelleNeuf, libelleChange, optsJoueur) => {
+    consigne.innerHTML = texte;
+    if (choix === null && dejaFait) choix = s.action;
+    const v = valider(() => ({ type: 'lg_nuit', cible: choix }), dejaFait ? libelleChange : libelleNeuf);
+    p.appendChild(grille(etat, joueurs, choix, i => { choix = i; v.b.disabled = i === s.action; }, optsJoueur));
+    if (dejaFait) v.b.disabled = true;
+    p.appendChild(v.r);
+  };
+  if (genre === 'meute') {
     consigne.innerHTML = '🐺 <b>Choisis la victime</b> avec ta meute. Vous devez tomber d’accord.';
     const proies = vivants.filter(i => !(s.loups || []).includes(i));
     const marques = {};
     Object.entries(s.meute || {}).forEach(([l, c]) => { (marques[c] = marques[c] || []).push(Number(l) === MOI ? 'toi' : prenom(Number(l))); });
-    if (choix === null && s.action !== null && s.action !== undefined) choix = s.action;
-    const v = valider(() => ({ type: 'lg_nuit', cible: choix }), s.action !== null && s.action !== undefined ? 'Changer pour ce choix' : 'Valider');
-    p.appendChild(grille(etat, proies, choix, i => { choix = i; v.b.disabled = i === s.action; },
-      i => ({ marques: marques[i] ? '🐺 ' + marques[i].join(', ') : '' })));
-    if (s.action !== null && s.action !== undefined) v.b.disabled = choix === s.action;
+    if (choix === null && dejaFait) choix = s.action;
+    if (choixInfecter === null) choixInfecter = !!s.infecter;
+    if (choixSolo === undefined) choixSolo = s.solo === undefined ? null : s.solo;
+    const message = () => {
+      const m = { type: 'lg_nuit', cible: choix };
+      if (s.role === 'infect' && s.infection) m.infecter = choixInfecter;
+      if (s.role === 'loup_blanc' && s.solo_possible) m.solo = choixSolo;
+      return m;
+    };
+    const change = () => choix !== null && (choix !== s.action || (s.role === 'infect' && s.infection && choixInfecter !== !!s.infecter)
+      || (s.role === 'loup_blanc' && s.solo_possible && choixSolo !== s.solo));
+    const v = valider(message, dejaFait ? 'Changer pour ce choix' : 'Valider');
+    p.appendChild(grille(etat, proies, choix, i => { choix = i; v.b.disabled = !change(); },
+      i => ({ marques: [marques[i] ? '🐺 ' + marques[i].join(', ') : '', moiLoup() && s.petite_fille === i ? '👧 Petite Fille' : ''].filter(Boolean).join(' · ') })));
+    if (s.role === 'infect' && s.infection) {
+      const ri = rangee();
+      const bi = bouton(choixInfecter ? '🦠 Infecter (au lieu de tuer) : oui' : '🦠 Infecter (au lieu de tuer) : non', 'sombre petit' + (choixInfecter ? ' choisi' : ''), () => {
+        choixInfecter = !choixInfecter;
+        bi.textContent = choixInfecter ? '🦠 Infecter (au lieu de tuer) : oui' : '🦠 Infecter (au lieu de tuer) : non';
+        bi.classList.toggle('choisi', choixInfecter);
+        v.b.disabled = !change();
+      });
+      ri.appendChild(bi);
+      p.appendChild(ri);
+      p.appendChild(aide('Une seule fois dans la partie : la victime rejoint la meute au lieu de mourir.'));
+    }
+    if (s.role === 'loup_blanc' && s.solo_possible) {
+      p.appendChild(div('consigne'));
+      p.lastChild.innerHTML = '🤍 <b>Loup Blanc</b> : dévorer aussi un loup cette nuit ? (facultatif, retouche pour annuler)';
+      const autresLoups = (s.loups || []).filter(j => j !== MOI && etat.vivants[j]);
+      const g2 = div('choix-joueurs');
+      autresLoups.forEach(j => {
+        g2.appendChild(tuileJoueur(etat, j, { choisi: choixSolo === j, marques: '🐺', clic: () => {
+          choixSolo = choixSolo === j ? null : j;
+          g2.querySelectorAll('.tuile').forEach(t => t.classList.toggle('choisi', t.dataset.joueur === String(choixSolo)));
+          v.b.disabled = !change();
+        } }));
+      });
+      p.appendChild(g2);
+    }
+    v.b.disabled = !change();
     p.appendChild(v.r);
     const choixMeute = new Set(Object.values(s.meute || {}));
     const nbLoups = (s.loups || []).filter(j => etat.vivants[j] && !etat.partis[j]).length;
     p.appendChild(aide(Object.keys(s.meute || {}).length >= nbLoups && choixMeute.size === 1 ? '✔️ La meute est d’accord. On attend que la nuit passe…'
       : 'Pas d’accord à la fin de la nuit : le choix le plus suivi l’emporte (égalité : le sort).'));
-  } else if (role === 'cartomancienne' && s.action === null) {
-    consigne.innerHTML = '🔮 <b>Tire les cartes</b> d’un joueur : tu découvriras son rôle.';
-    const v = valider(() => ({ type: 'lg_nuit', cible: choix }), 'Révéler son rôle');
-    p.appendChild(grille(etat, vivants.filter(i => i !== MOI), choix, i => { choix = i; v.b.disabled = false; }));
+  } else if ((genre === 'vision' || genre === 'renard') && !dejaFait) {
+    if (genre === 'vision') consigne.innerHTML = '🔮 <b>Sonde un joueur</b> : tu découvriras sa carte.';
+    else consigne.innerHTML = '🦊 <b>Flaire un joueur</b> : tu sauras s’il y a un loup parmi lui et ses deux voisins.';
+    const v = valider(() => ({ type: 'lg_nuit', cible: choix }), genre === 'vision' ? 'Révéler sa carte' : 'Flairer');
+    p.appendChild(grille(etat, vivants.filter(i => i !== MOI), choix, i => { choix = i; v.b.disabled = false; }, i => ({ marques: marquesConnues(i) })));
     p.appendChild(v.r);
-  } else if (role === 'cartomancienne') {
+  } else if (genre === 'vision') {
     const vis = (s.visions || []).filter(x => x.nuit === etat.nuit)[0];
     if (vis) {
       const d = div('vision');
@@ -1193,27 +1416,72 @@ function panneauNuit(etat, s) {
       p.appendChild(d);
     }
     p.appendChild(aide('Les cartes ont parlé. Attends que la nuit passe…'));
-  } else if (role === 'videur') {
-    consigne.innerHTML = '🛡️ <b>Protège un joueur</b> des loups cette nuit (toi compris).';
-    if (choix === null && s.action !== null && s.action !== undefined) choix = s.action;
-    const v = valider(() => ({ type: 'lg_nuit', cible: choix }), s.action !== null && s.action !== undefined ? 'Changer de protégé' : 'Protéger');
-    p.appendChild(grille(etat, vivants, choix, i => { choix = i; v.b.disabled = i === s.action; },
-      i => (i === s.dernier_protege ? { interdit: true, marques: 'déjà protégé hier' } : {})));
-    if (s.action !== null && s.action !== undefined) v.b.disabled = true;
-    p.appendChild(v.r);
+  } else if (genre === 'renard') {
+    const f = (s.flairs || []).filter(x => x.nuit === etat.nuit)[0];
+    if (f) {
+      const d = div('vision');
+      d.innerHTML = '🦊 <b></b> : <b></b>';
+      const bs = d.querySelectorAll('b');
+      bs[0].textContent = f.groupe.map(prenom).join(', ');
+      bs[1].textContent = f.loup ? 'il y a au moins un loup !' : 'pas de loup (tu perds ton flair)';
+      p.appendChild(d);
+    }
+    p.appendChild(aide('Ton flair a parlé. Attends que la nuit passe…'));
+  } else if (genre === 'protection') {
+    unChoix('🛡️ <b>Protège un joueur</b> des loups cette nuit (toi compris).', vivants, 'Protéger', 'Changer de protégé',
+      i => (i === s.dernier_protege ? { interdit: true, marques: 'déjà protégé hier' } : { marques: marquesConnues(i) }));
+  } else if (genre === 'corbeau') {
+    unChoix('🐦‍⬛ <b>Désigne un joueur</b> : il aura 2 voix de plus contre lui au vote de demain.', vivants.filter(i => i !== MOI),
+      'Le désigner', 'Changer', i => ({ marques: marquesConnues(i) }));
+  } else if (genre === 'modele') {
+    unChoix('🧒 <b>Choisis ton modèle</b>. S’il meurt, tu deviendras loup.', vivants.filter(i => i !== MOI),
+      'C’est mon modèle', 'Changer de modèle', i => ({ marques: marquesConnues(i) }));
+  } else if (genre === 'cupidon') {
+    consigne.innerHTML = '💘 <b>Unis deux amoureux</b> (toi compris si tu veux) : touche deux joueurs.';
+    if (choix === null && s.couple) { choix = s.couple[0]; choix2 = s.couple[1]; }
+    const r = rangee();
+    r.style.marginTop = '6px';
+    const b = bouton(s.couple ? 'Changer de couple' : 'Unir ces deux-là', 'gros', () => agir({ type: 'lg_nuit', cible: choix, cible2: choix2 }));
+    const maj = () => {
+      b.disabled = choix === null || choix2 === null || (s.couple && JSON.stringify([choix, choix2].sort((x, y) => x - y)) === JSON.stringify(s.couple));
+    };
+    const g = div('choix-joueurs');
+    vivants.forEach(i => {
+      g.appendChild(tuileJoueur(etat, i, { choisi: i === choix || i === choix2, clic: () => {
+        if (i === choix) choix = choix2, choix2 = null;
+        else if (i === choix2) choix2 = null;
+        else if (choix === null) choix = i;
+        else if (choix2 === null) choix2 = i;
+        else { choix = choix2; choix2 = i; }
+        g.querySelectorAll('.tuile').forEach(t => t.classList.toggle('choisi', t.dataset.joueur === String(choix) || t.dataset.joueur === String(choix2)));
+        maj();
+      } }));
+    });
+    p.appendChild(g);
+    maj();
+    r.appendChild(b);
+    p.appendChild(r);
+    if (s.couple) {
+      const f = div('fait');
+      f.innerHTML = '✔️ Amoureux : <b></b>';
+      f.querySelector('b').textContent = s.couple.map(prenom).join(' & ');
+      p.appendChild(f);
+    }
   } else {
-    consigne.innerHTML = '👀 <b>Qui soupçonnes-tu ?</b> Ton flair est compté à la fin de la partie.';
-    if (choix === null && s.action !== null && s.action !== undefined) choix = s.action;
-    const v = valider(() => ({ type: 'lg_nuit', cible: choix }), s.action !== null && s.action !== undefined ? 'Changer de suspect' : 'Je le soupçonne');
-    p.appendChild(grille(etat, vivants.filter(i => i !== MOI), choix, i => { choix = i; v.b.disabled = i === s.action; }));
-    if (s.action !== null && s.action !== undefined) v.b.disabled = true;
-    p.appendChild(v.r);
+    const pf = s.espion;
+    unChoix('👀 <b>Qui soupçonnes-tu ?</b> Ton flair est compté à la fin de la partie.' + (pf ? '<br>👧 Tu entrouvres les yeux : tu vois les cibles de la meute.' : ''),
+      vivants.filter(i => i !== MOI), 'Je le soupçonne', 'Changer de suspect',
+      i => ({ marques: [pf && pf[String(i)] ? '🐺×' + pf[String(i)] + ' visé' : '', marquesConnues(i)].filter(Boolean).join(' · ') }));
   }
-  if (role === 'cartomancienne' && (s.visions || []).length) {
+  if (genre === 'vision' && (s.visions || []).length) {
     const anciennes = s.visions.filter(x => x.nuit !== etat.nuit);
     if (anciennes.length) p.appendChild(div('visions', 'Tes visions : ' + anciennes.map(x => prenom(x.cible) + ' ' + iconeRole(x.role)).join(' · ')));
   }
-  if (s.action !== null && s.action !== undefined && role !== 'cartomancienne') {
+  if (s.role === 'renard' && (s.flairs || []).length) {
+    const anciens = s.flairs.filter(x => x.nuit !== etat.nuit);
+    if (anciens.length) p.appendChild(div('visions', 'Tes flairs : ' + anciens.map(x => x.groupe.map(prenom).join('/') + (x.loup ? ' 🐺' : ' ✗')).join(' · ')));
+  }
+  if (dejaFait && !['vision', 'renard', 'cupidon'].includes(genre)) {
     const f = div('fait');
     f.innerHTML = '✔️ C’est noté : <b></b>';
     f.querySelector('b').textContent = prenom(s.action);
@@ -1226,33 +1494,31 @@ function panneauNuit(etat, s) {
 function panneauPotion(etat, s) {
   const p = ouvrirPanneau('');
   p.appendChild(carteRole(s, false));
-  if (s.role !== 'herboriste' || !s.vivant || s.potion_faite) {
+  if (s.role !== 'herboriste' || !s.vivant || s.potion_faite || etat.pouvoirs_perdus) {
     p.appendChild(div('consigne', '🌙 La nuit continue… Garde les yeux sur ton écran.'));
     return;
   }
   const pot = s.potions || {};
   const c = div('consigne');
-  c.innerHTML = s.victime === null ? '🌿 Cette nuit, <b>personne</b> n’a été attaqué.' : '🌿 Les loups ont attaqué <b></b>.';
+  c.innerHTML = s.victime === null ? '🧙‍♀️ Cette nuit, <b>personne</b> n’a été attaqué.' : '🧙‍♀️ Les loups ont attaqué <b></b>.';
   if (s.victime !== null) c.querySelector('b').textContent = s.victime === MOI ? 'toi' : prenom(s.victime);
   p.appendChild(c);
   const r1 = rangee();
-  let bSoin = null;
   if (s.victime !== null && pot.soin) {
-    bSoin = bouton(choixSoin ? '✔️ Je le soigne' : '💚 Soigner', 'sombre' + (choixSoin ? ' choisi' : ''), () => { choixSoin = !choixSoin; rafraichirPanneau(true); });
-    r1.appendChild(bSoin);
+    r1.appendChild(bouton(choixSoin ? '✔️ Je le sauve' : '💚 Potion de vie', 'sombre' + (choixSoin ? ' choisi' : ''), () => { choixSoin = !choixSoin; rafraichirPanneau(true); }));
   } else if (!pot.soin) {
-    p.appendChild(aide('Ta potion de soin est déjà utilisée.'));
+    p.appendChild(aide('Ta potion de vie est déjà utilisée.'));
   }
   p.appendChild(r1);
   if (pot.poison) {
-    p.appendChild(div('consigne', '☠️ Empoisonner quelqu’un ? (touche un joueur, ou laisse vide)'));
+    p.appendChild(div('consigne', '☠️ Potion de mort sur quelqu’un ? (touche un joueur, ou laisse vide)'));
     const g = grille(etat, vivantsDe(etat).filter(i => i !== MOI), choixPoison, i => {
       choixPoison = choixPoison === i ? null : i;
       g.querySelectorAll('.tuile').forEach(t => t.classList.toggle('choisi', t.dataset.joueur === String(choixPoison)));
-    });
+    }, i => ({ marques: marquesConnues(i) }));
     p.appendChild(g);
   } else {
-    p.appendChild(aide('Ta potion de poison est déjà utilisée.'));
+    p.appendChild(aide('Ta potion de mort est déjà utilisée.'));
   }
   const r = rangee();
   r.style.marginTop = '6px';
@@ -1268,8 +1534,8 @@ function lignesMorts(etat, morts) {
     l.append(div('ic', iconeRole(m.role)));
     const t = div('');
     const nom = document.createElement('div');
-    nom.textContent = (m.joueur === MOI ? 'Toi' : prenom(m.joueur)) + ' : ' + nomRole(m.role);
-    t.append(nom, div('cause', CAUSES[m.cause] + (m.boit ? ' · 🍺 ' + m.boit : '')));
+    nom.textContent = (m.joueur === MOI ? 'Toi' : prenom(m.joueur)) + ' : ' + nomRoleMort(m);
+    t.append(nom, div('cause', (CAUSES[m.cause] || '') + (m.boit ? ' · 🍺 ' + m.boit : '')));
     l.append(t);
     d.appendChild(l);
   });
@@ -1290,10 +1556,21 @@ function panneauAnnonce(etat, s) {
     const morts = a.morts.filter(m => m.cause !== 'abattu');
     p.appendChild(div('grand', morts.length ? '☀️ Cette nuit…' : '☀️ Personne n’est mort !'));
     p.appendChild(lignesMorts(etat, morts));
+    if (a.grogne) p.appendChild(div('fait', '🐻 L’ours du montreur grogne : un loup est assis à côté de lui !'));
+    else if (a.grogne === false) p.appendChild(aide('🐻 L’ours du montreur reste calme.'));
+    if (a.corbeau !== null && a.corbeau !== undefined) {
+      const f = div('fait');
+      f.innerHTML = '🐦‍⬛ Le corbeau a désigné <b></b> : 2 voix contre lui au vote.';
+      f.querySelector('b').textContent = prenom(a.corbeau);
+      p.appendChild(f);
+    }
   } else {
-    p.appendChild(div('grand', a.elimine === null ? (a.egalite ? '⚖️ Égalité : personne' : '⚖️ Personne n’est éliminé') : '⚖️ Le village a tranché'));
-    const elim = a.morts.filter(m => m.cause === 'elimine');
-    p.appendChild(lignesMorts(etat, elim));
+    let titre = a.elimine === null ? (a.egalite ? '⚖️ Égalité : personne' : '⚖️ Personne n’est éliminé') : '⚖️ Le village a tranché';
+    if (a.idiot !== null && a.idiot !== undefined) titre = '🤪 L’Idiot du Village est épargné';
+    else if (a.bouc !== null && a.bouc !== undefined) titre = '🐐 Égalité : le Bouc Émissaire part';
+    p.appendChild(div('grand', titre));
+    if (a.idiot !== null && a.idiot !== undefined) p.appendChild(aide(prenom(a.idiot) + ' reste en vie, mais ne votera plus.'));
+    p.appendChild(lignesMorts(etat, a.morts.filter(m => m.cause !== 'abattu')));
     // Qui a voté quoi.
     const t = document.createElement('table');
     t.className = 'bilan';
@@ -1304,18 +1581,20 @@ function panneauAnnonce(etat, s) {
       const tr = document.createElement('tr');
       tr.className = v.joueur === MOI ? 'moi' : '';
       const accuse = a.accusateurs.find(x => x.joueur === v.joueur);
-      [[prenom(v.joueur) + (v.joueur === MOI ? ' (toi)' : '')], [v.cible === null ? 'blanc' : prenom(v.cible)], [accuse ? '🍺 ' + accuse.boit : '', accuse ? 'n ko' : 'n']].forEach(([txt, cl]) => {
+      [[(v.poids > 1 ? '🎖️ ' : '') + prenom(v.joueur) + (v.joueur === MOI ? ' (toi)' : '')], [(v.cible === null ? 'blanc' : prenom(v.cible)) + (v.poids > 1 ? ' ×2' : '')], [accuse ? '🍺 ' + accuse.boit : '', accuse ? 'n ko' : 'n']].forEach(([txt, cl]) => {
         const td = document.createElement('td'); td.textContent = txt; if (cl) td.className = cl; tr.appendChild(td);
       });
       t.appendChild(tr);
     });
     p.appendChild(t);
+    if (a.corbeau !== null && a.corbeau !== undefined) p.appendChild(aide('🐦‍⬛ + 2 voix du corbeau contre ' + prenom(a.corbeau) + '.'));
     if (a.accusateurs.length) p.appendChild(aide('😬 Un innocent : chacun de ses accusateurs boit ' + a.accusateurs[0].boit + '.'));
   }
   if (a.tir) {
     if (a.tir.cible === null) p.appendChild(aide('🏹 ' + prenom(a.tir.tireur) + ' n’a pas tiré.'));
     else p.appendChild(lignesMorts(etat, a.morts.filter(m => m.cause === 'abattu')));
   }
+  if (a.succession && a.succession.capitaine !== null) p.appendChild(aide('🎖️ ' + prenom(a.succession.capitaine) + ' devient Capitaine.'));
   if (!s.vivant) p.appendChild(div('fantome', '👻 Tu es mort : tu vois maintenant tous les rôles. Motus jusqu’à la fin !'));
   const r = rangee();
   const bt = bouton(etat.suivants[MOI] ? 'En attente des autres…' : etat.phase === 'aube' ? 'Au débat ▶' : 'La nuit tombe ▶', '', () => agir({ type: 'lg_suivant' }));
@@ -1328,58 +1607,68 @@ function panneauAnnonce(etat, s) {
 
 function panneauTir(etat, s) {
   const p = ouvrirPanneau('');
+  const tir = etat.phase === 'tir';
   if (etat.tireur !== MOI) {
     if (s.vivant) p.appendChild(carteRole(s, false));
-    p.appendChild(div('grand', '🏹 ' + prenom(etat.tireur) + ' vise…'));
-    p.appendChild(aide('Le Braconnier, en mourant, emporte quelqu’un avec lui.'));
+    p.appendChild(div('grand', (tir ? '🏹 ' + prenom(etat.tireur) + ' vise…' : '🎖️ ' + prenom(etat.tireur) + ' nomme son successeur…')));
+    p.appendChild(aide(tir ? 'Le Chasseur, en mourant, emporte quelqu’un avec lui.' : 'Le Capitaine, en mourant, transmet son grade.'));
     return;
   }
-  p.appendChild(div('grand', '🏹 Tu es mort, Braconnier'));
-  p.appendChild(div('consigne', 'Emporte un joueur avec toi :'));
+  p.appendChild(div('grand', tir ? '🏹 Tu es mort, Chasseur' : '🎖️ Tu es mort, Capitaine'));
+  p.appendChild(div('consigne', tir ? 'Emporte un joueur avec toi :' : 'Nomme ton successeur :'));
   const r = rangee();
   r.style.marginTop = '6px';
-  const b = bouton('Tirer', 'gros', () => agir({ type: 'lg_tir', cible: choix }));
+  const b = bouton(tir ? 'Tirer' : 'Nommer', 'gros', () => agir({ type: 'lg_tir', cible: choix }));
   b.disabled = choix === null;
   p.appendChild(grille(etat, vivantsDe(etat), choix, i => { choix = i; b.disabled = false; }));
   r.appendChild(b);
   p.appendChild(r);
 }
 
-function panneauDebat(etat, s) {
+function panneauDebat(etat, s, election) {
   const p = ouvrirPanneau('');
   p.appendChild(carteRole(s, false));
+  if (!election && etat.idiot_revele === MOI) {
+    p.appendChild(div('consigne', '🤪 Tu es l’Idiot du Village dévoilé : tu débats, mais tu ne votes plus.'));
+    p.appendChild(div('compte'));
+    majPanneauLeger(etat);
+    return;
+  }
   const vote = s.vote;
   if (vote && !enEdition) {
     const f = div('fait');
-    f.innerHTML = vote.cible === null ? '🗳️ Tu votes <b>blanc</b>' : '🗳️ Tu votes contre <b></b>';
-    if (vote.cible !== null) f.querySelector('b').textContent = prenom(vote.cible);
+    f.innerHTML = vote.cible === null ? '🗳️ Tu votes <b>blanc</b>' : (election ? '🎖️ Tu votes pour <b></b>' : '🗳️ Tu votes contre <b></b>');
+    if (vote.cible !== null) f.querySelector('b').textContent = vote.cible === MOI ? 'toi' : prenom(vote.cible);
     p.appendChild(f);
     const r = rangee();
     r.appendChild(bouton('✏️ Changer', 'sombre petit', () => { enEdition = true; choix = vote.cible; rafraichirPanneau(true); }));
     p.appendChild(r);
   } else {
-    p.appendChild(div('consigne', '⚖️ Débattez à voix haute, puis vote contre le joueur à éliminer.'));
+    p.appendChild(div('consigne', election ? '🎖️ Élisez votre Capitaine (toi compris) : sa voix comptera double.' : '⚖️ Débattez à voix haute, puis vote contre le joueur à éliminer.'));
     const r = rangee();
     r.style.marginTop = '6px';
-    const b = bouton('Voter', 'gros', () => agir({ type: 'lg_voter', cible: choix }));
+    const b = bouton(election ? 'Élire' : 'Voter', 'gros', () => agir({ type: 'lg_voter', cible: choix }));
     b.disabled = choix === null;
-    p.appendChild(grille(etat, vivantsDe(etat).filter(i => i !== MOI), choix, i => { choix = i; b.disabled = false; }));
+    const joueurs = election ? vivantsDe(etat) : vivantsDe(etat).filter(i => i !== MOI);
+    p.appendChild(grille(etat, joueurs, choix, i => { choix = i; b.disabled = false; }, i => ({ marques: [marquesConnues(i), etat.corbeau === i ? '🐦‍⬛ +2' : '', etat.idiot_revele === i ? '🤪' : ''].filter(Boolean).join(' · ') })));
     r.appendChild(b);
     r.appendChild(bouton('Vote blanc', 'sombre', () => agir({ type: 'lg_voter', cible: null })));
     if (enEdition) r.appendChild(bouton('Annuler', 'sombre', () => { enEdition = false; rafraichirPanneau(true); }));
     p.appendChild(r);
   }
-  p.appendChild(aide('Le plus désigné est éliminé, sauf égalité. Les votes sont révélés au verdict.'));
+  if (election) p.appendChild(aide('Le plus désigné devient Capitaine (égalité : le sort).'));
+  else p.appendChild(aide('Le plus désigné est éliminé, sauf égalité. Les votes sont révélés au verdict.' + (etat.capitaine !== null && etat.capitaine !== undefined ? ' 🎖️ La voix du Capitaine compte double.' : '')));
   p.appendChild(div('compte'));
   majPanneauLeger(etat);
 }
 
-function listeRoles(etat, roles) {
+function listeRoles(etat, roles, convertis) {
   const d = div('liste-roles');
   etat.joueurs.forEach((nom, i) => {
     const sp = document.createElement('span');
-    sp.className = (roles[i] === 'loup' ? 'loup' : '') + (!etat.vivants[i] ? ' mort' : '');
-    sp.textContent = iconeRole(roles[i]) + ' ' + nom + (i === MOI ? ' (toi)' : '');
+    const loup = estRoleLoup(roles[i]) || (convertis && convertis[i]);
+    sp.className = (loup ? 'loup' : '') + (!etat.vivants[i] ? ' mort' : '');
+    sp.textContent = iconeRole(roles[i]) + (convertis && convertis[i] && !estRoleLoup(roles[i]) ? '🐺' : '') + ' ' + nom + (i === MOI ? ' (toi)' : '');
     d.appendChild(sp);
   });
   return d;
@@ -1388,10 +1677,12 @@ function listeRoles(etat, roles) {
 function panneauFantome(etat, s) {
   const p = ouvrirPanneau('👻 Tu es un fantôme');
   p.appendChild(div('fantome', 'Tu vois tous les rôles, mais tu ne dis plus rien : ni grimace, ni indice !'));
-  if (s.tous_roles) p.appendChild(listeRoles(etat, s.tous_roles));
+  if (s.tous_roles) p.appendChild(listeRoles(etat, s.tous_roles, s.tous_convertis));
+  if (s.amoureux) p.appendChild(aide('💘 Amoureux : ' + s.amoureux.map(prenom).join(' & ')));
   if (etat.phase === 'nuit') p.appendChild(aide('🌙 Les vivants jouent leur nuit…'));
   else if (etat.phase === 'potion') p.appendChild(aide('🌙 La nuit continue…'));
   else if (etat.phase === 'debat') p.appendChild(aide('⚖️ Les vivants débattent et votent.'));
+  else if (etat.phase === 'election') p.appendChild(aide('🎖️ Les vivants élisent leur Capitaine.'));
   p.appendChild(div('compte'));
   majPanneauLeger(etat);
 }
@@ -1399,27 +1690,30 @@ function panneauFantome(etat, s) {
 function panneauFin(etat) {
   const f = etat.final || { vainqueur: 'village', gagnants: [], perdants: [], roles: [], flair: [], meilleur_flair: [] };
   const gagne = f.gagnants.includes(MOI);
-  const p = ouvrirPanneau((f.vainqueur === 'loups' ? '🐺 Les loups gagnent' : '🏡 Le village gagne') + (MOI < etat.joueurs.length ? (gagne ? ' : bravo !' : '') : ''));
+  const p = ouvrirPanneau((VAINQUEURS[f.vainqueur] || 'Fin de la partie') + (MOI < etat.joueurs.length ? (gagne ? ' : bravo !' : '') : ''));
   const t = document.createElement('table');
   t.className = 'bilan';
   const tete = document.createElement('tr');
   ['', 'Rôle', '👀 Flair', '🍺 bues'].forEach(h => { const th = document.createElement('th'); th.textContent = h; tete.appendChild(th); });
   t.appendChild(tete);
   const ordre = etat.joueurs.map((_, i) => i).sort((a, b) => (f.gagnants.includes(b) - f.gagnants.includes(a)) || a - b);
+  const conv = f.convertis || [];
   ordre.forEach(j => {
     const tr = document.createElement('tr');
     tr.className = (j === MOI ? 'moi ' : '') + (f.gagnants.includes(j) ? 'gagnant ' : '') + (!etat.vivants[j] ? 'mort' : '');
-    [[(f.gagnants.includes(j) ? '🏆 ' : '') + (etat.vivants[j] ? '' : '💀 ') + etat.joueurs[j] + (j === MOI ? ' (toi)' : '')],
-     [iconeRole(f.roles[j]) + ' ' + nomRole(f.roles[j])], [String(f.flair[j] || 0), 'n'], [String(etat.gorgees[j]), 'n']].forEach(([txt, cl]) => {
+    const amour = f.amoureux && f.amoureux.includes(j) ? ' 💘' : '';
+    [[(f.gagnants.includes(j) ? '🏆 ' : '') + (etat.vivants[j] ? '' : '💀 ') + etat.joueurs[j] + (j === MOI ? ' (toi)' : '') + amour],
+     [iconeRole(f.roles[j]) + ' ' + nomRole(f.roles[j]) + (conv[j] && !estRoleLoup(f.roles[j]) ? ' 🐺' : '')], [String(f.flair[j] || 0), 'n'], [String(etat.gorgees[j]), 'n']].forEach(([txt, cl]) => {
       const td = document.createElement('td'); td.textContent = txt; if (cl) td.className = cl; tr.appendChild(td);
     });
     t.appendChild(tr);
   });
   p.appendChild(t);
+  if (conv.some(Boolean)) p.appendChild(aide('🐺 à côté d’un rôle : devenu loup en cours de partie.'));
   if (f.meilleur_flair && f.meilleur_flair.length) {
     p.appendChild(aide('👀 Meilleur flair : ' + f.meilleur_flair.map(j => nomDe(j)).join(', ') + ' (' + f.flair[f.meilleur_flair[0]] + ' nuit' + (f.flair[f.meilleur_flair[0]] > 1 ? 's' : '') + ' à soupçonner un loup).'));
   }
-  if (f.perdants.length) p.appendChild(aide('🍺 Le camp perdant boit ' + f.perdants[0].boit + ' gorgées chacun.'));
+  if (f.perdants.length) p.appendChild(aide('🍺 Les perdants boivent ' + f.perdants[0].boit + ' gorgées chacun.'));
   p.appendChild(aide('Une autre ? Ceux qui sont arrivés en cours de partie s’assoient.'));
   const n = joueursProchainePartie(etat);
   p.appendChild(blocReglage(n, () => rafraichirPanneau(true)));
@@ -1448,7 +1742,7 @@ function panneauSpectateur(etat) {
   p.appendChild(r);
 }
 
-// --- Réglage : nombre de loups, rôles spéciaux ---
+// --- Réglage : nombre de loups, rôles spéciaux, Capitaine ---
 function joueursProchainePartie(etat) {
   const absents = (etat.partis || []).filter(Boolean).length;
   return Math.max(0, (joueursSalon.length || etat.joueurs.length) - absents);
@@ -1457,6 +1751,7 @@ function messageDemarrer() {
   const m = { type: 'lg_demarrer' };
   if (loupsChoisis !== null) m.loups = loupsChoisis;
   if (speciauxChoisis !== null) m.speciaux = speciauxChoisis;
+  if (capitaineChoisi !== null) m.capitaine = capitaineChoisi;
   return m;
 }
 function blocReglage(n, redessiner) {
@@ -1464,21 +1759,28 @@ function blocReglage(n, redessiner) {
   const titre = texte => { d.appendChild(div('reglage-titre', texte)); };
   titre('Loups');
   const rl = rangee();
-  [[null, 'Auto'], [1, '1'], [2, '2'], [3, '3'], [4, '4']].forEach(([v, nom]) => {
+  [[null, 'Auto'], [1, '1'], [2, '2'], [3, '3'], [4, '4'], [5, '5'], [6, '6']].forEach(([v, nom]) => {
     const b = bouton(nom, 'sombre petit' + (v === loupsChoisis ? ' choisi' : ''), () => { loupsChoisis = v; redessiner(); });
     if (v !== null && n >= JOUEURS_MIN && v > loupsMax(n)) b.disabled = true;
     rl.appendChild(b);
   });
   d.appendChild(rl);
-  titre('Rôles spéciaux');
-  const g = div('modes');
-  const actifs = speciauxChoisis === null ? SPECIAUX.filter(r => n >= SPECIAUX_DES[r]) : speciauxChoisis;
-  SPECIAUX.forEach(r => {
-    const b = div('mode' + (actifs.includes(r) ? ' choisi' : ''));
+  titre('Capitaine (élu le premier jour, voix double)');
+  const rc = rangee();
+  [[null, 'Auto (dès ' + CAPITAINE_DES + ')'], [true, 'Oui'], [false, 'Non']].forEach(([v, nom]) => {
+    rc.appendChild(bouton(nom, 'sombre petit' + (v === capitaineChoisi ? ' choisi' : ''), () => { capitaineChoisi = v; redessiner(); }));
+  });
+  d.appendChild(rc);
+  titre('Rôles spéciaux (touche pour ajouter ou retirer)');
+  const g = div('modes roles-speciaux');
+  const actifs = speciauxChoisis === null ? SPECIAUX.filter(r => n >= (SPECIAUX_DES[r] || 99)) : speciauxChoisis;
+  const ordre = SPECIAUX.filter(r => LOUPS_SPECIAUX.includes(r)).concat(SPECIAUX.filter(r => !LOUPS_SPECIAUX.includes(r)));
+  ordre.forEach(r => {
+    const b = div('mode' + (actifs.includes(r) ? ' choisi' : '') + (LOUPS_SPECIAUX.includes(r) ? ' loup' : ''));
     b.setAttribute('role', 'button');
     b.textContent = ROLES[r].icone + ' ' + ROLES[r].nom;
     const sm = document.createElement('small');
-    sm.textContent = actifs.includes(r) ? 'dans la partie' : 'absent';
+    sm.textContent = actifs.includes(r) ? 'dans la partie' : (SPECIAUX_DES[r] ? 'auto dès ' + SPECIAUX_DES[r] : 'sur demande');
     b.appendChild(sm);
     b.addEventListener('click', () => {
       const base = speciauxChoisis === null ? actifs.slice() : speciauxChoisis.slice();
@@ -1489,9 +1791,17 @@ function blocReglage(n, redessiner) {
   });
   d.appendChild(g);
   const rr = rangee();
-  rr.appendChild(bouton('Rôles automatiques', 'sombre petit' + (speciauxChoisis === null && loupsChoisis === null ? ' choisi' : ''), () => { speciauxChoisis = null; loupsChoisis = null; redessiner(); }));
+  rr.appendChild(bouton('Rôles automatiques', 'sombre petit' + (speciauxChoisis === null && loupsChoisis === null && capitaineChoisi === null ? ' choisi' : ''), () => { speciauxChoisis = null; loupsChoisis = null; capitaineChoisi = null; redessiner(); }));
   d.appendChild(rr);
-  if (n >= JOUEURS_MIN) d.appendChild(div('compo', 'À ' + n + ' : ' + texteComposition(composition(n, loupsChoisis, speciauxChoisis))));
+  if (n >= JOUEURS_MIN) {
+    const cap = capitaineChoisi === null ? n >= CAPITAINE_DES : capitaineChoisi;
+    d.appendChild(div('compo', 'À ' + n + ' : ' + texteComposition(composition(n, loupsChoisis, speciauxChoisis)) + (cap ? ' · 🎖️ Capitaine' : '')));
+    if (speciauxChoisis !== null) {
+      const c = composition(n, loupsChoisis, speciauxChoisis);
+      const manquants = speciauxChoisis.filter(r => !c[r]);
+      if (manquants.length) d.appendChild(div('alerte', 'Pas la place pour : ' + manquants.map(nomRole).join(', ') + (manquants.includes('loup_blanc') ? ' (le Loup Blanc demande 2 loups)' : '') + '.'));
+    }
+  }
   return d;
 }
 
@@ -1510,7 +1820,7 @@ let joueursSalon = [];
 let enPartie = false;
 let monJeton = null;
 const JOUEURS_MIN = 4;
-const JOUEURS_MAX = 15;
+const JOUEURS_MAX = 20;
 const CLE_SESSION = 'loupgarou3d.session';
 function lireSession() {
   try { return JSON.parse(localStorage.getItem(CLE_SESSION) || 'null'); }
@@ -1787,7 +2097,7 @@ function panneauAttente() {
   const p = ouvrirPanneau('Salle d’attente');
   const invite = document.createElement('p');
   invite.className = 'invitation-soiree';
-  invite.textContent = 'De 4 à 15 joueurs (le plus drôle à partir de 6) : chacun reçoit un rôle secret sur son téléphone, le téléphone fait le conteur. Le QR de la soirée est sur l’accueil.';
+  invite.textContent = 'De 4 à 20 joueurs (le plus drôle à partir de 8) : chacun reçoit un rôle secret sur son téléphone, le téléphone fait le conteur. Le QR de la soirée est sur l’accueil.';
   p.appendChild(invite);
   const liste = div('liste-attente', joueursSalon.length
     ? joueursSalon.map((n, i) => (i === MOI ? n + ' (toi)' : n)).join(' · ')
