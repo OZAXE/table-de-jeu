@@ -150,6 +150,13 @@
   .modale td:first-child { white-space: nowrap; color: var(--texte); }
   .modale .accent { color: var(--accent); font-weight: 700; }
 
+  .poche { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin: 4px 0 8px; }
+  .poche button { font-size: 14px; padding: 7px 11px; }
+  .poche button.passif { opacity: 0.75; }
+  .rayon { display: grid; grid-template-columns: 1fr; gap: 6px; margin: 6px 0; }
+  .rayon button { text-align: left; display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+  .rayon button small { display: block; font-size: 12px; opacity: 0.8; font-weight: 400; }
+  .rayon .prix { white-space: nowrap; font-weight: 700; }
   .cache { display: none !important; }
   .note { font-size: 12px; margin-top: 10px; }
   .alerte { font-size: 13px; color: #e0a05a; margin-top: 8px; }
@@ -227,18 +234,20 @@
 <div id="modale-regles" class="cache">
   <div class="modale">
     <h2>Règles de La Tournée</h2>
-    <p>Un plateau sur la table, une <span class="accent">capsule d'or</span> posée sur une case, et un mini-jeu à chaque tour. Celui qui finit avec le plus de capsules gagne la tournée.</p>
+    <p>Une grande carte en relief façon Mario Party, une <span class="accent">capsule d'or</span> posée sur une case, des objets, des boutiques et un mini-jeu à chaque tour. Celui qui finit avec le plus de capsules gagne la tournée.</p>
 
     <h3>Trois plateaux</h3>
     <table>
-      <tr><td>🌞 La Terrasse</td><td><span class="accent">Facile</span>, un port au soleil : un raccourci, peu de pièges, pas de vol. On boit peu.</td></tr>
-      <tr><td>🍺 Le Pub</td><td><span class="accent">Moyen</span>, la ville de nuit : deux embranchements, duels, vols de pièces, échanges de place, une surprise du patron tous les 3 tours.</td></tr>
-      <tr><td>💀 La Cave</td><td><span class="accent">Difficile</span>, des caves volcaniques : trois chemins, deux trappes, un videur qui rôde, des capsules qui se volent. Tout peut basculer au dernier tour.</td></tr>
+      <tr><td>🌞 La Terrasse</td><td><span class="accent">Facile</span>, un port au soleil : la plage, la colline du phare, le marché, la jetée. Un bateau pour filer par la mer, peu de pièges, pas de vol. On boit peu.</td></tr>
+      <tr><td>🍺 Le Pub</td><td><span class="accent">Moyen</span>, la ville de nuit : la butte et ses escaliers, le quartier des néons, le canal. Un tram, un pont à péage, des duels, des vols de pièces.</td></tr>
+      <tr><td>💀 La Cave</td><td><span class="accent">Difficile</span>, des caves volcaniques : le cratère, un pont suspendu au-dessus de la lave, un geyser, deux trappes, un videur qui rôde, des capsules qui se volent. Tout peut basculer au dernier tour.</td></tr>
     </table>
 
     <h3>Un tour</h3>
     <ul>
-      <li><span class="accent">Les dés</span> : tout le monde lance en même temps. À un embranchement, tu <span class="accent">choisis ton chemin</span> (les arrivées s'allument sur la table). Sans réponse, le dé et le chemin partent tout seuls.</li>
+      <li><span class="accent">Un objet ?</span> Avant de lancer, tu peux utiliser un objet de ta poche (un par tour).</li>
+      <li><span class="accent">Le dé de 10</span> : tout le monde lance en même temps. Quand ta route arrive à un embranchement, tu <span class="accent">choisis ta direction</span> (les routes s'allument sur la carte). Sans réponse, le dé et le chemin partent tout seuls.</li>
+      <li><span class="accent">La boutique</span> : passe devant et tu peux acheter un objet avec tes pièces (3 au plus dans ta poche).</li>
       <li><span class="accent">La capsule d'or</span> : passe dessus ou arrête-toi dessus avec <span class="accent">20 pièces</span> et elle est à toi. Elle file alors ailleurs.</li>
       <li><span class="accent">Le mini-jeu</span> : tout le monde joue en même temps sur son téléphone, le même défi pour tous. Parfois en <span class="accent">équipes</span> (2 contre 2, 1 contre 3...).</li>
       <li>Une partie se joue en 5, 10 ou 15 tours (10 tours ≈ 30 min). On commence avec 10 pièces.</li>
@@ -254,7 +263,24 @@
       <tr><td>🍀 Chance</td><td>Jackpot, poche trouée, échange de place…</td></tr>
       <tr><td>⚔️ Duel</td><td>Contre un joueur au hasard : le gagnant prend 5 pièces (une capsule à la Cave), le perdant boit.</td></tr>
       <tr><td>🕳️ Trappe</td><td>Tu ressors par l'autre trappe.</td></tr>
+      <tr><td>🎁 Objet</td><td>Un objet gratuit (poches pleines : +5 pièces).</td></tr>
+      <tr><td>🛒 Boutique</td><td>Passer devant ouvre la boutique.</td></tr>
+      <tr><td>🚧 Péage</td><td>Un raccourci payant (8 pièces en ville, 10 à la Cave). Sans les pièces, la barrière reste fermée.</td></tr>
+      <tr><td>⛵ 🚋 🌋</td><td>Bateau, tram, geyser : s'arrêter dessus t'emmène ailleurs sur la carte.</td></tr>
       <tr><td>🕶️ Videur</td><td>À la Cave : passer devant lui coûte 2 pièces, s'arrêter dessus renvoie au départ.</td></tr>
+    </table>
+
+    <h3>Les objets</h3>
+    <table>
+      <tr><td>🎲 Double shot</td><td>Tu lances 2 dés (🎰 Triple shot : 3 dés).</td></tr>
+      <tr><td>☕ Café serré</td><td>+3 à ton dé.</td></tr>
+      <tr><td>🎯 Dé pipé</td><td>Tu choisis ton chiffre, de 1 à 10.</td></tr>
+      <tr><td>🚕 Taxi doré</td><td>Il te dépose juste avant la capsule d'or.</td></tr>
+      <tr><td>🪑 Chaises musicales</td><td>Tu échanges ta place avec quelqu'un.</td></tr>
+      <tr><td>🤏 Main baladeuse</td><td>Tu voles 5 à 10 pièces (👝 Vide-poche : un objet).</td></tr>
+      <tr><td>🍷 Verre renversé</td><td>Un piège sur ta case : le prochain qui s'y arrête te donne 10 pièces.</td></tr>
+      <tr><td>😇 Ange gardien</td><td>Il bloque tout seul le prochain vol.</td></tr>
+      <tr><td>🍻 Tournée offerte</td><td>Le joueur de ton choix boit 2 gorgées.</td></tr>
     </table>
 
     <h3>Le mini-jeu</h3>
@@ -355,9 +381,15 @@ function distanceCadrage(cam) {
   return Math.max(LARGEUR_VUE / (Math.tan(hHalf) * zone.c.fracL), HAUTEUR_VUE / (Math.tan(vHalf) * zone.c.fracH), 4.2) * zone.c.zoom;
 }
 const FOG_DENSITE_MAX = 0.07;
+// Téléphone en portrait et carte plus large que profonde : on la regarde de
+// côté, pour que sa longueur suive la hauteur de l'écran.
+function angleVue() {
+  return monde && monde.largeur > monde.profondeur * 1.1 && window.innerWidth < window.innerHeight * 0.85 ? -Math.PI / 2 : 0;
+}
+const AXE_Y = new THREE.Vector3(0, 1, 0);
 function majCadrageTable(cam) {
   const d = distanceCadrage(cam);
-  const dir = zone.direction(0.56);
+  const dir = zone.direction(0.56).applyAxisAngle(AXE_Y, angleVue());
   CAM_POS.copy(CAM_CIBLE).addScaledVector(dir, d);
   if (scene.fog) scene.fog.density = monde ? Math.min(0.03, 0.12 / d) : Math.min(FOG_DENSITE_MAX, 0.5 / d);
 }
@@ -425,7 +457,15 @@ const TYPES_CASES = {
   chance:    { icone: '🍀', fond: '#7ac43a', bord: '#3a6a14', nom: 'Chance' },
   duel:      { icone: '⚔️', fond: '#e07a1a', bord: '#7a3a0a', nom: 'Duel' },
   trappe:    { icone: '🕳️', fond: '#3a3434', bord: '#0a0808', nom: 'Trappe' },
+  objet:     { icone: '🎁', fond: '#f0c020', bord: '#8a6a00', nom: 'Objet' },
+  boutique:  { icone: '🛒', fond: '#ff6ab0', bord: '#8a2a5a', nom: 'Boutique' },
+  peage:     { icone: '🚧', fond: '#9a9aa8', bord: '#3a3a44', nom: 'Péage' },
+  transport: { icone: '🚀', fond: '#20c8d8', bord: '#0a5a64', nom: 'Transport' },
+  transport_bateau: { icone: '⛵', fond: '#20c8d8', bord: '#0a5a64', nom: 'Bateau' },
+  transport_tram:   { icone: '🚋', fond: '#20c8d8', bord: '#0a5a64', nom: 'Tram' },
+  transport_geyser: { icone: '🌋', fond: '#ff8a3a', bord: '#7a2a0a', nom: 'Geyser' },
 };
+function typeAffiche(c) { return c.type === 'transport' && c.moyen ? 'transport_' + c.moyen : c.type; }
 const plateauGroupe = new THREE.Group();
 plateauGroupe.position.y = 0.012;
 scene.add(plateauGroupe);
@@ -438,7 +478,7 @@ function angleCase(c) { return -c / nbCases * Math.PI * 2 + Math.PI / 2 + Math.P
 function posCase(c, decalage = 0) {
   if (carteCourante && carteCourante.cases[c]) {
     const k = carteCourante.cases[c];
-    return new THREE.Vector3(k.x * ECHELLE_CARTE, 0, k.z * ECHELLE_CARTE);
+    return new THREE.Vector3(k.x * ECHELLE_CARTE, (k.y || 0) * ECHELLE_CARTE, k.z * ECHELLE_CARTE);
   }
   const a = angleCase(c);
   const r = R_PLATEAU + decalage;
@@ -478,7 +518,7 @@ function installerMonde(carte) {
   if (monde) { scene.remove(monde.groupe); monde.liberer(); monde = null; }
   const actif = !!(carte && carte.id);
   if (actif) {
-    monde = creerMonde(THREE, carte.id, carte.cases.map(c => ({ x: c.x * ECHELLE_CARTE, z: c.z * ECHELLE_CARTE, suivants: c.suivants })), { leger: LEGER });
+    monde = creerMonde(THREE, carte.id, carte.cases.map(c => Object.assign({}, c, { x: c.x * ECHELLE_CARTE, y: (c.y || 0) * ECHELLE_CARTE, z: c.z * ECHELLE_CARTE })), { leger: LEGER });
     scene.add(monde.groupe);
     const a = monde.ambiance;
     scene.background = new THREE.Color(a.ciel);
@@ -489,8 +529,9 @@ function installerMonde(carte) {
     hemiMonde.color.set(a.hemi[0]); hemiMonde.groundColor.set(a.hemi[1]); hemiMonde.intensity = a.hemi[2];
     Object.assign(keyLight.shadow.camera, { left: -3.6, right: 3.6, top: 3.6, bottom: -3.6, near: 0.5, far: 12 });
     keyLight.shadow.camera.updateProjectionMatrix();
-    LARGEUR_VUE = monde.rayon + 0.15;
-    HAUTEUR_VUE = monde.rayon * 0.95;
+    const tourne = angleVue() !== 0;
+    LARGEUR_VUE = (tourne ? monde.profondeur : monde.largeur) / 2 + 0.3;
+    HAUTEUR_VUE = (tourne ? monde.largeur : monde.profondeur) / 2 * 0.8 + 0.2;
   } else {
     scene.background = ambianceBar.fond.clone();
     scene.fog.color = ambianceBar.fond.clone();
@@ -518,7 +559,7 @@ function construirePlateau(carte, types) {
   clePlateau = cle;
   carteCourante = carte || null;
   while (plateauGroupe.children.length) plateauGroupe.remove(plateauGroupe.children[0]);
-  const liste = carte ? carte.cases.map(c => c.type) : types;
+  const liste = carte ? carte.cases.map(typeAffiche) : types;
   nbCases = liste.length;
   installerMonde(carte);
   if (carte) {
@@ -536,7 +577,7 @@ function construirePlateau(carte, types) {
     const dessus = new THREE.MeshStandardMaterial({ map: textureCase(type), roughness: 0.5 });
     const m = new THREE.Mesh(new THREE.BoxGeometry(tailleCase, 0.03, tailleCase), [MAT_CASE_COTE, MAT_CASE_COTE, dessus, MAT_CASE_COTE, MAT_CASE_COTE, MAT_CASE_COTE]);
     const p = posCase(k);
-    m.position.set(p.x, 0.015, p.z);
+    m.position.set(p.x, p.y + 0.015, p.z);
     if (carte) {
       const s = posCase(carte.cases[k].suivants[0]);
       m.rotation.y = Math.atan2(s.x - p.x, s.z - p.z);
@@ -564,7 +605,7 @@ function construirePlateau(carte, types) {
       if (c.suivants.length > 1) {
         const f = new THREE.Mesh(new THREE.ConeGeometry(tailleCase * 0.16, tailleCase * 0.3, 3), MAT_FLECHE);
         const u = (tailleCase * 0.75) / Math.max(d, 0.001);
-        f.position.set(a.x + (b.x - a.x) * u, 0.04, a.z + (b.z - a.z) * u);
+        f.position.set(a.x + (b.x - a.x) * u, a.y + (b.y - a.y) * u + 0.05, a.z + (b.z - a.z) * u);
         f.rotation.set(Math.PI / 2, 0, -Math.atan2(b.x - a.x, b.z - a.z));
         plateauGroupe.add(f);
       }
@@ -576,7 +617,7 @@ function construirePlateau(carte, types) {
       new THREE.MeshBasicMaterial({ color: 0x9a7aff, transparent: true, opacity: 0.7, side: THREE.DoubleSide }));
     r.rotation.x = -Math.PI / 2;
     const p = posCase(c.id);
-    r.position.set(p.x, 0.035, p.z);
+    r.position.set(p.x, p.y + 0.035, p.z);
     plateauGroupe.add(r);
   });
 }
@@ -591,7 +632,7 @@ function marquerCases(liste) {
       new THREE.MeshBasicMaterial({ color: couleur, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }));
     m.rotation.x = -Math.PI / 2;
     const p = posCase(c);
-    m.position.set(p.x, 0.05, p.z);
+    m.position.set(p.x, p.y + 0.05, p.z);
     scene.add(m);
     marqueurs.push(m);
   });
@@ -620,7 +661,7 @@ let capsuleCase = null;
 function placerCapsule(c, anime) {
   if (c === null || c === undefined || !casesPlateau.length) { capsule.visible = false; return; }
   const p = posCase(c);
-  const arrivee = new THREE.Vector3(p.x, 0.26, p.z);
+  const arrivee = new THREE.Vector3(p.x, p.y + 0.26, p.z);
   if (!anime || !capsule.visible) { capsule.position.copy(arrivee); capsule.visible = true; capsuleCase = c; return; }
   const depart = capsule.position.clone();
   capsuleCase = c;
@@ -660,7 +701,7 @@ function placerVideur(c, anime) {
   animer(1.0, an => {
     const t = lisser(an.t / an.duree);
     videur.position.lerpVectors(depart, p, t);
-    videur.position.y = Math.abs(Math.sin(t * Math.PI * 3)) * 0.06;
+    videur.position.y += Math.abs(Math.sin(t * Math.PI * 3)) * 0.06;
   }, () => videur.position.copy(p));
 }
 
@@ -707,7 +748,7 @@ function placerPions(etat) {
 
 // Rejoue le tour de plateau : chaque pion avance case par case, dans l'ordre
 // des dés ; les effets s'affichent en l'air. Renvoie la durée totale (s).
-const PAS = 0.22;
+const PAS = 0.18;
 const TITRES_EVENEMENTS = {
   pourboire: 'Pourboire', tournee_generale: 'Tournée générale', pickpocket: 'Pickpocket',
   raccourci: 'Raccourci', addition: "L'addition", cul_sec: 'Gorgée de courage', courage: 'Gorgée de courage',
@@ -732,6 +773,10 @@ function texteEffet(e) {
   }
   if (e.type === 'trappe') return ['🕳️ Trappe !', '#b8a6ff'];
   if (e.type === 'videur') return ['🕶️ Le videur te sort ! 🍺 ' + e.boit, '#ff6a6a'];
+  if (e.type === 'peage') return ['🚧 Péage ' + e.pieces + ' 🪙', '#d8d8e8'];
+  if (e.type === 'transport') return [({ bateau: '⛵ En bateau !', tram: '🚋 En tram !', geyser: '🌋 Le geyser te propulse !' })[e.moyen] || '🚀 En route !', '#8af0ff'];
+  if (e.type === 'objet') return [e.plein ? '🎁 Poches pleines : +' + e.pieces + ' 🪙' : '🎁 ' + nomObjet(e.objet), '#ffe27a'];
+  if (e.type === 'piege_pose') return ['🍷 Verre renversé : ' + e.pieces + ' 🪙 pour ' + prenom(e.proprio), '#ff9ac8'];
   if (e.type === 'fouille') return ['🕶️ Fouille ' + e.pieces + ' 🪙', '#ffb0a0'];
   return ['', '#fff'];
 }
@@ -746,16 +791,16 @@ function animerDeplacements(etat, instantane) {
   const sautVers = (i, c, hauteur) => {
     pos[i] = c;
     const de = pions[i].position.clone(), vers = placePion(i, c, pos);
-    animer(0.6, an => { const u = lisser(an.t / an.duree); pions[i].position.lerpVectors(de, vers, u); pions[i].position.y = Math.sin(u * Math.PI) * hauteur; },
+    animer(0.6, an => { const u = lisser(an.t / an.duree); pions[i].position.lerpVectors(de, vers, u); pions[i].position.y += Math.sin(u * Math.PI) * hauteur; },
       () => pions[i].position.copy(vers));
   };
   let t = 0.3;
   dep.lignes.forEach(l => {
     const i = l.joueur;
     const debutLigne = t;
-    attendre(debutLigne, () => { pionSuivi = i; texteFlottant(pions[i].position.clone().setY(0.1), '🎲 ' + l.de, '', '#ffffff', 0.32); });
+    attendre(debutLigne, () => { pionSuivi = i; texteFlottant(pions[i].position.clone().add(new THREE.Vector3(0, 0.1, 0)), '🎲 ' + l.de, '', '#ffffff', 0.32); });
     t += 0.45;
-    const enRoute = ['depart', 'capsule', 'capsule_ratee', 'fouille', 'videur'];
+    const enRoute = ['depart', 'capsule', 'capsule_ratee', 'fouille', 'videur', 'peage'];
     l.chemin.forEach((c, k) => {
       attendre(t, () => {
         const de = pions[i].position.clone();
@@ -764,14 +809,14 @@ function animerDeplacements(etat, instantane) {
         animer(PAS * 0.9, an => {
           const u = lisser(an.t / an.duree);
           pions[i].position.lerpVectors(de, vers, u);
-          pions[i].position.y = Math.sin(u * Math.PI) * 0.12;
+          pions[i].position.y += Math.sin(u * Math.PI) * 0.12;
         }, () => { pions[i].position.copy(vers); });
       });
       t += PAS;
       l.effets.filter(e => enRoute.includes(e.type) && e.case === c).forEach(e => {
         attendre(t, () => {
           const [txt, coul] = texteEffet(e);
-          texteFlottant(posCase(c).setY(0.15), txt, '', coul, 0.34);
+          texteFlottant(posCase(c).add(new THREE.Vector3(0, 0.15, 0)), txt, '', coul, 0.34);
           if (e.type === 'capsule') placerCapsule(e.nouvelle_case, true);
           if (e.type === 'videur') { sautVers(i, 0, 0.6); encaisser(i); }
         });
@@ -782,9 +827,9 @@ function animerDeplacements(etat, instantane) {
     l.effets.filter(e => !enRoute.includes(e.type)).forEach(e => {
       attendre(t, () => {
         const [txt, coul] = texteEffet(e);
-        texteFlottant(pions[i].position.clone().setY(0.15), txt, '', coul, 0.34);
+        texteFlottant(pions[i].position.clone().add(new THREE.Vector3(0, 0.15, 0)), txt, '', coul, 0.34);
         const ancienne = pos[i];
-        if (e.vers !== undefined) sautVers(i, e.vers, 0.4);
+        if (e.vers !== undefined) sautVers(i, e.vers, e.type === 'transport' ? 1.2 : 0.4);
         // Échange de place : l'autre joueur prend la case qu'on quitte.
         if (e.avec !== undefined && pions[e.avec]) sautVers(e.avec, ancienne, 0.4);
         if (e.boit) encaisser(e.perdant !== undefined ? e.perdant : i);
@@ -1101,9 +1146,9 @@ let finAnimation = 0;         // les pions avancent : le journal attend la fin
 let toursChoisis = 10;
 // Les trois plateaux (le serveur envoie la carte complète une fois la partie lancée).
 const PLATEAUX = [
-  { id: 'terrasse', nom: 'La Terrasse', icone: '🌞', difficulte: 'Facile', texte: 'Un port au soleil. Un raccourci, peu de pièges, on boit peu.' },
-  { id: 'pub', nom: 'Le Pub', icone: '🍺', difficulte: 'Moyen', texte: 'La ville de nuit : deux embranchements, duels, vols de pièces.' },
-  { id: 'cave', nom: 'La Cave', icone: '💀', difficulte: 'Difficile', texte: 'Caves volcaniques : trappes, videur, capsules volées.' },
+  { id: 'terrasse', nom: 'La Terrasse', icone: '🌞', difficulte: 'Facile', texte: 'Un port au soleil : plage, phare, bateau. Peu de pièges, on boit peu.' },
+  { id: 'pub', nom: 'Le Pub', icone: '🍺', difficulte: 'Moyen', texte: 'La ville de nuit : la butte, le canal, un tram et un péage. Duels et vols.' },
+  { id: 'cave', nom: 'La Cave', icone: '💀', difficulte: 'Difficile', texte: 'Caves volcaniques : pont sur la lave, geyser, trappes, videur, capsules volées.' },
 ];
 let plateauChoisi = 'pub';
 const COULEURS_OPTIONS = [0x4af0ff, 0xff4ad2, 0x9cff4a, 0xffa64a];
@@ -1140,11 +1185,31 @@ function clientRecevoir(msg) {
       break;
     case 'tr_etat':
       msg.recu = Date.now();
-      quandLibre(() => appliquerEtat(msg), 0, msg.phase === 'minijeu');
+      // Mini-jeu et boutique ont un temps compté : les pions finissent leur trajet d'un coup.
+      quandLibre(() => appliquerEtat(msg), 0, msg.phase === 'minijeu' || msg.phase === 'boutique');
       break;
     case 'tr_de':
       // Le dé de chacun s'affiche tout de suite au-dessus de sa place.
       if (sieges[msg.index]) texteFlottant(sieges[msg.index].base.clone().setY(0.35), '🎲 ' + msg.valeur, '', '#ffffff', 0.4);
+      if (pions[msg.index] && monde) texteFlottant(pions[msg.index].position.clone().add(new THREE.Vector3(0, 0.3, 0)), '🎲 ' + (msg.detail && msg.detail.length > 1 ? msg.detail.join(' + ') + ' = ' : '') + msg.valeur, '', '#ffffff', 0.36);
+      break;
+    case 'tr_objet_utilise': {
+      const u = msg.utilisation;
+      const o = objetDef(u.objet);
+      const qui = u.joueur === MOI ? 'Tu utilises' : prenom(u.joueur) + ' utilise';
+      let detail = o ? o.nom : u.objet;
+      if (u.cible !== undefined) detail += ' sur ' + (u.cible === MOI ? 'toi' : prenom(u.cible));
+      if (u.protege) detail += ' : bloqué par l\'Ange gardien !';
+      else if (u.pieces !== undefined) detail += ' : ' + u.pieces + ' 🪙';
+      else if (u.vole) detail += ' : ' + nomObjet(u.vole);
+      else if (u.boit) detail += ' : ' + u.boit + ' gorgées';
+      else if (u.valeur !== undefined) detail += ' : ' + u.valeur;
+      quandLibre(() => annoncer((o ? o.icone + ' ' : '') + qui, detail, '#ffe27a', 2.2, { flash: u.cible === MOI }));
+      if (u.boit && u.cible !== undefined) encaisser(u.cible);
+      break;
+    }
+    case 'tr_achat':
+      if (msg.index !== MOI && etatCourant) elRappel.textContent = prenom(msg.index) + (msg.objet ? ' achète ' + nomObjet(msg.objet) : ' ne prend rien') + '.';
       break;
     case 'tr_score_recu':
       monScore = msg.score;
@@ -1189,9 +1254,17 @@ function appliquerEtat(etat) {
     else annoncer('Tour ' + etat.tour + ' / ' + etat.nb_tours, etat.tour === etat.nb_tours ? 'Dernier tour !' : 'Lancez les dés !', '#ffc23a', 1.6);
   }
   if (videurCase !== etat.videur && !(etat.phase === 'des' && nouvellePhase)) placerVideur(etat.videur, false);
+  // Un objet a déplacé des pions avant les dés (taxi, chaises musicales) : ils sautent à leur nouvelle case.
+  if (etat.phase === 'des' && !nouvellePhase && avant && avant.positions) {
+    etat.positions.forEach((c, i) => {
+      if (c === avant.positions[i] || !pions[i]) return;
+      const de = pions[i].position.clone(), vers = placePion(i, c, etat.positions);
+      animer(0.8, an => { const u = lisser(an.t / an.duree); pions[i].position.lerpVectors(de, vers, u); pions[i].position.y += Math.sin(u * Math.PI) * 0.8; }, () => pions[i].position.copy(vers));
+    });
+  }
   // Choix du chemin : les arrivées possibles s'allument sur le plateau.
   const mesOptions = etat.phase === 'des' && etat.options ? etat.options[MOI] : null;
-  if (mesOptions && etat.choix[MOI] === undefined) marquerCases(mesOptions.map((o, k) => [o.arrivee, COULEURS_OPTIONS[k % COULEURS_OPTIONS.length]]));
+  if (mesOptions && (etat.trajets || etat.choix[MOI] === undefined)) marquerCases(mesOptions.map((o, k) => [o.arrivee, COULEURS_OPTIONS[k % COULEURS_OPTIONS.length]]));
   else marquerCases([]);
   if (etat.phase !== 'deplacement') pionSuivi = null;
   if (etat.phase === 'deplacement' && nouvellePhase) {
@@ -1202,6 +1275,8 @@ function appliquerEtat(etat) {
   if (etat.phase !== 'deplacement' && (!avant || avant.phase === 'deplacement' || nouvellePhase)) {
     if (!(etat.phase === 'des' && nouvellePhase)) { placerPions(etat); placerCapsule(etat.capsule_case, false); }
   }
+  if (etat.phase !== 'des') objetEnCours = null;
+  if (etat.phase === 'boutique' && nouvellePhase && etat.boutiques && etat.boutiques[MOI]) annoncer('🛒 ' + etat.boutiques[MOI].nom, 'Un petit achat ?', '#ff9ad0', 1.8);
   if (etat.phase === 'minijeu') ouvrirMinijeu(etat);
   else fermerMinijeu();
   if (etat.phase === 'resultats' && nouvellePhase) annoncerResultats(etat);
@@ -1344,6 +1419,7 @@ function majBandeau(etat) {
   else if (etat.phase === 'fin') elMessage.textContent = 'Fin de la tournée';
   else if (etat.phase === 'des') elMessage.textContent = '🎲 Tour ' + etat.tour + ' / ' + etat.nb_tours;
   else if (etat.phase === 'deplacement') elMessage.textContent = '🚶 En route';
+  else if (etat.phase === 'boutique') elMessage.textContent = '🛒 Boutique';
   else if (etat.phase === 'minijeu') elMessage.textContent = '🎮 ' + (etat.minijeu ? etat.minijeu.nom : 'Mini-jeu');
   else elMessage.textContent = '📋 Résultats';
   elRappel.textContent = etat.message || '';
@@ -1379,8 +1455,9 @@ function majListeJoueurs(etat) {
     nm.textContent = nom + (i === MOI ? ' (toi)' : '');
     const inf = document.createElement('span');
     inf.className = 'info';
-    inf.textContent = '🏆 ' + etat.capsules[i] + ' · 🪙 ' + etat.pieces[i] + ' · 🍺 ' + etat.gorgees[i];
-    inf.title = 'capsules · pièces · gorgées bues';
+    const poche = (etat.objets && etat.objets[i]) || [];
+    inf.textContent = '🏆 ' + etat.capsules[i] + ' · 🪙 ' + etat.pieces[i] + ' · 🍺 ' + etat.gorgees[i] + (poche.length ? ' · ' + poche.map(o => (objetDef(o) || {}).icone || '🎁').join('') : '');
+    inf.title = 'capsules · pièces · gorgées bues · objets';
     d.append(p, nm, inf);
     elJoueurs.appendChild(d);
   });
@@ -1432,12 +1509,15 @@ function rafraichirPanneau(forcer) {
   if (!enPartie || !etatCourant) return;
   const etat = etatCourant;
   const cle = [etat.phase, etat.tour, MOI >= etat.joueurs.length, etat.des[MOI], (etat.choix || {})[MOI], monScore,
+    JSON.stringify(((etat.options || {})[MOI] || []).map(o => o.arrivee)), ((etat.objets || [])[MOI] || []).join(','),
+    (etat.objet_tour || {})[MOI], objetEnCours, etat.pieces[MOI], etat.phase === 'boutique' ? String((etat.achats || {})[MOI]) : '',
     etat.phase === 'resultats' ? etat.suivants[MOI] : '', etat.phase === 'fin' ? joueursProchainePartie(etat) : ''].join('|');
   if (!forcer && cle === clePanneau) { majPanneauLeger(etat); return; }
   clePanneau = cle;
   if (MOI >= etat.joueurs.length) { panneauSpectateur(etat); return; }
   if (etat.phase === 'des') { panneauDes(etat); return; }
   if (etat.phase === 'deplacement') { panneauDeplacement(etat); return; }
+  if (etat.phase === 'boutique') { panneauBoutique(etat); return; }
   if (etat.phase === 'minijeu') { panneauMinijeu(etat); return; }
   if (etat.phase === 'resultats') { panneauResultats(etat); return; }
   if (etat.phase === 'fin') { panneauFin(etat); return; }
@@ -1447,7 +1527,7 @@ function majPanneauLeger(etat) {
   const c = elPanneau.querySelector('.compte');
   if (c) {
     const pr = presents(etat);
-    if (etat.phase === 'des') c.textContent = pr.filter(i => etat.des[i] !== undefined && (!(etat.options || {})[i] || (etat.choix || {})[i] !== undefined)).length + ' / ' + pr.length + ' prêts';
+    if (etat.phase === 'des') c.textContent = pr.filter(i => etat.des[i] !== undefined && (!(etat.options || {})[i] || (!etat.trajets && (etat.choix || {})[i] !== undefined))).length + ' / ' + pr.length + ' prêts';
     else if (etat.phase === 'minijeu') c.textContent = pr.filter(i => etat.a_joue[i]).length + ' / ' + pr.length + ' ont fini';
     else if (etat.phase === 'resultats') c.textContent = pr.filter(i => etat.suivants[i]).length + ' / ' + pr.length + ' prêts pour la suite';
   }
@@ -1466,24 +1546,75 @@ function remplirDes(d, etat) {
   });
 }
 
+// Les objets : le catalogue vient avec la carte.
+let objetEnCours = null;   // objet choisi qui attend une cible ou un chiffre
+function objetDef(id) { return etatCourant && etatCourant.carte && etatCourant.carte.objets ? etatCourant.carte.objets.find(o => o.id === id) : null; }
+function nomObjet(id) { const o = objetDef(id); return o ? o.icone + ' ' + o.nom : id; }
+
 function panneauDes(etat) {
   const p = ouvrirPanneau('');
   const v = etat.des[MOI];
   if (v === undefined) {
-    p.appendChild(aide('Capsule d’or : ' + etat.prix_capsule + ' pièces (elle brille sur le plateau). Tu en as ' + etat.pieces[MOI] + '.'));
+    const poche = (etat.objets && etat.objets[MOI]) || [];
+    const utilise = (etat.objet_tour || {})[MOI];
+    const def = objetEnCours ? objetDef(objetEnCours) : null;
+    if (def && !utilise && poche.includes(objetEnCours)) {
+      // L'objet attend une cible (un joueur) ou un chiffre (dé pipé).
+      p.appendChild(aide(def.icone + ' ' + def.nom + ' : ' + def.texte));
+      const r = rangee();
+      if (def.choix_de) {
+        for (let k = 1; k <= ((etat.carte && etat.carte.faces) || 10); k++) r.appendChild(bouton(String(k), '', () => { objetEnCours = null; agir({ type: 'tr_objet', objet: def.id, valeur: k }); }));
+      } else {
+        presents(etat).filter(i => i !== MOI).forEach(i => {
+          const extra = def.vol_objet ? ' (' + (((etat.objets || [])[i] || []).length) + ' obj.)' : def.vol ? ' (' + etat.pieces[i] + ' 🪙)' : '';
+          const b = bouton(etat.joueurs[i] + extra, 'sombre', () => { objetEnCours = null; agir({ type: 'tr_objet', objet: def.id, cible: i }); });
+          b.style.setProperty('border-color', couleurCss(i), 'important');
+          if (def.vol_objet && !((etat.objets || [])[i] || []).length) b.disabled = true;
+          r.appendChild(b);
+        });
+      }
+      p.appendChild(r);
+      const r2 = rangee();
+      r2.appendChild(bouton('Annuler', 'sombre', () => { objetEnCours = null; rafraichirPanneau(true); }));
+      p.appendChild(r2);
+      return;
+    }
+    p.appendChild(aide('Capsule d’or : ' + etat.prix_capsule + ' pièces (elle brille sur la carte). Tu en as ' + etat.pieces[MOI] + '.'));
+    if (poche.length) {
+      const d = document.createElement('div');
+      d.className = 'poche';
+      poche.forEach(id => {
+        const o = objetDef(id) || { id, nom: id, icone: '🎁', texte: '' };
+        const b = bouton(o.icone + ' ' + o.nom, 'sombre' + (o.passif ? ' passif' : ''), () => {
+          if (o.passif) { elRappel.textContent = o.nom + ' : ' + o.texte; return; }
+          if (o.cible || o.choix_de) { objetEnCours = id; rafraichirPanneau(true); return; }
+          agir({ type: 'tr_objet', objet: id });
+        });
+        b.title = o.texte;
+        if (utilise && !o.passif) b.disabled = true;
+        d.appendChild(b);
+      });
+      p.appendChild(d);
+    }
+    if (utilise) p.appendChild(aide((objetDef(utilise) || {}).icone + ' ' + ((objetDef(utilise) || {}).nom || utilise) + ' utilisé ce tour.'));
+    else if (poche.some(id => !(objetDef(id) || {}).passif)) p.appendChild(aide('Un objet avant de lancer ? (un par tour)'));
+    const od = utilise ? objetDef(utilise) : null;
+    const nbDes = od && od.des ? od.des : 1;
     const r = rangee();
-    r.appendChild(bouton('🎲 Lancer le dé', 'gros', () => agir({ type: 'tr_lancer' })));
+    r.appendChild(bouton(nbDes > 1 ? '🎲 Lancer ' + nbDes + ' dés' : od && od.bonus ? '🎲 Lancer le dé (+' + od.bonus + ')' : '🎲 Lancer le dé', 'gros', () => agir({ type: 'tr_lancer' })));
     p.appendChild(r);
   } else {
     const g = document.createElement('div');
     g.className = 'gros-de';
-    g.textContent = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'][v] || String(v);
+    const detail = (etat.des_detail || {})[MOI];
+    g.textContent = detail && detail.length > 1 ? detail.join(' + ') + ' = ' + v : '🎲 ' + v;
     p.appendChild(g);
     const options = (etat.options || {})[MOI];
     const choix = (etat.choix || {})[MOI];
-    if (options && choix === undefined) {
-      // Embranchement : chacun choisit son chemin (les arrivées s'allument sur la table).
-      p.appendChild(aide('Tu as fait ' + v + '. Quel chemin ?'));
+    if (options && (etat.trajets || choix === undefined)) {
+      // Embranchement : chacun choisit son chemin (les routes s'allument sur la carte).
+      const fait = ((etat.trajets || {})[MOI] || []).length;
+      p.appendChild(aide('Tu as fait ' + v + (fait ? ' (encore ' + (v - fait) + ' cases)' : '') + '. Quelle direction ?'));
       const r = rangee();
       r.classList.add('chemins');
       options.forEach((o, k) => {
@@ -1510,6 +1641,44 @@ function panneauDes(etat) {
   c.className = 'compte';
   p.appendChild(c);
   majPanneauLeger(etat);
+}
+
+function panneauBoutique(etat) {
+  const offre = (etat.boutiques || {})[MOI];
+  const achete = (etat.achats || {})[MOI];
+  if (offre && achete === undefined) {
+    const p = ouvrirPanneau('🛒 ' + offre.nom);
+    const poche = (etat.objets && etat.objets[MOI]) || [];
+    p.appendChild(aide('Tu as ' + etat.pieces[MOI] + ' pièces · poche ' + poche.length + ' / ' + ((etat.carte && etat.carte.poche_max) || 3) + (etat.bonus && etat.bonus.soldes ? ' · SOLDES !' : '')));
+    const d = document.createElement('div');
+    d.className = 'rayon';
+    offre.stock.forEach(s => {
+      const o = objetDef(s.id) || { nom: s.id, icone: '🎁', texte: '' };
+      const b = document.createElement('button');
+      b.className = 'sombre';
+      const g = document.createElement('span');
+      g.textContent = o.icone + ' ' + o.nom;
+      const sm = document.createElement('small');
+      sm.textContent = o.texte;
+      g.appendChild(sm);
+      const pr = document.createElement('span');
+      pr.className = 'prix';
+      pr.textContent = s.prix + ' 🪙';
+      b.append(g, pr);
+      b.disabled = s.prix > etat.pieces[MOI];
+      b.addEventListener('click', () => agir({ type: 'tr_acheter', objet: s.id }));
+      d.appendChild(b);
+    });
+    p.appendChild(d);
+    const r = rangee();
+    r.appendChild(bouton('Rien, merci', 'sombre', () => agir({ type: 'tr_acheter', objet: null })));
+    p.appendChild(r);
+    return;
+  }
+  const p = ouvrirPanneau('🛒 Boutique');
+  const qui = Object.keys(etat.boutiques || {}).map(Number).filter(i => (etat.achats || {})[i] === undefined);
+  if (offre) p.appendChild(aide(achete ? 'Merci ! ' + nomObjet(achete) + ' rejoint ta poche.' : 'Pas d’achat cette fois.'));
+  p.appendChild(aide(qui.length ? qui.map(i => etat.joueurs[i]).join(', ') + (qui.length > 1 ? ' font' : ' fait') + ' ses courses…' : 'Le mini-jeu arrive…'));
 }
 
 function ligneJournal(etat, l) {
@@ -2181,8 +2350,8 @@ function boucle() {
     if (pionSuivi !== null && pions[pionSuivi]) {
       suit = true;
       const p = pions[pionSuivi].position;
-      camSuivi.cible.set(p.x, 0.05, p.z);
-      camSuivi.pos.copy(camSuivi.cible).addScaledVector(zone.direction(0.62), 2.0);
+      camSuivi.cible.set(p.x, p.y + 0.05, p.z);
+      camSuivi.pos.copy(camSuivi.cible).addScaledVector(zone.direction(0.62).applyAxisAngle(AXE_Y, angleVue()), 2.0);
     }
   }
   camera.position.lerp(suit ? camSuivi.pos : camObjectifPos, suit ? 0.06 : CAM_VITESSE);
