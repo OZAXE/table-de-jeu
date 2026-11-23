@@ -25,6 +25,9 @@ Le serveur multijoueur est le dépôt `kinito-serveur` (son README décrit tous 
   dans la place qui reste.
 - Décors 3D partagés dans `commun/` (`decors3d.js`, `manoir3d.js`). La Tournée pose chaque plateau dans un monde 3D
   (`commun/mondes3d.js` : port ensoleillé, ville de nuit, caves volcaniques) qui remplace la table pendant la partie.
+  Le monde suit le relief des cases (`y`) : terrain en hauteur, escaliers, ponts, boutiques, péage, transports.
+  Sur la page, poche d'objets avant le dé (dé de 10) et panneau boutique ; les états `boutique` et `minijeu`
+  passent devant les animations des pions (temps compté).
 
 ## La soirée (commun/soiree.js)
 Chargé par l'accueil et par chaque page de jeu : prénom saisi une seule fois (`shield.nom`),
