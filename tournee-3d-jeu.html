@@ -246,7 +246,7 @@
     <h3>Un tour</h3>
     <ul>
       <li><span class="accent">Un objet ?</span> Avant de lancer, tu peux utiliser un objet de ta poche (un par tour).</li>
-      <li><span class="accent">Le dé de 10</span> : tout le monde lance en même temps. Quand ta route arrive à un embranchement, tu <span class="accent">choisis ta direction</span> (les routes s'allument sur la carte). Sans réponse, le dé et le chemin partent tout seuls.</li>
+      <li><span class="accent">Le dé de 10</span> : à chaque tour, tu lances <span class="accent">1 ou 2 dés</span>, au choix (1 pour viser une case, 2 pour aller loin). Tout le monde lance en même temps. Quand ta route arrive à un embranchement, tu <span class="accent">choisis ta direction</span> (les routes s'allument sur la carte). Sans réponse, le dé et le chemin partent tout seuls.</li>
       <li><span class="accent">La boutique</span> : passe devant et tu peux acheter un objet avec tes pièces (3 au plus dans ta poche).</li>
       <li><span class="accent">La capsule d'or</span> : passe dessus ou arrête-toi dessus avec <span class="accent">20 pièces</span> et elle est à toi. Elle file alors ailleurs.</li>
       <li><span class="accent">Le mini-jeu</span> : tout le monde joue en même temps sur son téléphone, le même défi pour tous. Parfois en <span class="accent">équipes</span> (2 contre 2, 1 contre 3...).</li>
@@ -272,7 +272,7 @@
 
     <h3>Les objets</h3>
     <table>
-      <tr><td>🎲 Double shot</td><td>Tu lances 2 dés (🎰 Triple shot : 3 dés).</td></tr>
+      <tr><td>🎲 Double shot</td><td>Un dé de plus ce tour (🎰 Triple shot : deux dés de plus).</td></tr>
       <tr><td>☕ Café serré</td><td>+3 à ton dé.</td></tr>
       <tr><td>🎯 Dé pipé</td><td>Tu choisis ton chiffre, de 1 à 10.</td></tr>
       <tr><td>🚕 Taxi doré</td><td>Il te dépose juste avant la capsule d'or.</td></tr>
@@ -1599,10 +1599,16 @@ function panneauDes(etat) {
     if (utilise) p.appendChild(aide((objetDef(utilise) || {}).icone + ' ' + ((objetDef(utilise) || {}).nom || utilise) + ' utilisé ce tour.'));
     else if (poche.some(id => !(objetDef(id) || {}).passif)) p.appendChild(aide('Un objet avant de lancer ? (un par tour)'));
     const od = utilise ? objetDef(utilise) : null;
-    const nbDes = od && od.des ? od.des : 1;
+    // 1 ou 2 dés, au choix à chaque tour ; le Double shot en ajoute un, le Triple shot deux.
+    const enPlus = od && od.des ? od.des - 1 : 0;
+    const bonus = od && od.bonus ? ' (+' + od.bonus + ')' : '';
     const r = rangee();
-    r.appendChild(bouton(nbDes > 1 ? '🎲 Lancer ' + nbDes + ' dés' : od && od.bonus ? '🎲 Lancer le dé (+' + od.bonus + ')' : '🎲 Lancer le dé', 'gros', () => agir({ type: 'tr_lancer' })));
+    [1, 2].forEach(base => {
+      const n = base + enPlus;
+      r.appendChild(bouton('🎲'.repeat(base) + ' Lancer ' + n + (n > 1 ? ' dés' : ' dé') + bonus, 'gros', () => agir({ type: 'tr_lancer', des: base })));
+    });
     p.appendChild(r);
+    p.appendChild(aide('1 dé pour viser juste, 2 dés pour filer loin.'));
   } else {
     const g = document.createElement('div');
     g.className = 'gros-de';
