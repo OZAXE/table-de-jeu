@@ -280,8 +280,8 @@ document.getElementById('quitter-table').addEventListener('click', () => {
 // Dans la scène : X = x * S, Z = -y * S (le but adverse est au fond).
 // =====================================================================
 const CAT = {
-  terrain: { largeur: 1.0, longueur: 1.6, but_largeur: 0.3, but_profondeur: 0.09 },
-  palet: 0.047, balle: 0.03, palets_par_equipe: 5, images_par_s: 25,
+  terrain: { largeur: 1.0, longueur: 1.6, but_largeur: 0.4, but_profondeur: 0.09 },
+  palet: 0.052, balle: 0.032, palets_par_equipe: 5, images_par_s: 25,
   formations: [], gorgees: { but_encaisse: 1, contre_son_camp: 2, defaite: 5 },
 };
 const S = 2.2;                  // unités de scène par unité de terrain
@@ -540,6 +540,7 @@ function construirePieces() {
     });
   }
   const geoAnneau = new THREE.RingGeometry(r * 1.18, r * 1.42, 40);
+  const geoPortee = new THREE.CircleGeometry(TIRAGE_MAX * S, 56);
   for (let k = 0; k < 2 * CAT.palets_par_equipe; k++) {
     const e = Math.floor(k / CAT.palets_par_equipe);
     const gp = new THREE.Group();
@@ -551,12 +552,18 @@ function construirePieces() {
     anneau.rotation.x = -Math.PI / 2;
     anneau.position.y = 0.004;
     gp.add(anneau);
+    // Disque sombre de portée : jusqu'où on peut tirer le doigt (force maximale au bord).
+    const portee = new THREE.Mesh(geoPortee, new THREE.MeshBasicMaterial({ color: 0x0b1a0b, transparent: true, opacity: 0.0, depthWrite: false }));
+    portee.rotation.x = -Math.PI / 2;
+    portee.position.y = 0.003;
+    portee.visible = false;
+    gp.add(portee);
     const etiquette = creerEtiquettePetite();
     etiquette.position.y = 0.26;
     etiquette.visible = false;
     gp.add(etiquette);
     monde.add(gp);
-    capsules.push({ groupe: gp, equipe: e, k, anneau, etiquette, maillage: m });
+    capsules.push({ groupe: gp, equipe: e, k, anneau, portee, etiquette, maillage: m });
   }
   const rb = CAT.balle * S;
   const liege = texture((ctx, L) => {
@@ -643,9 +650,12 @@ function poserFleche(k, x, y, dx, dy, force, couleur) {
   f.pointe.position.set(r + long + 0.03, 0, 0);
   f.pointe.rotation.set(-Math.PI / 2, 0, 0);
   f.groupe.visible = true;
+  const c = capsules[k];
+  if (c && c.portee) { c.portee.visible = true; c.portee.material.opacity = 0.3; }
 }
 function cacherFleches(garder) {
   fleches.forEach((f, k) => { if (!garder || !garder.has(k)) f.groupe.visible = false; });
+  capsules.forEach(c => { if (c.portee && (!garder || !garder.has(c.k))) c.portee.visible = false; });
 }
 
 // =====================================================================
@@ -751,6 +761,12 @@ function annoncerTir(tir) {
   if (!etat) return;
   if (tir.but === null || tir.but === undefined) {
     elRappel.textContent = tir.tirs.length ? 'Pas de but. On remet ça !' : 'Personne n’a tiré !';
+    if (tir.passe) {
+      const de = tir.passe.de === MOI ? 'Toi' : etat.joueurs[tir.passe.de];
+      elRappel.textContent = 'Belle passe de ' + etat.joueurs[tir.passe.de] + ' !';
+      annoncer('BELLE PASSE !', de + ' → ' + (tir.passe.equipe === monEquipe() ? 'un coéquipier' : 'un coéquipier des ' + EQUIPES[tir.passe.equipe].court),
+        '#8fd0ff', 1.6, { vibrer: 40 });
+    }
     return;
   }
   const monEq = monEquipe();
