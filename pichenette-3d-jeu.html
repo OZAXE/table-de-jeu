@@ -197,7 +197,7 @@
 <div id="modale-regles" class="cache">
   <div class="modale">
     <h2>Règles de Pichenette FC</h2>
-    <p>Du foot sur une table de bistrot. Chaque équipe a <span class="accent">6 capsules</span> (les Blondes contre les Brunes) et on joue avec un <span class="accent">bouchon</span>. Chacun joue sur son téléphone, avec son but en bas de l'écran.</p>
+    <p>Du foot sur une table de bistrot. Chaque équipe a <span class="accent">5 capsules</span> (les Blondes contre les Brunes) et on joue avec un <span class="accent">bouchon</span>. Chacun joue sur son téléphone, avec son but en bas de l'écran.</p>
 
     <h3>Le coup d'envoi</h3>
     <ul>
@@ -281,7 +281,7 @@ document.getElementById('quitter-table').addEventListener('click', () => {
 // =====================================================================
 const CAT = {
   terrain: { largeur: 1.0, longueur: 1.6, but_largeur: 0.3, but_profondeur: 0.09 },
-  palet: 0.047, balle: 0.03, palets_par_equipe: 6, images_par_s: 25,
+  palet: 0.047, balle: 0.03, palets_par_equipe: 5, images_par_s: 25,
   formations: [], gorgees: { but_encaisse: 1, contre_son_camp: 2, defaite: 5 },
 };
 const S = 2.2;                  // unités de scène par unité de terrain
@@ -1295,7 +1295,9 @@ function panneauFormation(etat) {
     r.appendChild(bouton('Changer', 'sombre petit', () => envoyerIntention(MOI, { type: 'pf_formation', defense: fo.defense })));
   } else {
     if (etatCourant.equipes[e].length > 1) p.appendChild(aide('Toute l’équipe voit ces choix : mettez-vous d’accord, un seul valide.'));
-    r.appendChild(bouton('Valider les formations', '', () => agir({ type: 'pf_formation', attaque: fo.attaque, defense: fo.defense, valider: true })));
+    // Valider seul : le serveur garde les derniers choix de l'équipe (un panneau pas
+    // encore redessiné ne doit pas renvoyer une ancienne formation).
+    r.appendChild(bouton('Valider les formations', '', () => agir({ type: 'pf_formation', valider: true })));
   }
   p.appendChild(r);
 }
