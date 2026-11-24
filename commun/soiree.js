@@ -89,6 +89,7 @@
     quidenous: { titre: 'Qui de nous ?', page: 'quidenous-3d-jeu.html', icone: '👉' },
     tournee: { titre: 'La Tournée', page: 'tournee-3d-jeu.html', icone: '🏆' },
     loupgarou: { titre: 'Loup-Garou', page: 'loupgarou-3d-jeu.html', icone: '🐺' },
+    pichenette: { titre: 'Pichenette FC', page: 'pichenette-3d-jeu.html', icone: '⚽' },
   };
 
   function lire(cle) {

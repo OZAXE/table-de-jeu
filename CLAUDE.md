@@ -14,7 +14,7 @@ les pages appellent le serveur publié sur Render (`Soiree.SERVEURS` dans `commu
 ## Le projet
 Site des jeux de soirée (application installable « SHIELD »), publié depuis `main`.
 Chaque jeu en ligne est une page `*-3d-jeu.html` (Three.js) : kinito, beerbattle, buckshot,
-picolopoly, menteur (affiché « Cal 12 »), casino, undercover, conquete (affiché « Royaumes »), justepinte (affiché « Le Juste Pinte », thème `pub`), quidenous (affiché « Qui de nous ? », thème `plateau`), tournee (affiché « La Tournée », thème `tournee`, party game : ses mini-jeux sont des modules 2D `commun/minijeux/<id>.js`, un par entrée de `tournee_minijeux.json` côté serveur), loupgarou (affiché « Loup-Garou », thème `veillee`, 4 à 20 joueurs, rôles officiels cachés sans meneur). Exception : le Gribouillophone
+picolopoly, menteur (affiché « Cal 12 »), casino, undercover, conquete (affiché « Royaumes »), justepinte (affiché « Le Juste Pinte », thème `pub`), quidenous (affiché « Qui de nous ? », thème `plateau`), tournee (affiché « La Tournée », thème `tournee`, party game : ses mini-jeux sont des modules 2D `commun/minijeux/<id>.js`, un par entrée de `tournee_minijeux.json` côté serveur), loupgarou (affiché « Loup-Garou », thème `veillee`, 4 à 20 joueurs, rôles officiels cachés sans meneur), pichenette (affiché « Pichenette FC », thème `pub`, foot de comptoir à pichenettes : chacun voit le terrain depuis son but, tirs simultanés, trajectoire calculée par le serveur et rejouée). Exception : le Gribouillophone
 (jeu de dessin, identifiant `telephone`) est une page 2D, `telephone-jeu.html`, sans Three.js ni `da/`.
 Le serveur multijoueur est le dépôt `kinito-serveur` (son README décrit tous les messages).
 
