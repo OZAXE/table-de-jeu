@@ -324,11 +324,12 @@
       <tr><td>Départ</td><td id="regle-depart"></td></tr>
       <tr><td>Taxes</td><td id="regle-taxe"></td></tr>
       <tr><td>Prison</td><td id="regle-prison"></td></tr>
+      <tr><td>Double aux dés</td><td id="regle-double"></td></tr>
       <tr><td>Échange conclu</td><td id="regle-echange"></td></tr>
       <tr><td>Faillite</td><td>Cul sec.</td></tr>
       <tr><td>Parc Blossac</td><td>La cagnotte : les taxes, les amendes des cartes, les 50 € de sortie de prison et les mises perdues à la roulette s'y accumulent (son total est affiché en haut). En t'y arrêtant, tu peux la rafler contre 1 gorgée par tranche de 50 € (sans plafond). Pas d'immunité qui tienne : c'est un marché, pas une pénalité.</td></tr>
       <tr><td>Roulette</td><td>1 gorgée par lancer, quelle que soit la mise, bue quoi qu'il sorte.</td></tr>
-      <tr><td>Construire</td><td>Rien.</td></tr>
+      <tr><td>Construire</td><td id="regle-construire"></td></tr>
     </table>
 
     <h3>La prison, un abri</h3>
@@ -346,7 +347,7 @@
     </table>
 
     <h3>Les difficultés</h3>
-    <p>Le créateur du salon la choisit avant de lancer. Elle change combien on boit, mais surtout <span class="accent">quand</span>. La cagnotte et la roulette ne bougent pas : ce sont des choix, pas des pénalités.</p>
+    <p>Le créateur du salon la choisit avant de lancer. Elle change combien on boit, mais surtout <span class="accent">quand</span>. La cagnotte et la roulette ne bougent pas : ce sont des choix, pas des pénalités. Chaque gorgée vient d'un moment du jeu, et celles qu'on distribue se comptent <span class="accent">par adversaire</span> : à 8 comme à 4, chacun boit à peu près autant. Sur une heure, compte environ 100 gorgées par personne en difficile, 40 en normal et 30 en facile.</p>
     <table id="tableau-difficultes"></table>
 
     <h3>🎰 La roulette</h3>
@@ -418,27 +419,35 @@ const PP_INTERET_LEVEE = 10;
 const PP_GORGEES_DISTRIBUTION = 1;
 const PP_RETOUR_DEFAUT = 2;
 // Difficulté, choisie par le créateur du salon. Elle ne fait pas que
-// multiplier : elle décide aussi QUAND on boit.
+// multiplier : elle décide aussi QUAND on boit. Chaque gorgée vient d'un
+// moment du jeu (pas de toast gratuit pour toute la table).
 //   tranche / plafond  loyers, taxes, cartes : 1 gorgée par tranche de
 //                      « tranche » €, au moins 1, au plus « plafond »
 //   depart             passage au Départ : toute la table trinque ('tous'),
 //                      celui qui passe seulement ('joueur'), ou personne
-//   miroir             le propriétaire qui encaisse un loyer fait boire N
-//                      gorgées à qui il veut (0 = il ne distribue rien)
-//   prison / echange   entrée en prison ; toast collectif d'un échange conclu
+//   miroir             le propriétaire qui encaisse un loyer distribue
+//   maison / hotel     crémaillère : construire une maison (un hôtel)
+//   double             un double aux dés : son lanceur distribue
+//                      (ces trois-là : N gorgées PAR ADVERSAIRE, réparties
+//                      comme il veut entre eux, voir ppFaireServir)
+//   prison             entrée en prison
+//   prison_tour        chaque tour passé en prison sans en sortir
+//   echange            toast collectif d'un échange conclu
 //   duel / cadeau / sommelier   les cartes spéciales ({n} dans leur texte)
 // La cagnotte et la roulette ne bougent pas : ce sont des choix, pas des
-// pénalités. 'difficile' est la partie d'origine, et le défaut quand un
-// client n'envoie rien.
-// Rythme visé sur une partie d'1 h (total de la table) : difficile ~100
-// gorgées, normal ~40, facile ~30 (tests/picolopoly_rythme.py côté serveur).
+// pénalités. 'difficile' est le défaut quand un client n'envoie rien.
+// Rythme visé PAR PERSONNE sur une partie d'1 h, roulette comprise :
+// difficile ~100, normal ~40, facile ~30 (tests/picolopoly_rythme.py côté serveur).
 const PP_DIFFICULTES = {
-  facile: { tranche: 150, plafond: 3, depart: 'personne', miroir: 0,
-            prison: 0, echange: 0, duel: 2, cadeau: 2, sommelier: 3 },
-  normal: { tranche: 50, plafond: 3, depart: 'personne', miroir: 0,
-            prison: 1, echange: 1, duel: 3, cadeau: 3, sommelier: 5 },
-  difficile: { tranche: 50, plafond: 5, depart: 'tous', miroir: 1,
-               prison: 1, echange: 1, duel: 3, cadeau: 3, sommelier: 6 },
+  facile: { tranche: 150, plafond: 3, depart: 'personne', miroir: 0.5,
+            maison: 0.5, hotel: 1, double: 0, prison: 0, prison_tour: 0,
+            echange: 0, duel: 2, cadeau: 2, sommelier: 3 },
+  normal: { tranche: 150, plafond: 3, depart: 'personne', miroir: 0.75,
+            maison: 0.5, hotel: 1, double: 0.5, prison: 1, prison_tour: 0,
+            echange: 1, duel: 3, cadeau: 3, sommelier: 5 },
+  difficile: { tranche: 25, plafond: 10, depart: 'joueur', miroir: 2.5,
+               maison: 2, hotel: 3, double: 1.5, prison: 3, prison_tour: 2,
+               echange: 2, duel: 5, cadeau: 5, sommelier: 10 },
 };
 const PP_DIFFICULTE_DEFAUT = 'difficile';
 // Cagnotte du Parc Blossac : taxes, amendes des cartes et sorties de prison
@@ -973,10 +982,11 @@ function ppExecuter(etat, ev, etape) {
   } else if (t === 'payer') {
     ppPayer(etat, ev, i, etape.montant, etape.creancier, etape.motif);
   } else if (t === 'miroir') {
-    const o = etape.proprio;
-    if (!etat.faillite[o]) ppDemanderCible(etat, o, 'miroir', ppRegle(etat).miroir, false);
+    ppFaireServir(etat, etape.proprio, 'miroir', ppRegle(etat).miroir);
   } else if (t === 'monopoly') {
     ppMonsieurMonopoly(etat, ev, i);
+  } else if (t === 'double') {
+    ppFaireServir(etat, i, 'double', ppRegle(etat).double);
   }
 }
 
@@ -1052,6 +1062,19 @@ function ppDemanderCible(etat, qui, raison, nombre, parCarte) {
     return;
   }
   etat.attente = { type: 'cible', joueur: qui, raison, nombre, cibles };
+}
+
+// Miroir, double, crémaillère : le joueur répartit comme il veut
+// round(parAdversaire × adversaires) gorgées (au moins 1) entre ses
+// adversaires. Plus la table est grande, plus il y a de verres à remplir :
+// chacun boit à peu près autant quel que soit le nombre de joueurs.
+function ppFaireServir(etat, qui, raison, parAdversaire) {
+  if (parAdversaire <= 0 || etat.faillite[qui]) return;
+  const cibles = ppAdversaires(etat, qui, false);
+  if (!cibles.length) return;
+  const total = Math.max(1, Math.floor(parAdversaire * cibles.length + 0.5));
+  if (cibles.length === 1) ppDemanderCible(etat, qui, raison, total, false);
+  else etat.attente = { type: 'sommelier', joueur: qui, raison, total, cibles };
 }
 
 function ppPiocher(etat, ev, i, paquet) {
@@ -1154,6 +1177,7 @@ function ppLancer(etat, ev, i) {
       } else {
         etat.message = ppNom(etat, i) + ' reste en prison.';
         etat.suite = [];
+        ppBoire(etat, ev, [[i, ppRegle(etat).prison_tour]], 'prison_tour');
       }
     }
     ppDerouler(etat, ev);
@@ -1174,6 +1198,8 @@ function ppLancer(etat, ev, i) {
     return null;
   }
 
+  // Un double se fête : son lanceur distribue, une fois le déplacement fini.
+  const bonus = d1 === d2 && ppRegle(etat).double > 0 ? [{ t: 'double' }] : [];
   if (d1 === d2) {
     etat.doubles += 1;
     if (etat.doubles >= 3) {
@@ -1193,6 +1219,7 @@ function ppLancer(etat, ev, i) {
       options = [...new Set([(pos + d1) % 40, (pos + d2) % 40, (pos + d1 + d2) % 40])]
         .sort((a, b) => a - b);
     }
+    etat.suite = bonus;
     etat.attente = { type: 'deplacement', joueur: i, raison: 'bus', options };
     etat.message = 'Bus ! ' + ppNom(etat, i) + ' choisit sa case.';
     return null;
@@ -1201,6 +1228,7 @@ function ppLancer(etat, ev, i) {
   const n = d1 + d2 + (typeof rapide === 'number' ? rapide : 0);
   etat.suite = [{ t: 'avancer', n }];
   if (rapide === 'monopoly') etat.suite.push({ t: 'monopoly' });
+  etat.suite.push(...bonus);
   ppDerouler(etat, ev);
   return null;
 }
@@ -1294,6 +1322,9 @@ function ppConstruire(etat, ev, i, message) {
   p.maisons += 1;
   ev.push(ppTous({ type: 'pp_construction', joueur: i, case: c, maisons: p.maisons }));
   etat.message = ppNom(etat, i) + (p.maisons === 5 ? ' pose un hôtel sur ' : ' construit sur ') + cs.nom + '.';
+  // Crémaillère : la construction se fête aux frais des adversaires.
+  const r = ppRegle(etat);
+  ppFaireServir(etat, i, 'cremaillere', p.maisons === 5 ? r.hotel : r.maison);
   return null;
 }
 
@@ -1671,7 +1702,7 @@ function ppChoix(etat, ev, i, message) {
   } else if (t === 'sommelier') {
     etat.message = ppNom(etat, i) + ' fait le service.';
     const liste = Object.keys(v).map(Number).sort((x, y) => x - y).map(k => [k, v[k]]);
-    ppBoire(etat, ev, liste, 'sommelier');
+    ppBoire(etat, ev, liste, a.raison || 'sommelier');
   } else if (t === 'deplacement') {
     ppAvancerVers(etat, ev, i, v, a.raison);
     etat.suite.unshift({ t: 'arrivee' });
@@ -2852,7 +2883,7 @@ const RAISONS = {
   taxe: 'taxe', carte: 'carte', distribuer: 'distribution', distribution: 'distribution générale',
   retour: 'retour de bâton', duel: 'duel', cadeau: 'cadeau empoisonné', sommelier: 'sommelier',
   toast_echange: 'toast de l’échange', faillite: 'faillite', cagnotte: 'prix de la cagnotte',
-  roulette: 'mise à la roulette',
+  roulette: 'mise à la roulette', double: 'double aux dés', cremaillere: 'crémaillère', prison_tour: 'tour en prison',
 };
 const TOASTS = { toast_depart: 1, toast_echange: 1 };
 
@@ -3590,7 +3621,8 @@ function panneauChoix(e, a) {
     p.appendChild(r);
   } else if (a.type === 'sommelier') {
     const total = Object.values(repartition).reduce((s, x) => s + x, 0);
-    const p = ouvrirPanneau('Sommelier : ' + (a.total - total) + ' gorgée' + (a.total - total > 1 ? 's' : '') + ' à servir');
+    const quoi = { miroir: 'Loyer encaissé', double: 'Double', cremaillere: 'Crémaillère' }[a.raison] || 'Sommelier';
+    const p = ouvrirPanneau(quoi + ' : ' + (a.total - total) + ' gorgée' + (a.total - total > 1 ? 's' : '') + ' à servir');
     a.cibles.forEach(c => {
       const n = repartition[c] || 0;
       const r = rangee();
@@ -4179,9 +4211,9 @@ let monJeton = null;
 let difficulteChoisie = 'normal';
 
 const LIBELLES_DIFFICULTE = {
-  facile: { nom: 'Facile', icone: '🙂', resume: 'on boit sur les loyers, les taxes et les cartes, moins et moins souvent' },
-  normal: { nom: 'Normal', icone: '🍺', resume: 'le proprio ne fait plus boire, seul celui qui passe au Départ trinque' },
-  difficile: { nom: 'Difficile', icone: '🔥', resume: 'tout le monde trinque au Départ, le proprio distribue à chaque loyer' },
+  facile: { nom: 'Facile', icone: '🙂', resume: '~30 gorgées par personne et par heure : loyers légers, le proprio et les constructions font un peu boire' },
+  normal: { nom: 'Normal', icone: '🍺', resume: '~40 par personne et par heure : en plus, les doubles et l’entrée en prison font boire' },
+  difficile: { nom: 'Difficile', icone: '🔥', resume: '~100 par personne et par heure : loyers lourds, le proprio sert toute la table, chaque tour en prison se paie' },
 };
 
 // La rangée de boutons ; le panneau qui l'affiche se redessine au clic.
@@ -4634,14 +4666,21 @@ function majReglesDifficulte() {
   const ecrire = (id, texte) => { document.getElementById(id).textContent = texte; };
   const tranche = '1 gorgée par tranche de ' + r.tranche + ' € (au moins 1, au plus ' + r.plafond + ')';
   ecrire('regle-difficulte', '— ' + LIBELLES_DIFFICULTE[d].icone + ' ' + LIBELLES_DIFFICULTE[d].nom);
+  // Miroir, double, crémaillère : tant de gorgées PAR ADVERSAIRE, réparties
+  // librement entre eux (ppFaireServir).
+  const parAdv = x => String(x).replace('.', ',') + ' gorgée' + (x >= 2 ? 's' : '') + ' par adversaire (arrondi), à répartir comme tu veux';
   ecrire('regle-loyer', tranche + '. ' + (r.miroir > 0
-    ? 'Le propriétaire fait boire ' + r.miroir + ' gorgée à qui il veut.'
+    ? 'Le propriétaire distribue ' + parAdv(r.miroir) + '.'
     : 'Le propriétaire encaisse sans faire boire personne.'));
+  ecrire('regle-double', r.double > 0 ? 'Celui qui le fait distribue ' + parAdv(r.double) + '.' : 'Rien à boire.');
+  ecrire('regle-construire', 'Crémaillère : une maison fait distribuer ' + parAdv(r.maison) + ', un hôtel '
+    + String(r.hotel).replace('.', ',') + ' par adversaire.');
   ecrire('regle-depart', { tous: 'Toast : tout le monde boit 1 gorgée avec celui qui passe.',
     joueur: 'Celui qui passe boit 1 gorgée.', personne: 'Rien à boire, juste les ' + PP_SALAIRE + ' €.' }[r.depart]);
   ecrire('regle-taxe', tranche + '.');
-  ecrire('regle-prison', r.prison > 0 ? r.prison + ' gorgée en entrant.' : 'Rien à boire.');
-  ecrire('regle-echange', r.echange > 0 ? 'Toast : tout le monde boit ' + r.echange + ' gorgée.' : 'Rien à boire.');
+  ecrire('regle-prison', (r.prison > 0 ? r.prison + ' gorgée' + (r.prison > 1 ? 's' : '') + ' en entrant' : 'Rien à boire en entrant')
+    + (r.prison_tour > 0 ? ', puis ' + r.prison_tour + ' par tour passé dedans.' : '.'));
+  ecrire('regle-echange', r.echange > 0 ? 'Toast : tout le monde boit ' + r.echange + ' gorgée' + (r.echange > 1 ? 's' : '') + '.' : 'Rien à boire.');
   ecrire('regle-duel', r.duel);
   ecrire('regle-cadeau', r.cadeau);
   ecrire('regle-sommelier', r.sommelier);
@@ -4664,9 +4703,12 @@ function majReglesDifficulte() {
   };
   ligne('', (x, k) => LIBELLES_DIFFICULTE[k].icone + ' ' + LIBELLES_DIFFICULTE[k].nom);
   ligne('Loyers, taxes, cartes', x => '1 / ' + x.tranche + ' €, max ' + x.plafond);
-  ligne('Le proprio distribue', x => (x.miroir > 0 ? String(x.miroir) : 'non'));
+  const virgule = x => String(x).replace('.', ',');
+  ligne('Le proprio distribue (par adv.)', x => (x.miroir > 0 ? virgule(x.miroir) : 'non'));
+  ligne('Double (par adv.)', x => (x.double > 0 ? virgule(x.double) : 'non'));
+  ligne('Maison / hôtel (par adv.)', x => virgule(x.maison) + ' / ' + virgule(x.hotel));
   ligne('Départ', x => ({ tous: 'toute la table', joueur: 'celui qui passe', personne: 'personne' }[x.depart]));
-  ligne('Prison', x => (x.prison > 0 ? String(x.prison) : 'rien'));
+  ligne('Prison (entrée / par tour)', x => x.prison + ' / ' + x.prison_tour);
   ligne('Toast d’échange', x => (x.echange > 0 ? 'oui' : 'non'));
   ligne('Duel / cadeau / sommelier', x => x.duel + ' / ' + x.cadeau + ' / ' + x.sommelier);
 }
