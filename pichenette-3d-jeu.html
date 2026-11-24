@@ -1295,7 +1295,9 @@ function panneauFormation(etat) {
     r.appendChild(bouton('Changer', 'sombre petit', () => envoyerIntention(MOI, { type: 'pf_formation', defense: fo.defense })));
   } else {
     if (etatCourant.equipes[e].length > 1) p.appendChild(aide('Toute l’équipe voit ces choix : mettez-vous d’accord, un seul valide.'));
-    r.appendChild(bouton('Valider les formations', '', () => agir({ type: 'pf_formation', attaque: fo.attaque, defense: fo.defense, valider: true })));
+    // Valider seul : le serveur garde les derniers choix de l'équipe (un panneau pas
+    // encore redessiné ne doit pas renvoyer une ancienne formation).
+    r.appendChild(bouton('Valider les formations', '', () => agir({ type: 'pf_formation', valider: true })));
   }
   p.appendChild(r);
 }
