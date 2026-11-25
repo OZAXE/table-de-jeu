@@ -731,7 +731,7 @@
     champPrenom.value = Soiree.nom();
     // Pseudo de test : un repère sous le champ (l'onglet 🧪 apparaîtra dans les jeux).
     const repereTest = document.createElement('div');
-    repereTest.textContent = '🧪 Mode test activé : dans chaque jeu, l\'onglet 🧪 ajoute des joueurs test.';
+    repereTest.textContent = '🧪 Mode test activé : dans chaque jeu, l\'onglet 🧪 ajoute des bots qui jouent contre toi.';
     repereTest.style.cssText = 'margin-top:6px;font-size:13px;font-weight:600;color:#6ee7b7';
     champPrenom.parentElement.insertAdjacentElement('afterend', repereTest);
     const majRepereTest = () => { repereTest.style.display = Soiree.estPseudoTest(champPrenom.value) ? 'block' : 'none'; };
