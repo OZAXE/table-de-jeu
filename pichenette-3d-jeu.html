@@ -74,6 +74,12 @@
   button.choisi { outline: 3px solid var(--accent); outline-offset: 2px; }
   .compte { font-size: 14px; color: var(--texte-doux); margin-top: 6px; }
 
+  /* --- Mode objets --- */
+  .reserve-pf { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin: 4px 0; }
+  .reserve-pf button { font-size: 14px; padding: 7px 12px; }
+  .reserve-pf button .ico { font-size: 18px; margin-right: 4px; }
+  .reserves-pf { font-size: 13px; color: var(--texte-doux); margin: 2px 0 4px; }
+
   /* --- Formations --- */
   .formations { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 4px 0 8px; }
   .formation {
@@ -212,6 +218,13 @@
       <li>En 1 contre 1, tu tires <span class="accent">2 capsules</span> par tour. En équipe, chacun en tire <span class="accent">1</span>, et deux coéquipiers ne peuvent pas prendre la même.</li>
       <li>Quand tout le monde a validé (ou au bout du chrono), toutes les capsules partent ensemble. Elles peuvent se percuter en plein vol : la physique tranche.</li>
       <li>Une capsule visée mais pas validée part quand même. Les autres ne bougent pas, sauf si on les percute.</li>
+    </ul>
+
+    <h3>Mode objets (au choix au lancement)</h3>
+    <ul>
+      <li>Une <span class="accent">tireuse 🍺</span> apparaît au milieu du terrain. La première capsule tirée qui la touche gagne un objet pour son équipe (2 au plus en réserve, partagés par l'équipe). Elle revient deux tours plus tard.</li>
+      <li>Pendant la visée, touche un objet de la réserve pour l'activer (une seule activation par équipe et par tour). Il reste <span class="accent">secret</span> jusqu'au tir : l'autre équipe sait seulement que vous préparez quelque chose.</li>
+      <li>🍺 Mousse (tirs plus forts), 🧊 Glaçon (gèle une capsule adverse 2 tours), 🍻 Tournée (une capsule de plus), 🫗 Bière renversée (flaque qui freine), 🟤 Sous-bock (petit mur), 👻 Capsule fantôme (traverse les capsules), 🧲 Décapsuleur aimanté (le bouchon colle), 🧤 Gardien XXL, 🔄 Échange (deux capsules permutent), 🥴 Tête qui tourne (l'écran adverse tangue), 🥃 Cul sec (2 gorgées à un adversaire).</li>
     </ul>
 
     <h3>Les gorgées</h3>
@@ -727,11 +740,22 @@ function rejouerTir(tir, score) {
     poserFleche(t.palet, p[0], p[1], t.dx, t.dy, t.force, coul);
   });
   if (tir.tirs.length) elRappel.textContent = '👀 Les tirs sont dévoilés…';
+  const objets = tir.objets || [];
+  if (objets.length) {
+    majCalqueObjets(effetsDevoiles(objets), etatCourant && etatCourant.pastille, positions.palets);
+    annoncerObjets(objets);
+  }
+  // Capsules fantômes : transparentes pendant le tir.
+  const fantomes = new Set();
+  objets.filter(o => o.objet === 'fantome').forEach(o => tir.tirs.forEach(t => {
+    if (Math.floor(t.palet / CAT.palets_par_equipe) === o.equipe) fantomes.add(t.palet);
+  }));
+  fantomes.forEach(k => { capsules[k].maillage.material = matsFantome(capsules[k].equipe); });
   replayEnCours = true;
   const fps = CAT.images_par_s || 25;
   const nb = tir.images.length;
   const dureeAnim = Math.max(0.05, (nb - 1) / fps);
-  attendre(tir.tirs.length ? 0.75 : 0.1, () => {
+  attendre(objets.length ? 1.5 : tir.tirs.length ? 0.75 : 0.1, () => {
     cacherFleches();
     animer(dureeAnim, an => {
       const f = Math.min(nb - 1, an.t * fps);
@@ -742,7 +766,9 @@ function rejouerTir(tir, score) {
       }
       positions.balle = [(a[2 * n] + (b[2 * n] - a[2 * n]) * u) / 1000, (a[2 * n + 1] + (b[2 * n + 1] - a[2 * n + 1]) * u) / 1000];
       placerPieces();
+      if (tir.ramasse && meshPastille && f >= tir.ramasse.image) meshPastille.visible = false;
     }, () => {
+      fantomes.forEach(k => { capsules[k].maillage.material = MATS_CAPSULE[capsules[k].equipe]; });
       const z = tir.images[nb - 1];
       for (let k = 0; k < n; k++) positions.palets[k] = [z[2 * k] / 1000, z[2 * k + 1] / 1000];
       positions.balle = [z[2 * n] / 1000, z[2 * n + 1] / 1000];
@@ -759,6 +785,15 @@ function rejouerTir(tir, score) {
 function annoncerTir(tir) {
   const etat = etatCourant;
   if (!etat) return;
+  if (tir.ramasse) {
+    const o = objetInfo(tir.ramasse.objet);
+    const pour = tir.ramasse.equipe === monEquipe() ? 'pour ton équipe' : 'pour les ' + EQUIPES[tir.ramasse.equipe].court;
+    if ((tir.but === null || tir.but === undefined) && !tir.passe) {
+      annoncer('🍺 TIREUSE !', o.icone + ' ' + o.nom + ' ' + pour, '#ffcf5a', 1.8, { vibrer: 30 });
+      elRappel.textContent = o.icone + ' ' + o.nom + ' ' + pour + ' !';
+      return;
+    }
+  }
   if (tir.but === null || tir.but === undefined) {
     elRappel.textContent = tir.tirs.length ? 'Pas de but. On remet ça !' : 'Personne n’a tiré !';
     if (tir.passe) {
@@ -785,6 +820,220 @@ function annoncerTir(tir) {
   if (boitMoi) petit += ' · tu bois ' + boitMoi.gorgees;
   else if (monEq === tir.but) petit += ' · ils boivent !';
   annoncer(gros, petit, couleur, 2.6, { flash: monEq === tir.but, vibrer: boitMoi ? 200 : [60, 40, 120] });
+}
+
+// =====================================================================
+// MODE OBJETS : tireuse à ramasser, réserve d'équipe, objets secrets
+// =====================================================================
+const MODES = [{ id: 'pur', nom: '⚽ Pur' }, { id: 'objets', nom: '🎁 Objets' }];
+let modeChoisi = 'pur';
+let choixCible = null;      // { objet, cible: type, pris: [] } pendant qu'on désigne la cible
+let teteQuiTourne = false;
+let meshPastille = null;
+const calqueObjets = new THREE.Group();
+monde.add(calqueObjets);
+const MATS_FANTOME = [];
+function matsFantome(e) {
+  if (!MATS_FANTOME[e]) MATS_FANTOME[e] = MATS_CAPSULE[e].map(m => { const c = m.clone(); c.transparent = true; c.opacity = 0.35; c.depthWrite = false; return c; });
+  return MATS_FANTOME[e];
+}
+function objetInfo(id) {
+  const cat = (CAT.objets && CAT.objets.catalogue) || [];
+  return cat.find(o => o.id === id) || { id, nom: id, icone: '🎁', cible: null, detail: '' };
+}
+function effetsActifs(etat) {
+  etat = etat || etatCourant;
+  if (!etat || !etat.effets) return [];
+  return etat.effets.filter(x => x.jusqu >= etat.tour && (x.debut || 0) <= etat.tour);
+}
+function gelees() { return new Set(effetsActifs().filter(x => x.type === 'glacon').map(x => x.palet)); }
+// Au tir, les objets dévoilés se voient tout de suite (avant le nouvel état du serveur).
+function effetsDevoiles(objets) {
+  const O = CAT.objets || {};
+  const deja = (etatCourant && etatCourant.effets) || [];
+  const extra = [];
+  objets.forEach(o => {
+    if (o.objet === 'flaque') extra.push({ type: 'flaque', x: o.cible[0], y: o.cible[1], r: O.flaque_rayon || 0.12 });
+    if (o.objet === 'sous_bock') extra.push({ type: 'sous_bock', x: o.cible[0], y: o.cible[1], r: O.mur_rayon || 0.055 });
+    if (o.objet === 'glacon') extra.push({ type: 'glacon', palet: o.cible });
+    if (o.objet === 'xxl') extra.push({ type: 'xxl', palet: o.cible, r: CAT.palet * (O.xxl_facteur || 1.6) });
+  });
+  const tour = etatCourant ? etatCourant.tour : 0;
+  return deja.filter(x => x.jusqu >= tour && (x.debut || 0) <= tour).concat(extra);
+}
+function texteEmoji(emoji, fond, bord) {
+  return texture((ctx, L) => {
+    ctx.fillStyle = fond; ctx.beginPath(); ctx.arc(L / 2, L / 2, L / 2, 0, Math.PI * 2); ctx.fill();
+    if (bord) { ctx.strokeStyle = bord; ctx.lineWidth = L * 0.07; ctx.beginPath(); ctx.arc(L / 2, L / 2, L * 0.43, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.font = Math.round(L * 0.56) + 'px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(emoji, L / 2, L / 2 + L * 0.04);
+  }, 128);
+}
+let TEX_PASTILLE = null, TEX_SOUS_BOCK = null;
+function majCalqueObjets(effets, pastille, palets) {
+  while (calqueObjets.children.length) calqueObjets.remove(calqueObjets.children[0]);
+  meshPastille = null;
+  const tour = etatCourant ? etatCourant.tour : 0;
+  const actifs = effets.filter(x => x.jusqu === undefined || (x.jusqu >= tour && (x.debut || 0) <= tour));
+  // Gardien XXL : la capsule grossit.
+  const xxl = new Map(actifs.filter(x => x.type === 'xxl').map(x => [x.palet, x.r / CAT.palet]));
+  capsules.forEach(c => {
+    const f = xxl.get(c.k) || 1;
+    c.maillage.scale.set(f, 1, f);
+    c.anneau.scale.setScalar(f);
+  });
+  actifs.forEach(x => {
+    if (x.type === 'flaque') {
+      const m = new THREE.Mesh(new THREE.CircleGeometry(x.r * S, 40),
+        new THREE.MeshStandardMaterial({ color: 0xd99a1e, transparent: true, opacity: 0.6, roughness: 0.15, metalness: 0.1, depthWrite: false }));
+      m.rotation.x = -Math.PI / 2;
+      m.position.set(x.x * S, 0.0025, -x.y * S);
+      calqueObjets.add(m);
+    } else if (x.type === 'sous_bock') {
+      if (!TEX_SOUS_BOCK) TEX_SOUS_BOCK = texteEmoji('🍺', '#b07a45', '#6b4220');
+      const cote = mat(0x8a5a30, { roughness: 0.9 });
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(x.r * S, x.r * S, 0.045, 36),
+        [cote, mat(0xffffff, { map: TEX_SOUS_BOCK, roughness: 0.85 }), cote]);
+      m.position.set(x.x * S, 0.0225, -x.y * S);
+      m.castShadow = true;
+      calqueObjets.add(m);
+    } else if (x.type === 'glacon') {
+      const p = palets && palets[x.palet];
+      if (!p) return;
+      const r = CAT.palet * S * 1.25;
+      const m = new THREE.Mesh(new THREE.BoxGeometry(r * 2, H_CAPSULE * 2.2, r * 2),
+        new THREE.MeshStandardMaterial({ color: 0xbfe8ff, transparent: true, opacity: 0.55, roughness: 0.05, metalness: 0.1, depthWrite: false }));
+      m.position.set(p[0] * S, H_CAPSULE * 1.1, -p[1] * S);
+      m.rotation.y = 0.4;
+      calqueObjets.add(m);
+    }
+  });
+  if (pastille) {
+    if (!TEX_PASTILLE) TEX_PASTILLE = texteEmoji('🍺', '#ffcf3a', '#9a6a00');
+    const r = ((CAT.objets && CAT.objets.pastille && CAT.objets.pastille.rayon) || 0.035) * S;
+    const cote = mat(0xd9a520, { metalness: 0.8, roughness: 0.3 });
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.02, 36), [cote, mat(0xffffff, { map: TEX_PASTILLE, metalness: 0.3, roughness: 0.4 }), cote]);
+    m.position.set(pastille[0] * S, 0.01, -pastille[1] * S);
+    // Toujours lisible, même retourné pour les Brunes.
+    const halo = new THREE.Mesh(new THREE.RingGeometry(r * 1.2, r * 1.55, 36), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.6, depthWrite: false }));
+    halo.rotation.x = -Math.PI / 2;
+    halo.position.y = -0.007;
+    m.add(halo);
+    calqueObjets.add(m);
+    meshPastille = m;
+  }
+}
+function annoncerObjets(objets) {
+  const etat = etatCourant;
+  const gros = objets.map(o => objetInfo(o.objet).icone + ' ' + objetInfo(o.objet).nom.toUpperCase()).join(' + ');
+  const petit = objets.map(o => {
+    let t = EQUIPES[o.equipe].court;
+    if (o.objet === 'cul_sec' && etat) t += ' : ' + (o.cible === MOI ? 'tu bois 2 gorgées !' : etat.joueurs[o.cible] + ' boit 2 gorgées');
+    else if (o.objet === 'tete') t += ' : l’écran des ' + EQUIPES[1 - o.equipe].court + ' va tanguer';
+    else if (o.objet === 'tournee' && etat) t += ' : ' + etat.joueurs[o.par] + ' tire une capsule de plus';
+    return t;
+  }).join(' · ');
+  annoncer(gros, petit, '#ffcf5a', 1.6, { vibrer: objets.some(o => o.objet === 'cul_sec' && o.cible === MOI) ? 200 : 40 });
+}
+function texteCible(type) {
+  if (type === 'palet_adverse') return 'Touche la capsule adverse à geler.';
+  if (type === 'palets_miens') return 'Touche deux de tes capsules à échanger' + (choixCible && choixCible.pris.length ? ' (encore une).' : '.');
+  if (type === 'point') return 'Touche l’endroit du terrain où le poser.';
+  if (type === 'joueur_adverse') return 'Choisis l’adversaire qui boit.';
+  return '';
+}
+function activerObjet(id, cible) {
+  choixCible = null;
+  envoyerIntention(MOI, { type: 'pf_objet', objet: id, cible: cible === undefined ? null : cible });
+}
+function choisirObjet(id) {
+  const act = maVue && maVue.activation;
+  if (act && act.objet === id && !choixCible) { activerObjet(null); return; }
+  const o = objetInfo(id);
+  if (!o.cible) { activerObjet(id); return; }
+  choixCible = { objet: id, cible: o.cible, pris: [] };
+  elRappel.textContent = o.icone + ' ' + texteCible(o.cible);
+  rafraichirPanneau(true);
+}
+function capsuleProche(pt, equipe) {
+  if (!pt) return null;
+  let meilleur = null, dMin = CAT.palet * 2.4;
+  for (let k = equipe * CAT.palets_par_equipe; k < (equipe + 1) * CAT.palets_par_equipe; k++) {
+    const p = positions.palets[k];
+    if (!p) continue;
+    const d = Math.hypot(p[0] - pt[0], p[1] - pt[1]);
+    if (d < dMin) { dMin = d; meilleur = k; }
+  }
+  return meilleur;
+}
+function designerCible(pt) {
+  const e = monEquipe();
+  if (!choixCible || e === null || !pt) return;
+  const c = choixCible;
+  if (c.cible === 'palet_adverse') {
+    const k = capsuleProche(pt, 1 - e);
+    if (k !== null) activerObjet(c.objet, k);
+  } else if (c.cible === 'palets_miens') {
+    const k = capsuleProche(pt, e);
+    if (k === null || c.pris.includes(k)) return;
+    c.pris.push(k);
+    if (c.pris.length === 2) activerObjet(c.objet, c.pris.slice());
+    else { elRappel.textContent = objetInfo(c.objet).icone + ' ' + texteCible(c.cible); rafraichirPanneau(true); }
+  } else if (c.cible === 'point') {
+    const T = CAT.terrain;
+    if (Math.abs(pt[0]) > T.largeur / 2 || Math.abs(pt[1]) > T.longueur / 2) return;
+    activerObjet(c.objet, [Math.round(pt[0] * 1e4) / 1e4, Math.round(pt[1] * 1e4) / 1e4]);
+  }
+}
+function ligneReserves(etat) {
+  const d = document.createElement('div');
+  d.className = 'reserves-pf';
+  d.textContent = '🎁 ' + [0, 1].map(e => EQUIPES[e].court + ' ' + ((etat.reserves && etat.reserves[e].length)
+    ? etat.reserves[e].map(id => objetInfo(id).icone).join('') : '–')).join(' · ');
+  return d;
+}
+function blocObjets(p, etat) {
+  const e = monEquipe();
+  if (e === null) return;
+  const act = maVue && maVue.activation;
+  if (choixCible) {
+    const o = objetInfo(choixCible.objet);
+    p.appendChild(aide(o.icone + ' ' + o.nom + ' : ' + texteCible(choixCible.cible)));
+    const r = rangee();
+    if (choixCible.cible === 'joueur_adverse') {
+      etat.equipes[1 - e].forEach(j => r.appendChild(bouton(etat.joueurs[j], 'petit', () => activerObjet(choixCible.objet, j))));
+    }
+    r.appendChild(bouton('Annuler', 'sombre petit', () => { choixCible = null; elRappel.textContent = ''; rafraichirPanneau(true); }));
+    p.appendChild(r);
+    return;
+  }
+  const mes = (etat.reserves && etat.reserves[e]) || [];
+  if (mes.length) {
+    const r = document.createElement('div');
+    r.className = 'reserve-pf';
+    const vus = new Set();
+    mes.forEach(id => {
+      const o = objetInfo(id);
+      const b = bouton('', 'sombre' + (act && act.objet === id && !vus.has(id) ? ' choisi' : ''), () => choisirObjet(id));
+      vus.add(id);
+      const ico = document.createElement('span'); ico.className = 'ico'; ico.textContent = o.icone;
+      b.appendChild(ico); b.appendChild(document.createTextNode(o.nom));
+      b.title = o.detail;
+      r.appendChild(b);
+    });
+    p.appendChild(r);
+  }
+  if (act) {
+    const o = objetInfo(act.objet);
+    p.appendChild(aide('🤫 ' + o.icone + ' ' + o.nom + ' activé' + (act.par === MOI ? '' : ' par ' + etat.joueurs[act.par]) + ', dévoilé au tir. Touche-le encore pour l’annuler.'));
+  } else if (mes.length) {
+    p.appendChild(aide('Touche un objet pour l’activer ce tour-ci (un seul par équipe).'));
+  } else if (etat.pastille) {
+    p.appendChild(aide('Pas d’objet : touche la tireuse 🍺 avec une capsule pour en gagner un.'));
+  }
+  if (etat.objet_active && etat.objet_active[1 - e]) p.appendChild(aide('👀 Les ' + EQUIPES[1 - e].court + ' préparent un objet…'));
+  p.appendChild(ligneReserves(etat));
 }
 
 // =====================================================================
@@ -816,7 +1065,8 @@ function monEquipe() {
 function maxTirs() {
   const e = monEquipe();
   if (e === null) return 0;
-  return etatCourant.equipes[e].length === 1 ? 2 : 1;
+  const act = maVue && maVue.activation;
+  return (etatCourant.equipes[e].length === 1 ? 2 : 1) + (act && act.objet === 'tournee' && act.par === MOI ? 1 : 0);
 }
 function prisParCoequipiers() {
   const pris = new Map();
@@ -833,7 +1083,7 @@ function capsuleSous(pt) {
   let meilleur = null, dMin = CAT.palet * 2.4;
   for (let k = e * CAT.palets_par_equipe; k < (e + 1) * CAT.palets_par_equipe; k++) {
     const p = positions.palets[k];
-    if (!p || pris.has(k)) continue;
+    if (!p || pris.has(k) || gelees().has(k)) continue;
     const d = Math.hypot(p[0] - pt[0], p[1] - pt[1]);
     if (d < dMin) { dMin = d; meilleur = k; }
   }
@@ -848,6 +1098,7 @@ function viseeDepuis(k, pt) {
 
 renderer.domElement.addEventListener('pointerdown', ev => {
   if (!enVisee || replayEnCours) return;
+  if (choixCible) { ev.preventDefault(); designerCible(pointTerrain(ev)); return; }
   const pt = pointTerrain(ev);
   const k = capsuleSous(pt);
   if (k === null) return;
@@ -933,7 +1184,7 @@ function majAnneaux() {
   const e = monEquipe();
   const pris = prisParCoequipiers();
   capsules.forEach(c => {
-    const jouable = enVisee && e === c.equipe && !pris.has(c.k);
+    const jouable = enVisee && e === c.equipe && !pris.has(c.k) && !gelees().has(c.k);
     const vise = brouillons.some(b => b.palet === c.k);
     c.anneau.material.opacity = jouable ? (vise ? 0.85 : 0.45) : 0;
     c.anneau.material.color.set(vise ? 0xffe066 : 0xffffff);
@@ -1048,6 +1299,7 @@ function appliquerCatalogue(c) {
     terrain: c.terrain || CAT.terrain, palet: c.palet || CAT.palet, balle: c.balle || CAT.balle,
     palets_par_equipe: c.palets_par_equipe || CAT.palets_par_equipe, images_par_s: c.images_par_s || CAT.images_par_s,
     formations: c.formations || CAT.formations, gorgees: c.gorgees || CAT.gorgees,
+    objets: c.objets || CAT.objets,
   });
   if (JSON.stringify([CAT.terrain, CAT.palet, CAT.balle, CAT.palets_par_equipe]) !== avant) {
     construireTerrain();
@@ -1069,6 +1321,7 @@ function appliquerVue(v) {
     if (mien && !brouillons.length) brouillons = mien.map(b => ({ ...b }));
     pret = !!etat.prets[MOI];
   }
+  if (brouillons.length > maxTirs()) brouillons = brouillons.slice(0, maxTirs());
   dessinerVisees();
   rafraichirPanneau(false);
 }
@@ -1082,6 +1335,7 @@ function appliquerEtat(etat) {
   if (!enPartie) demarrerScene();
   etatCourant = etat;
   if (BUTS.includes(etat.buts_victoire)) butsChoisis = etat.buts_victoire;
+  if (etat.mode) modeChoisi = etat.mode;
   echeanceLocale = etat.delai === null || etat.delai === undefined ? null : Date.now() + etat.delai * 1000;
   orienterMonde();
   const nouvellePhase = !avant || avant.phase !== etat.phase || avant.tour !== etat.tour;
@@ -1115,7 +1369,12 @@ function appliquerEtat(etat) {
   } else {
     enVisee = false;
     tirage = null;
+    choixCible = null;
   }
+  if (nouvellePhase) choixCible = null;
+  teteQuiTourne = etat.phase === 'visee' && effetsActifs(etat).some(x => x.type === 'tete' && x.equipe === monEquipe());
+  if (teteQuiTourne && nouvellePhase) annoncer('🥴 TÊTE QUI TOURNE', 'Ton écran tangue ce tour-ci, vise bien !', '#c9a0ff', 1.8);
+  if (etat.phase !== 'tir') majCalqueObjets(etat.effets || [], etat.pastille, etat.palets);
   if (etat.phase === 'fin' && nouvellePhase && avant) annoncerFin(etat);
   dessinerVisees();
   majListeJoueurs(etat);
@@ -1234,6 +1493,7 @@ function rafraichirPanneau(forcer) {
   const e = monEquipe();
   const f = maVue && maVue.formation ? [maVue.formation.attaque, maVue.formation.defense, maVue.formation.valide].join(',') : '';
   const cle = [etat.phase, etat.tour, e, f, pret, brouillons.length, etat.formations_validees.join(','),
+    JSON.stringify([etat.reserves, etat.objet_active, maVue && maVue.activation, choixCible && [choixCible.objet, choixCible.pris.length]]),
     etat.phase === 'fin' ? joueursProchainePartie(etat) : ''].join('|');
   if (!forcer && cle === clePanneau) { majPanneauLeger(etat); return; }
   clePanneau = cle;
@@ -1331,6 +1591,7 @@ function panneauVisee(etat) {
     t.textContent = '🎯 ' + brouillons.length + ' / ' + n + ' visée' + (n > 1 ? 's' : '') + '. Touche une capsule sans tirer pour l’annuler.';
   }
   p.appendChild(t);
+  if (etat.mode === 'objets') blocObjets(p, etat);
   const r = rangee();
   if (pret) {
     r.appendChild(bouton('✔️ Prêt · modifier', 'sombre', () => { pret = false; envoyerVisees(false); rafraichirPanneau(true); }));
@@ -1350,6 +1611,7 @@ function panneauVisee(etat) {
 function panneauTir(etat) {
   const p = ouvrirPanneau('', true);
   p.appendChild(aide('⚡ Tout le monde tire !'));
+  if (etat.mode === 'objets') p.appendChild(ligneReserves(etat));
 }
 
 function panneauFin(etat) {
@@ -1412,7 +1674,7 @@ function joueursProchainePartie(etat) {
   const absents = (etat.partis || []).filter(Boolean).length;
   return Math.max(0, (joueursSalon.length || etat.joueurs.length) - absents);
 }
-function messageDemarrer() { return { type: 'pf_demarrer', buts: butsChoisis }; }
+function messageDemarrer() { return { type: 'pf_demarrer', buts: butsChoisis, mode: modeChoisi }; }
 
 function blocReglage(redessiner) {
   const d = document.createElement('div');
@@ -1426,6 +1688,17 @@ function blocReglage(redessiner) {
     rm.appendChild(bouton(String(m), 'sombre petit' + (m === butsChoisis ? ' choisi' : ''), () => { butsChoisis = m; redessiner(); }));
   });
   d.appendChild(rm);
+  const t2 = document.createElement('div');
+  t2.className = 'reglage-titre';
+  t2.style.textAlign = 'center';
+  t2.textContent = 'Mode';
+  d.appendChild(t2);
+  const ro = rangee();
+  MODES.forEach(m => {
+    ro.appendChild(bouton(m.nom, 'sombre petit' + (m.id === modeChoisi ? ' choisi' : ''), () => { modeChoisi = m.id; redessiner(); }));
+  });
+  d.appendChild(ro);
+  if (modeChoisi === 'objets') d.appendChild(aide('Une tireuse 🍺 à ramasser sur le terrain donne des objets à activer en secret.'));
   return d;
 }
 
@@ -1793,6 +2066,9 @@ function demarrerScene() {
   apercu = null;
   replayEnCours = false;
   positions.palets = [];
+  choixCible = null;
+  teteQuiTourne = false;
+  majCalqueObjets([], null, []);
   cacherFleches();
   cacherPanneau();
 }
@@ -1819,6 +2095,11 @@ function boucle() {
   if (enVisee) capsules.forEach(c => { if (c.anneau.material.opacity > 0) c.anneau.scale.setScalar(1 + Math.sin(t * 4 + c.k) * 0.06); });
   if (bouchon) bouchon.children[1].material.opacity = 0.35 + Math.sin(t * 3) * 0.2;
   camera.position.lerp(CAM_POS, 0.12);
+  if (teteQuiTourne) {
+    camera.position.x += Math.sin(t * 1.7) * 0.32;
+    camera.position.z += Math.cos(t * 1.1) * 0.22;
+  }
+  if (meshPastille) meshPastille.rotation.y = t * 1.5;
   decor.animer(t);
   camera.lookAt(CAM_CIBLE);
   const lx = CAT.terrain.largeur / 2 * S + 0.12, lz = (CAT.terrain.longueur / 2 + CAT.terrain.but_profondeur) * S + 0.06;
@@ -1874,6 +2155,8 @@ window.pfTest = {
   positions: () => positions.palets.map(p => p.slice()),
   annonces: () => journalAnnonces.slice(),
   orientation: () => monde.rotation.y,
+  objets: () => ({ mode: etatCourant && etatCourant.mode, reserves: etatCourant && etatCourant.reserves, activation: maVue && maVue.activation,
+    choix: choixCible && choixCible.objet, pastille: !!(meshPastille && meshPastille.visible), tete: teteQuiTourne }),
 };
 surveillerFluidite();
 </script>
