@@ -1,11 +1,10 @@
 # table-de-jeu
-## Mode test (jouer seul)
+## Mode test (jouer contre des bots)
 
 Avec le pseudo **Admin01** (majuscules indifférentes), chaque jeu affiche un onglet 🧪 sur le
-bord gauche, une fois la page connectée à une table. Il ajoute des « joueurs test » (Bot 1,
-Bot 2… jusqu'à 7) : chacun est la vraie page du jeu, ouverte dans un cadre et connectée sous son
-prénom comme un vrai téléphone. La barre du haut sert à jouer à la place d'un bot (toucher son
-nom) ou à revenir à sa propre partie (« Moi », c'est là qu'on lance le jeu). Les bots suivent la
-table quand on change de jeu ; « Retirer » en fait partir un. Marche aussi dans l'Enquête et le
-Bingo. Rien côté serveur : pour lui, ce sont des joueurs ordinaires. La liste des pseudos est
-`PSEUDOS_TEST` dans `commun/soiree.js`.
+bord gauche, une fois la page connectée à une table. Il ouvre un petit panneau pour ajouter des
+bots à sa table (« ＋ Ajouter un bot ») ou en faire partir un (✕). Les bots vivent sur le serveur
+(`bots.py` du dépôt `kinito-serveur`) : ils s'assoient comme des joueurs ordinaires, jouent tout
+seuls avec un temps de réflexion, et restent à la table quand elle change de jeu. Un jeu dont les
+bots ne savent pas encore jouer le signale dans le panneau (ils restent assis sans jouer). La
+liste des pseudos est `PSEUDOS_TEST` dans `commun/soiree.js` (et dans `serveur.py`).

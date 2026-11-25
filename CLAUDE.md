@@ -48,10 +48,9 @@ passent par `Soiree.appelReveil(url, surAttente)`, qui réessaie jusqu'à 90 s e
 `Soiree.texteReveil(secondes)`. Un pingueur cron-job.org garde aussi le serveur éveillé.
 
 ## Mode test (pseudo `Admin01`)
-`Soiree.modeTest(jeu)` (appelé par `verifierJeuEnCours`, et par l'Enquête et le Bingo) ajoute
-l'onglet 🧪 : des « joueurs test » qui sont la vraie page du jeu dans un cadre, avec
-`?siege_test=<prénom>`. Dans un tel cadre, `soiree.js` donne ce prénom et préfixe les clés du
-localStorage (`siege:<prénom>:`) pour ne pas écraser les sessions du vrai joueur.
+`Soiree.modeTest(jeu)` (appelé par `verifierJeuEnCours`) ajoute l'onglet 🧪 : un panneau qui
+ajoute ou retire des bots à la table (`/salon/{code}/bots/ajouter|retirer?par=Admin01`). Les bots
+vivent sur le serveur (`bots.py`, un cerveau par jeu) et jouent tout seuls ; plus de contrôle manuel.
 Test : `node tests/mode_test_navigateur.js` (dépôt serveur).
 
 ## Les jeux en parallèle (onglet « En parallèle » de l'accueil)
